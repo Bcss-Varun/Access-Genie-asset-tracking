@@ -48,7 +48,7 @@ export function Sidebar() {
       <div className="p-3 border-b border-slate-200 shrink-0">
         <Link href="/" className="block" aria-label="Access Genie — home">
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src="/access-genie-logo.png" alt="Access Genie" className="w-full h-auto rounded-md" />
+          <img src="/access-genie-logo.png" alt="Access Genie" className="w-36 h-auto rounded-md" />
         </Link>
       </div>
 

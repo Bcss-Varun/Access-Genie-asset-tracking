@@ -1,5 +1,6 @@
 'use client';
 
+import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { useScope } from '@/components/providers/ScopeProvider';
@@ -11,7 +12,7 @@ import { useMobileNav } from '@/components/providers/MobileNavProvider';
 import { Dropdown, MenuItem } from '@/components/ui/Dropdown';
 import { Avatar } from '@/components/ui/primitives';
 import { flattenScope, mockUsers } from '@/lib/rbac';
-import { mockInsights } from '@/lib/mock-data';
+import { mockInsights, mockAssets } from '@/lib/mock-data';
 import { cn } from '@/lib/utils';
 
 const levelLabel: Record<string, string> = {
@@ -26,6 +27,7 @@ export function TopBar() {
   const { toast } = useToast();
   const { toggle: toggleMobileNav } = useMobileNav();
   const router = useRouter();
+  const [scanOpen, setScanOpen] = useState(false);
   const scopeList = flattenScope();
   const alertCount = mockInsights.filter((i) => i.severity === 'Critical').length;
 
@@ -96,32 +98,15 @@ export function TopBar() {
       </button>
 
       <div className="flex items-center gap-1 ml-auto">
-        {/* Quick create */}
-        <Dropdown
-          ariaLabel="Quick create"
-          trigger={({ toggle: t }) => (
-            <button onClick={t} className="hidden sm:inline-flex items-center gap-1 rounded-lg bg-primary-600 text-white px-3 py-1.5 text-sm font-medium hover:bg-primary-700 transition-colors">
-              <span className="text-base leading-none">＋</span> Create
-            </button>
-          )}
-        >
-          {({ close }) => (
-            <>
-              <MenuItem icon="📦" onClick={() => { close(); router.push('/assets'); }}>New Asset</MenuItem>
-              <MenuItem icon="🔧" onClick={() => { close(); router.push('/maintenance'); }}>New Work Order</MenuItem>
-              <MenuItem icon="🔁" onClick={() => { close(); toast({ title: 'Transfer request', description: 'Coming soon in the demo', tone: 'info' }); }}>New Transfer</MenuItem>
-              <MenuItem icon="📥" onClick={() => { close(); toast({ title: 'Bulk import', description: 'Coming soon in the demo', tone: 'info' }); }}>Bulk Import</MenuItem>
-            </>
-          )}
-        </Dropdown>
+        {/* Scan QR / RFID */}
+        <IconButton label="Scan QR / RFID" onClick={() => setScanOpen(true)}>📷</IconButton>
 
-        <IconButton label="Scan QR / RFID" onClick={() => toast({ title: 'Scanner', description: 'Camera/RFID scan is a mobile capability (doc 14).', tone: 'info' })}>📷</IconButton>
-
-        {/* Alerts */}
+        {/* Alerts → Alert Center */}
         <button
-          onClick={() => toast({ title: `${alertCount} critical alerts`, description: 'Alert Center is on the roadmap.', tone: 'info' })}
+          onClick={() => router.push('/alerts')}
           className="relative p-2 rounded-lg text-slate-500 hover:bg-slate-100 hover:text-slate-800 transition-colors"
-          aria-label="Alerts"
+          aria-label={`Alerts — ${alertCount} critical`}
+          title="Alert Center"
         >
           🔔
           {alertCount > 0 && (
@@ -131,8 +116,10 @@ export function TopBar() {
           )}
         </button>
 
-        <IconButton label="Toggle theme" onClick={toggle}>{theme === 'light' ? '🌙' : '☀️'}</IconButton>
-        <IconButton label="Help" onClick={() => toast({ title: 'Help & Support', description: 'Help center is on the roadmap.', tone: 'info' })}>❓</IconButton>
+        {/* Dark mode */}
+        <IconButton label={theme === 'light' ? 'Switch to dark mode' : 'Switch to light mode'} onClick={toggle}>
+          {theme === 'light' ? '🌙' : '☀️'}
+        </IconButton>
 
         {/* User / persona menu */}
         <Dropdown
@@ -172,6 +159,43 @@ export function TopBar() {
           )}
         </Dropdown>
       </div>
+
+      {/* Scan dialog */}
+      {scanOpen && (
+        <div className="fixed inset-0 z-[80] flex items-center justify-center p-4" role="dialog" aria-modal="true" aria-label="Scan asset tag">
+          <div className="absolute inset-0 bg-slate-900/50" onClick={() => setScanOpen(false)} />
+          <div className="relative w-full max-w-sm rounded-2xl bg-white border border-slate-200 shadow-2xl overflow-hidden">
+            <div className="flex items-center justify-between px-4 py-3 border-b border-slate-100">
+              <h3 className="text-sm font-semibold text-slate-800">Scan asset tag</h3>
+              <button onClick={() => setScanOpen(false)} aria-label="Close" className="text-slate-400 hover:text-slate-700">✕</button>
+            </div>
+            <div className="p-5">
+              <div className="relative mx-auto aspect-square w-56 rounded-xl bg-slate-900 overflow-hidden">
+                <div className="absolute inset-6 rounded-lg border-2 border-white/70" />
+                <div
+                  className="absolute left-6 right-6 h-0.5 bg-primary-400 shadow-[0_0_8px_2px_rgba(129,140,248,0.7)]"
+                  style={{ animation: 'scanline 2s ease-in-out infinite' }}
+                />
+                <span className="absolute bottom-3 inset-x-0 text-center text-[11px] text-white/70">Point at a QR / RFID tag</span>
+              </div>
+              <p className="mt-4 text-center text-xs text-slate-500">
+                Live camera scanning is a mobile capability — use the demo below.
+              </p>
+              <button
+                onClick={() => {
+                  const a = mockAssets[0];
+                  setScanOpen(false);
+                  toast({ title: `Scanned ${a.id}`, description: a.name, tone: 'success' });
+                  router.push(`/assets/${a.id}`);
+                }}
+                className="mt-4 w-full rounded-lg bg-primary-600 text-white py-2 text-sm font-medium hover:bg-primary-700 transition-colors"
+              >
+                Simulate scan → open asset
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </header>
   );
 }

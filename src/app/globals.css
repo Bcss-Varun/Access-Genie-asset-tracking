@@ -78,6 +78,53 @@ h1, h2, h3, h4, h5, h6 {
   }
 }
 
+/* Scanner viewfinder line (top-bar Scan dialog) */
+@keyframes scanline {
+  0%, 100% { top: 18%; }
+  50% { top: 82%; }
+}
+
+/* ── Dark theme (opt-in via the top-bar toggle) ──────────────────────────────
+   Pages are light-authored with Tailwind utilities, so the toggle remaps the
+   common neutral utilities to dark equivalents. Card surfaces (glass-panel)
+   flip automatically via the surface tokens; brand/status/accent colors keep
+   their meaning. */
+.dark {
+  --background: #0b1220;
+  --foreground: #e5e7eb;
+  --color-surface: #111a2e;
+  --color-surface-border: #1f2a44;
+}
+.dark .bg-white,
+.dark [class~="bg-white/95"],
+.dark [class~="bg-white/90"],
+.dark [class~="bg-white/80"],
+.dark [class~="bg-white/50"] { background-color: #111a2e !important; }
+.dark .bg-slate-50,
+.dark [class~="bg-slate-50/60"],
+.dark [class~="bg-slate-50/50"],
+.dark [class~="bg-slate-50/40"] { background-color: #0f1729 !important; }
+.dark .bg-slate-100 { background-color: #1c2740 !important; }
+.dark .text-slate-900 { color: #f1f5f9 !important; }
+.dark .text-slate-800 { color: #e5ebf3 !important; }
+.dark .text-slate-700 { color: #cbd5e1 !important; }
+.dark .text-slate-600 { color: #aeb9c9 !important; }
+.dark .text-slate-500 { color: #94a3b8 !important; }
+.dark .text-slate-400 { color: #6b7a90 !important; }
+.dark .border-slate-100 { border-color: #1c2740 !important; }
+.dark .border-slate-200 { border-color: #1f2a44 !important; }
+.dark .border-slate-300 { border-color: #2a3958 !important; }
+.dark [class~="divide-slate-100"] > *,
+.dark [class~="divide-slate-200"] > * { border-color: #1f2a44 !important; }
+.dark [class~="hover:bg-slate-50"]:hover,
+.dark [class~="hover:bg-slate-100"]:hover { background-color: #1c2740 !important; }
+/* Blue Cloud Softech logo is dark-on-transparent — keep it on a light chip in dark mode */
+.dark img[alt="Blue Cloud Softech Solutions Ltd."] {
+  background: #ffffff;
+  padding: 6px 8px;
+  border-radius: 6px;
+}
+
 /* Tasteful thin scrollbars */
 * {
   scrollbar-width: thin;
