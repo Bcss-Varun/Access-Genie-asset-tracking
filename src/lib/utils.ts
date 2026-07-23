@@ -9,7 +9,7 @@ export function formatMoney(n: number): string {
   if (Math.abs(n) >= 1_000) return `$${Math.round(n / 1_000)}k`;
   return `$${n.toLocaleString()}`;
 }
-
+//
 /** Demo clock — mock data anchors timestamps here (deterministic, no hydration drift). */
 export const DEMO_NOW = Date.parse('2026-07-23T09:00:00.000Z');
 
