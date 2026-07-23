@@ -44,15 +44,11 @@ export function Sidebar() {
 
   return (
     <aside className="w-64 h-full bg-white border-r border-slate-200 flex flex-col">
-      {/* Brand */}
-      <div className="px-5 py-4 border-b border-slate-200 shrink-0">
-        <Link href="/" className="block">
-          <h1 className="text-xl font-heading font-bold text-slate-900 tracking-tight">
-            Access <span className="text-primary-600">Genie</span>
-          </h1>
-          <p className="text-[10px] text-slate-400 mt-0.5 uppercase tracking-wider font-semibold">
-            Asset Intelligence Platform
-          </p>
+      {/* Brand — Access Genie logo */}
+      <div className="p-3 border-b border-slate-200 shrink-0">
+        <Link href="/" className="block" aria-label="Access Genie — home">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src="/access-genie-logo.png" alt="Access Genie" className="w-full h-auto rounded-md" />
         </Link>
       </div>
 
@@ -113,11 +109,16 @@ export function Sidebar() {
         })}
       </nav>
 
-      {/* Footer — role hint */}
-      <div className="px-4 py-3 border-t border-slate-200 shrink-0">
+      {/* Footer — role hint + Blue Cloud Softech logo */}
+      <div className="border-t border-slate-200 shrink-0 px-4 py-3 space-y-3">
         <p className="text-[11px] text-slate-400">
           Viewing as <span className="font-semibold text-slate-600">{session.role.name}</span>
         </p>
+        <div className="pt-3 border-t border-slate-100">
+          <p className="text-[9px] uppercase tracking-wider text-slate-300 font-semibold mb-1.5">Powered by</p>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src="/bcss-logo.png" alt="Blue Cloud Softech Solutions Ltd." className="w-full h-auto max-w-[172px]" />
+        </div>
       </div>
     </aside>
   );

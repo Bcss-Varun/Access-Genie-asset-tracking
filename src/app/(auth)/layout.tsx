@@ -7,12 +7,8 @@ export default function AuthLayout({ children }: { children: React.ReactNode }) 
       {/* Left: brand / value panel (hidden on small screens) */}
       <div className="hidden lg:flex flex-col justify-between p-12 bg-slate-900 text-white relative overflow-hidden">
         <div className="relative z-10">
-          <h1 className="text-2xl font-heading font-bold tracking-tight">
-            Access <span className="text-primary-400">Genie</span>
-          </h1>
-          <p className="text-xs text-slate-400 mt-1 uppercase tracking-wider font-semibold">
-            Asset Intelligence Platform
-          </p>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src="/access-genie-logo.png" alt="Access Genie" className="w-52 h-auto rounded-md" />
         </div>
         <div className="relative z-10 max-w-md">
           <h2 className="text-3xl font-heading font-bold leading-tight">
@@ -30,7 +26,12 @@ export default function AuthLayout({ children }: { children: React.ReactNode }) 
             ))}
           </div>
         </div>
-        <p className="relative z-10 text-xs text-slate-500">© 2026 Access Genie AI · SOC 2 · ISO 27001 · GDPR</p>
+        <div className="relative z-10 space-y-1">
+          <p className="text-xs text-slate-400">
+            Powered by <span className="font-semibold text-slate-300">Blue Cloud Softech Solutions Ltd.</span>
+          </p>
+          <p className="text-xs text-slate-500">© 2026 Access Genie AI · SOC 2 · ISO 27001 · GDPR</p>
+        </div>
         {/* subtle glow */}
         <div className="absolute -top-24 -right-24 h-96 w-96 rounded-full bg-primary-500/20 blur-3xl" />
         <div className="absolute -bottom-32 -left-16 h-96 w-96 rounded-full bg-primary-700/20 blur-3xl" />
@@ -38,18 +39,19 @@ export default function AuthLayout({ children }: { children: React.ReactNode }) 
 
       {/* Right: the auth card */}
       <div className="flex flex-col items-center justify-center p-6 sm:p-10">
-        <div className="lg:hidden mb-8 text-center">
-          <h1 className="text-2xl font-heading font-bold tracking-tight text-slate-900">
-            Access <span className="text-primary-600">Genie</span>
-          </h1>
-          <p className="text-xs text-slate-400 mt-1 uppercase tracking-wider font-semibold">
-            Asset Intelligence Platform
-          </p>
+        <div className="lg:hidden mb-8">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src="/access-genie-logo.png" alt="Access Genie" className="w-48 h-auto rounded-md mx-auto" />
         </div>
         <div className="w-full max-w-sm">{children}</div>
         <p className="mt-8 text-xs text-slate-400 text-center">
           Need help? <Link href="/help" className="text-primary-600 hover:underline">Contact support</Link>
         </p>
+        <div className="mt-6 flex flex-col items-center gap-1.5">
+          <span className="text-[9px] uppercase tracking-wider text-slate-300 font-semibold">Powered by</span>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src="/bcss-logo.png" alt="Blue Cloud Softech Solutions Ltd." className="w-40 h-auto opacity-90" />
+        </div>
       </div>
     </div>
   );
