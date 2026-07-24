@@ -46,11 +46,11 @@ export function resolveModules(roleId: RoleId): ModuleKey[] {
 // ─────────────────────────────────────────────────────────────────────────────
 export const mockUsers: User[] = [
   { id: 'U-001', name: 'Raj', email: 'raj@bcss.in', initials: 'R', roleId: 'super_admin', title: 'Super Admin', homeScopeId: 'ORG-1' },
-  { id: 'U-002', name: 'Sarah Jenkins', email: 'sarah.jenkins@accessgenie.ai', initials: 'SJ', roleId: 'facility_manager', title: 'Facility Manager — Central Warehouse', homeScopeId: 'FAC-WH1' },
-  { id: 'U-003', name: 'Miguel Ortiz', email: 'miguel.ortiz@accessgenie.ai', initials: 'MO', roleId: 'maintenance_manager', title: 'Maintenance Manager', homeScopeId: 'FAC-WH1' },
-  { id: 'U-004', name: 'Diego Martinez', email: 'diego.martinez@accessgenie.ai', initials: 'DM', roleId: 'technician', title: 'Field Technician', homeScopeId: 'FAC-WH1' },
-  { id: 'U-005', name: 'Amara Osei', email: 'amara.osei@accessgenie.ai', initials: 'AO', roleId: 'executive', title: 'Chief Operating Officer', homeScopeId: 'ORG-1' },
-  { id: 'U-006', name: 'Tom Fisher', email: 'tom.fisher@accessgenie.ai', initials: 'TF', roleId: 'security_officer', title: 'Security Officer', homeScopeId: 'FAC-WH1' },
+  { id: 'U-002', name: 'Sneha Iyer', email: 'sneha.iyer@accessgenie.in', initials: 'SI', roleId: 'facility_manager', title: 'Facility Manager — Hyderabad Central Warehouse', homeScopeId: 'FAC-WH1' },
+  { id: 'U-003', name: 'Manoj Reddy', email: 'manoj.reddy@accessgenie.in', initials: 'MR', roleId: 'maintenance_manager', title: 'Maintenance Manager', homeScopeId: 'FAC-WH1' },
+  { id: 'U-004', name: 'Deepak Nair', email: 'deepak.nair@accessgenie.in', initials: 'DN', roleId: 'technician', title: 'Field Technician', homeScopeId: 'FAC-WH1' },
+  { id: 'U-005', name: 'Ananya Sharma', email: 'ananya.sharma@accessgenie.in', initials: 'AS', roleId: 'executive', title: 'Chief Operating Officer', homeScopeId: 'ORG-1' },
+  { id: 'U-006', name: 'Tarun Fernandes', email: 'tarun.fernandes@accessgenie.in', initials: 'TF', roleId: 'security_officer', title: 'Security Officer', homeScopeId: 'FAC-WH1' },
 ];
 
 export const defaultUser = mockUsers[0];
@@ -68,13 +68,13 @@ export function hasModule(session: Session, module: ModuleKey): boolean {
 // Scope tree (Org ▸ Facility ▸ Building ▸ Zone) — powers the scope switcher.
 // ─────────────────────────────────────────────────────────────────────────────
 export const scopeTree: ScopeNode = {
-  id: 'ORG-1', name: 'Access Genie Global', level: 'org', assetCount: 14205,
+  id: 'ORG-1', name: 'Access Genie India', level: 'org', assetCount: 14205,
   children: [
     {
-      id: 'REG-NA', name: 'North America', level: 'region', assetCount: 8420,
+      id: 'REG-SI', name: 'South India', level: 'region', assetCount: 8420,
       children: [
         {
-          id: 'FAC-WH1', name: 'Central Warehouse', level: 'facility', assetCount: 3120,
+          id: 'FAC-WH1', name: 'Hyderabad Central Warehouse', level: 'facility', assetCount: 3120,
           children: [
             {
               id: 'BLD-A', name: 'Building A', level: 'building', assetCount: 2100,
@@ -88,16 +88,22 @@ export const scopeTree: ScopeNode = {
           ],
         },
         {
-          id: 'FAC-HQ', name: 'HQ Building', level: 'facility', assetCount: 2450,
+          id: 'FAC-HQ', name: 'Bengaluru HQ', level: 'facility', assetCount: 2450,
           children: [
             { id: 'BLD-N', name: 'North Wing', level: 'building', assetCount: 1310 },
             { id: 'BLD-S', name: 'South Wing', level: 'building', assetCount: 1140 },
           ],
         },
-        { id: 'FAC-DC', name: 'Primary Data Center', level: 'facility', assetCount: 2850 },
+        { id: 'FAC-DC', name: 'Chennai Data Center', level: 'facility', assetCount: 2850 },
       ],
     },
-    { id: 'REG-EU', name: 'Europe', level: 'region', assetCount: 5785 },
+    {
+      id: 'REG-NW', name: 'North & West India', level: 'region', assetCount: 5785,
+      children: [
+        { id: 'FAC-MUM', name: 'Mumbai Regional Hub', level: 'facility', assetCount: 3200 },
+        { id: 'FAC-NCR', name: 'Delhi NCR Office', level: 'facility', assetCount: 2585 },
+      ],
+    },
   ],
 };
 

@@ -3,12 +3,46 @@ export function cn(...classes: (string | false | null | undefined)[]): string {
   return classes.filter(Boolean).join(' ');
 }
 
-/** Compact USD formatter: $1.2M / $74k / $250. */
-export function formatMoney(n: number): string {
-  if (Math.abs(n) >= 1_000_000) return `$${(n / 1_000_000).toFixed(1)}M`;
-  if (Math.abs(n) >= 1_000) return `$${Math.round(n / 1_000)}k`;
-  return `$${n.toLocaleString()}`;
+/**
+ * Indian digit grouping (last 3, then pairs): 1234567 → "12,34,567".
+ * Hand-rolled rather than `toLocaleString('en-IN')` so server and client always
+ * agree regardless of the runtime's ICU build (no hydration drift).
+ */
+export function groupINR(n: number): string {
+  const s = Math.round(Math.abs(n)).toString();
+  if (s.length <= 3) return s;
+  const last3 = s.slice(-3);
+  const rest = s.slice(0, -3);
+  return `${rest.replace(/\B(?=(\d{2})+(?!\d))/g, ',')},${last3}`;
 }
+
+/** Compact INR formatter (lakh/crore): ₹2,084 Cr / ₹7.2 L / ₹17,800. */
+export function formatMoney(n: number): string {
+  const abs = Math.abs(n);
+  const sign = n < 0 ? '-' : '';
+  // One decimal below 100 units, grouped whole units above (₹2,084 Cr).
+  const unit = (v: number) => {
+    const r = Math.round(v * 10) / 10;
+    return r >= 100 ? groupINR(r) : r.toString();
+  };
+  if (abs >= 1_00_00_000) return `${sign}₹${unit(abs / 1_00_00_000)} Cr`;
+  if (abs >= 1_00_000) return `${sign}₹${unit(abs / 1_00_000)} L`;
+  return `${sign}₹${groupINR(abs)}`;
+}
+const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+
+/**
+ * Indian-style date: "20 Jan 2020". Read in UTC and formatted by hand so the
+ * server and the browser never disagree (the app is timezone-agnostic; the
+ * tenant clock is IST).
+ */
+export function formatDate(iso: string): string {
+  const t = Date.parse(iso);
+  if (Number.isNaN(t)) return '';
+  const d = new Date(t);
+  return `${String(d.getUTCDate()).padStart(2, '0')} ${MONTHS[d.getUTCMonth()]} ${d.getUTCFullYear()}`;
+}
+
 //
 /** Demo clock — mock data anchors timestamps here (deterministic, no hydration drift). */
 export const DEMO_NOW = Date.parse('2026-07-23T09:00:00.000Z');

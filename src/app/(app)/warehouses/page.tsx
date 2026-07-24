@@ -9,7 +9,7 @@ export default function WarehousesPage() {
   const totalWarehouses = mockWarehouses.length;
   const totalSkus = mockWarehouses.reduce((sum, w) => sum + w.skuCount, 0);
   const totalBins = mockWarehouses.reduce((sum, w) => sum + w.binCount, 0);
-  const totalValue = mockWarehouses.reduce((sum, w) => sum + w.valueUsd, 0);
+  const totalValue = mockWarehouses.reduce((sum, w) => sum + w.valueInr, 0);
 
   return (
     <div className="h-full flex flex-col space-y-6">
@@ -59,7 +59,7 @@ export default function WarehousesPage() {
               </div>
               <div className="col-span-2">
                 <div className="text-slate-400">Inventory Value</div>
-                <div className="font-semibold text-slate-800 tabular-nums">{formatMoney(w.valueUsd)}</div>
+                <div className="font-semibold text-slate-800 tabular-nums">{formatMoney(w.valueInr)}</div>
               </div>
             </div>
 

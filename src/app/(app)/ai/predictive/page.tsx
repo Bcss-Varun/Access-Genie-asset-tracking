@@ -128,7 +128,7 @@ export default function AiPredictivePage() {
   const avgLeadTime = atRisk.length
     ? Math.round(atRisk.reduce((s, a) => s + daysToFail(a.riskScore ?? 0), 0) / atRisk.length)
     : 0;
-  const downtimeAvoided = failures.reduce((s, i) => s + (i.impactUsd ?? 0), 0);
+  const downtimeAvoided = failures.reduce((s, i) => s + (i.impactInr ?? 0), 0);
 
   function createPredictiveWo(source: { assetName?: string }) {
     toast({
@@ -200,9 +200,9 @@ export default function AiPredictivePage() {
                       </div>
                       <h3 className="text-base font-heading font-semibold text-slate-900 leading-snug">{f.title}</h3>
                     </div>
-                    {f.impactUsd != null && (
+                    {f.impactInr != null && (
                       <div className="text-right shrink-0">
-                        <div className="text-lg font-bold font-heading text-health-critical">{formatMoney(f.impactUsd)}</div>
+                        <div className="text-lg font-bold font-heading text-health-critical">{formatMoney(f.impactInr)}</div>
                         <div className="text-[11px] text-slate-400">at risk</div>
                       </div>
                     )}

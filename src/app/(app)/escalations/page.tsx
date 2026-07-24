@@ -29,8 +29,8 @@ const POLICIES: Policy[] = [
     severity: 'Critical',
     tiers: [
       { tier: 1, notify: 'Facilities On-call', afterMin: 0, channels: ['Push', 'SMS'] },
-      { tier: 2, notify: 'IT Ops Lead (James Park)', afterMin: 10, channels: ['Call', 'Email'] },
-      { tier: 3, notify: 'Site Director (Sarah Jenkins)', afterMin: 30, channels: ['Call'] },
+      { tier: 2, notify: 'IT Ops Lead (Arjun Menon)', afterMin: 10, channels: ['Call', 'Email'] },
+      { tier: 3, notify: 'Site Director (Sneha Iyer)', afterMin: 30, channels: ['Call'] },
     ],
   },
   {
@@ -64,9 +64,9 @@ interface Shift {
   window: string;
 }
 const ROTATION: Shift[] = [
-  { day: 'Mon–Tue', primary: 'James Park', secondary: 'Diego Martinez', window: '08:00 – 20:00' },
-  { day: 'Wed–Thu', primary: 'Sarah Jenkins', secondary: 'James Park', window: '08:00 – 20:00' },
-  { day: 'Fri–Sun', primary: 'Diego Martinez', secondary: 'Sarah Jenkins', window: '20:00 – 08:00' },
+  { day: 'Mon–Tue', primary: 'Arjun Menon', secondary: 'Deepak Nair', window: '08:00 – 20:00' },
+  { day: 'Wed–Thu', primary: 'Sneha Iyer', secondary: 'Arjun Menon', window: '08:00 – 20:00' },
+  { day: 'Fri–Sun', primary: 'Deepak Nair', secondary: 'Sneha Iyer', window: '20:00 – 08:00' },
 ];
 
 const initials = (name: string) =>

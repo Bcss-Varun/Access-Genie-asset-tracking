@@ -14,9 +14,9 @@ type Result =
 
 // A few scripted natural-language demos (the real Copilot is doc 08).
 const AI_ANSWERS: { q: string; answer: string }[] = [
-  { q: 'critical assets not scanned in 7 days', answer: '1 asset matches: iPad Pro 12.9" (Field Ops) (AST-1006) — last ping 52h ago, last seen HQ Lobby. Recommend an RTLS recovery search.' },
+  { q: 'critical assets not scanned in 7 days', answer: '1 asset matches: iPad Pro 12.9" (Field Ops) (AST-1006) — last ping 52h ago, last seen Bengaluru HQ Lobby. Recommend an RTLS recovery search.' },
   { q: 'what needs attention today', answer: '3 things: MacBook Pro 16" has an 85%-confidence battery-swelling prediction (14 days), the Field Ops iPad is missing, and the Aruba AP-515 access point is over-utilized at 96%.' },
-  { q: 'total portfolio value', answer: 'Portfolio TCO is $245.2M across 14,205 assets; $42.1M depreciated. Compute leads at $89.4M.' },
+  { q: 'total portfolio value', answer: 'Portfolio TCO is ₹107 Cr across 14,205 assets; ₹18 Cr depreciated. Compute leads at ₹56 Cr.' },
 ];
 
 export function CommandPalette() {

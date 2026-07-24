@@ -119,7 +119,7 @@ export default function CheckInOutPage() {
             <input
               value={custodian}
               onChange={(e) => setCustodian(e.target.value)}
-              placeholder="e.g. Diego Martinez"
+              placeholder="e.g. Deepak Nair"
               className="mt-1.5 w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-800 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-primary-500"
             />
           </label>

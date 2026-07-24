@@ -7,13 +7,10 @@
 
 import { useMemo, useState } from 'react';
 import { utilizationDowntimeSeries, categoryBreakdown } from '@/lib/mock-data';
+import { formatMoney } from '@/lib/utils';
 
-// Compact money formatting: $89.4M / $245.2M / $920k / $500.
-function fmtMoney(n: number): string {
-  if (n >= 1_000_000) return `$${(n / 1_000_000).toFixed(1)}M`;
-  if (n >= 1_000) return `$${Math.round(n / 1_000)}k`;
-  return `$${n}`;
-}
+// Compact INR (lakh/crore) formatting: ₹28.9Cr / ₹74L / ₹25,000.
+const fmtMoney = formatMoney;
 
 // ═════════════════════════════════════════════════════════════════════════════
 // 1) Utilization (line, left axis) vs Downtime (soft bars, right axis)

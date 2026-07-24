@@ -30,7 +30,7 @@ export default function AuthLayout({ children }: { children: React.ReactNode }) 
           <p className="text-xs text-slate-400">
             Powered by <span className="font-semibold text-slate-300">Blue Cloud Softech Solutions Ltd.</span>
           </p>
-          <p className="text-xs text-slate-500">© 2026 Access Genie AI · SOC 2 · ISO 27001 · GDPR</p>
+          <p className="text-xs text-slate-500">© 2026 Access Genie AI · ISO 27001 · SOC 2 · DPDP Act 2023</p>
         </div>
         {/* subtle glow */}
         <div className="absolute -top-24 -right-24 h-96 w-96 rounded-full bg-primary-500/20 blur-3xl" />

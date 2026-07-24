@@ -27,15 +27,15 @@ interface Subscription {
 
 // Deterministic delivery config keyed off the scheduled reports.
 const scheduleConfig: Record<string, { cadence: Cadence; recipients: string; recipientCount: number; channel: string; nextRunH: number; enabled: boolean }> = {
-  'RPT-01': { cadence: 'Weekly', recipients: 'exec-team@genie.co', recipientCount: 6, channel: 'Email', nextRunH: 20, enabled: true },
-  'RPT-02': { cadence: 'Monthly', recipients: 'finance@genie.co', recipientCount: 4, channel: 'Email + Drive', nextRunH: 96, enabled: true },
-  'RPT-05': { cadence: 'Weekly', recipients: 'compliance@genie.co', recipientCount: 3, channel: 'Slack #compliance', nextRunH: 44, enabled: false },
+  'RPT-01': { cadence: 'Weekly', recipients: 'exec-team@accessgenie.in', recipientCount: 6, channel: 'Email', nextRunH: 20, enabled: true },
+  'RPT-02': { cadence: 'Monthly', recipients: 'finance@accessgenie.in', recipientCount: 4, channel: 'Email + Drive', nextRunH: 96, enabled: true },
+  'RPT-05': { cadence: 'Weekly', recipients: 'compliance@accessgenie.in', recipientCount: 3, channel: 'Slack #compliance', nextRunH: 44, enabled: false },
 };
 
 const initialSubs: Subscription[] = mockReports
   .filter((r) => r.scheduled)
   .map((r) => {
-    const c = scheduleConfig[r.id] ?? { cadence: 'Weekly' as Cadence, recipients: 'team@genie.co', recipientCount: 2, channel: 'Email', nextRunH: 24, enabled: true };
+    const c = scheduleConfig[r.id] ?? { cadence: 'Weekly' as Cadence, recipients: 'team@accessgenie.in', recipientCount: 2, channel: 'Email', nextRunH: 24, enabled: true };
     return {
       id: `SUB-${r.id.replace('RPT-', '')}`,
       reportName: r.name,

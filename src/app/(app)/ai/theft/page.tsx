@@ -15,7 +15,7 @@ interface RiskItem {
   confidence: number;
   description: string;
   lastSeenIso: string;
-  impactUsd: number;
+  impactInr: number;
   sources: string[];
 }
 
@@ -41,7 +41,7 @@ function buildRiskItems(): RiskItem[] {
       confidence: i.confidence,
       description: i.summary,
       lastSeenIso: asset?.telemetry?.lastPing ?? i.createdAt,
-      impactUsd: i.impactUsd ?? asset?.bookValue ?? 0,
+      impactInr: i.impactInr ?? asset?.bookValue ?? 0,
       sources: ['Theft/Security insight'],
     });
   }
@@ -62,7 +62,7 @@ function buildRiskItems(): RiskItem[] {
         confidence: a.confidence,
         description: a.description,
         lastSeenIso: a.detectedAt,
-        impactUsd: asset?.bookValue ?? 0,
+        impactInr: asset?.bookValue ?? 0,
         sources: ['Signal-loss anomaly'],
       });
     }
@@ -77,7 +77,7 @@ export default function TheftPage() {
 
   const geofenceBreaches = items.filter((i) => i.drivers.some((d) => /geofence/i.test(d)) || /geofence/i.test(i.description)).length;
   const custodyGaps = items.filter((i) => i.drivers.some((d) => /custody/i.test(d)) || /custody/i.test(i.description)).length;
-  const atRiskUsd = items.reduce((s, i) => s + i.impactUsd, 0);
+  const atRiskInr = items.reduce((s, i) => s + i.impactInr, 0);
 
   return (
     <div className="h-full flex flex-col space-y-6">
@@ -97,7 +97,7 @@ export default function TheftPage() {
         <KpiCard label="Loss-Risk Assets" value={items.length} sub="Flagged for review" tone="red" accent />
         <KpiCard label="Geofence Breaches" value={geofenceBreaches} sub="Boundary exits" tone="amber" />
         <KpiCard label="Custody Gaps" value={custodyGaps} sub="Unlogged handoffs" tone="amber" />
-        <KpiCard label="Value at Risk" value={formatMoney(atRiskUsd)} sub="Book value exposed" tone="primary" />
+        <KpiCard label="Value at Risk" value={formatMoney(atRiskInr)} sub="Book value exposed" tone="primary" />
       </div>
 
       <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
@@ -124,7 +124,7 @@ export default function TheftPage() {
                     </h3>
                   </div>
                   <div className="text-right shrink-0">
-                    <div className="text-xl font-heading font-bold text-health-critical">{formatMoney(item.impactUsd)}</div>
+                    <div className="text-xl font-heading font-bold text-health-critical">{formatMoney(item.impactInr)}</div>
                     <div className="text-xs text-slate-400">at risk</div>
                   </div>
                 </div>

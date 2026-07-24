@@ -24,12 +24,12 @@ interface ExportRow {
   sizeKb: number;
 }
 const exportHistory: ExportRow[] = [
-  { id: 'EXP-2041', report: 'Executive Asset Portfolio', format: 'PDF', requestedBy: 'Alicia Gomez', at: iso(1), status: 'Ready', sizeKb: 2480 },
+  { id: 'EXP-2041', report: 'Executive Asset Portfolio', format: 'PDF', requestedBy: 'Kavya Krishnan', at: iso(1), status: 'Ready', sizeKb: 2480 },
   { id: 'EXP-2040', report: 'Depreciation & Book Value', format: 'Excel', requestedBy: 'Finance Bot', at: iso(3), status: 'Ready', sizeKb: 940 },
-  { id: 'EXP-2039', report: 'Compliance & Audit Pack', format: 'PDF', requestedBy: 'David Okoro', at: iso(6), status: 'Processing', sizeKb: 0 },
+  { id: 'EXP-2039', report: 'Compliance & Audit Pack', format: 'PDF', requestedBy: 'Vikram Bhat', at: iso(6), status: 'Processing', sizeKb: 0 },
   { id: 'EXP-2038', report: 'Asset Utilization', format: 'CSV', requestedBy: 'Ops Scheduler', at: iso(26), status: 'Ready', sizeKb: 312 },
   { id: 'EXP-2037', report: 'Security & Loss Prevention', format: 'PDF', requestedBy: 'Security Bot', at: iso(50), status: 'Ready', sizeKb: 1560 },
-  { id: 'EXP-2036', report: 'Warranty Expiry Exposure', format: 'Excel', requestedBy: 'Alicia Gomez', at: iso(74), status: 'Ready', sizeKb: 688 },
+  { id: 'EXP-2036', report: 'Warranty Expiry Exposure', format: 'Excel', requestedBy: 'Kavya Krishnan', at: iso(74), status: 'Ready', sizeKb: 688 },
 ];
 
 const FORMATS = ['PDF', 'Excel', 'CSV', 'JSON'];

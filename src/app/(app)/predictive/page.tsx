@@ -53,7 +53,7 @@ export default function PredictivePage() {
   // ── KPIs (over the still-visible alerts) ─────────────────────────────────────
   const predicted30d = visible.length;
   const highConfidence = visible.filter((a) => a.confidence >= 80).length;
-  const atRisk = visible.reduce((sum, a) => sum + (a.impactUsd ?? 0), 0);
+  const atRisk = visible.reduce((sum, a) => sum + (a.impactInr ?? 0), 0);
 
   // ── Actions ──────────────────────────────────────────────────────────────────
   function createWorkOrder(a: AIInsight) {
@@ -154,10 +154,10 @@ export default function PredictivePage() {
                         <span className="text-slate-300">↗</span>
                       </Link>
                     )}
-                    {a.impactUsd != null && (
+                    {a.impactInr != null && (
                       <span className="inline-flex items-center gap-1.5 text-sm">
                         <span className="font-bold font-heading text-health-critical">
-                          {formatMoney(a.impactUsd)}
+                          {formatMoney(a.impactInr)}
                         </span>
                         {a.impactLabel && <span className="text-xs text-slate-400">{a.impactLabel}</span>}
                       </span>

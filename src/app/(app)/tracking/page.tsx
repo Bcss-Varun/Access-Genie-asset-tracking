@@ -135,9 +135,9 @@ export default function LiveTrackingPage() {
         subtitle="Real-time RTLS & GPS positioning across the facility floor-plan."
         actions={
           <select className="bg-white border border-slate-200 rounded-lg px-4 py-2 text-sm font-medium">
-            <option>Central Warehouse — Building A</option>
-            <option>HQ Building — Floor 3</option>
-            <option>Primary Data Center</option>
+            <option>Hyderabad Central Warehouse — Building A</option>
+            <option>Bengaluru HQ — Floor 3</option>
+            <option>Chennai Data Center</option>
           </select>
         }
       />
@@ -169,7 +169,7 @@ export default function LiveTrackingPage() {
           <div className="mb-4">
             <h3 className="text-base font-semibold text-slate-800">Facility Floor-Plan</h3>
             <p className="text-xs text-slate-500 mt-0.5">
-              Central Warehouse · Building A · {markers.length} tracked signals
+              Hyderabad Central Warehouse · Building A · {markers.length} tracked signals
             </p>
           </div>
 

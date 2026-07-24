@@ -16,19 +16,19 @@ export default function Dashboard() {
     <div className="h-full flex flex-col space-y-6">
       <PageHeader
         title="Executive Dashboard"
-        subtitle="Real-time global asset intelligence."
+        subtitle="Real-time asset intelligence across India operations."
         actions={
           <select defaultValue="All Organizations" className="bg-white border border-slate-200 rounded-lg px-3 py-2 text-sm font-medium text-slate-700">
             <option>All Organizations</option>
-            <option>North America</option>
-            <option>Europe</option>
+            <option>South India</option>
+            <option>North &amp; West India</option>
           </select>
         }
       />
 
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         <KpiCard label="Total Assets" value="14,205" sub="↑ 2.4% vs last month" tone="emerald" />
-        <KpiCard label="Total Value (TCO)" value="$245.2M" sub="Depreciated $42.1M" tone="primary" accent />
+        <KpiCard label="Total Value (TCO)" value="₹107 Cr" sub="Depreciated ₹18 Cr" tone="primary" accent />
         <KpiCard label="Critical Alerts" value="12" sub="8 missing, 4 failure risk" tone="red" />
         <KpiCard label="AI Health Score" value={<>92<span className="text-lg text-slate-400">/100</span></>} sub="Optimal state" tone="emerald" />
       </div>

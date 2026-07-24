@@ -70,7 +70,7 @@ export default function WarehouseDetailPage({ params }: { params: Promise<{ id: 
         <KpiCard label="SKUs" value={warehouse.skuCount.toLocaleString()} sub="Distinct parts stocked" tone="primary" accent />
         <KpiCard label="Bins" value={warehouse.binCount.toLocaleString()} sub="Storage locations" tone="slate" />
         <KpiCard label="Bin Utilization" value={`${overallPct}%`} sub={`${totalOccupied.toLocaleString()} of ${warehouse.binCount.toLocaleString()} occupied`} tone="slate" />
-        <KpiCard label="Inventory Value" value={formatMoney(warehouse.valueUsd)} sub="On-hand carrying value" tone="slate" />
+        <KpiCard label="Inventory Value" value={formatMoney(warehouse.valueInr)} sub="On-hand carrying value" tone="slate" />
       </div>
 
       {/* Bin-utilization visual */}

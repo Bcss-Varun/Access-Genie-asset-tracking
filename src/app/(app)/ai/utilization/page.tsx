@@ -53,7 +53,7 @@ export default function UtilizationPage() {
     () => mockInsights.filter((i) => i.type === 'Utilization'),
     [],
   );
-  const rebalanceUsd = rebalanceInsights.reduce((s, i) => s + (i.impactUsd ?? 0), 0);
+  const rebalanceInr = rebalanceInsights.reduce((s, i) => s + (i.impactInr ?? 0), 0);
 
   // Per-zone aggregation (deterministic — driven by asset order in mock-data).
   const zones = useMemo(() => {
@@ -83,7 +83,7 @@ export default function UtilizationPage() {
         <KpiCard label="Avg Utilization" value={`${avgUtil}%`} sub="Across active fleet" tone="primary" accent />
         <KpiCard label="Idle Assets" value={idleCount} sub={`Under ${IDLE_THRESHOLD}% used`} tone="red" />
         <KpiCard label="Over-Utilized" value={overCount} sub={`Above ${OVER_THRESHOLD}% used`} tone="amber" />
-        <KpiCard label="Rebalancing Opportunity" value={formatMoney(rebalanceUsd)} sub="Recoverable value" tone="emerald" />
+        <KpiCard label="Rebalancing Opportunity" value={formatMoney(rebalanceInr)} sub="Recoverable value" tone="emerald" />
       </div>
 
       {/* Per-zone heat + distribution */}
@@ -193,9 +193,9 @@ export default function UtilizationPage() {
                     </div>
                     <h3 className="text-lg font-heading font-bold text-slate-900 leading-snug">{ins.title}</h3>
                   </div>
-                  {ins.impactUsd !== undefined && (
+                  {ins.impactInr !== undefined && (
                     <div className="text-right shrink-0">
-                      <div className="text-xl font-heading font-bold text-health-good">{formatMoney(ins.impactUsd)}</div>
+                      <div className="text-xl font-heading font-bold text-health-good">{formatMoney(ins.impactInr)}</div>
                       {ins.impactLabel && <div className="text-xs text-slate-400">{ins.impactLabel}</div>}
                     </div>
                   )}
@@ -220,7 +220,7 @@ export default function UtilizationPage() {
                   </div>
                   <Button
                     onClick={() =>
-                      toast({ title: 'Transfer initiated', description: `${ins.assetName ?? ins.title} · ${formatMoney(ins.impactUsd ?? 0)} opportunity`, tone: 'success' })
+                      toast({ title: 'Transfer initiated', description: `${ins.assetName ?? ins.title} · ${formatMoney(ins.impactInr ?? 0)} opportunity`, tone: 'success' })
                     }
                   >
                     Initiate Transfer

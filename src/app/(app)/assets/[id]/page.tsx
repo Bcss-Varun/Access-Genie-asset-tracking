@@ -17,7 +17,7 @@ import { PageHeader, Badge, EmptyState, Avatar } from '@/components/ui/primitive
 import { Button } from '@/components/ui/Button';
 import { Dropdown, MenuItem } from '@/components/ui/Dropdown';
 import { useToast } from '@/components/providers/ToastProvider';
-import { cn, formatMoney, relTime, DEMO_NOW } from '@/lib/utils';
+import { cn, formatMoney, formatDate, relTime, DEMO_NOW } from '@/lib/utils';
 
 // ── token helpers ─────────────────────────────────────────────────────────────
 const healthHex = (score: number): string =>
@@ -306,9 +306,9 @@ function InsightCard({ ins, onAct }: { ins: AIInsight; onAct: (label: string) =>
           <span className="text-xs font-semibold">{ins.confidence}%</span>
         </div>
         <div className="flex items-center gap-3">
-          {ins.impactUsd !== undefined && (
+          {ins.impactInr !== undefined && (
             <span className="text-xs font-semibold text-slate-700">
-              {formatMoney(ins.impactUsd)}
+              {formatMoney(ins.impactInr)}
               {ins.impactLabel && <span className="text-slate-400 font-normal ml-1">{ins.impactLabel}</span>}
             </span>
           )}
@@ -697,7 +697,7 @@ export default function AssetProfilePage({ params }: { params: Promise<{ id: str
                       <KV label="Criticality" value={asset.criticality} />
                       <KV label="Open Work Orders" value={String(workOrders.length)} />
                       <KV label="Utilization" value={asset.utilization !== undefined ? `${asset.utilization}%` : '—'} />
-                      <KV label="Purchased" value={new Date(asset.purchaseDate).toLocaleDateString()} />
+                      <KV label="Purchased" value={formatDate(asset.purchaseDate)} />
                     </dl>
                   </div>
 
@@ -905,7 +905,7 @@ export default function AssetProfilePage({ params }: { params: Promise<{ id: str
                               <div className="mt-1 text-xs text-slate-500">
                                 {wo.id} <span className="text-slate-300">•</span> {wo.type}{' '}
                                 <span className="text-slate-300">•</span> {wo.assignedTo}{' '}
-                                <span className="text-slate-300">•</span> Due {new Date(wo.dueDate).toLocaleDateString()}
+                                <span className="text-slate-300">•</span> Due {formatDate(wo.dueDate)}
                               </div>
                             </div>
                             <div className="flex flex-col items-end gap-1.5 flex-shrink-0">
@@ -950,7 +950,7 @@ export default function AssetProfilePage({ params }: { params: Promise<{ id: str
                         </div>
                       </div>
                       <div className="mt-4 grid grid-cols-2 gap-4">
-                        <KV label="Expiry Date" value={new Date(asset.warrantyExpiry).toLocaleDateString()} />
+                        <KV label="Expiry Date" value={formatDate(asset.warrantyExpiry)} />
                         <KV label="Provider" value={asset.manufacturer ?? '—'} />
                       </div>
                       <div className="mt-4 flex gap-2">
@@ -1137,7 +1137,7 @@ export default function AssetProfilePage({ params }: { params: Promise<{ id: str
                             <td className="py-2.5 pr-3">
                               <span className="text-[10px] font-medium px-1.5 py-0.5 rounded bg-slate-100 text-slate-600">{r.source}</span>
                             </td>
-                            <td className="py-2.5 text-slate-500">{new Date(r.ts).toLocaleDateString()}</td>
+                            <td className="py-2.5 text-slate-500">{formatDate(r.ts)}</td>
                           </tr>
                         ))}
                       </tbody>
@@ -1231,7 +1231,7 @@ export default function AssetProfilePage({ params }: { params: Promise<{ id: str
                     <div className="rounded-lg border border-slate-200 p-4">
                       <div className="text-xs text-slate-500">Asset Age</div>
                       <div className="text-2xl font-heading font-bold mt-1">{ageYears}y</div>
-                      <div className="text-xs text-slate-400 mt-1">Since {new Date(asset.purchaseDate).toLocaleDateString()}</div>
+                      <div className="text-xs text-slate-400 mt-1">Since {formatDate(asset.purchaseDate)}</div>
                     </div>
                   </div>
 
@@ -1258,7 +1258,7 @@ export default function AssetProfilePage({ params }: { params: Promise<{ id: str
                       value={
                         asset.warrantyExpiry ? (
                           <span className={warrantyExpired ? 'text-health-critical' : 'text-slate-900'}>
-                            {new Date(asset.warrantyExpiry).toLocaleDateString()}
+                            {formatDate(asset.warrantyExpiry)}
                             {warrantyExpired && ' (Expired)'}
                           </span>
                         ) : (
@@ -1266,7 +1266,7 @@ export default function AssetProfilePage({ params }: { params: Promise<{ id: str
                         )
                       }
                     />
-                    <KV label="Purchase Date" value={new Date(asset.purchaseDate).toLocaleDateString()} />
+                    <KV label="Purchase Date" value={formatDate(asset.purchaseDate)} />
                     <KV label="Lifecycle Stage" value={asset.lifecycleStage} />
                   </dl>
 

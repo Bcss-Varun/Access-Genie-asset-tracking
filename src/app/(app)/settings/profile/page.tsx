@@ -8,14 +8,11 @@ import { useSession } from '@/components/providers/SessionProvider';
 import { useToast } from '@/components/providers/ToastProvider';
 
 const TIMEZONES = [
-  'America/Los_Angeles',
-  'America/Denver',
-  'America/Chicago',
-  'America/New_York',
-  'Europe/London',
-  'Europe/Berlin',
   'Asia/Kolkata',
+  'Asia/Dubai',
   'Asia/Singapore',
+  'Europe/London',
+  'America/New_York',
 ];
 
 const inputCls =
@@ -29,8 +26,8 @@ export default function ProfileSettingsPage() {
 
   const [name, setName] = useState(user.name);
   const [title, setTitle] = useState(user.title);
-  const [phone, setPhone] = useState('+1 (415) 555-0148');
-  const [timezone, setTimezone] = useState('America/Los_Angeles');
+  const [phone, setPhone] = useState('+91 98490 55148');
+  const [timezone, setTimezone] = useState('Asia/Kolkata');
 
   const onSave = (e: React.FormEvent) => {
     e.preventDefault();
@@ -96,7 +93,7 @@ export default function ProfileSettingsPage() {
           <Button
             type="button"
             variant="outline"
-            onClick={() => { setName(user.name); setTitle(user.title); setPhone('+1 (415) 555-0148'); setTimezone('America/Los_Angeles'); }}
+            onClick={() => { setName(user.name); setTitle(user.title); setPhone('+91 98490 55148'); setTimezone('Asia/Kolkata'); }}
           >
             Reset
           </Button>

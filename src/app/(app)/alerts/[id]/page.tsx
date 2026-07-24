@@ -38,7 +38,7 @@ function buildTimeline(alert: Alert): { label: string; detail: string; ts: strin
     },
     {
       label: 'Acknowledged',
-      detail: 'Sarah Jenkins acknowledged the alert.',
+      detail: 'Sneha Iyer acknowledged the alert.',
       ts: alert.createdAt,
       done: idx >= 1,
     },
@@ -171,7 +171,7 @@ export default function AlertDetailPage({ params }: { params: Promise<{ id: stri
               <Button
                 variant="outline"
                 size="sm"
-                onClick={() => toast({ title: 'Alert assigned', description: `${alert.id} assigned to James Park.`, tone: 'info' })}
+                onClick={() => toast({ title: 'Alert assigned', description: `${alert.id} assigned to Arjun Menon.`, tone: 'info' })}
               >
                 Assign
               </Button>

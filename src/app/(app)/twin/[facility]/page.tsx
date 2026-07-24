@@ -14,9 +14,9 @@ import { cn, relTime } from '@/lib/utils';
 // ─────────────────────────────────────────────────────────────────────────────
 type Facility = { slug: string; name: string; locationName: string; building: string };
 const FACILITIES: Facility[] = [
-  { slug: 'central-warehouse', name: 'Central Warehouse', locationName: 'Central Warehouse', building: 'Building A' },
-  { slug: 'hq-building', name: 'HQ Building', locationName: 'HQ Building', building: 'Floors 1–4 · Offices & IT Storeroom' },
-  { slug: 'primary-data-center', name: 'Primary Data Center', locationName: 'Primary Data Center', building: 'Server Room Alpha' },
+  { slug: 'central-warehouse', name: 'Hyderabad Central Warehouse', locationName: 'Hyderabad Central Warehouse', building: 'Building A' },
+  { slug: 'hq-building', name: 'Bengaluru HQ', locationName: 'Bengaluru HQ', building: 'Floors 1–4 · Offices & IT Storeroom' },
+  { slug: 'primary-data-center', name: 'Chennai Data Center', locationName: 'Chennai Data Center', building: 'Server Room Alpha' },
 ];
 
 // ── Zone styling by type ─────────────────────────────────────────────────────

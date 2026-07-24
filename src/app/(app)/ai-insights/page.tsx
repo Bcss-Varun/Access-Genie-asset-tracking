@@ -5,6 +5,7 @@ import Link from "next/link";
 import { mockInsights, mockAssets, getAssetById } from "@/lib/mock-data";
 import { PageHeader, KpiCard } from "@/components/ui/primitives";
 import type { AIInsight, InsightSeverity, InsightType } from "@/types/asset";
+import { formatMoney } from "@/lib/utils";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Helpers (module scope → deterministic, no hydration drift)
@@ -22,14 +23,8 @@ function relTime(iso: string): string {
   return `${days}d ago`;
 }
 
-function fmtUsd(n: number): string {
-  if (n >= 1_000_000) return `$${(n / 1_000_000).toFixed(1)}M`;
-  if (n >= 1_000) {
-    const k = n / 1_000;
-    return `$${Number.isInteger(k) ? k : k.toFixed(1)}k`;
-  }
-  return `$${n}`;
-}
+/** Compact INR (lakh/crore) — shares the platform-wide money formatter. */
+const fmtInr = formatMoney;
 
 function catEmoji(cat?: string): string {
   return cat === 'Endpoints' ? '📱' : cat === 'Compute' ? '💻' : cat === 'Network' ? '🌐' : cat === 'Sensors' ? '📡' : cat === 'Infrastructure' ? '⚡' : '⚙️';
@@ -147,13 +142,13 @@ export default function AIInsightsPage() {
   ).size;
   const predictedFailures = insights.filter((i) => i.type === "Predictive Failure" || i.type === "Lifecycle").length;
   const idleAssets = mockAssets.filter((a) => (a.utilization ?? 100) < 20).length;
-  const savings = insights.reduce((s, i) => s + (i.impactUsd ?? 0), 0);
+  const savings = insights.reduce((s, i) => s + (i.impactInr ?? 0), 0);
 
   const kpis: { label: string; value: string | number; sub: string; tone: "slate" | "emerald" | "amber" | "red" | "primary" }[] = [
     { label: "Assets at Risk", value: atRiskCount, sub: "Critical + warning", tone: "red" },
     { label: "Predicted Failures", value: predictedFailures, sub: "Next 30 days", tone: "amber" },
     { label: "Idle Assets", value: idleAssets, sub: "Under 20% used", tone: "slate" },
-    { label: "Savings Identified", value: fmtUsd(savings), sub: "If all actioned", tone: "emerald" },
+    { label: "Savings Identified", value: fmtInr(savings), sub: "If all actioned", tone: "emerald" },
   ];
 
   // ── Filter + sort ───────────────────────────────────────────────────────────
@@ -162,7 +157,7 @@ export default function AIInsightsPage() {
     .filter((i) => selectedSeverity === "all" || i.severity === selectedSeverity)
     .filter((i) => i.confidence >= confidenceMin)
     .sort((a, b) => {
-      if (sortBy === "impact") return (b.impactUsd ?? 0) - (a.impactUsd ?? 0);
+      if (sortBy === "impact") return (b.impactInr ?? 0) - (a.impactInr ?? 0);
       const d = SEV_RANK[a.severity] - SEV_RANK[b.severity];
       return d !== 0 ? d : b.confidence - a.confidence;
     });
@@ -328,10 +323,10 @@ export default function AIInsightsPage() {
                         <span className="text-slate-400">→</span>
                       </Link>
                     )}
-                    {ins.impactUsd !== undefined && (
+                    {ins.impactInr !== undefined && (
                       <div className="flex items-baseline gap-2">
                         <span className={`text-xl font-heading font-bold ${sev.impactColor}`}>
-                          {fmtUsd(ins.impactUsd)}
+                          {fmtInr(ins.impactInr)}
                         </span>
                         {ins.impactLabel && <span className="text-xs text-slate-400">{ins.impactLabel}</span>}
                       </div>

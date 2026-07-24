@@ -10,8 +10,8 @@ const accumDep = tco - bookValue;
 const writeOffs = mockAssets.filter((a) => a.lifecycleStage === 'EOL Planning').reduce((s, a) => s + (a.bookValue ?? 0), 0);
 
 const capexFc = mockForecasts.find((f) => f.id === 'FC-CAPEX');
-// Capex forecast horizon = forecast-only points (no actuals), unit is $k
-const capexForecast = (capexFc?.points.filter((p) => p.actual == null).reduce((s, p) => s + p.forecast, 0) ?? 0) * 1000;
+// Capex forecast horizon = forecast-only points (no actuals); FC-CAPEX is in ₹ lakh
+const capexForecast = (capexFc?.points.filter((p) => p.actual == null).reduce((s, p) => s + p.forecast, 0) ?? 0) * 1_00_000;
 
 // Book vs purchase by category
 const cats = ['Compute', 'Network', 'Endpoints', 'Infrastructure', 'Sensors'];

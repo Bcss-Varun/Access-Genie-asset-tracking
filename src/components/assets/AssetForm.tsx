@@ -400,7 +400,7 @@ export function AssetForm({ mode, asset }: { mode: 'create' | 'edit'; asset?: As
       {/* Financials */}
       <FormSection title="Financials" description="Purchase and warranty details.">
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-x-5 gap-y-4">
-          <Field label="Purchase Price (USD)" htmlFor="f-price">
+          <Field label="Purchase Price (₹)" htmlFor="f-price">
             <input
               id="f-price"
               type="number"

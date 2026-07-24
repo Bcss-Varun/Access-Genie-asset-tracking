@@ -5,7 +5,7 @@ import { mockParts, mockWarehouses, reorderParts, getSupplier, mockInsights } fr
 import { cn, formatMoney } from '@/lib/utils';
 
 const skus = mockParts.length;
-const stockValue = mockWarehouses.reduce((s, w) => s + w.valueUsd, 0);
+const stockValue = mockWarehouses.reduce((s, w) => s + w.valueInr, 0);
 const belowReorder = reorderParts();
 const stockouts = mockParts.filter((p) => p.onHand < p.reorderPoint).length;
 const fillRate = Math.round(((skus - belowReorder.length) / skus) * 100);

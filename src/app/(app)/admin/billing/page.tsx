@@ -12,13 +12,17 @@ interface Invoice {
   status: 'Paid' | 'Due';
 }
 
+// Amounts are INR, exclusive of 18% GST (shown separately on the invoice).
 const invoices: Invoice[] = [
-  { id: 'INV-2026-07', date: 'Jul 1, 2026', amount: 48000, status: 'Due' },
-  { id: 'INV-2026-06', date: 'Jun 1, 2026', amount: 48000, status: 'Paid' },
-  { id: 'INV-2026-05', date: 'May 1, 2026', amount: 48000, status: 'Paid' },
-  { id: 'INV-2026-04', date: 'Apr 1, 2026', amount: 44000, status: 'Paid' },
-  { id: 'INV-2026-03', date: 'Mar 1, 2026', amount: 44000, status: 'Paid' },
+  { id: 'INV-2026-07', date: '01 Jul 2026', amount: 1800000, status: 'Due' },
+  { id: 'INV-2026-06', date: '01 Jun 2026', amount: 1800000, status: 'Paid' },
+  { id: 'INV-2026-05', date: '01 May 2026', amount: 1800000, status: 'Paid' },
+  { id: 'INV-2026-04', date: '01 Apr 2026', amount: 1650000, status: 'Paid' },
+  { id: 'INV-2026-03', date: '01 Mar 2026', amount: 1650000, status: 'Paid' },
 ];
+
+const MONTHLY_INR = 1800000;
+const GST_RATE = 0.18;
 
 const AUM_USED = 12840;
 const AUM_LIMIT = 15000;
@@ -42,7 +46,7 @@ export default function BillingPage() {
     <div className="h-full flex flex-col space-y-6">
       <PageHeader
         title="Billing & Subscription"
-        subtitle="Plan, usage & invoices for your Access Genie tenant."
+        subtitle="Plan, usage & invoices for your Access Genie tenant. All amounts in INR."
         breadcrumb={[{ label: 'Administration' }, { label: 'Billing' }]}
         actions={
           <Button variant="outline" onClick={() => toast({ title: 'Manage plan', description: 'Contact your account executive to change plans.', tone: 'info' })}>
@@ -59,11 +63,11 @@ export default function BillingPage() {
               <h2 className="font-heading text-xl font-bold text-slate-900">Enterprise</h2>
               <Badge tone="primary">Current Plan</Badge>
             </div>
-            <p className="mt-1 text-sm text-slate-500">Billed annually · Renews Jan 1, 2027</p>
+            <p className="mt-1 text-sm text-slate-500">Billed annually · Renews 01 Jan 2027 · GSTIN 36AABCA1234F1Z5</p>
           </div>
           <div className="text-right">
-            <div className="font-heading text-3xl font-bold text-slate-900">{formatMoney(48000)}</div>
-            <div className="text-xs text-slate-400">per month</div>
+            <div className="font-heading text-3xl font-bold text-slate-900">{formatMoney(MONTHLY_INR)}</div>
+            <div className="text-xs text-slate-400">per month + {Math.round(GST_RATE * 100)}% GST</div>
           </div>
         </div>
       </div>
@@ -71,8 +75,8 @@ export default function BillingPage() {
       <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
         <KpiCard label="Seats" value={`${SEATS_USED} / ${SEATS_LIMIT}`} sub="Active users" tone="primary" accent />
         <KpiCard label="AUM" value={`${aumPct}%`} sub="Of plan limit" tone={aumPct >= 90 ? 'red' : 'amber'} />
-        <KpiCard label="Next Invoice" value={formatMoney(48000)} sub="Due Jul 1" tone="slate" />
-        <KpiCard label="Contract" value="Annual" sub="Renews Jan 2027" tone="emerald" />
+        <KpiCard label="Next Invoice" value={formatMoney(MONTHLY_INR * (1 + GST_RATE))} sub="Incl. GST · due 01 Jul" tone="slate" />
+        <KpiCard label="Contract" value="Annual" sub="Renews Jan 2027 · INR" tone="emerald" />
       </div>
 
       {/* Usage breakdown */}
@@ -109,7 +113,7 @@ export default function BillingPage() {
               <tr className="border-b border-slate-100 bg-slate-50/70 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">
                 <th className="px-5 py-2.5">Invoice</th>
                 <th className="px-5 py-2.5">Date</th>
-                <th className="px-5 py-2.5 text-right">Amount</th>
+                <th className="px-5 py-2.5 text-right">Amount (excl. GST)</th>
                 <th className="px-5 py-2.5">Status</th>
                 <th className="px-5 py-2.5 text-right">Actions</th>
               </tr>

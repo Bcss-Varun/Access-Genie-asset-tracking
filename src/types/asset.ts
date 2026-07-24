@@ -52,7 +52,7 @@ export interface Asset {
   criticality?: Criticality;
   riskScore?: number;         // 0-100 (higher = more at risk)
   utilization?: number;       // 0-100 (% of capacity used)
-  bookValue?: number;         // depreciated value in USD
+  bookValue?: number;         // depreciated value in INR
   depreciationMethod?: string;
   warrantyExpiry?: string;    // ISO date
   trackingTech?: string;      // e.g. "UWB", "BLE", "GPS"
@@ -106,7 +106,7 @@ export interface AIInsight {
   assetId?: string;
   assetName?: string;
   confidence: number;        // 0-100
-  impactUsd?: number;        // $ impact if actioned (or avoided loss)
+  impactInr?: number;        // ₹ impact if actioned (or avoided loss)
   impactLabel?: string;      // human label, e.g. "4 days to failure"
   /** Explainable-AI: the factors driving this score. */
   drivers: string[];
@@ -158,7 +158,7 @@ export interface UtilizationDowntimePoint {
 export interface CategoryBreakdown {
   category: AssetCategory;
   count: number;
-  value: number; // USD
+  value: number; // INR
 }
 
 // ── Taxonomy & attribute schema (per-class dynamic attributes) ────────────────
@@ -204,7 +204,7 @@ export interface AssetDoc {
 
 // ── Tracking / IoT devices ────────────────────────────────────────────────────
 export type SensorStatus = 'Online' | 'Offline' | 'Low Battery';
-export type SensorKind = 'RFID Tag' | 'BLE Beacon' | 'UWB Tag' | 'GPS Tracker' | 'LoRaWAN Sensor' | 'Environmental';
+export type SensorKind = 'RFID Tag' | 'BLE Beacon' | 'UWB Tag' | 'GPS Tracker' | 'QR Label' | 'LoRaWAN Sensor' | 'Environmental';
 
 export interface Sensor {
   id: string;
@@ -213,16 +213,22 @@ export interface Sensor {
   assetId?: string;
   assetName?: string;
   status: SensorStatus;
-  batteryLevel?: number;   // 0-100
+  batteryLevel?: number;   // 0-100 (passive tags — RFID/QR — have none)
   signalStrength: number;  // 0-100
   firmwareVersion: string;
   gatewayId: string;
   zone?: string;
   lastReading: string;     // ISO
+  /** Physical identifier printed/encoded on the tag (EPC, MAC, IMEI, QR payload). */
+  tagId?: string;
+  /** Facility this device reports into (scope tree facility name). */
+  facility?: string;
+  /** True for devices registered in-session via the onboarding form. */
+  registeredInSession?: boolean;
 }
 
 export type GatewayStatus = 'Online' | 'Degraded' | 'Offline';
-export type GatewayKind = 'RFID Reader' | 'BLE Gateway' | 'LoRaWAN Gateway' | 'UWB Anchor';
+export type GatewayKind = 'RFID Reader' | 'BLE Gateway' | 'LoRaWAN Gateway' | 'UWB Anchor' | 'GPS/LTE Bridge' | 'QR Scan Station';
 
 export interface Gateway {
   id: string;
@@ -327,7 +333,7 @@ export interface Warehouse {
   location: string;
   binCount: number;
   skuCount: number;
-  valueUsd: number;
+  valueInr: number;
 }
 
 export interface Supplier {

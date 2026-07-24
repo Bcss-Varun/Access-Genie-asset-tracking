@@ -7,7 +7,7 @@ import type { PmSchedule, PmFrequency } from '@/types/asset';
 import { PageHeader, Badge, EmptyState } from '@/components/ui/primitives';
 import { Button } from '@/components/ui/Button';
 import { useToast } from '@/components/providers/ToastProvider';
-import { cn, relTime, DEMO_NOW } from '@/lib/utils';
+import { cn, relTime, formatDate, DEMO_NOW } from '@/lib/utils';
 
 // ── token helpers ─────────────────────────────────────────────────────────────
 type Tone = 'slate' | 'primary' | 'emerald' | 'amber' | 'red';
@@ -33,8 +33,7 @@ const freqDays: Record<PmFrequency, number> = {
 const complianceHex = (pct: number): string =>
   pct >= 95 ? '#10b981' : pct >= 80 ? '#f59e0b' : '#ef4444';
 
-const fmtDate = (iso: string): string =>
-  new Date(Date.parse(iso)).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+const fmtDate = formatDate;
 
 function dueLabel(iso: string): { text: string; overdue: boolean } {
   const diffDays = Math.round((Date.parse(iso) - DEMO_NOW) / DAY);

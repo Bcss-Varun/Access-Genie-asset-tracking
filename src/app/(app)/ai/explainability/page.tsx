@@ -223,9 +223,9 @@ export default function ExplainabilityPage() {
                 </Link>
               )}
               <span className="text-slate-400">Scored {relTime(insight.createdAt)}</span>
-              {insight.impactUsd !== undefined && (
+              {insight.impactInr !== undefined && (
                 <span className="font-semibold text-slate-700">
-                  {formatMoney(insight.impactUsd)}
+                  {formatMoney(insight.impactInr)}
                   {insight.impactLabel ? ` · ${insight.impactLabel}` : ''}
                 </span>
               )}

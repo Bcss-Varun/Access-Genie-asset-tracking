@@ -100,7 +100,7 @@ export default function HeatmapsPage() {
             <div>
               <h3 className="text-base font-semibold text-slate-800">{activeMeta.label} Density</h3>
               <p className="text-xs text-slate-500 mt-0.5">
-                Central Warehouse · Building A · blob size &amp; shade scale with {activeMeta.label.toLowerCase()}
+                Hyderabad Central Warehouse · Building A · blob size &amp; shade scale with {activeMeta.label.toLowerCase()}
               </p>
             </div>
           </div>

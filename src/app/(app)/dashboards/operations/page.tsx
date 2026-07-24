@@ -33,10 +33,10 @@ export default function OperationsDashboard() {
         subtitle="Live facility state — availability, backlog and alerts to triage."
         breadcrumb={[{ label: 'Workspace' }, { label: 'Dashboards', href: '/dashboards' }, { label: 'Operations' }]}
         actions={
-          <select defaultValue="Central Warehouse" className="bg-white border border-slate-200 rounded-lg px-3 py-2 text-sm font-medium text-slate-700">
-            <option>Central Warehouse</option>
-            <option>HQ Building</option>
-            <option>Primary Data Center</option>
+          <select defaultValue="Hyderabad Central Warehouse" className="bg-white border border-slate-200 rounded-lg px-3 py-2 text-sm font-medium text-slate-700">
+            <option>Hyderabad Central Warehouse</option>
+            <option>Bengaluru HQ</option>
+            <option>Chennai Data Center</option>
             <option>All Facilities</option>
           </select>
         }

@@ -18,10 +18,10 @@ const passkeys = [
 ];
 
 const sessions = [
-  { id: 'S-1', device: 'Chrome · macOS', location: 'San Francisco, US', lastActive: '2026-07-23T08:52:00.000Z', current: true },
-  { id: 'S-2', device: 'Safari · iOS', location: 'San Francisco, US', lastActive: '2026-07-23T06:20:00.000Z', current: false },
-  { id: 'S-3', device: 'Edge · Windows', location: 'Austin, US', lastActive: '2026-07-22T21:05:00.000Z', current: false },
-  { id: 'S-4', device: 'Firefox · Linux', location: 'Berlin, DE', lastActive: '2026-07-20T13:40:00.000Z', current: false },
+  { id: 'S-1', device: 'Chrome · macOS', location: 'Hyderabad, IN', lastActive: '2026-07-23T08:52:00.000Z', current: true },
+  { id: 'S-2', device: 'Safari · iOS', location: 'Hyderabad, IN', lastActive: '2026-07-23T06:20:00.000Z', current: false },
+  { id: 'S-3', device: 'Edge · Windows', location: 'Bengaluru, IN', lastActive: '2026-07-22T21:05:00.000Z', current: false },
+  { id: 'S-4', device: 'Firefox · Linux', location: 'Mumbai, IN', lastActive: '2026-07-20T13:40:00.000Z', current: false },
 ];
 
 const th = 'px-4 py-3 text-left font-semibold uppercase tracking-wider text-[11px] text-slate-500';

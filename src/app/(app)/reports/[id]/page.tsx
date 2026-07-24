@@ -14,7 +14,7 @@ function metricValue(name: string, seed: number): string {
   const n = name.toLowerCase();
   const h = Array.from(name).reduce((a, c) => a + c.charCodeAt(0), seed);
   if (n.includes('value') || n.includes('tco') || n.includes('exposure') || n.includes('savings') || n.includes('$'))
-    return formatMoney(120_000 + (h % 90) * 41_000);
+    return formatMoney(50_00_000 + (h % 90) * 12_00_000);
   if (n.includes('%') || n.includes('utilization') || n.includes('compliance') || n.includes('coverage'))
     return `${62 + (h % 34)}%`;
   if (n.includes('mttr')) return `${2 + (h % 6)}.${h % 10}h`;

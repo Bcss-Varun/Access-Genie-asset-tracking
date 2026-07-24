@@ -72,7 +72,7 @@ export default function MovementHistoryPage() {
           <div className="mb-4">
             <h3 className="text-base font-semibold text-slate-800">Facility Floor-Plan</h3>
             <p className="text-xs text-slate-500 mt-0.5">
-              Central Warehouse · Building A · {markers.length} current positions
+              Hyderabad Central Warehouse · Building A · {markers.length} current positions
             </p>
           </div>
 

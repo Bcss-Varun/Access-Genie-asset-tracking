@@ -7,7 +7,7 @@ import { cn, relTime, DEMO_NOW, formatMoney } from '@/lib/utils';
 const atRisk = mockAssets.filter((a) => (a.riskScore ?? 0) > 60).length;
 const predictedFailures = mockAssets.filter((a) => (a.riskScore ?? 0) >= 70).length;
 const anomalies24h = mockAnomalies.filter((a) => DEMO_NOW - Date.parse(a.detectedAt) < 24 * 3600_000).length;
-const savings = mockInsights.reduce((s, i) => s + (i.impactUsd ?? 0), 0);
+const savings = mockInsights.reduce((s, i) => s + (i.impactInr ?? 0), 0);
 
 // Risk score distribution
 const buckets = [
@@ -25,7 +25,7 @@ const riskDist = buckets.map((b, i) => ({
   }).length,
 }));
 
-const rankedInsights = [...mockInsights].sort((a, b) => (b.impactUsd ?? 0) - (a.impactUsd ?? 0));
+const rankedInsights = [...mockInsights].sort((a, b) => (b.impactInr ?? 0) - (a.impactInr ?? 0));
 const topAnomalies = [...mockAnomalies].sort((a, b) => b.confidence - a.confidence);
 
 const anomTone = (s: string): 'red' | 'amber' | 'slate' => (s === 'Critical' ? 'red' : s === 'Warning' ? 'amber' : 'slate');
@@ -95,7 +95,7 @@ export default function AiIntelligenceDashboard() {
               <div className="min-w-0 flex-1">
                 <div className="flex items-center justify-between gap-2">
                   <span className="text-sm font-semibold text-slate-900 truncate">{ins.title}</span>
-                  <span className="text-sm font-semibold text-emerald-600 shrink-0">{formatMoney(ins.impactUsd ?? 0)}</span>
+                  <span className="text-sm font-semibold text-emerald-600 shrink-0">{formatMoney(ins.impactInr ?? 0)}</span>
                 </div>
                 <p className="text-xs text-slate-500 mt-0.5 line-clamp-1">{ins.summary}</p>
                 <div className="mt-1.5 flex items-center gap-2 text-[11px] text-slate-400">

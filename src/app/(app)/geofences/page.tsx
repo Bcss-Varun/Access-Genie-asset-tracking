@@ -101,7 +101,7 @@ export default function GeofencesPage() {
             <div>
               <h3 className="text-base font-semibold text-slate-800">Facility Floor-Plan</h3>
               <p className="text-xs text-slate-500 mt-0.5">
-                Central Warehouse · Building A · {filtered.length} of {total} geofences shown
+                Hyderabad Central Warehouse · Building A · {filtered.length} of {total} geofences shown
               </p>
             </div>
           </div>

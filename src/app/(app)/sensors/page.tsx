@@ -3,7 +3,8 @@
 import { useMemo, useState } from 'react';
 import Link from 'next/link';
 import { mockSensors } from '@/lib/mock-data';
-import type { SensorStatus, SensorKind } from '@/types/asset';
+import type { Sensor, SensorStatus, SensorKind } from '@/types/asset';
+import { RegisterDeviceDialog } from '@/components/tracking/RegisterDeviceDialog';
 import { PageHeader, Badge, KpiCard, EmptyState } from '@/components/ui/primitives';
 import { Button } from '@/components/ui/Button';
 import { useToast } from '@/components/providers/ToastProvider';
@@ -20,7 +21,8 @@ const kindTone = (k: SensorKind): Tone =>
     : k === 'BLE Beacon' ? 'emerald'
       : k === 'RFID Tag' ? 'amber'
         : k === 'GPS Tracker' ? 'red'
-          : 'slate';
+          : k === 'QR Label' ? 'primary'
+            : 'slate';
 
 const barHex = (pct: number): string =>
   pct > 60 ? '#10b981' : pct > 25 ? '#f59e0b' : '#ef4444';
@@ -47,7 +49,7 @@ function Meter({ value, hint }: { value: number | undefined; hint?: string }) {
 }
 
 const STATUS_FILTERS: (SensorStatus | 'All')[] = ['All', 'Online', 'Low Battery', 'Offline'];
-const KIND_FILTERS: SensorKind[] = ['RFID Tag', 'BLE Beacon', 'UWB Tag', 'GPS Tracker', 'LoRaWAN Sensor', 'Environmental'];
+const KIND_FILTERS: SensorKind[] = ['RFID Tag', 'BLE Beacon', 'UWB Tag', 'GPS Tracker', 'QR Label', 'LoRaWAN Sensor', 'Environmental'];
 
 export default function SensorsPage() {
   const { toast } = useToast();
@@ -56,16 +58,20 @@ export default function SensorsPage() {
   const [kinds, setKinds] = useState<Set<SensorKind>>(new Set());
   const [selected, setSelected] = useState<Set<string>>(new Set());
 
+  // Registry is in-session state so newly-onboarded devices appear immediately.
+  const [devices, setDevices] = useState<Sensor[]>(mockSensors);
+  const [registerOpen, setRegisterOpen] = useState(false);
+
   // ── KPIs ─────────────────────────────────────────────────────────────────────
-  const total = mockSensors.length;
-  const online = mockSensors.filter((s) => s.status === 'Online').length;
-  const lowBattery = mockSensors.filter((s) => s.status === 'Low Battery').length;
-  const offline = mockSensors.filter((s) => s.status === 'Offline').length;
+  const total = devices.length;
+  const online = devices.filter((s) => s.status === 'Online').length;
+  const lowBattery = devices.filter((s) => s.status === 'Low Battery').length;
+  const offline = devices.filter((s) => s.status === 'Offline').length;
 
   // ── filtered rows ─────────────────────────────────────────────────────────────
   const rows = useMemo(() => {
     const q = query.trim().toLowerCase();
-    return mockSensors.filter((s) => {
+    return devices.filter((s) => {
       if (status !== 'All' && s.status !== status) return false;
       if (kinds.size > 0 && !kinds.has(s.kind)) return false;
       if (!q) return true;
@@ -74,10 +80,25 @@ export default function SensorsPage() {
         s.id.toLowerCase().includes(q) ||
         (s.assetName?.toLowerCase().includes(q) ?? false) ||
         s.gatewayId.toLowerCase().includes(q) ||
+        (s.tagId?.toLowerCase().includes(q) ?? false) ||
+        (s.facility?.toLowerCase().includes(q) ?? false) ||
         (s.zone?.toLowerCase().includes(q) ?? false)
       );
     });
-  }, [query, status, kinds]);
+  }, [devices, query, status, kinds]);
+
+  const registerDevice = (device: Sensor) => {
+    setDevices((prev) => [device, ...prev]);
+    setRegisterOpen(false);
+    setQuery('');
+    setStatus('All');
+    setKinds(new Set());
+    toast({
+      title: 'Device registered',
+      description: `${device.name} (${device.id}) is live on ${device.gatewayId}${device.assetName ? ` and bonded to ${device.assetName}` : ' as spare stock'}.`,
+      tone: 'success',
+    });
+  };
 
   const toggleKind = (k: SensorKind) =>
     setKinds((prev) => {
@@ -120,16 +141,16 @@ export default function SensorsPage() {
   return (
     <div className="h-full flex flex-col space-y-6">
       <PageHeader
-        title="Sensors & Devices"
-        subtitle="IoT device fleet — tags, beacons and environmental sensors across the RTLS grid."
+        title="Tag & Device Registry"
+        subtitle="Every RFID, BLE, UWB, GPS, QR and LoRaWAN device on the RTLS grid — and where each one reports."
         breadcrumb={[
-          { label: 'Tracking', href: '/tracking' },
-          { label: 'Sensors & Gateways' },
+          { label: 'Real-Time Asset Tracking', href: '/tracking' },
+          { label: 'Tag & Device Registry' },
         ]}
         actions={
           <>
-            <Button variant="outline" size="md" onClick={() => toast({ title: 'Register device', description: 'Device onboarding wizard is not part of this demo.', tone: 'info' })}>
-              Register device
+            <Button variant="outline" size="md" onClick={() => setRegisterOpen(true)}>
+              + Register device
             </Button>
             <Link href="/tracking">
               <Button variant="primary" size="md">Live map</Button>
@@ -153,7 +174,7 @@ export default function SensorsPage() {
             <input
               value={query}
               onChange={(e) => setQuery(e.target.value)}
-              placeholder="Search devices, assets, gateways…"
+              placeholder="Search devices, tag IDs, assets, gateways, facilities…"
               className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-700 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-primary-500"
             />
           </div>
@@ -241,6 +262,7 @@ export default function SensorsPage() {
                 </th>
                 <th className="px-4 py-3 font-semibold">Device</th>
                 <th className="px-4 py-3 font-semibold">Kind</th>
+                <th className="px-4 py-3 font-semibold">Tag ID</th>
                 <th className="px-4 py-3 font-semibold">Linked Asset</th>
                 <th className="px-4 py-3 font-semibold">Status</th>
                 <th className="px-4 py-3 font-semibold">Battery</th>
@@ -256,7 +278,7 @@ export default function SensorsPage() {
                     key={s.id}
                     className={cn(
                       'border-b border-slate-100 transition-colors',
-                      checked ? 'bg-primary-50/50' : 'hover:bg-slate-50',
+                      checked ? 'bg-primary-50/50' : s.registeredInSession ? 'bg-emerald-50/60 hover:bg-emerald-50' : 'hover:bg-slate-50',
                     )}
                   >
                     <td className="px-4 py-3">
@@ -269,13 +291,21 @@ export default function SensorsPage() {
                       />
                     </td>
                     <td className="px-4 py-3">
-                      <Link href={`/sensors/${s.id}`} className="font-medium text-slate-800 hover:text-primary-600">
-                        {s.name}
-                      </Link>
-                      <div className="text-xs text-slate-400">{s.id}{s.zone ? ` · ${s.zone}` : ''}</div>
+                      <span className="flex items-center gap-2">
+                        <Link href={`/sensors/${s.id}`} className="font-medium text-slate-800 hover:text-primary-600">
+                          {s.name}
+                        </Link>
+                        {s.registeredInSession && <Badge tone="emerald">New</Badge>}
+                      </span>
+                      <div className="text-xs text-slate-400">
+                        {s.id}{s.zone ? ` · ${s.zone}` : ''}{s.facility ? ` · ${s.facility}` : ''}
+                      </div>
                     </td>
                     <td className="px-4 py-3">
                       <Badge tone={kindTone(s.kind)}>{s.kind}</Badge>
+                    </td>
+                    <td className="px-4 py-3">
+                      <span className="font-mono text-xs text-slate-500">{s.tagId ?? '—'}</span>
                     </td>
                     <td className="px-4 py-3">
                       {s.assetId ? (
@@ -330,6 +360,14 @@ export default function SensorsPage() {
           />
         )}
       </div>
+
+      {registerOpen && (
+        <RegisterDeviceDialog
+          devices={devices}
+          onClose={() => setRegisterOpen(false)}
+          onRegister={registerDevice}
+        />
+      )}
     </div>
   );
 }

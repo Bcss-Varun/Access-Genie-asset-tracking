@@ -21,8 +21,10 @@ interface StandardPack {
 }
 const standardPacks: StandardPack[] = [
   { id: 'STD-SOC2', name: 'SOC 2 Evidence Pack', framework: 'SOC 2 Type II', description: 'Access controls, asset inventory completeness and change-log evidence for the audit period.', format: 'PDF + Excel' },
-  { id: 'STD-GDPR', name: 'GDPR Data Map', framework: 'GDPR', description: 'Data-bearing asset register, processing locations and retention posture.', format: 'PDF' },
-  { id: 'STD-SOC2', name: 'SOC 2 Type II Evidence', framework: 'AICPA SOC 2', description: 'IT equipment inspection, firmware patching, and network device compliance.', format: 'PDF' },
+  { id: 'STD-DPDP', name: 'DPDP Act Data Map', framework: 'DPDP Act 2023', description: 'Data-bearing asset register, processing locations in India and retention posture.', format: 'PDF' },
+  { id: 'STD-CERTIN', name: 'CERT-In Incident Pack', framework: 'CERT-In Directions', description: 'Six-hour incident timeline, 180-day log retention proof and NTP-sync attestation.', format: 'PDF' },
+  { id: 'STD-ISO27001', name: 'ISO 27001 Annex A Evidence', framework: 'ISO 27001', description: 'IT equipment inspection, firmware patching and network device compliance mapped to Annex A controls.', format: 'PDF' },
+  { id: 'STD-BIS', name: 'BIS / E-Waste Disposal Pack', framework: 'BIS / MeitY CRS', description: 'CRS registration evidence and E-Waste (Management) Rules disposal manifests per asset.', format: 'PDF + Excel' },
 ];
 
 export default function ComplianceReportsPage() {
@@ -44,7 +46,7 @@ export default function ComplianceReportsPage() {
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         <KpiCard label="Compliance Reports" value={complianceReports.length} sub="In library" tone="primary" accent />
         <KpiCard label="Standard Packs" value={standardPacks.length} sub="Framework templates" tone="slate" />
-        <KpiCard label="Frameworks" value={4} sub="SOC 2 · GDPR · JC · Internal" tone="slate" />
+        <KpiCard label="Frameworks" value={5} sub="ISO 27001 · SOC 2 · DPDP · CERT-In · BIS" tone="slate" />
         <KpiCard label="Audit Readiness" value="98%" sub="Evidence coverage" tone="emerald" />
       </div>
 

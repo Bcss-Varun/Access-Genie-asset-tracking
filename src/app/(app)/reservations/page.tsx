@@ -29,10 +29,10 @@ const WEEK = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
 
 const RESERVATIONS: Reservation[] = [
   { id: 'RES-7001', assetId: 'AST-1014', assetName: 'Fluke Networks DSX-8000', reservedBy: 'Network Team', startDay: 0, endDay: 1, startLabel: 'Mon 08:00', endLabel: 'Tue 17:00', status: 'In Use' },
-  { id: 'RES-7002', assetId: 'AST-1003', assetName: 'Lenovo ThinkPad T14 (Loaner)', reservedBy: 'Diego Martinez', startDay: 1, endDay: 2, startLabel: 'Tue 09:00', endLabel: 'Wed 12:00', status: 'Confirmed' },
-  { id: 'RES-7003', assetId: 'AST-1010', assetName: 'Dell UltraSharp 32" Monitor (Loaner)', reservedBy: 'Alex Designer', startDay: 2, endDay: 2, startLabel: 'Wed 07:00', endLabel: 'Wed 15:00', status: 'Confirmed' },
+  { id: 'RES-7002', assetId: 'AST-1003', assetName: 'Lenovo ThinkPad T14 (Loaner)', reservedBy: 'Deepak Nair', startDay: 1, endDay: 2, startLabel: 'Tue 09:00', endLabel: 'Wed 12:00', status: 'Confirmed' },
+  { id: 'RES-7003', assetId: 'AST-1010', assetName: 'Dell UltraSharp 32" Monitor (Loaner)', reservedBy: 'Aditya Rao', startDay: 2, endDay: 2, startLabel: 'Wed 07:00', endLabel: 'Wed 15:00', status: 'Confirmed' },
   { id: 'RES-7004', assetId: 'AST-1014', assetName: 'Fluke Networks DSX-8000', reservedBy: 'Facilities Team', startDay: 1, endDay: 2, startLabel: 'Tue 13:00', endLabel: 'Wed 10:00', status: 'Pending' },
-  { id: 'RES-7005', assetId: 'AST-1011', assetName: 'Zebra TC52 Mobile Computer', reservedBy: 'Elena Ortiz', startDay: 3, endDay: 4, startLabel: 'Thu 06:00', endLabel: 'Fri 18:00', status: 'Confirmed' },
+  { id: 'RES-7005', assetId: 'AST-1011', assetName: 'Zebra TC52 Mobile Computer', reservedBy: 'Ishita Chawla', startDay: 3, endDay: 4, startLabel: 'Thu 06:00', endLabel: 'Fri 18:00', status: 'Confirmed' },
   { id: 'RES-7006', assetId: 'AST-1003', assetName: 'Lenovo ThinkPad T14 (Loaner)', reservedBy: 'IT Helpdesk', startDay: 5, endDay: 6, startLabel: 'Sat 08:00', endLabel: 'Sun 20:00', status: 'Pending' },
 ];
 

@@ -22,9 +22,9 @@ const daysAgo = (d: number) => new Date(Date.parse('2026-07-23T09:00:00.000Z') -
 const FRAMEWORKS: Framework[] = [
   { id: 'soc2', name: 'SOC 2 Type II', scope: 'Trust Services Criteria — security, availability, confidentiality', status: 'Certified', coverage: 98, lastAssessment: daysAgo(52), evidence: 214 },
   { id: 'iso27001', name: 'ISO 27001', scope: 'Information Security Management System (ISMS)', status: 'Certified', coverage: 95, lastAssessment: daysAgo(120), evidence: 176 },
-  { id: 'gdpr', name: 'GDPR', scope: 'EU data protection & privacy for personal data', status: 'In Progress', coverage: 82, lastAssessment: daysAgo(30), evidence: 88 },
-  { id: 'nist', name: 'NIST CSF 2.0', scope: 'Cybersecurity risk management — identify, protect, detect, respond', status: 'In Progress', coverage: 76, lastAssessment: daysAgo(18), evidence: 141 },
-  { id: 'cis', name: 'CIS Controls v8', scope: 'Prioritized security controls & asset inventory hygiene', status: 'Gap', coverage: 61, lastAssessment: daysAgo(9), evidence: 63 },
+  { id: 'dpdp', name: 'DPDP Act 2023', scope: 'India digital personal data protection — consent, retention & breach duties', status: 'In Progress', coverage: 82, lastAssessment: daysAgo(30), evidence: 88 },
+  { id: 'certin', name: 'CERT-In Directions', scope: 'Six-hour incident reporting, 180-day log retention & NTP sync (MeitY)', status: 'In Progress', coverage: 76, lastAssessment: daysAgo(18), evidence: 141 },
+  { id: 'bis', name: 'BIS / MeitY CRS', scope: 'Compulsory Registration Scheme — IT hardware conformity & e-waste rules', status: 'Gap', coverage: 61, lastAssessment: daysAgo(9), evidence: 63 },
 ];
 
 const statusTone = (s: FrameworkStatus): 'emerald' | 'amber' | 'red' =>
@@ -40,7 +40,7 @@ export default function RegulatoryPage() {
     <div className="h-full flex flex-col space-y-6">
       <PageHeader
         title="Regulatory Frameworks"
-        subtitle="Compliance posture across the frameworks that govern your operations."
+        subtitle="Compliance posture across the Indian and international frameworks that govern your operations."
         breadcrumb={[{ label: 'Compliance' }, { label: 'Regulatory' }]}
       />
 

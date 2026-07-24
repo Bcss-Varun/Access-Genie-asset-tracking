@@ -61,8 +61,8 @@ export default function MyWorkPage() {
   const approvals = useMemo<Approval[]>(() => {
     if (!isApprover) return [];
     return [
-      { id: 'TR-4001', title: 'Transfer: Cisco Catalyst 9500 → Server Room Beta', requestedBy: 'James Park', at: hoursAgo(2) },
-      { id: 'TR-4004', title: 'Transfer: Fluke DSX-8000 → Central Warehouse', requestedBy: 'Network Team', at: hoursAgo(3) },
+      { id: 'TR-4001', title: 'Transfer: Cisco Catalyst 9500 → Server Room Beta', requestedBy: 'Arjun Menon', at: hoursAgo(2) },
+      { id: 'TR-4004', title: 'Transfer: Fluke DSX-8000 → Hyderabad Central Warehouse', requestedBy: 'Network Team', at: hoursAgo(3) },
     ];
   }, [isApprover]);
 
