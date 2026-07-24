@@ -3,8 +3,6 @@ import type { ModuleKey } from '@access-genie/shared';
 export interface NavItem {
   label: string;
   to: string;
-  /** Marks routes specced in the blueprint but not yet built. */
-  comingSoon?: boolean;
 }
 
 export interface NavSection {
@@ -40,9 +38,11 @@ export const navSections: NavSection[] = [
     icon: '🏠',
     module: 'workspace',
     items: [
-      { label: 'Dashboards', to: '/dashboards', comingSoon: true },
-      { label: 'AI Copilot', to: '/copilot', comingSoon: true },
+      { label: 'Dashboards', to: '/dashboards' },
+      { label: 'AI Copilot', to: '/copilot' },
       { label: 'Notifications', to: '/notifications' },
+      { label: "What's New", to: '/whats-new' },
+      { label: 'Help Center', to: '/help' },
     ],
   },
 
@@ -56,12 +56,14 @@ export const navSections: NavSection[] = [
     module: 'tracking',
     items: [
       { label: 'Live Asset Map', to: '/tracking' },
-      { label: 'Tag & Device Registry', to: '/tracking/devices' },
-      { label: 'Geofencing Zones', to: '/tracking/geofences' },
-      { label: 'Gateways & Readers', to: '/tracking/gateways' },
-      { label: 'Movement History', to: '/tracking/movement', comingSoon: true },
-      { label: 'Zone Heatmaps', to: '/tracking/heatmaps', comingSoon: true },
-      { label: 'Digital Twin', to: '/tracking/twin', comingSoon: true },
+      { label: 'Geofencing Zones', to: '/geofences' },
+      { label: 'Movement History', to: '/movement' },
+      { label: 'Tag & Device Registry', to: '/sensors' },
+      { label: 'Gateways & Readers', to: '/gateways' },
+      { label: 'Zone Heatmaps', to: '/heatmaps' },
+      { label: 'Digital Twin', to: '/twin' },
+      { label: 'Telemetry Explorer', to: '/telemetry' },
+      { label: 'Label & Tag Printing', to: '/assets/labels' },
     ],
   },
 
@@ -70,15 +72,20 @@ export const navSections: NavSection[] = [
     id: 'ai',
     label: 'AI Asset Intelligence',
     fullLabel: 'AI-Powered Asset Intelligence and Utilization Analytics',
-    to: '/insights',
+    to: '/ai-insights',
     icon: '✨',
     module: 'ai',
     items: [
-      { label: 'AI Insights Feed', to: '/insights' },
-      { label: 'Utilization Analytics', to: '/insights/utilization', comingSoon: true },
-      { label: 'Predictive Failure', to: '/insights/predictive', comingSoon: true },
-      { label: 'Anomaly Detection', to: '/insights/anomaly', comingSoon: true },
-      { label: 'Model Registry', to: '/insights/models', comingSoon: true },
+      { label: 'AI Insights Feed', to: '/ai-insights' },
+      { label: 'Utilization Analytics', to: '/ai/utilization' },
+      { label: 'Predictive Failure', to: '/ai/predictive' },
+      { label: 'Theft & Custody Anomaly', to: '/ai/theft' },
+      { label: 'Anomaly Detection', to: '/ai/anomaly' },
+      { label: 'CapEx Forecasting', to: '/ai/forecasting' },
+      { label: 'Fleet Health Scoring', to: '/ai/health' },
+      { label: 'Model Registry', to: '/ai/models' },
+      { label: 'Explainability', to: '/ai/explainability' },
+      { label: 'Model Feedback', to: '/ai/feedback' },
     ],
   },
 
@@ -93,10 +100,13 @@ export const navSections: NavSection[] = [
     items: [
       { label: 'IT Asset Registry', to: '/assets' },
       { label: 'Register Asset', to: '/assets/new' },
-      { label: 'Chain of Custody', to: '/custody' },
-      { label: 'Lifecycle Management', to: '/assets/lifecycle', comingSoon: true },
-      { label: 'Asset Financials', to: '/assets/financials', comingSoon: true },
-      { label: 'Bulk Import', to: '/assets/import', comingSoon: true },
+      { label: 'Digital Asset Passports', to: '/taxonomy' },
+      { label: 'Lifecycle Management', to: '/lifecycle' },
+      { label: 'Groups & Fleets', to: '/groups' },
+      { label: 'Kits & Bundles', to: '/kits' },
+      { label: 'Asset Financials', to: '/financials' },
+      { label: 'Depreciation Schedules', to: '/depreciation' },
+      { label: 'Bulk Import', to: '/assets/import' },
     ],
   },
 
@@ -111,9 +121,12 @@ export const navSections: NavSection[] = [
     items: [
       { label: 'Automated Work Orders', to: '/maintenance' },
       { label: 'Raise Work Order', to: '/maintenance/new' },
-      { label: 'Maintenance Calendar', to: '/maintenance/calendar', comingSoon: true },
-      { label: 'Preventive (PM)', to: '/maintenance/pm', comingSoon: true },
-      { label: 'Inspections', to: '/maintenance/inspections', comingSoon: true },
+      { label: 'Maintenance Calendar', to: '/maintenance/calendar' },
+      { label: 'Predictive Alerts', to: '/predictive' },
+      { label: 'Preventive (PM)', to: '/pm' },
+      { label: 'Inspections', to: '/inspections' },
+      { label: 'Checklists', to: '/checklists' },
+      { label: 'Spares Consumption', to: '/consumption' },
     ],
   },
 
@@ -127,11 +140,15 @@ export const navSections: NavSection[] = [
     module: 'compliance',
     items: [
       { label: 'Alert Center', to: '/alerts' },
-      { label: 'Alert Rules', to: '/alerts/rules' },
-      { label: 'Immutable Audit Log', to: '/audit' },
+      { label: 'Alert Rules', to: '/alert-rules' },
+      { label: 'Escalation Policies', to: '/escalations' },
+      { label: 'Compliance Monitoring', to: '/compliance-reports' },
+      { label: 'Regulatory Frameworks', to: '/regulatory' },
       { label: 'Chain of Custody', to: '/custody' },
-      { label: 'Compliance Monitoring', to: '/compliance/reports', comingSoon: true },
-      { label: 'Certifications', to: '/compliance/certifications', comingSoon: true },
+      { label: 'Certifications', to: '/certifications' },
+      { label: 'Audit Center', to: '/audit' },
+      { label: 'Immutable Audit Log', to: '/audit-log' },
+      { label: 'Data Retention', to: '/retention' },
     ],
   },
 
@@ -144,10 +161,13 @@ export const navSections: NavSection[] = [
     icon: '📱',
     module: 'operations',
     items: [
-      { label: 'Field Operations', to: '/field-ops', comingSoon: true },
-      { label: 'My Work Queue', to: '/field-ops/my-work', comingSoon: true },
-      { label: 'Check-in / Check-out', to: '/field-ops/checkinout', comingSoon: true },
-      { label: 'Cycle Counts', to: '/field-ops/cycle-counts', comingSoon: true },
+      { label: 'Field Operations', to: '/field-ops' },
+      { label: 'My Work Queue', to: '/my-work' },
+      { label: 'Check-in / Check-out', to: '/checkinout' },
+      { label: 'Technician Scheduling', to: '/scheduling' },
+      { label: 'Asset Transfers', to: '/operations/transfers' },
+      { label: 'Cycle Counts', to: '/cycle-counts' },
+      { label: 'Reservations', to: '/reservations' },
     ],
   },
 
@@ -159,9 +179,11 @@ export const navSections: NavSection[] = [
     icon: '📄',
     module: 'analytics',
     items: [
-      { label: 'Report Library', to: '/reports', comingSoon: true },
-      { label: 'Report Builder', to: '/reports/builder', comingSoon: true },
-      { label: 'Export Center', to: '/reports/exports', comingSoon: true },
+      { label: 'Report Library', to: '/reports' },
+      { label: 'Report Builder', to: '/reports/builder' },
+      { label: 'BI & Warehouse Sync', to: '/bi' },
+      { label: 'Scheduled Subscriptions', to: '/subscriptions' },
+      { label: 'Export Center', to: '/exports' },
     ],
   },
   {
@@ -172,8 +194,10 @@ export const navSections: NavSection[] = [
     module: 'inventory',
     items: [
       { label: 'IT Spares Overview', to: '/inventory' },
-      { label: 'Warehouses & Bins', to: '/inventory/warehouses', comingSoon: true },
-      { label: 'Purchase Orders', to: '/inventory/purchase-orders', comingSoon: true },
+      { label: 'Warehouses & Bins', to: '/warehouses' },
+      { label: 'Reorder Planning', to: '/reorder' },
+      { label: 'Purchase Orders', to: '/procurement' },
+      { label: 'Suppliers', to: '/suppliers' },
     ],
   },
   {
@@ -185,8 +209,15 @@ export const navSections: NavSection[] = [
     items: [
       { label: 'Users & Roles', to: '/admin/users' },
       { label: 'Roles & Permissions', to: '/admin/roles' },
-      { label: 'Integrations & API', to: '/admin/integrations', comingSoon: true },
-      { label: 'Branding & White-Label', to: '/admin/branding', comingSoon: true },
+      { label: 'Teams', to: '/admin/teams' },
+      { label: 'Org & Facilities', to: '/admin/org' },
+      { label: 'Approval Workflows', to: '/admin/workflows' },
+      { label: 'Integrations & API', to: '/admin/integrations' },
+      { label: 'Webhooks', to: '/admin/webhooks' },
+      { label: 'API Keys', to: '/admin/api-keys' },
+      { label: 'Branding & White-Label', to: '/admin/branding' },
+      { label: 'Data Management', to: '/admin/data' },
+      { label: 'Billing & Subscription', to: '/admin/billing' },
     ],
   },
 ];
@@ -199,7 +230,7 @@ export function navForModules(modules: ModuleKey[]): NavSection[] {
 /** Every destination, flattened — the ⌘K palette's index. */
 export const allNavItems = navSections.flatMap((section) => {
   const group = section.fullLabel ?? section.label;
-  const hub = { label: section.label, to: section.to, icon: section.icon, group, comingSoon: false };
+  const hub = { label: section.label, to: section.to, icon: section.icon, group };
   const children = section.items
     .filter((item) => item.to !== section.to)
     .map((item) => ({ ...item, icon: section.icon, group }));

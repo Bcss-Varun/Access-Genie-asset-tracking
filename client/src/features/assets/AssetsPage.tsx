@@ -137,7 +137,7 @@ export function AssetsPage() {
             description={hasFilters ? 'Try widening the search or clearing a filter.' : 'Register your first asset to start building the graph.'}
             action={
               hasFilters ? (
-                <Button variant="secondary" size="sm" onClick={() => setParams({}, { replace: true })}>
+                <Button variant="outline" size="sm" onClick={() => setParams({}, { replace: true })}>
                   Clear filters
                 </Button>
               ) : (
@@ -215,13 +215,13 @@ export function AssetsPage() {
               <strong className="text-slate-700">{data.meta.total}</strong>
             </span>
             <span className="flex items-center gap-2">
-              <Button variant="secondary" size="sm" disabled={!data.meta.hasPrev} onClick={() => setParam('page', String(page - 1))}>
+              <Button variant="outline" size="sm" disabled={!data.meta.hasPrev} onClick={() => setParam('page', String(page - 1))}>
                 Previous
               </Button>
               <span className="tabular-nums">
                 {data.meta.page} / {data.meta.totalPages}
               </span>
-              <Button variant="secondary" size="sm" disabled={!data.meta.hasNext} onClick={() => setParam('page', String(page + 1))}>
+              <Button variant="outline" size="sm" disabled={!data.meta.hasNext} onClick={() => setParam('page', String(page + 1))}>
                 Next
               </Button>
             </span>

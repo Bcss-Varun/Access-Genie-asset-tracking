@@ -142,16 +142,42 @@ immediately.
 - **Charts are small multiples, never dual-axis.** Utilization (%) and downtime (hours) share an x-axis in
   stacked panels; two y-scales would invent crossings that mean nothing.
 
-## What is ported so far
+## Screens
 
-Complete: the backend (all models, services, auth, RBAC, seed) and the client shell (router, auth flow,
-API layer, design system, the six-pillar sidebar, ⌘K palette).
+**All 119 screens from the prototype are present**, across every section — workspace, tracking, AI,
+lifecycle, maintenance, compliance, mobile workforce, analytics, inventory, administration and settings.
 
-Screens live against the API: **login · dashboard · asset registry · asset 360 · register asset · live map ·
-device registry · geofences · gateways · alert center · alert rules · work orders · work-order detail ·
-raise work order · AI insights · users · roles · audit log · chain of custody · inventory · notifications.**
+They come from two places:
 
-Remaining blueprint routes render an honest `ComingSoon` stub rather than a dead link.
+| | Count | Data source |
+|---|---|---|
+| **API-backed** | 20 | live MongoDB through the REST API — reads *and* writes |
+| **Ported from the prototype** | 99 | the fixture dataset in `client/src/lib/mock-data.ts` |
+
+The API-backed set is: dashboard · asset registry · asset 360 · register asset · live map · device
+registry · geofences · gateways · alert center · alert rules · work orders · work-order detail · raise
+work order · AI insights · users · roles · audit log · chain of custody · inventory · notifications.
+Everything else renders dummy data.
+
+The two sets are disjoint by construction — `client/scripts/port-prototype.mjs` excludes every
+API-backed path — because a fixture-keyed page cannot show a record created through the app, so it must
+never own that route.
+
+### Re-running the port
+
+The prototype's screens were converted mechanically, not by hand:
+
+```bash
+node client/scripts/port-prototype.mjs   # re-ports src/app/(app)/**  →  client/src/pages/**
+```
+
+It rewrites `next/link` → react-router `Link`, `next/navigation` hooks → their router equivalents, and
+async `params` → `useParams()`, then regenerates `client/src/app/prototype-routes.tsx`. Every ported
+route is code-split, so 99 extra screens add nothing to the initial bundle.
+
+Two compiler flags — `noUncheckedIndexedAccess` and `verbatimModuleSyntax` — are off in
+`client/tsconfig.json` because the ported screens were authored without them. The server, which is
+entirely first-party code, keeps both.
 
 ---
 

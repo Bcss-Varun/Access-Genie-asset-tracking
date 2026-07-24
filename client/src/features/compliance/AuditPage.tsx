@@ -81,13 +81,13 @@ export function AuditPage() {
           <div className="flex items-center justify-between px-4 py-3 border-t border-slate-100 text-xs text-slate-500">
             <span>{data.meta.total} records</span>
             <span className="flex items-center gap-2">
-              <Button variant="secondary" size="sm" disabled={!data.meta.hasPrev} onClick={() => setPage(page - 1)}>
+              <Button variant="outline" size="sm" disabled={!data.meta.hasPrev} onClick={() => setPage(page - 1)}>
                 Previous
               </Button>
               <span className="tabular-nums">
                 {data.meta.page} / {data.meta.totalPages}
               </span>
-              <Button variant="secondary" size="sm" disabled={!data.meta.hasNext} onClick={() => setPage(page + 1)}>
+              <Button variant="outline" size="sm" disabled={!data.meta.hasNext} onClick={() => setPage(page + 1)}>
                 Next
               </Button>
             </span>

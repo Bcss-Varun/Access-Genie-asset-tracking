@@ -246,7 +246,7 @@ export function WorkOrderDetailPage() {
                 aria-label="Hours worked"
                 className="w-24 rounded-lg border border-slate-300 px-3 py-1.5 text-sm outline-none focus:border-primary-500 focus:ring-2 focus:ring-primary-100"
               />
-              <Button type="submit" size="sm" variant="secondary" disabled={!hours || logLabor.isPending}>
+              <Button type="submit" size="sm" variant="outline" disabled={!hours || logLabor.isPending}>
                 Log time
               </Button>
             </form>
@@ -288,7 +288,7 @@ export function WorkOrderDetailPage() {
               aria-label="Add a comment"
               className="flex-1 rounded-lg border border-slate-300 px-3 py-1.5 text-sm outline-none focus:border-primary-500 focus:ring-2 focus:ring-primary-100"
             />
-            <Button type="submit" size="sm" variant="secondary" disabled={!comment.trim() || addComment.isPending}>
+            <Button type="submit" size="sm" variant="outline" disabled={!comment.trim() || addComment.isPending}>
               Post
             </Button>
           </form>

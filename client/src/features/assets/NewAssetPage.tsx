@@ -174,7 +174,7 @@ export function NewAssetPage() {
           <Button type="submit" disabled={mutation.isPending}>
             {mutation.isPending ? 'Registering…' : 'Register asset'}
           </Button>
-          <Button type="button" variant="secondary" onClick={() => navigate('/assets')}>
+          <Button type="button" variant="outline" onClick={() => navigate('/assets')}>
             Cancel
           </Button>
         </div>

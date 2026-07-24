@@ -230,7 +230,7 @@ function CreateUserForm({ onDone }: { onDone: () => void }) {
         <Button type="submit" disabled={create.isPending}>
           {create.isPending ? 'Creating…' : 'Create user'}
         </Button>
-        <Button type="button" variant="secondary" onClick={onDone}>
+        <Button type="button" variant="outline" onClick={onDone}>
           Cancel
         </Button>
       </div>

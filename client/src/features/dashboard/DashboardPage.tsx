@@ -34,7 +34,7 @@ export function DashboardPage() {
         subtitle={`${session.role.name} · ${session.user.title}`}
         actions={
           <>
-            <LinkButton to="/tracking" variant="secondary" size="sm">
+            <LinkButton to="/tracking" variant="outline" size="sm">
               🗺️ Live map
             </LinkButton>
             <LinkButton to="/assets/new" size="sm">

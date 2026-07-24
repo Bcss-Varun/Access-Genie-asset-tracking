@@ -1,8 +1,9 @@
-import { createBrowserRouter, Navigate } from 'react-router-dom';
+import { createBrowserRouter } from 'react-router-dom';
 import { AppShell } from '@/components/layout/AppShell';
 import { RequireAuth, RequireModule } from './RequireAuth';
-import { ComingSoon, NotFoundPage } from '@/components/ComingSoon';
+import { NotFoundPage } from '@/components/ComingSoon';
 import { RouteError } from './RouteError';
+import { prototypeRoutes } from './prototype-routes';
 
 import { LoginPage } from '@/features/auth/LoginPage';
 import { DashboardPage } from '@/features/dashboard/DashboardPage';
@@ -29,12 +30,22 @@ import { InventoryPage } from '@/features/inventory/InventoryPage';
 /**
  * The route tree.
  *
- * Everything below `RequireAuth` needs a session; module-gated branches sit
- * behind `RequireModule`, which mirrors the API's `requireModule` guard so a
- * user meets one clear explanation instead of a screen of 403s.
+ * Two sources feed it:
  *
- * Routes specced in the blueprint but not yet built resolve to `ComingSoon`,
- * so the (deliberately short) sidebar never dead-ends.
+ *  1. **API-backed screens** (below) — these read and write the live MongoDB
+ *     through the REST API.
+ *  2. **`prototypeRoutes`** — the remaining 99 screens ported from the Next.js
+ *     prototype, rendering the fixture dataset. Code-split, so they cost
+ *     nothing until visited.
+ *
+ * The two sets are disjoint: the generator excludes every path declared below,
+ * so no path is registered twice. Where both could exist, the live version
+ * wins by construction — a fixture-keyed detail page cannot show an asset
+ * created through the app, so it must never own that route.
+ *
+ * Module-gated branches sit behind `RequireModule`, mirroring the API's
+ * `requireModule` guard, so a user meets one clear explanation instead of a
+ * screen full of 403s.
  */
 export const router = createBrowserRouter([
   { path: '/login', element: <LoginPage />, errorElement: <RouteError /> },
@@ -46,101 +57,66 @@ export const router = createBrowserRouter([
       {
         element: <AppShell />,
         children: [
+          ...prototypeRoutes,
+
           // ── Workspace ──────────────────────────────────────────────────
           { index: true, element: <DashboardPage /> },
           { path: 'notifications', element: <NotificationsPage /> },
-          { path: 'dashboards', element: <ComingSoon /> },
-          { path: 'copilot', element: <ComingSoon /> },
 
           // ── Pillar 1: Real-time tracking ───────────────────────────────
           {
-            path: 'tracking',
             element: <RequireModule module="tracking" />,
             children: [
-              { index: true, element: <LiveMapPage /> },
-              { path: 'devices', element: <DevicesPage /> },
+              { path: 'tracking', element: <LiveMapPage /> },
+              { path: 'sensors', element: <DevicesPage /> },
               { path: 'geofences', element: <GeofencesPage /> },
               { path: 'gateways', element: <GatewaysPage /> },
-              { path: '*', element: <ComingSoon /> },
             ],
           },
 
           // ── Pillar 2: AI intelligence ──────────────────────────────────
           {
-            path: 'insights',
             element: <RequireModule module="ai" />,
-            children: [
-              { index: true, element: <InsightsPage /> },
-              { path: '*', element: <ComingSoon /> },
-            ],
+            children: [{ path: 'ai-insights', element: <InsightsPage /> }],
           },
 
           // ── Pillar 3: Passport & lifecycle ─────────────────────────────
           {
-            path: 'assets',
             element: <RequireModule module="assets" />,
             children: [
-              { index: true, element: <AssetsPage /> },
+              { path: 'assets', element: <AssetsPage /> },
               // `new` precedes `:id` so it is not swallowed as an asset ID.
-              { path: 'new', element: <NewAssetPage /> },
-              { path: 'lifecycle', element: <ComingSoon /> },
-              { path: 'financials', element: <ComingSoon /> },
-              { path: 'import', element: <ComingSoon /> },
-              { path: ':id', element: <AssetDetailPage /> },
+              { path: 'assets/new', element: <NewAssetPage /> },
+              { path: 'assets/:id', element: <AssetDetailPage /> },
             ],
           },
 
           // ── Pillar 4: Predictive maintenance ───────────────────────────
           {
-            path: 'maintenance',
             element: <RequireModule module="maintenance" />,
             children: [
-              { index: true, element: <WorkOrdersPage /> },
-              { path: 'new', element: <NewWorkOrderPage /> },
-              { path: 'calendar', element: <ComingSoon /> },
-              { path: 'pm', element: <ComingSoon /> },
-              { path: 'inspections', element: <ComingSoon /> },
-              { path: ':id', element: <WorkOrderDetailPage /> },
+              { path: 'maintenance', element: <WorkOrdersPage /> },
+              { path: 'maintenance/new', element: <NewWorkOrderPage /> },
+              { path: 'maintenance/:id', element: <WorkOrderDetailPage /> },
             ],
           },
 
           // ── Pillar 5: Security & compliance ────────────────────────────
-          {
-            path: 'alerts',
-            children: [
-              { index: true, element: <AlertsPage /> },
-              { path: 'rules', element: <AlertRulesPage /> },
-            ],
-          },
-          { path: 'audit', element: <AuditPage /> },
+          { path: 'alerts', element: <AlertsPage /> },
+          { path: 'alert-rules', element: <AlertRulesPage /> },
+          { path: 'audit-log', element: <AuditPage /> },
           { path: 'custody', element: <CustodyPage /> },
-          { path: 'compliance/*', element: <ComingSoon /> },
-
-          // ── Pillar 6: Mobile workforce ─────────────────────────────────
-          { path: 'field-ops/*', element: <ComingSoon /> },
-          { path: 'field-ops', element: <ComingSoon /> },
 
           // ── Supporting ─────────────────────────────────────────────────
           {
-            path: 'inventory',
             element: <RequireModule module="inventory" />,
-            children: [
-              { index: true, element: <InventoryPage /> },
-              { path: '*', element: <ComingSoon /> },
-            ],
+            children: [{ path: 'inventory', element: <InventoryPage /> }],
           },
-          { path: 'reports', element: <ComingSoon /> },
-          { path: 'reports/*', element: <ComingSoon /> },
-          { path: 'settings/*', element: <ComingSoon /> },
-
           {
-            path: 'admin',
             element: <RequireModule module="admin" />,
             children: [
-              { index: true, element: <Navigate to="/admin/users" replace /> },
-              { path: 'users', element: <UsersPage /> },
-              { path: 'roles', element: <RolesPage /> },
-              { path: '*', element: <ComingSoon /> },
+              { path: 'admin/users', element: <UsersPage /> },
+              { path: 'admin/roles', element: <RolesPage /> },
             ],
           },
 

@@ -55,10 +55,10 @@ export function LiveMapPage() {
         subtitle="Real-time positions across RFID, BLE, GPS, QR and UWB."
         actions={
           <>
-            <Button variant="secondary" size="sm" onClick={() => setShowGeofences((v) => !v)}>
+            <Button variant="outline" size="sm" onClick={() => setShowGeofences((v) => !v)}>
               {showGeofences ? '👁️ Geofences on' : '🚫 Geofences off'}
             </Button>
-            <Button variant="secondary" size="sm" onClick={() => void refetch()}>
+            <Button variant="outline" size="sm" onClick={() => void refetch()}>
               ↻ Refresh
             </Button>
           </>
@@ -187,7 +187,7 @@ export function LiveMapPage() {
                   {selectedAsset.trackingId && <p className="text-[11px] font-mono text-slate-500">{selectedAsset.trackingId}</p>}
                   {selectedAsset.zone && <p className="text-sm text-slate-600">Zone: {selectedAsset.zone}</p>}
                   {selectedAsset.lastPing && <p className="text-[11px] text-slate-400">Last ping {relTime(selectedAsset.lastPing)}</p>}
-                  <Button variant="secondary" size="sm" onClick={() => setSelected(null)}>
+                  <Button variant="outline" size="sm" onClick={() => setSelected(null)}>
                     Clear selection
                   </Button>
                 </div>

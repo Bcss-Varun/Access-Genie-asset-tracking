@@ -168,7 +168,7 @@ export function NewWorkOrderPage() {
           <Button type="submit" disabled={mutation.isPending}>
             {mutation.isPending ? 'Raising…' : 'Raise work order'}
           </Button>
-          <Button type="button" variant="secondary" onClick={() => navigate('/maintenance')}>
+          <Button type="button" variant="outline" onClick={() => navigate('/maintenance')}>
             Cancel
           </Button>
         </div>

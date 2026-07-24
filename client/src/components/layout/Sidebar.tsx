@@ -108,9 +108,6 @@ export function Sidebar() {
                         )}
                       >
                         <span className="truncate flex-1">{item.label}</span>
-                        {item.comingSoon && (
-                          <span className="text-[9px] uppercase tracking-wide text-slate-300 font-semibold">soon</span>
-                        )}
                       </Link>
                     );
                   })}

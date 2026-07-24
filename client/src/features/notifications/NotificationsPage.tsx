@@ -24,7 +24,7 @@ export function NotificationsPage() {
         subtitle={unread > 0 ? `${unread} unread` : 'You are all caught up.'}
         actions={
           unread > 0 ? (
-            <Button size="sm" variant="secondary" disabled={markAll.isPending} onClick={() => markAll.mutate()}>
+            <Button size="sm" variant="outline" disabled={markAll.isPending} onClick={() => markAll.mutate()}>
               Mark all read
             </Button>
           ) : undefined

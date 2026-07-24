@@ -6,6 +6,8 @@ const STORAGE_KEY = 'ag.theme';
 interface ThemeContextValue {
   theme: Theme;
   toggleTheme: () => void;
+  /** Alias — the ported prototype screens call it `toggle`. */
+  toggle: () => void;
 }
 
 const ThemeContext = createContext<ThemeContextValue | null>(null);
@@ -36,7 +38,7 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
   }, [theme]);
 
   const toggleTheme = useCallback(() => setTheme((current) => (current === 'dark' ? 'light' : 'dark')), []);
-  const value = useMemo(() => ({ theme, toggleTheme }), [theme, toggleTheme]);
+  const value = useMemo(() => ({ theme, toggleTheme, toggle: toggleTheme }), [theme, toggleTheme]);
 
   return <ThemeContext value={value}>{children}</ThemeContext>;
 }

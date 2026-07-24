@@ -16,11 +16,21 @@ export default defineConfig(({ mode }) => {
       },
     },
 
+    // Proxy /api to the Express server so the browser sees one origin: the
+    // refresh cookie is then first-party and no CORS preflight is involved,
+    // which is also how it behaves behind a reverse proxy in production.
     server: {
       port: 5173,
-      // Proxy /api to the Express server in development so the browser sees one
-      // origin: the refresh cookie is then first-party and no CORS preflight is
-      // involved, which is also how it behaves behind a reverse proxy in prod.
+      proxy: {
+        '/api': { target: apiTarget, changeOrigin: true },
+        '/health': { target: apiTarget, changeOrigin: true },
+      },
+    },
+
+    // `vite preview` serves the real build; it needs the same proxy so the
+    // production bundle can be exercised against a live API.
+    preview: {
+      port: 4173,
       proxy: {
         '/api': { target: apiTarget, changeOrigin: true },
         '/health': { target: apiTarget, changeOrigin: true },

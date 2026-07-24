@@ -232,7 +232,7 @@ function RegisterDeviceForm({ onDone }: { onDone: () => void }) {
         <Button type="submit" disabled={create.isPending}>
           {create.isPending ? 'Registering…' : 'Register device'}
         </Button>
-        <Button type="button" variant="secondary" onClick={onDone}>
+        <Button type="button" variant="outline" onClick={onDone}>
           Cancel
         </Button>
       </div>

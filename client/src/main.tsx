@@ -6,6 +6,8 @@ import { queryClient } from './app/queryClient';
 import { router } from './app/router';
 import { ThemeProvider } from './app/ThemeProvider';
 import { AuthProvider } from './features/auth/AuthProvider';
+import { ToastProvider } from './components/providers/ToastProvider';
+import { ScopeProvider } from './components/providers/ScopeProvider';
 import './styles/index.css';
 
 const container = document.getElementById('root');
@@ -18,7 +20,12 @@ createRoot(container).render(
     <QueryClientProvider client={queryClient}>
       <ThemeProvider>
         <AuthProvider>
-          <RouterProvider router={router} />
+          {/* Toasts and the scope switcher are consumed by the ported screens. */}
+          <ToastProvider>
+            <ScopeProvider>
+              <RouterProvider router={router} />
+            </ScopeProvider>
+          </ToastProvider>
         </AuthProvider>
       </ThemeProvider>
     </QueryClientProvider>
