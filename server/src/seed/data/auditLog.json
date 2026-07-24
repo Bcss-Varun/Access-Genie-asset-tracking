@@ -1,0 +1,110 @@
+[
+  {
+    "id": "AU-01",
+    "actor": "Sneha Iyer",
+    "action": "ASSET_CHECKOUT",
+    "target": "AST-1003",
+    "category": "Custody",
+    "timestamp": "2026-07-23T07:00:00.000Z",
+    "ip": "10.5.3.88"
+  },
+  {
+    "id": "AU-02",
+    "actor": "Arjun Menon",
+    "action": "WORKORDER_CREATE",
+    "target": "WO-5002",
+    "category": "Maintenance",
+    "timestamp": "2026-07-23T03:00:00.000Z",
+    "ip": "10.4.2.19"
+  },
+  {
+    "id": "AU-03",
+    "actor": "System (AI Engine)",
+    "action": "INSIGHT_RAISED",
+    "target": "INS-9001",
+    "category": "AI",
+    "timestamp": "2026-07-23T06:00:00.000Z",
+    "ip": "10.0.0.4"
+  },
+  {
+    "id": "AU-04",
+    "actor": "Tarun Fernandes",
+    "action": "ALERT_ESCALATE",
+    "target": "ALT-01",
+    "category": "Security",
+    "timestamp": "2026-07-23T05:00:00.000Z",
+    "ip": "10.5.1.62"
+  },
+  {
+    "id": "AU-05",
+    "actor": "IT Ops Team",
+    "action": "ASSET_RELOCATE",
+    "target": "AST-1001",
+    "category": "Asset",
+    "timestamp": "2026-06-13T09:00:00.000Z",
+    "ip": "10.4.2.51"
+  },
+  {
+    "id": "AU-06",
+    "actor": "Manoj Reddy",
+    "action": "PM_SCHEDULE_UPDATE",
+    "target": "PM-08",
+    "category": "Maintenance",
+    "timestamp": "2026-07-21T09:00:00.000Z",
+    "ip": "10.6.1.77"
+  },
+  {
+    "id": "AU-07",
+    "actor": "Raj",
+    "action": "ROLE_GRANT",
+    "target": "U-004 → technician",
+    "category": "Administration",
+    "timestamp": "2026-07-18T09:00:00.000Z",
+    "ip": "10.0.0.11"
+  },
+  {
+    "id": "AU-08",
+    "actor": "Ananya Sharma",
+    "action": "REPORT_EXPORT",
+    "target": "RPT-001",
+    "category": "Analytics",
+    "timestamp": "2026-07-22T09:00:00.000Z",
+    "ip": "10.5.2.30"
+  },
+  {
+    "id": "AU-09",
+    "actor": "Deepak Nair",
+    "action": "DEVICE_REGISTER",
+    "target": "SEN-19",
+    "category": "Devices",
+    "timestamp": "2026-07-17T09:00:00.000Z",
+    "ip": "10.6.1.41"
+  },
+  {
+    "id": "AU-10",
+    "actor": "System (Compliance)",
+    "action": "EVIDENCE_PACK_BUILD",
+    "target": "STD-DPDP",
+    "category": "Compliance",
+    "timestamp": "2026-07-21T09:00:00.000Z",
+    "ip": "10.0.0.4"
+  },
+  {
+    "id": "AU-11",
+    "actor": "Sneha Iyer",
+    "action": "CYCLE_COUNT_CLOSE",
+    "target": "CC-02",
+    "category": "Inventory",
+    "timestamp": "2026-07-19T09:00:00.000Z",
+    "ip": "10.6.1.12"
+  },
+  {
+    "id": "AU-12",
+    "actor": "Raj",
+    "action": "API_KEY_ROTATE",
+    "target": "AK-2291",
+    "category": "Administration",
+    "timestamp": "2026-07-14T09:00:00.000Z",
+    "ip": "10.0.0.11"
+  }
+]

@@ -1,0 +1,65 @@
+[
+  {
+    "id": "Z1",
+    "name": "IT Storeroom",
+    "type": "warehouse",
+    "x": 2,
+    "y": 2,
+    "width": 28,
+    "height": 34
+  },
+  {
+    "id": "Z2",
+    "name": "Office Wing 1",
+    "type": "office",
+    "x": 32,
+    "y": 2,
+    "width": 36,
+    "height": 62
+  },
+  {
+    "id": "Z3",
+    "name": "Server Room Alpha",
+    "type": "restricted",
+    "x": 2,
+    "y": 38,
+    "width": 28,
+    "height": 30
+  },
+  {
+    "id": "Z4",
+    "name": "Server Room Beta",
+    "type": "restricted",
+    "x": 2,
+    "y": 70,
+    "width": 28,
+    "height": 28
+  },
+  {
+    "id": "Z5",
+    "name": "Design Studio",
+    "type": "office",
+    "x": 32,
+    "y": 66,
+    "width": 36,
+    "height": 32
+  },
+  {
+    "id": "Z6",
+    "name": "Lobby",
+    "type": "office",
+    "x": 70,
+    "y": 2,
+    "width": 28,
+    "height": 44
+  },
+  {
+    "id": "Z7",
+    "name": "Data Center Core",
+    "type": "restricted",
+    "x": 70,
+    "y": 48,
+    "width": 28,
+    "height": 50
+  }
+]

@@ -1,0 +1,84 @@
+[
+  {
+    "id": "INS-9001",
+    "type": "Predictive Failure",
+    "severity": "Critical",
+    "title": "MacBook Pro — imminent battery swelling risk",
+    "summary": "Telemetry shows rapid battery degradation and thermal spikes. High probability of swelling.",
+    "assetId": "AST-1004",
+    "assetName": "MacBook Pro 16\"",
+    "confidence": 85,
+    "impactInr": 96000,
+    "impactLabel": "Battery swelling risk",
+    "drivers": [
+      "Thermal spikes +15°C",
+      "Cycle count > 800",
+      "Charge capacity dropped 40%",
+      "Past 3 models swelled at this signature"
+    ],
+    "recommendedAction": "Auto-generate a High priority work order to recall device and replace battery.",
+    "actionLabel": "Create Work Order",
+    "createdAt": "2026-07-23T06:00:00.000Z"
+  },
+  {
+    "id": "INS-9002",
+    "type": "Utilization",
+    "severity": "Opportunity",
+    "title": "Rebalance idle ThinkPads (Storeroom → Field Ops)",
+    "summary": "12 ThinkPad T14 units in IT Storeroom sit at 0% utilization while Field Ops runs short.",
+    "assetId": "AST-1003",
+    "assetName": "Lenovo ThinkPad T14",
+    "confidence": 78,
+    "impactInr": 1140000,
+    "impactLabel": "Avoid new purchases",
+    "drivers": [
+      "Storeroom utilization 0% (30d)",
+      "Field Ops requests +12 laptops",
+      "Zero transfer cost"
+    ],
+    "recommendedAction": "Initiate a bulk transfer to Field Ops to fulfill requests without new POs.",
+    "actionLabel": "Initiate Transfer",
+    "createdAt": "2026-07-23T04:00:00.000Z"
+  },
+  {
+    "id": "INS-9003",
+    "type": "Theft/Security",
+    "severity": "Critical",
+    "title": "iPad Pro missing — possible custody gap",
+    "summary": "Asset not scanned in 52 hours and last seen leaving the Lobby outside authorized zone.",
+    "assetId": "AST-1006",
+    "assetName": "iPad Pro 12.9\" (Field Ops)",
+    "confidence": 71,
+    "impactInr": 115000,
+    "impactLabel": "Loss risk high",
+    "drivers": [
+      "No BLE ping 52h",
+      "Last seen crossing Lobby geofence",
+      "No custody check-out logged",
+      "Battery at 12%"
+    ],
+    "recommendedAction": "Trigger an MDM lock, RTLS recovery search, and open a custody-exception incident.",
+    "actionLabel": "Start Recovery & Lock",
+    "createdAt": "2026-07-23T05:00:00.000Z"
+  },
+  {
+    "id": "INS-9006",
+    "type": "Lifecycle",
+    "severity": "Warning",
+    "title": "Dell R740 Server reaching end-of-life",
+    "summary": "Book value near zero, warranty expired, health score 30. Recommend replacement planning this quarter.",
+    "assetId": "AST-1001",
+    "assetName": "Dell PowerEdge R740 Server",
+    "confidence": 88,
+    "impactInr": 850000,
+    "impactLabel": "EOL this quarter",
+    "drivers": [
+      "Health score 30 and falling",
+      "Warranty expired Jan 2025",
+      "Thermal faults recurring"
+    ],
+    "recommendedAction": "Add to Q3 replacement plan and stage a workload migration window.",
+    "actionLabel": "Plan Replacement",
+    "createdAt": "2026-07-22T09:00:00.000Z"
+  }
+]

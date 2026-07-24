@@ -1,0 +1,106 @@
+[
+  {
+    "id": "ORG-1",
+    "name": "Access Genie India",
+    "level": "org",
+    "assetCount": 14205
+  },
+  {
+    "id": "REG-SI",
+    "name": "South India",
+    "level": "region",
+    "parentId": "ORG-1",
+    "assetCount": 8420
+  },
+  {
+    "id": "FAC-WH1",
+    "name": "Hyderabad Central Warehouse",
+    "level": "facility",
+    "parentId": "REG-SI",
+    "assetCount": 3120
+  },
+  {
+    "id": "BLD-A",
+    "name": "Building A",
+    "level": "building",
+    "parentId": "FAC-WH1",
+    "assetCount": 2100
+  },
+  {
+    "id": "ZN-DOCK",
+    "name": "Loading Dock",
+    "level": "zone",
+    "parentId": "BLD-A",
+    "assetCount": 340
+  },
+  {
+    "id": "ZN-WH",
+    "name": "Main Warehouse",
+    "level": "zone",
+    "parentId": "BLD-A",
+    "assetCount": 1180
+  },
+  {
+    "id": "ZN-COLD",
+    "name": "Secure Cage",
+    "level": "zone",
+    "parentId": "BLD-A",
+    "assetCount": 210
+  },
+  {
+    "id": "ZN-PROD",
+    "name": "Staging Bay",
+    "level": "zone",
+    "parentId": "BLD-A",
+    "assetCount": 370
+  },
+  {
+    "id": "FAC-HQ",
+    "name": "Bengaluru HQ",
+    "level": "facility",
+    "parentId": "REG-SI",
+    "assetCount": 2450
+  },
+  {
+    "id": "BLD-N",
+    "name": "North Wing",
+    "level": "building",
+    "parentId": "FAC-HQ",
+    "assetCount": 1310
+  },
+  {
+    "id": "BLD-S",
+    "name": "South Wing",
+    "level": "building",
+    "parentId": "FAC-HQ",
+    "assetCount": 1140
+  },
+  {
+    "id": "FAC-DC",
+    "name": "Chennai Data Center",
+    "level": "facility",
+    "parentId": "REG-SI",
+    "assetCount": 2850
+  },
+  {
+    "id": "REG-NW",
+    "name": "North & West India",
+    "level": "region",
+    "parentId": "ORG-1",
+    "assetCount": 5785
+  },
+  {
+    "id": "FAC-MUM",
+    "name": "Mumbai Regional Hub",
+    "level": "facility",
+    "parentId": "REG-NW",
+    "assetCount": 3200
+  },
+  {
+    "id": "FAC-NCR",
+    "name": "Delhi NCR Office",
+    "level": "facility",
+    "parentId": "REG-NW",
+    "assetCount": 2585
+  }
+]

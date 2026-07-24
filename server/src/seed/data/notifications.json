@@ -1,0 +1,82 @@
+[
+  {
+    "id": "NT-01",
+    "title": "Asset AST-1006 escalated to Security",
+    "body": "iPad Pro 12.9\" (Field Ops) has not been scanned in 52 hours. Recovery search dispatched.",
+    "category": "Security",
+    "read": false,
+    "at": "2026-07-23T05:00:00.000Z"
+  },
+  {
+    "id": "NT-02",
+    "title": "Work order WO-5002 assigned to you",
+    "body": "Emergency server thermal shutdown risk on Dell PowerEdge R740 — due in 1 day.",
+    "category": "Maintenance",
+    "read": false,
+    "at": "2026-07-23T03:00:00.000Z"
+  },
+  {
+    "id": "NT-03",
+    "title": "New AI insight — ₹11.4 L opportunity",
+    "body": "12 idle ThinkPad T14 units in the Bengaluru storeroom can cover Field Ops requests.",
+    "category": "AI",
+    "read": false,
+    "at": "2026-07-23T04:00:00.000Z"
+  },
+  {
+    "id": "NT-04",
+    "title": "Gateway GW-09 went offline",
+    "body": "Secure Cage RFID Reader stopped reporting 14 hours ago. 0 tags currently served.",
+    "category": "Devices",
+    "read": false,
+    "at": "2026-07-22T19:00:00.000Z"
+  },
+  {
+    "id": "NT-05",
+    "title": "Cycle count CC-03 recorded a variance",
+    "body": "Hyderabad Secure Cage counted 208 of 210 expected assets.",
+    "category": "Inventory",
+    "read": true,
+    "at": "2026-07-22T09:00:00.000Z"
+  },
+  {
+    "id": "NT-06",
+    "title": "PO-2203 received",
+    "body": "4 × PowerEdge R740 Fan Module received from Redington India Ltd.",
+    "category": "Procurement",
+    "read": true,
+    "at": "2026-07-22T09:00:00.000Z"
+  },
+  {
+    "id": "NT-07",
+    "title": "DPDP Act evidence pack generated",
+    "body": "Data-bearing asset register exported for the Q2 FY27 assessment.",
+    "category": "Compliance",
+    "read": true,
+    "at": "2026-07-21T09:00:00.000Z"
+  },
+  {
+    "id": "NT-08",
+    "title": "Firmware v17.9.3 pushed to core switch",
+    "body": "WO-5010 completed — link stability verified post-update.",
+    "category": "Maintenance",
+    "read": true,
+    "at": "2026-07-22T09:00:00.000Z"
+  },
+  {
+    "id": "NT-09",
+    "title": "Tag SEN-09 battery low",
+    "body": "UWB tag on Synology RS2418+ NAS is at 17%. Schedule a swap.",
+    "category": "Devices",
+    "read": true,
+    "at": "2026-07-22T22:00:00.000Z"
+  },
+  {
+    "id": "NT-10",
+    "title": "Monthly depreciation run completed",
+    "body": "Book values refreshed for 14 tracked assets; ₹15.4 L accumulated to date.",
+    "category": "Finance",
+    "read": true,
+    "at": "2026-07-20T09:00:00.000Z"
+  }
+]

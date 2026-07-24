@@ -1,0 +1,110 @@
+[
+  {
+    "id": "PO-2203",
+    "supplierId": "SUP-1",
+    "supplierName": "Redington India Ltd",
+    "status": "Received",
+    "createdAt": "2026-07-17T09:00:00.000Z",
+    "expectedAt": "2026-07-22T09:00:00.000Z",
+    "total": 34000,
+    "lines": [
+      {
+        "sku": "FAN-R740-MOD",
+        "name": "PowerEdge R740 Fan Module",
+        "qty": 4,
+        "unitCost": 8500
+      }
+    ]
+  },
+  {
+    "id": "PO-2204",
+    "supplierId": "SUP-2",
+    "supplierName": "Dell India Pvt Ltd",
+    "status": "Sent",
+    "createdAt": "2026-07-20T09:00:00.000Z",
+    "expectedAt": "2026-07-27T09:00:00.000Z",
+    "total": 189000,
+    "lines": [
+      {
+        "sku": "HDD-8TB-NAS",
+        "name": "NAS HDD 8 TB (RAID-rated)",
+        "qty": 10,
+        "unitCost": 18900
+      }
+    ]
+  },
+  {
+    "id": "PO-2205",
+    "supplierId": "SUP-1",
+    "supplierName": "Redington India Ltd",
+    "status": "Approved",
+    "createdAt": "2026-07-21T09:00:00.000Z",
+    "expectedAt": "2026-07-31T09:00:00.000Z",
+    "total": 156000,
+    "lines": [
+      {
+        "sku": "TAG-UWB-STD",
+        "name": "UWB Asset Tag (rechargeable)",
+        "qty": 30,
+        "unitCost": 3900
+      },
+      {
+        "sku": "TAG-BLE-CR2477",
+        "name": "BLE Beacon Tag (CR2477)",
+        "qty": 60,
+        "unitCost": 640
+      }
+    ]
+  },
+  {
+    "id": "PO-2206",
+    "supplierId": "SUP-1",
+    "supplierName": "Redington India Ltd",
+    "status": "Draft",
+    "createdAt": "2026-07-22T09:00:00.000Z",
+    "expectedAt": "2026-08-04T09:00:00.000Z",
+    "total": 58800,
+    "lines": [
+      {
+        "sku": "TNR-HP-89A",
+        "name": "HP 89A Toner Cartridge",
+        "qty": 6,
+        "unitCost": 9800
+      }
+    ]
+  },
+  {
+    "id": "PO-2207",
+    "supplierId": "SUP-2",
+    "supplierName": "Dell India Pvt Ltd",
+    "status": "Received",
+    "createdAt": "2026-07-02T09:00:00.000Z",
+    "expectedAt": "2026-07-11T09:00:00.000Z",
+    "total": 215000,
+    "lines": [
+      {
+        "sku": "SSD-960-ENT",
+        "name": "Enterprise SSD 960 GB",
+        "qty": 10,
+        "unitCost": 21500
+      }
+    ]
+  },
+  {
+    "id": "PO-2208",
+    "supplierId": "SUP-1",
+    "supplierName": "Redington India Ltd",
+    "status": "Cancelled",
+    "createdAt": "2026-06-23T09:00:00.000Z",
+    "expectedAt": "2026-07-03T09:00:00.000Z",
+    "total": 27000,
+    "lines": [
+      {
+        "sku": "TAG-RFID-UHF",
+        "name": "UHF RFID Asset Label (roll of 500)",
+        "qty": 5,
+        "unitCost": 5400
+      }
+    ]
+  }
+]

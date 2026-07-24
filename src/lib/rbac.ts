@@ -122,3 +122,4 @@ export function findScope(id: string, node: ScopeNode = scopeTree): ScopeNode | 
   }
   return undefined;
 }
+

@@ -1,0 +1,92 @@
+[
+  {
+    "id": "CU-01",
+    "assetId": "AST-1003",
+    "assetName": "Lenovo ThinkPad T14",
+    "holder": "Sneha Iyer",
+    "action": "Checked Out",
+    "at": "2026-07-23T07:00:00.000Z",
+    "by": "QR Scan Station GW-08"
+  },
+  {
+    "id": "CU-02",
+    "assetId": "AST-1011",
+    "assetName": "Zebra TC52 Mobile Computer",
+    "holder": "Warehouse Team",
+    "action": "Checked Out",
+    "at": "2026-07-23T02:00:00.000Z",
+    "by": "Kiosk WH-1"
+  },
+  {
+    "id": "CU-03",
+    "assetId": "AST-1014",
+    "assetName": "Fluke Networks DSX-8000",
+    "holder": "Network Team",
+    "action": "Assigned",
+    "at": "2026-07-22T09:00:00.000Z",
+    "by": "Manoj Reddy"
+  },
+  {
+    "id": "CU-04",
+    "assetId": "AST-1006",
+    "assetName": "iPad Pro 12.9\" (Field Ops)",
+    "holder": "Unknown",
+    "action": "Transferred",
+    "at": "2026-07-21T05:00:00.000Z",
+    "by": "System (geofence exit — no check-out)"
+  },
+  {
+    "id": "CU-05",
+    "assetId": "AST-1001",
+    "assetName": "Dell PowerEdge R740 Server",
+    "holder": "IT Ops Team",
+    "action": "Assigned",
+    "at": "2026-06-13T09:00:00.000Z",
+    "by": "IT Manager"
+  },
+  {
+    "id": "CU-06",
+    "assetId": "AST-1004",
+    "assetName": "MacBook Pro 16\"",
+    "holder": "Aditya Rao",
+    "action": "Assigned",
+    "at": "2026-06-23T09:00:00.000Z",
+    "by": "Sneha Iyer"
+  },
+  {
+    "id": "CU-07",
+    "assetId": "AST-1006",
+    "assetName": "iPad Pro 12.9\" (Field Ops)",
+    "holder": "Field Tech 2B",
+    "action": "Checked Out",
+    "at": "2026-07-17T09:00:00.000Z",
+    "by": "Kiosk HQ-1"
+  },
+  {
+    "id": "CU-08",
+    "assetId": "AST-1013",
+    "assetName": "HP LaserJet Enterprise M507",
+    "holder": "IT Support",
+    "action": "Assigned",
+    "at": "2026-05-24T09:00:00.000Z",
+    "by": "IT Manager"
+  },
+  {
+    "id": "CU-09",
+    "assetId": "AST-1011",
+    "assetName": "Zebra TC52 Mobile Computer",
+    "holder": "Deepak Nair",
+    "action": "Checked In",
+    "at": "2026-07-21T09:00:00.000Z",
+    "by": "Kiosk WH-1"
+  },
+  {
+    "id": "CU-10",
+    "assetId": "AST-1009",
+    "assetName": "Synology RS2418+ NAS",
+    "holder": "Storage Team",
+    "action": "Transferred",
+    "at": "2026-07-09T09:00:00.000Z",
+    "by": "Manoj Reddy"
+  }
+]

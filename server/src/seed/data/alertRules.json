@@ -1,0 +1,121 @@
+[
+  {
+    "id": "AR-01",
+    "name": "Asset not scanned in 24h",
+    "condition": "lastPing > 24h AND criticality IN (High, Critical)",
+    "severity": "Critical",
+    "channels": [
+      "Email",
+      "SMS",
+      "In-app"
+    ],
+    "enabled": true,
+    "triggered24h": 2
+  },
+  {
+    "id": "AR-02",
+    "name": "Geofence exit without check-out",
+    "condition": "geofence.exit = true AND custody.checkedOut = false",
+    "severity": "Critical",
+    "channels": [
+      "Email",
+      "SMS",
+      "Webhook"
+    ],
+    "enabled": true,
+    "triggered24h": 3
+  },
+  {
+    "id": "AR-03",
+    "name": "Server inlet temperature breach",
+    "condition": "telemetry.temperature > 75°C for 10 min",
+    "severity": "Critical",
+    "channels": [
+      "Email",
+      "In-app",
+      "PagerDuty"
+    ],
+    "enabled": true,
+    "triggered24h": 1
+  },
+  {
+    "id": "AR-04",
+    "name": "Predicted failure within 14 days",
+    "condition": "ai.failureProbability > 0.75",
+    "severity": "Critical",
+    "channels": [
+      "Email",
+      "In-app"
+    ],
+    "enabled": true,
+    "triggered24h": 1
+  },
+  {
+    "id": "AR-05",
+    "name": "Tag battery below 20%",
+    "condition": "sensor.batteryLevel < 20",
+    "severity": "Warning",
+    "channels": [
+      "In-app"
+    ],
+    "enabled": true,
+    "triggered24h": 2
+  },
+  {
+    "id": "AR-06",
+    "name": "Gateway offline > 30 min",
+    "condition": "gateway.lastSeen > 30 min",
+    "severity": "Warning",
+    "channels": [
+      "Email",
+      "In-app"
+    ],
+    "enabled": true,
+    "triggered24h": 1
+  },
+  {
+    "id": "AR-07",
+    "name": "Utilization above 90% for 30 days",
+    "condition": "utilization > 90 for 30d",
+    "severity": "Warning",
+    "channels": [
+      "In-app"
+    ],
+    "enabled": true,
+    "triggered24h": 1
+  },
+  {
+    "id": "AR-08",
+    "name": "Warranty expiring in 60 days",
+    "condition": "warrantyExpiry - now < 60d",
+    "severity": "Info",
+    "channels": [
+      "Email"
+    ],
+    "enabled": true,
+    "triggered24h": 0
+  },
+  {
+    "id": "AR-09",
+    "name": "After-hours movement in Secure Cage",
+    "condition": "movement.detected AND time NOT IN 08:00-20:00 IST",
+    "severity": "Critical",
+    "channels": [
+      "SMS",
+      "Webhook"
+    ],
+    "enabled": true,
+    "triggered24h": 0
+  },
+  {
+    "id": "AR-10",
+    "name": "Spare stock below reorder point",
+    "condition": "part.onHand <= part.reorderPoint",
+    "severity": "Info",
+    "channels": [
+      "Email"
+    ],
+    "enabled": false,
+    "triggered24h": 0
+  }
+]

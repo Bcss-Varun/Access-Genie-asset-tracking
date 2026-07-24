@@ -1,0 +1,58 @@
+import type { Request, Response } from 'express';
+import { validatedQuery } from '../middleware/validate.js';
+import { asyncHandler } from '../utils/asyncHandler.js';
+import { sendData, sendList } from '../utils/response.js';
+import * as assetService from '../services/asset.service.js';
+import { recordAudit } from '../services/audit.service.js';
+import type { AssetListQuery, CreateAssetInput, UpdateAssetInput } from '../validators/asset.validator.js';
+
+/**
+ * Controllers stay thin on purpose: read the request, call one service, send
+ * the response. All business rules live in the service layer so they are
+ * reachable from the seeder, a future GraphQL resolver or a job runner without
+ * going through HTTP.
+ */
+
+export const list = asyncHandler(async (_req: Request, res: Response) => {
+  const query = validatedQuery<AssetListQuery>(res);
+  const { items, meta } = await assetService.listAssets(query);
+  sendList(res, items, meta);
+});
+
+export const stats = asyncHandler(async (_req: Request, res: Response) => {
+  sendData(res, await assetService.getAssetStats());
+});
+
+export const getOne = asyncHandler(async (req: Request, res: Response) => {
+  sendData(res, await assetService.getAsset(req.params.id as string));
+});
+
+/** Asset 360 — the record plus every timeline attached to it. */
+export const getProfile = asyncHandler(async (req: Request, res: Response) => {
+  sendData(res, await assetService.getAssetProfile(req.params.id as string));
+});
+
+export const create = asyncHandler(async (req: Request, res: Response) => {
+  const actor = req.auth?.user.name ?? 'system';
+  const asset = await assetService.createAsset(req.body as CreateAssetInput, actor);
+
+  recordAudit(req, { action: 'asset.create', target: asset._id, category: 'Assets' });
+  sendData(res, asset, 201);
+});
+
+export const update = asyncHandler(async (req: Request, res: Response) => {
+  const actor = req.auth?.user.name ?? 'system';
+  const id = req.params.id as string;
+  const asset = await assetService.updateAsset(id, req.body as UpdateAssetInput, actor);
+
+  recordAudit(req, { action: 'asset.update', target: id, category: 'Assets', metadata: { fields: Object.keys(req.body ?? {}) } });
+  sendData(res, asset);
+});
+
+export const remove = asyncHandler(async (req: Request, res: Response) => {
+  const id = req.params.id as string;
+  await assetService.deleteAsset(id);
+
+  recordAudit(req, { action: 'asset.delete', target: id, category: 'Assets' });
+  res.status(204).send();
+});

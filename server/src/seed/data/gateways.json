@@ -1,0 +1,110 @@
+[
+  {
+    "id": "GW-01",
+    "name": "Server Room Alpha RFID",
+    "kind": "RFID Reader",
+    "status": "Online",
+    "connectedDevices": 42,
+    "firmwareVersion": "v4.8.2",
+    "uptimePct": 99.9,
+    "location": "Chennai Data Center · Server Room Alpha",
+    "ip": "10.4.1.11",
+    "lastSeen": "2026-07-23T08:59:00.000Z"
+  },
+  {
+    "id": "GW-02",
+    "name": "Bengaluru HQ BLE Gateway",
+    "kind": "BLE Gateway",
+    "status": "Online",
+    "connectedDevices": 118,
+    "firmwareVersion": "v3.2.0",
+    "uptimePct": 99.7,
+    "location": "Bengaluru HQ · Lobby",
+    "ip": "10.4.1.12",
+    "lastSeen": "2026-07-23T08:59:00.000Z"
+  },
+  {
+    "id": "GW-03",
+    "name": "Dock 4 RFID Portal",
+    "kind": "RFID Reader",
+    "status": "Online",
+    "connectedDevices": 96,
+    "firmwareVersion": "v4.8.2",
+    "uptimePct": 99.4,
+    "location": "Hyderabad Central Warehouse · Loading Dock 4",
+    "ip": "10.6.1.21",
+    "lastSeen": "2026-07-23T08:59:00.000Z"
+  },
+  {
+    "id": "GW-04",
+    "name": "Warehouse UWB Anchor Cluster",
+    "kind": "UWB Anchor",
+    "status": "Online",
+    "connectedDevices": 64,
+    "firmwareVersion": "v2.4.1",
+    "uptimePct": 99.1,
+    "location": "Hyderabad Central Warehouse · Building A",
+    "ip": "10.6.1.22",
+    "lastSeen": "2026-07-23T08:58:00.000Z"
+  },
+  {
+    "id": "GW-05",
+    "name": "HQ Floor 3 UWB Anchor",
+    "kind": "UWB Anchor",
+    "status": "Degraded",
+    "connectedDevices": 28,
+    "firmwareVersion": "v2.3.7",
+    "uptimePct": 94.2,
+    "location": "Bengaluru HQ · Floor 3",
+    "ip": "10.5.3.14",
+    "lastSeen": "2026-07-23T08:51:00.000Z"
+  },
+  {
+    "id": "GW-06",
+    "name": "DC LoRaWAN Environmental",
+    "kind": "LoRaWAN Gateway",
+    "status": "Online",
+    "connectedDevices": 37,
+    "firmwareVersion": "v1.9.4",
+    "uptimePct": 99.8,
+    "location": "Chennai Data Center · Utility Room",
+    "ip": "10.4.1.31",
+    "lastSeen": "2026-07-23T08:57:00.000Z"
+  },
+  {
+    "id": "GW-07",
+    "name": "In-Transit GPS/LTE Bridge",
+    "kind": "GPS/LTE Bridge",
+    "status": "Online",
+    "connectedDevices": 12,
+    "firmwareVersion": "v5.1.0",
+    "uptimePct": 98.6,
+    "location": "Mobile · Hyderabad ▸ Bengaluru corridor",
+    "ip": "10.9.0.7",
+    "lastSeen": "2026-07-23T08:54:00.000Z"
+  },
+  {
+    "id": "GW-08",
+    "name": "Storeroom QR Scan Station",
+    "kind": "QR Scan Station",
+    "status": "Online",
+    "connectedDevices": 210,
+    "firmwareVersion": "v3.0.2",
+    "uptimePct": 99.9,
+    "location": "Bengaluru HQ · IT Storeroom",
+    "ip": "10.5.1.44",
+    "lastSeen": "2026-07-23T08:59:00.000Z"
+  },
+  {
+    "id": "GW-09",
+    "name": "Secure Cage RFID Reader",
+    "kind": "RFID Reader",
+    "status": "Offline",
+    "connectedDevices": 0,
+    "firmwareVersion": "v4.6.0",
+    "uptimePct": 81.3,
+    "location": "Hyderabad Central Warehouse · Secure Cage",
+    "ip": "10.6.1.29",
+    "lastSeen": "2026-07-22T19:00:00.000Z"
+  }
+]

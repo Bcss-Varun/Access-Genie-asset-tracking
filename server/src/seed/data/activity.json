@@ -1,0 +1,58 @@
+[
+  {
+    "id": "EV-1",
+    "assetId": "AST-1004",
+    "type": "Alert",
+    "description": "Battery swelling risk alert raised",
+    "actor": "AI Engine",
+    "timestamp": "2026-07-23T06:00:00.000Z"
+  },
+  {
+    "id": "EV-2",
+    "assetId": "AST-1004",
+    "type": "Telemetry",
+    "description": "Temperature exceeded 65°C threshold",
+    "actor": "MDM Agent",
+    "timestamp": "2026-07-23T05:00:00.000Z"
+  },
+  {
+    "id": "EV-4",
+    "assetId": "AST-1001",
+    "type": "Alert",
+    "description": "Inlet temperature critical (85°C)",
+    "actor": "AI Engine",
+    "timestamp": "2026-07-23T03:00:00.000Z"
+  },
+  {
+    "id": "EV-5",
+    "assetId": "AST-1001",
+    "type": "Maintenance",
+    "description": "Work order WO-5002 opened",
+    "actor": "Arjun Menon",
+    "timestamp": "2026-07-23T03:00:00.000Z"
+  },
+  {
+    "id": "EV-7",
+    "assetId": "AST-1003",
+    "type": "Custody",
+    "description": "Custody assigned to Sneha Iyer",
+    "actor": "IT Manager",
+    "timestamp": "2026-07-11T09:00:00.000Z"
+  },
+  {
+    "id": "EV-10",
+    "assetId": "AST-1006",
+    "type": "Alert",
+    "description": "Signal loss — no ping in 52h",
+    "actor": "RTLS Monitor",
+    "timestamp": "2026-07-23T05:00:00.000Z"
+  },
+  {
+    "id": "EV-11",
+    "assetId": "AST-1006",
+    "type": "Movement",
+    "description": "Last seen crossing Lobby geofence",
+    "actor": "BLE Beacon",
+    "timestamp": "2026-07-21T05:00:00.000Z"
+  }
+]

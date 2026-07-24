@@ -1,0 +1,670 @@
+[
+  {
+    "id": "WO-5001",
+    "title": "Investigate Mac battery degradation",
+    "assetId": "AST-1004",
+    "assetName": "MacBook Pro 16\"",
+    "status": "New",
+    "priority": "High",
+    "type": "Predictive",
+    "assignedTo": "Unassigned",
+    "createdAt": "2026-07-23T06:00:00.000Z",
+    "dueDate": "2026-07-25T09:00:00.000Z",
+    "estimatedHours": 1,
+    "aiGenerated": true,
+    "description": "AI predicts battery failure within 14 days. Cycle count exceeds 800.",
+    "detail": {
+      "checklist": [
+        {
+          "label": "Pull battery cycle count and health report",
+          "done": true
+        },
+        {
+          "label": "Confirm swelling signature against model drivers",
+          "done": true
+        },
+        {
+          "label": "Notify custodian and arrange loaner",
+          "done": false
+        },
+        {
+          "label": "Recall device to IT Storeroom",
+          "done": false
+        },
+        {
+          "label": "Replace battery and re-certify",
+          "done": false
+        }
+      ],
+      "parts": [],
+      "laborLog": [
+        {
+          "tech": "Unassigned",
+          "hours": 0,
+          "note": "Awaiting assignment — AI-generated work order.",
+          "at": "2026-07-23T06:00:00.000Z"
+        }
+      ],
+      "comments": [
+        {
+          "author": "AI Engine",
+          "text": "Failure probability 85% within 14 days. Cycle count 812, capacity down 40%.",
+          "at": "2026-07-23T06:00:00.000Z"
+        },
+        {
+          "author": "Sneha Iyer",
+          "text": "Aditya Rao is travelling until Thursday — schedule the recall for Friday.",
+          "at": "2026-07-23T07:00:00.000Z"
+        }
+      ]
+    }
+  },
+  {
+    "id": "WO-5002",
+    "title": "Emergency server thermal shutdown risk",
+    "assetId": "AST-1001",
+    "assetName": "Dell PowerEdge R740 Server",
+    "status": "In Progress",
+    "priority": "Critical",
+    "type": "Corrective",
+    "assignedTo": "Arjun Menon",
+    "createdAt": "2026-07-23T03:00:00.000Z",
+    "dueDate": "2026-07-24T09:00:00.000Z",
+    "estimatedHours": 3,
+    "aiGenerated": false,
+    "description": "Inlet temperature at 85°C. Replace failing fan module and reseat thermal sensors in Rack 42.",
+    "detail": {
+      "checklist": [
+        {
+          "label": "Verify inlet temperature at rack sensor",
+          "done": true
+        },
+        {
+          "label": "Isolate failing fan module (bay 3)",
+          "done": true
+        },
+        {
+          "label": "Migrate workloads to standby node",
+          "done": true
+        },
+        {
+          "label": "Replace fan module",
+          "done": false
+        },
+        {
+          "label": "Reseat thermal sensors in Rack 42",
+          "done": false
+        },
+        {
+          "label": "Confirm inlet temp < 30°C for 2 hours",
+          "done": false
+        }
+      ],
+      "parts": [
+        {
+          "sku": "FAN-R740-MOD",
+          "name": "PowerEdge R740 Fan Module",
+          "qty": 1,
+          "unitCost": 8500
+        },
+        {
+          "sku": "SEN-THRM-42",
+          "name": "Thermal Sensor Rack 42",
+          "qty": 2,
+          "unitCost": 3200
+        }
+      ],
+      "laborLog": [
+        {
+          "tech": "Arjun Menon",
+          "hours": 1.5,
+          "note": "On-site triage, confirmed fan bay 3 stalled.",
+          "at": "2026-07-23T04:00:00.000Z"
+        },
+        {
+          "tech": "Arjun Menon",
+          "hours": 0.75,
+          "note": "Workload migration to standby node completed.",
+          "at": "2026-07-23T06:00:00.000Z"
+        }
+      ],
+      "comments": [
+        {
+          "author": "Telemetry",
+          "text": "Inlet temperature crossed 85°C threshold — alert ALT-02 raised.",
+          "at": "2026-07-23T03:00:00.000Z"
+        },
+        {
+          "author": "Arjun Menon",
+          "text": "Fan module in stock at Chennai DC spares (bin D-01-4). Replacing after the migration window.",
+          "at": "2026-07-23T05:00:00.000Z"
+        },
+        {
+          "author": "Manoj Reddy",
+          "text": "Approved emergency override — proceed outside the change window.",
+          "at": "2026-07-23T05:00:00.000Z"
+        }
+      ]
+    }
+  },
+  {
+    "id": "WO-5003",
+    "title": "Quarterly PM — UPS Battery Check",
+    "assetId": "AST-1005",
+    "assetName": "APC Smart-UPS 3000",
+    "status": "Assigned",
+    "priority": "Medium",
+    "type": "Preventive",
+    "assignedTo": "Deepak Nair",
+    "createdAt": "2026-07-22T09:00:00.000Z",
+    "dueDate": "2026-07-28T09:00:00.000Z",
+    "estimatedHours": 2,
+    "aiGenerated": false,
+    "description": "Scheduled quarterly preventive maintenance: battery impedance test, self-test, firmware review.",
+    "detail": {
+      "checklist": [
+        {
+          "label": "Battery impedance test",
+          "done": false
+        },
+        {
+          "label": "Run UPS self-test",
+          "done": false
+        },
+        {
+          "label": "Review firmware release notes",
+          "done": false
+        },
+        {
+          "label": "Log runtime at full load",
+          "done": false
+        }
+      ],
+      "parts": [
+        {
+          "sku": "UPS-BAT-RBC55",
+          "name": "UPS Battery Cartridge RBC55",
+          "qty": 1,
+          "unitCost": 12800
+        }
+      ],
+      "laborLog": [],
+      "comments": [
+        {
+          "author": "Manoj Reddy",
+          "text": "Quarterly PM — pair this with the INSP-02 load bank test to avoid a second downtime window.",
+          "at": "2026-07-22T09:00:00.000Z"
+        }
+      ]
+    }
+  },
+  {
+    "id": "WO-5004",
+    "title": "Replace degraded RAID drive",
+    "assetId": "AST-1009",
+    "assetName": "Synology RS2418+ NAS",
+    "status": "In Progress",
+    "priority": "High",
+    "type": "Corrective",
+    "assignedTo": "Storage Team",
+    "createdAt": "2026-07-21T09:00:00.000Z",
+    "dueDate": "2026-07-23T09:00:00.000Z",
+    "estimatedHours": 1.5,
+    "aiGenerated": false,
+    "description": "Drive 4 SMART status failed. Replace with cold spare and monitor rebuild.",
+    "detail": {
+      "checklist": [
+        {
+          "label": "Confirm SMART failure on drive 4",
+          "done": true
+        },
+        {
+          "label": "Verify backup completed in last 24h",
+          "done": true
+        },
+        {
+          "label": "Pull cold spare from D-01-2",
+          "done": true
+        },
+        {
+          "label": "Swap drive and start rebuild",
+          "done": false
+        },
+        {
+          "label": "Monitor rebuild to completion",
+          "done": false
+        }
+      ],
+      "parts": [
+        {
+          "sku": "HDD-8TB-NAS",
+          "name": "NAS HDD 8 TB (RAID-rated)",
+          "qty": 1,
+          "unitCost": 18900
+        }
+      ],
+      "laborLog": [
+        {
+          "tech": "Storage Team",
+          "hours": 0.5,
+          "note": "Backup verified, spare staged at the rack.",
+          "at": "2026-07-22T13:00:00.000Z"
+        }
+      ],
+      "comments": [
+        {
+          "author": "Telemetry",
+          "text": "Drive 4 reported reallocated sectors above threshold.",
+          "at": "2026-07-21T09:00:00.000Z"
+        },
+        {
+          "author": "Storage Team",
+          "text": "Rebuild will take ~9 hours. Scheduling for tonight to avoid business-hours IO load.",
+          "at": "2026-07-22T14:00:00.000Z"
+        }
+      ]
+    }
+  },
+  {
+    "id": "WO-5005",
+    "title": "AP connection drop anomaly",
+    "assetId": "AST-1007",
+    "assetName": "Aruba AP-515 Access Point",
+    "status": "Assigned",
+    "priority": "High",
+    "type": "Predictive",
+    "assignedTo": "Network Team",
+    "createdAt": "2026-07-22T09:00:00.000Z",
+    "dueDate": "2026-07-26T09:00:00.000Z",
+    "estimatedHours": 1,
+    "aiGenerated": true,
+    "description": "Utilization at 96% for 30 days. High collision rate and packet drops detected.",
+    "detail": {
+      "checklist": [
+        {
+          "label": "Capture 24h client-density profile",
+          "done": true
+        },
+        {
+          "label": "Review collision and retry counters",
+          "done": false
+        },
+        {
+          "label": "Model a second AP for Conference Room A",
+          "done": false
+        },
+        {
+          "label": "Raise procurement request if justified",
+          "done": false
+        }
+      ],
+      "parts": [],
+      "laborLog": [
+        {
+          "tech": "Network Team",
+          "hours": 1,
+          "note": "RF survey data collected; density 2.3× peer median.",
+          "at": "2026-07-22T23:00:00.000Z"
+        }
+      ],
+      "comments": [
+        {
+          "author": "AI Engine",
+          "text": "Utilization at 96% for 30 days with rising packet drops — an additional AP is likely cheaper than the support load.",
+          "at": "2026-07-22T09:00:00.000Z"
+        }
+      ]
+    }
+  },
+  {
+    "id": "WO-5009",
+    "title": "Locate & recover missing iPad",
+    "assetId": "AST-1006",
+    "assetName": "iPad Pro 12.9\" (Field Ops)",
+    "status": "New",
+    "priority": "Critical",
+    "type": "Corrective",
+    "assignedTo": "Unassigned",
+    "createdAt": "2026-07-23T05:00:00.000Z",
+    "dueDate": "2026-07-24T09:00:00.000Z",
+    "estimatedHours": 1,
+    "aiGenerated": true,
+    "description": "Asset not scanned in 52 hours; last seen Lobby. Dispatch RTLS search and verify custody.",
+    "detail": {
+      "checklist": [
+        {
+          "label": "Trigger MDM lock and locate",
+          "done": true
+        },
+        {
+          "label": "Pull last-known BLE trail",
+          "done": true
+        },
+        {
+          "label": "Interview last custodian",
+          "done": false
+        },
+        {
+          "label": "RTLS sweep of Bengaluru HQ Floor 1",
+          "done": false
+        },
+        {
+          "label": "File custody-exception incident",
+          "done": false
+        }
+      ],
+      "parts": [],
+      "laborLog": [
+        {
+          "tech": "Unassigned",
+          "hours": 0,
+          "note": "Security escalation raised, awaiting field assignment.",
+          "at": "2026-07-23T05:00:00.000Z"
+        }
+      ],
+      "comments": [
+        {
+          "author": "RTLS Monitor",
+          "text": "No BLE ping in 52 hours. Last read at the Lobby geofence boundary.",
+          "at": "2026-07-23T05:00:00.000Z"
+        },
+        {
+          "author": "Tarun Fernandes",
+          "text": "MDM lock confirmed. Escalating to ALT-01 and notifying the Field Ops lead.",
+          "at": "2026-07-23T06:00:00.000Z"
+        }
+      ]
+    }
+  },
+  {
+    "id": "WO-5010",
+    "title": "Firmware OTA — Switch",
+    "assetId": "AST-1002",
+    "assetName": "Cisco Catalyst 9500 Switch",
+    "status": "Completed",
+    "priority": "Low",
+    "type": "Preventive",
+    "assignedTo": "Network Team",
+    "createdAt": "2026-07-18T09:00:00.000Z",
+    "dueDate": "2026-07-22T09:00:00.000Z",
+    "estimatedHours": 0.5,
+    "aiGenerated": false,
+    "description": "Push firmware v17.9.3 to core switch; verify link stability post-update.",
+    "detail": {
+      "checklist": [
+        {
+          "label": "Review v17.9.3 release notes",
+          "done": true
+        },
+        {
+          "label": "Take pre-upgrade config backup",
+          "done": true
+        },
+        {
+          "label": "Push firmware in maintenance window",
+          "done": true
+        },
+        {
+          "label": "Verify link stability for 24h",
+          "done": true
+        }
+      ],
+      "parts": [],
+      "laborLog": [
+        {
+          "tech": "Network Team",
+          "hours": 0.5,
+          "note": "Firmware pushed during the 02:00 IST window.",
+          "at": "2026-07-21T09:00:00.000Z"
+        },
+        {
+          "tech": "Network Team",
+          "hours": 0.25,
+          "note": "Post-change verification clean, no flaps.",
+          "at": "2026-07-22T09:00:00.000Z"
+        }
+      ],
+      "comments": [
+        {
+          "author": "Network Team",
+          "text": "Completed with no impact. Closing.",
+          "at": "2026-07-22T09:00:00.000Z"
+        }
+      ]
+    }
+  },
+  {
+    "id": "WO-5012",
+    "title": "Commissioning checklist — Cable Tester",
+    "assetId": "AST-1014",
+    "assetName": "Fluke Networks DSX-8000",
+    "status": "In Progress",
+    "priority": "Low",
+    "type": "Inspection",
+    "assignedTo": "Network Team",
+    "createdAt": "2026-07-22T09:00:00.000Z",
+    "dueDate": "2026-07-27T09:00:00.000Z",
+    "estimatedHours": 2,
+    "aiGenerated": false,
+    "description": "New-asset commissioning: calibration verification, LinkWare cloud sync setup.",
+    "detail": {
+      "checklist": [
+        {
+          "label": "Verify NABL calibration certificate",
+          "done": true
+        },
+        {
+          "label": "Apply and scan asset tag",
+          "done": true
+        },
+        {
+          "label": "Configure LinkWare cloud sync",
+          "done": false
+        },
+        {
+          "label": "Assign custodian and tool-room bin",
+          "done": false
+        }
+      ],
+      "parts": [
+        {
+          "sku": "TAG-BLE-CR2477",
+          "name": "BLE Beacon Tag (CR2477)",
+          "qty": 1,
+          "unitCost": 640
+        }
+      ],
+      "laborLog": [
+        {
+          "tech": "Network Team",
+          "hours": 1,
+          "note": "Certificate filed as DOC-6; BLE tag SEN-14 bonded.",
+          "at": "2026-07-22T11:00:00.000Z"
+        }
+      ],
+      "comments": [
+        {
+          "author": "Manoj Reddy",
+          "text": "Hold in Staging until the LinkWare sync is verified end-to-end.",
+          "at": "2026-07-22T13:00:00.000Z"
+        }
+      ]
+    }
+  },
+  {
+    "id": "WO-5013",
+    "title": "Replace low UWB tag battery (SEN-09)",
+    "assetId": "AST-1009",
+    "assetName": "Synology RS2418+ NAS",
+    "status": "Assigned",
+    "priority": "Medium",
+    "type": "Preventive",
+    "assignedTo": "Deepak Nair",
+    "createdAt": "2026-07-22T22:00:00.000Z",
+    "dueDate": "2026-07-25T09:00:00.000Z",
+    "estimatedHours": 0.5,
+    "aiGenerated": true,
+    "description": "UWB tag battery at 17%. Swap the cell before the tag drops off the anchor cluster.",
+    "detail": {
+      "checklist": [
+        {
+          "label": "Triage and reproduce the reported fault",
+          "done": false
+        },
+        {
+          "label": "Identify parts and labour required",
+          "done": false
+        },
+        {
+          "label": "Carry out the fix",
+          "done": false
+        },
+        {
+          "label": "Verify and close out",
+          "done": false
+        }
+      ],
+      "parts": [],
+      "laborLog": [],
+      "comments": [
+        {
+          "author": "System",
+          "text": "Work order opened against Synology RS2418+ NAS. No activity logged yet.",
+          "at": "2026-07-22T22:00:00.000Z"
+        }
+      ]
+    }
+  },
+  {
+    "id": "WO-5014",
+    "title": "Restore Secure Cage RFID reader (GW-09)",
+    "assetId": "AST-1012",
+    "assetName": "Zebra RFID Gateway G-4",
+    "status": "In Progress",
+    "priority": "Critical",
+    "type": "Corrective",
+    "assignedTo": "IoT Platform",
+    "createdAt": "2026-07-22T19:00:00.000Z",
+    "dueDate": "2026-07-23T09:00:00.000Z",
+    "estimatedHours": 2,
+    "aiGenerated": false,
+    "description": "Reader offline 14h — Secure Cage currently has no RFID coverage. Check PoE run and reader power state.",
+    "detail": {
+      "checklist": [
+        {
+          "label": "Triage and reproduce the reported fault",
+          "done": false
+        },
+        {
+          "label": "Identify parts and labour required",
+          "done": false
+        },
+        {
+          "label": "Carry out the fix",
+          "done": false
+        },
+        {
+          "label": "Verify and close out",
+          "done": false
+        }
+      ],
+      "parts": [],
+      "laborLog": [],
+      "comments": [
+        {
+          "author": "System",
+          "text": "Work order opened against Zebra RFID Gateway G-4. No activity logged yet.",
+          "at": "2026-07-22T19:00:00.000Z"
+        }
+      ]
+    }
+  },
+  {
+    "id": "WO-5015",
+    "title": "Toner replacement — LaserJet M507",
+    "assetId": "AST-1013",
+    "assetName": "HP LaserJet Enterprise M507",
+    "status": "On Hold",
+    "priority": "Low",
+    "type": "Preventive",
+    "assignedTo": "IT Support",
+    "createdAt": "2026-07-20T09:00:00.000Z",
+    "dueDate": "2026-07-29T09:00:00.000Z",
+    "estimatedHours": 0.25,
+    "aiGenerated": false,
+    "description": "Toner below 10%. On hold until PO-2206 for HP 89A cartridges is received.",
+    "detail": {
+      "checklist": [
+        {
+          "label": "Triage and reproduce the reported fault",
+          "done": false
+        },
+        {
+          "label": "Identify parts and labour required",
+          "done": false
+        },
+        {
+          "label": "Carry out the fix",
+          "done": false
+        },
+        {
+          "label": "Verify and close out",
+          "done": false
+        }
+      ],
+      "parts": [],
+      "laborLog": [],
+      "comments": [
+        {
+          "author": "System",
+          "text": "Work order opened against HP LaserJet Enterprise M507. No activity logged yet.",
+          "at": "2026-07-20T09:00:00.000Z"
+        }
+      ]
+    }
+  },
+  {
+    "id": "WO-5016",
+    "title": "RF survey follow-up — HQ Floor 3 anchors",
+    "assetId": "AST-1007",
+    "assetName": "Aruba AP-515 Access Point",
+    "status": "New",
+    "priority": "Medium",
+    "type": "Inspection",
+    "assignedTo": "Unassigned",
+    "createdAt": "2026-07-23T00:00:00.000Z",
+    "dueDate": "2026-07-30T09:00:00.000Z",
+    "estimatedHours": 3,
+    "aiGenerated": false,
+    "description": "UWB anchor GW-05 degraded to 94.2% uptime. Survey anchor placement and interference on Floor 3.",
+    "detail": {
+      "checklist": [
+        {
+          "label": "Triage and reproduce the reported fault",
+          "done": false
+        },
+        {
+          "label": "Identify parts and labour required",
+          "done": false
+        },
+        {
+          "label": "Carry out the fix",
+          "done": false
+        },
+        {
+          "label": "Verify and close out",
+          "done": false
+        }
+      ],
+      "parts": [],
+      "laborLog": [],
+      "comments": [
+        {
+          "author": "System",
+          "text": "Work order opened against Aruba AP-515 Access Point. No activity logged yet.",
+          "at": "2026-07-23T00:00:00.000Z"
+        }
+      ]
+    }
+  }
+]

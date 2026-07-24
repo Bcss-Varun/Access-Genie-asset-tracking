@@ -1,0 +1,953 @@
+[
+  {
+    "id": "AST-1001",
+    "name": "Dell PowerEdge R740 Server",
+    "category": "Compute",
+    "serialNumber": "SVR-883-XQ",
+    "status": "Maintenance",
+    "healthScore": 30,
+    "healthStatus": "Critical",
+    "manufacturer": "Dell",
+    "model": "PowerEdge R740",
+    "location": {
+      "id": "LOC-DC-1",
+      "name": "Chennai Data Center",
+      "building": "Server Room Alpha",
+      "zone": "Rack 42"
+    },
+    "custodian": "IT Ops Team",
+    "purchaseDate": "2020-01-20",
+    "purchasePrice": 850000,
+    "bookValue": 170000,
+    "depreciationMethod": "Straight-line (5yr)",
+    "warrantyExpiry": "2025-01-20",
+    "criticality": "Critical",
+    "riskScore": 82,
+    "utilization": 91,
+    "trackingTech": "RFID",
+    "lifecycleStage": "EOL Planning",
+    "mapPosition": {
+      "x": 84,
+      "y": 62
+    },
+    "telemetry": {
+      "temperature": 85,
+      "vibration": 0.8,
+      "lastPing": "2026-07-23T08:55:00.000Z"
+    },
+    "tags": [
+      "RFID",
+      "Server"
+    ],
+    "healthTrend": [
+      {
+        "label": "Feb",
+        "value": 61
+      },
+      {
+        "label": "Mar",
+        "value": 55
+      },
+      {
+        "label": "Apr",
+        "value": 48
+      },
+      {
+        "label": "May",
+        "value": 42
+      },
+      {
+        "label": "Jun",
+        "value": 36
+      },
+      {
+        "label": "Jul",
+        "value": 30
+      }
+    ],
+    "trackingId": "RFID-E28011606001"
+  },
+  {
+    "id": "AST-1002",
+    "name": "Cisco Catalyst 9500 Switch",
+    "category": "Network",
+    "serialNumber": "NET-C95-1120",
+    "status": "Active",
+    "healthScore": 95,
+    "healthStatus": "Good",
+    "manufacturer": "Cisco",
+    "model": "Catalyst 9500",
+    "location": {
+      "id": "LOC-DC-1",
+      "name": "Chennai Data Center",
+      "building": "Server Room Alpha",
+      "zone": "Rack 12"
+    },
+    "custodian": "IT Ops Team",
+    "purchaseDate": "2024-05-22",
+    "purchasePrice": 1400000,
+    "bookValue": 1260000,
+    "depreciationMethod": "Straight-line (5yr)",
+    "warrantyExpiry": "2029-05-22",
+    "criticality": "Critical",
+    "riskScore": 9,
+    "utilization": 67,
+    "trackingTech": "RFID",
+    "lifecycleStage": "In Service",
+    "mapPosition": {
+      "x": 88,
+      "y": 55
+    },
+    "telemetry": {
+      "temperature": 44,
+      "lastPing": "2026-07-23T08:59:00.000Z"
+    },
+    "tags": [
+      "RFID",
+      "Network"
+    ],
+    "healthTrend": [
+      {
+        "label": "Feb",
+        "value": 97
+      },
+      {
+        "label": "Mar",
+        "value": 96
+      },
+      {
+        "label": "Apr",
+        "value": 96
+      },
+      {
+        "label": "May",
+        "value": 95
+      },
+      {
+        "label": "Jun",
+        "value": 95
+      },
+      {
+        "label": "Jul",
+        "value": 95
+      }
+    ],
+    "trackingId": "RFID-E28011606002"
+  },
+  {
+    "id": "AST-1003",
+    "name": "Lenovo ThinkPad T14",
+    "category": "Compute",
+    "serialNumber": "LNV-T14-9982",
+    "status": "Active",
+    "healthScore": 92,
+    "healthStatus": "Good",
+    "manufacturer": "Lenovo",
+    "model": "ThinkPad T14 Gen 4",
+    "location": {
+      "id": "LOC-HQ-1",
+      "name": "Bengaluru HQ",
+      "building": "Floor 3",
+      "zone": "IT Storeroom"
+    },
+    "custodian": "Sneha Iyer",
+    "purchaseDate": "2023-11-15",
+    "purchasePrice": 95000,
+    "bookValue": 76000,
+    "depreciationMethod": "Straight-line (3yr)",
+    "warrantyExpiry": "2026-11-15",
+    "criticality": "Medium",
+    "riskScore": 14,
+    "utilization": 78,
+    "trackingTech": "QR",
+    "lifecycleStage": "In Service",
+    "mapPosition": {
+      "x": 12,
+      "y": 20
+    },
+    "telemetry": {
+      "batteryLevel": 85,
+      "temperature": 42,
+      "lastPing": "2026-07-23T08:58:00.000Z"
+    },
+    "tags": [
+      "QR",
+      "Endpoint"
+    ],
+    "healthTrend": [
+      {
+        "label": "Feb",
+        "value": 96
+      },
+      {
+        "label": "Mar",
+        "value": 95
+      },
+      {
+        "label": "Apr",
+        "value": 94
+      },
+      {
+        "label": "May",
+        "value": 94
+      },
+      {
+        "label": "Jun",
+        "value": 93
+      },
+      {
+        "label": "Jul",
+        "value": 92
+      }
+    ],
+    "trackingId": "QR-AG-1003"
+  },
+  {
+    "id": "AST-1004",
+    "name": "MacBook Pro 16\"",
+    "category": "Compute",
+    "serialNumber": "MAC-BP-0042",
+    "status": "Active",
+    "healthScore": 41,
+    "healthStatus": "Warning",
+    "manufacturer": "Apple",
+    "model": "MacBook Pro M2 Max",
+    "location": {
+      "id": "LOC-HQ-1",
+      "name": "Bengaluru HQ",
+      "building": "Floor 4",
+      "zone": "Design Studio"
+    },
+    "custodian": "Aditya Rao",
+    "purchaseDate": "2022-06-01",
+    "purchasePrice": 320000,
+    "bookValue": 96000,
+    "depreciationMethod": "Straight-line (3yr)",
+    "warrantyExpiry": "2025-06-01",
+    "criticality": "High",
+    "riskScore": 85,
+    "utilization": 94,
+    "trackingTech": "BLE",
+    "lifecycleStage": "In Service",
+    "mapPosition": {
+      "x": 45,
+      "y": 8
+    },
+    "telemetry": {
+      "batteryLevel": 12,
+      "temperature": 68,
+      "lastPing": "2026-07-23T08:59:00.000Z"
+    },
+    "tags": [
+      "BLE",
+      "High Value",
+      "Battery Degradation"
+    ],
+    "healthTrend": [
+      {
+        "label": "Feb",
+        "value": 72
+      },
+      {
+        "label": "Mar",
+        "value": 68
+      },
+      {
+        "label": "Apr",
+        "value": 61
+      },
+      {
+        "label": "May",
+        "value": 55
+      },
+      {
+        "label": "Jun",
+        "value": 48
+      },
+      {
+        "label": "Jul",
+        "value": 41
+      }
+    ],
+    "trackingId": "BLE-C39A6F2B1004"
+  },
+  {
+    "id": "AST-1005",
+    "name": "APC Smart-UPS 3000",
+    "category": "Infrastructure",
+    "serialNumber": "APC-SU-7781",
+    "status": "Active",
+    "healthScore": 88,
+    "healthStatus": "Good",
+    "manufacturer": "APC",
+    "model": "Smart-UPS 3000",
+    "location": {
+      "id": "LOC-DC-1",
+      "name": "Chennai Data Center",
+      "building": "Utility Room",
+      "zone": "Power Row A"
+    },
+    "custodian": "Facilities Team",
+    "purchaseDate": "2023-02-18",
+    "purchasePrice": 85000,
+    "bookValue": 56000,
+    "depreciationMethod": "Straight-line (5yr)",
+    "warrantyExpiry": "2028-02-18",
+    "criticality": "Critical",
+    "riskScore": 22,
+    "utilization": 84,
+    "trackingTech": "BLE",
+    "lifecycleStage": "In Service",
+    "mapPosition": {
+      "x": 8,
+      "y": 78
+    },
+    "telemetry": {
+      "batteryLevel": 92,
+      "temperature": 26,
+      "lastPing": "2026-07-23T08:52:00.000Z"
+    },
+    "tags": [
+      "BLE",
+      "Power"
+    ],
+    "healthTrend": [
+      {
+        "label": "Feb",
+        "value": 91
+      },
+      {
+        "label": "Mar",
+        "value": 90
+      },
+      {
+        "label": "Apr",
+        "value": 90
+      },
+      {
+        "label": "May",
+        "value": 89
+      },
+      {
+        "label": "Jun",
+        "value": 89
+      },
+      {
+        "label": "Jul",
+        "value": 88
+      }
+    ],
+    "trackingId": "BLE-C39A6F2B1005"
+  },
+  {
+    "id": "AST-1006",
+    "name": "iPad Pro 12.9\" (Field Ops)",
+    "category": "Endpoints",
+    "serialNumber": "IPD-PR-3390",
+    "status": "Missing",
+    "healthScore": 70,
+    "healthStatus": "Warning",
+    "manufacturer": "Apple",
+    "model": "iPad Pro 6th Gen",
+    "location": {
+      "id": "LOC-HQ-1",
+      "name": "Bengaluru HQ",
+      "building": "Floor 1",
+      "zone": "Lobby"
+    },
+    "custodian": "Field Tech 2B",
+    "purchaseDate": "2021-09-30",
+    "purchasePrice": 115000,
+    "bookValue": 38000,
+    "depreciationMethod": "Straight-line (3yr)",
+    "warrantyExpiry": "2024-09-30",
+    "criticality": "High",
+    "riskScore": 74,
+    "utilization": 0,
+    "trackingTech": "BLE",
+    "lifecycleStage": "In Service",
+    "mapPosition": {
+      "x": 76,
+      "y": 30
+    },
+    "telemetry": {
+      "batteryLevel": 12,
+      "lastPing": "2026-07-21T05:00:00.000Z"
+    },
+    "tags": [
+      "BLE",
+      "Last seen 2d",
+      "Mobile"
+    ],
+    "healthTrend": [
+      {
+        "label": "Feb",
+        "value": 78
+      },
+      {
+        "label": "Mar",
+        "value": 77
+      },
+      {
+        "label": "Apr",
+        "value": 75
+      },
+      {
+        "label": "May",
+        "value": 73
+      },
+      {
+        "label": "Jun",
+        "value": 72
+      },
+      {
+        "label": "Jul",
+        "value": 70
+      }
+    ],
+    "trackingId": "BLE-C39A6F2B1006"
+  },
+  {
+    "id": "AST-1007",
+    "name": "Aruba AP-515 Access Point",
+    "category": "Network",
+    "serialNumber": "ARU-AP-6612",
+    "status": "Active",
+    "healthScore": 76,
+    "healthStatus": "Warning",
+    "manufacturer": "Aruba Networks",
+    "model": "AP-515",
+    "location": {
+      "id": "LOC-HQ-1",
+      "name": "Bengaluru HQ",
+      "building": "Floor 3",
+      "zone": "Conference Room A"
+    },
+    "custodian": "Network Team",
+    "purchaseDate": "2021-03-12",
+    "purchasePrice": 65000,
+    "bookValue": 32000,
+    "depreciationMethod": "Straight-line (5yr)",
+    "warrantyExpiry": "2026-03-12",
+    "criticality": "Medium",
+    "riskScore": 39,
+    "utilization": 96,
+    "trackingTech": "UWB",
+    "lifecycleStage": "In Service",
+    "mapPosition": {
+      "x": 40,
+      "y": 45
+    },
+    "telemetry": {
+      "temperature": 58,
+      "lastPing": "2026-07-23T08:57:00.000Z"
+    },
+    "tags": [
+      "UWB",
+      "Overutilized",
+      "Wireless"
+    ],
+    "healthTrend": [
+      {
+        "label": "Feb",
+        "value": 84
+      },
+      {
+        "label": "Mar",
+        "value": 82
+      },
+      {
+        "label": "Apr",
+        "value": 81
+      },
+      {
+        "label": "May",
+        "value": 79
+      },
+      {
+        "label": "Jun",
+        "value": 78
+      },
+      {
+        "label": "Jul",
+        "value": 76
+      }
+    ],
+    "trackingId": "UWB-ANCH-1007"
+  },
+  {
+    "id": "AST-1008",
+    "name": "Fortinet FortiGate 100F Firewall",
+    "category": "Network",
+    "serialNumber": "FGT-100F-1120",
+    "status": "Active",
+    "healthScore": 95,
+    "healthStatus": "Good",
+    "manufacturer": "Fortinet",
+    "model": "FortiGate 100F",
+    "location": {
+      "id": "LOC-DC-1",
+      "name": "Chennai Data Center",
+      "building": "Server Room Alpha",
+      "zone": "Rack 1"
+    },
+    "custodian": "Security Team",
+    "purchaseDate": "2024-05-22",
+    "purchasePrice": 450000,
+    "bookValue": 410000,
+    "depreciationMethod": "Straight-line (5yr)",
+    "warrantyExpiry": "2029-05-22",
+    "criticality": "Critical",
+    "riskScore": 9,
+    "utilization": 67,
+    "trackingTech": "RFID",
+    "lifecycleStage": "In Service",
+    "mapPosition": {
+      "x": 88,
+      "y": 55
+    },
+    "telemetry": {
+      "temperature": 44,
+      "lastPing": "2026-07-23T08:59:00.000Z"
+    },
+    "tags": [
+      "RFID",
+      "Security",
+      "Firewall"
+    ],
+    "healthTrend": [
+      {
+        "label": "Feb",
+        "value": 97
+      },
+      {
+        "label": "Mar",
+        "value": 96
+      },
+      {
+        "label": "Apr",
+        "value": 96
+      },
+      {
+        "label": "May",
+        "value": 95
+      },
+      {
+        "label": "Jun",
+        "value": 95
+      },
+      {
+        "label": "Jul",
+        "value": 95
+      }
+    ],
+    "trackingId": "RFID-E28011606008"
+  },
+  {
+    "id": "AST-1009",
+    "name": "Synology RS2418+ NAS",
+    "category": "Infrastructure",
+    "serialNumber": "SYN-RS-4410",
+    "status": "Maintenance",
+    "healthScore": 54,
+    "healthStatus": "Warning",
+    "manufacturer": "Synology",
+    "model": "RS2418+",
+    "location": {
+      "id": "LOC-DC-1",
+      "name": "Chennai Data Center",
+      "building": "Server Room Beta",
+      "zone": "Rack 8"
+    },
+    "custodian": "Storage Team",
+    "purchaseDate": "2022-08-05",
+    "purchasePrice": 240000,
+    "bookValue": 146000,
+    "depreciationMethod": "Straight-line (5yr)",
+    "warrantyExpiry": "2027-08-05",
+    "criticality": "Medium",
+    "riskScore": 46,
+    "utilization": 81,
+    "trackingTech": "UWB",
+    "lifecycleStage": "In Service",
+    "mapPosition": {
+      "x": 30,
+      "y": 25
+    },
+    "telemetry": {
+      "temperature": 38,
+      "vibration": 0.5,
+      "lastPing": "2026-07-23T08:46:00.000Z"
+    },
+    "tags": [
+      "UWB",
+      "Storage",
+      "Degraded Array"
+    ],
+    "healthTrend": [
+      {
+        "label": "Feb",
+        "value": 70
+      },
+      {
+        "label": "Mar",
+        "value": 67
+      },
+      {
+        "label": "Apr",
+        "value": 63
+      },
+      {
+        "label": "May",
+        "value": 60
+      },
+      {
+        "label": "Jun",
+        "value": 57
+      },
+      {
+        "label": "Jul",
+        "value": 54
+      }
+    ],
+    "trackingId": "UWB-ANCH-1009"
+  },
+  {
+    "id": "AST-1010",
+    "name": "Dell UltraSharp 32\" Monitor",
+    "category": "Endpoints",
+    "serialNumber": "MON-DL-9021",
+    "status": "Active",
+    "healthScore": 83,
+    "healthStatus": "Good",
+    "manufacturer": "Dell",
+    "model": "U3223QE",
+    "location": {
+      "id": "LOC-HQ-1",
+      "name": "Bengaluru HQ",
+      "building": "Floor 2",
+      "zone": "IT Storeroom"
+    },
+    "custodian": "IT Support",
+    "purchaseDate": "2023-07-19",
+    "purchasePrice": 78000,
+    "bookValue": 52000,
+    "depreciationMethod": "Straight-line (3yr)",
+    "warrantyExpiry": "2026-07-19",
+    "criticality": "Low",
+    "riskScore": 18,
+    "utilization": 88,
+    "trackingTech": "QR",
+    "lifecycleStage": "In Service",
+    "mapPosition": {
+      "x": 90,
+      "y": 30
+    },
+    "telemetry": {
+      "lastPing": "2026-07-23T08:54:00.000Z"
+    },
+    "tags": [
+      "QR",
+      "Peripheral"
+    ],
+    "healthTrend": [
+      {
+        "label": "Feb",
+        "value": 87
+      },
+      {
+        "label": "Mar",
+        "value": 86
+      },
+      {
+        "label": "Apr",
+        "value": 85
+      },
+      {
+        "label": "May",
+        "value": 85
+      },
+      {
+        "label": "Jun",
+        "value": 84
+      },
+      {
+        "label": "Jul",
+        "value": 83
+      }
+    ],
+    "trackingId": "QR-AG-1010"
+  },
+  {
+    "id": "AST-1011",
+    "name": "Zebra TC52 Mobile Computer",
+    "category": "Endpoints",
+    "serialNumber": "ZEB-TC-0071",
+    "status": "Active",
+    "healthScore": 79,
+    "healthStatus": "Good",
+    "manufacturer": "Zebra",
+    "model": "TC52",
+    "location": {
+      "id": "LOC-WH-1",
+      "name": "Hyderabad Central Warehouse",
+      "building": "Building A",
+      "zone": "Picking Zone"
+    },
+    "custodian": "Warehouse Team",
+    "purchaseDate": "2020-10-11",
+    "purchasePrice": 92000,
+    "bookValue": 17000,
+    "depreciationMethod": "Straight-line (5yr)",
+    "warrantyExpiry": "2025-10-11",
+    "criticality": "Medium",
+    "riskScore": 27,
+    "utilization": 93,
+    "trackingTech": "BLE",
+    "lifecycleStage": "In Service",
+    "mapPosition": {
+      "x": 4,
+      "y": 60
+    },
+    "telemetry": {
+      "batteryLevel": 52,
+      "lastPing": "2026-07-23T08:56:00.000Z"
+    },
+    "tags": [
+      "BLE",
+      "Scanner",
+      "Rugged"
+    ],
+    "healthTrend": [
+      {
+        "label": "Feb",
+        "value": 83
+      },
+      {
+        "label": "Mar",
+        "value": 82
+      },
+      {
+        "label": "Apr",
+        "value": 81
+      },
+      {
+        "label": "May",
+        "value": 81
+      },
+      {
+        "label": "Jun",
+        "value": 80
+      },
+      {
+        "label": "Jul",
+        "value": 79
+      }
+    ],
+    "trackingId": "BLE-C39A6F2B1011"
+  },
+  {
+    "id": "AST-1012",
+    "name": "Zebra RFID Gateway G-4",
+    "category": "Sensors",
+    "serialNumber": "SEN-ZG4-2205",
+    "status": "Active",
+    "healthScore": 90,
+    "healthStatus": "Good",
+    "manufacturer": "Zebra",
+    "model": "FX9600",
+    "location": {
+      "id": "LOC-WH-1",
+      "name": "Hyderabad Central Warehouse",
+      "building": "Building A",
+      "zone": "Loading Dock 4"
+    },
+    "custodian": "IoT Platform",
+    "purchaseDate": "2024-01-30",
+    "purchasePrice": 260000,
+    "bookValue": 228000,
+    "depreciationMethod": "Straight-line (5yr)",
+    "warrantyExpiry": "2027-01-30",
+    "criticality": "Medium",
+    "riskScore": 12,
+    "utilization": 55,
+    "trackingTech": "RFID",
+    "lifecycleStage": "In Service",
+    "mapPosition": {
+      "x": 16,
+      "y": 12
+    },
+    "telemetry": {
+      "batteryLevel": 100,
+      "temperature": 35,
+      "lastPing": "2026-07-23T08:59:00.000Z"
+    },
+    "tags": [
+      "RFID",
+      "Gateway"
+    ],
+    "healthTrend": [
+      {
+        "label": "Feb",
+        "value": 93
+      },
+      {
+        "label": "Mar",
+        "value": 92
+      },
+      {
+        "label": "Apr",
+        "value": 92
+      },
+      {
+        "label": "May",
+        "value": 91
+      },
+      {
+        "label": "Jun",
+        "value": 91
+      },
+      {
+        "label": "Jul",
+        "value": 90
+      }
+    ],
+    "trackingId": "RFID-E28011606012"
+  },
+  {
+    "id": "AST-1013",
+    "name": "HP LaserJet Enterprise M507",
+    "category": "Endpoints",
+    "serialNumber": "HP-LJ-8830",
+    "status": "Active",
+    "healthScore": 58,
+    "healthStatus": "Warning",
+    "manufacturer": "HP",
+    "model": "M507",
+    "location": {
+      "id": "LOC-HQ-1",
+      "name": "Bengaluru HQ",
+      "building": "Floor 3",
+      "zone": "Print Station"
+    },
+    "custodian": "IT Support",
+    "purchaseDate": "2021-11-22",
+    "purchasePrice": 62000,
+    "bookValue": 14000,
+    "depreciationMethod": "Straight-line (5yr)",
+    "warrantyExpiry": "2026-11-22",
+    "criticality": "Low",
+    "riskScore": 61,
+    "utilization": 72,
+    "trackingTech": "QR",
+    "lifecycleStage": "In Service",
+    "mapPosition": {
+      "x": 10,
+      "y": 45
+    },
+    "telemetry": {
+      "lastPing": "2026-07-23T08:58:00.000Z"
+    },
+    "tags": [
+      "QR",
+      "Printer",
+      "Low Toner"
+    ],
+    "healthTrend": [
+      {
+        "label": "Feb",
+        "value": 71
+      },
+      {
+        "label": "Mar",
+        "value": 68
+      },
+      {
+        "label": "Apr",
+        "value": 65
+      },
+      {
+        "label": "May",
+        "value": 63
+      },
+      {
+        "label": "Jun",
+        "value": 61
+      },
+      {
+        "label": "Jul",
+        "value": 58
+      }
+    ],
+    "trackingId": "QR-AG-1013"
+  },
+  {
+    "id": "AST-1014",
+    "name": "Fluke Networks DSX-8000",
+    "category": "Sensors",
+    "serialNumber": "FLK-DSX-5567",
+    "status": "Staging",
+    "healthScore": 97,
+    "healthStatus": "Good",
+    "manufacturer": "Fluke Networks",
+    "model": "DSX-8000 CableAnalyzer",
+    "location": {
+      "id": "LOC-HQ-1",
+      "name": "Bengaluru HQ",
+      "building": "Floor 1",
+      "zone": "IT Tool Room"
+    },
+    "custodian": "Network Team",
+    "purchaseDate": "2026-06-15",
+    "purchasePrice": 1450000,
+    "bookValue": 1425000,
+    "depreciationMethod": "Straight-line (5yr)",
+    "warrantyExpiry": "2031-06-15",
+    "criticality": "Medium",
+    "riskScore": 6,
+    "utilization": 12,
+    "trackingTech": "BLE",
+    "lifecycleStage": "Commissioning",
+    "mapPosition": {
+      "x": 55,
+      "y": 35
+    },
+    "telemetry": {
+      "batteryLevel": 96,
+      "temperature": 30,
+      "lastPing": "2026-07-23T08:59:00.000Z"
+    },
+    "tags": [
+      "BLE",
+      "New",
+      "Tester"
+    ],
+    "healthTrend": [
+      {
+        "label": "Feb",
+        "value": 0
+      },
+      {
+        "label": "Mar",
+        "value": 0
+      },
+      {
+        "label": "Apr",
+        "value": 0
+      },
+      {
+        "label": "May",
+        "value": 0
+      },
+      {
+        "label": "Jun",
+        "value": 98
+      },
+      {
+        "label": "Jul",
+        "value": 97
+      }
+    ],
+    "trackingId": "BLE-C39A6F2B1014"
+  }
+]

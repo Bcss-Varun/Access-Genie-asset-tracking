@@ -1,0 +1,56 @@
+[
+  {
+    "id": "U-001",
+    "name": "Raj",
+    "email": "raj@bcss.in",
+    "initials": "R",
+    "roleId": "super_admin",
+    "title": "Super Admin",
+    "homeScopeId": "ORG-1"
+  },
+  {
+    "id": "U-002",
+    "name": "Sneha Iyer",
+    "email": "sneha.iyer@accessgenie.in",
+    "initials": "SI",
+    "roleId": "facility_manager",
+    "title": "Facility Manager — Hyderabad Central Warehouse",
+    "homeScopeId": "FAC-WH1"
+  },
+  {
+    "id": "U-003",
+    "name": "Manoj Reddy",
+    "email": "manoj.reddy@accessgenie.in",
+    "initials": "MR",
+    "roleId": "maintenance_manager",
+    "title": "Maintenance Manager",
+    "homeScopeId": "FAC-WH1"
+  },
+  {
+    "id": "U-004",
+    "name": "Deepak Nair",
+    "email": "deepak.nair@accessgenie.in",
+    "initials": "DN",
+    "roleId": "technician",
+    "title": "Field Technician",
+    "homeScopeId": "FAC-WH1"
+  },
+  {
+    "id": "U-005",
+    "name": "Ananya Sharma",
+    "email": "ananya.sharma@accessgenie.in",
+    "initials": "AS",
+    "roleId": "executive",
+    "title": "Chief Operating Officer",
+    "homeScopeId": "ORG-1"
+  },
+  {
+    "id": "U-006",
+    "name": "Tarun Fernandes",
+    "email": "tarun.fernandes@accessgenie.in",
+    "initials": "TF",
+    "roleId": "security_officer",
+    "title": "Security Officer",
+    "homeScopeId": "FAC-WH1"
+  }
+]

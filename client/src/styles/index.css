@@ -1,0 +1,141 @@
+@import "tailwindcss";
+
+/* `dark:` is a class-based opt-in variant. The product ships a polished light theme. */
+@custom-variant dark (&:where(.dark, .dark *));
+
+@theme {
+  --font-sans: 'Inter', ui-sans-serif, system-ui, sans-serif;
+  --font-heading: 'Outfit', 'Inter', ui-sans-serif, system-ui, sans-serif;
+
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+
+  /* ── Primary — Indigo (confident, enterprise; used sparingly for accent) ── */
+  --color-primary-50: #eef2ff;
+  --color-primary-100: #e0e7ff;
+  --color-primary-200: #c7d2fe;
+  --color-primary-300: #a5b4fc;
+  --color-primary-400: #818cf8;
+  --color-primary-500: #6366f1;
+  --color-primary-600: #4f46e5;
+  --color-primary-700: #4338ca;
+  --color-primary-800: #3730a3;
+  --color-primary-900: #312e81;
+
+  /* ── Semantic status (health / severity) — one meaning per hue ── */
+  --color-health-good: #10b981;    /* emerald  — good / active / valid */
+  --color-health-warning: #f59e0b; /* amber    — warning / due soon */
+  --color-health-critical: #ef4444;/* red      — critical / overdue */
+
+  /* ── Surfaces & lines ── */
+  --color-surface: #ffffff;
+  --color-surface-border: #e5e7eb; /* hairline */
+}
+
+:root {
+  --background: #f8fafc; /* cool near-white canvas */
+  --foreground: #0f172a; /* slate-900 text */
+}
+
+body {
+  background-color: var(--background);
+  color: var(--foreground);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+h1, h2, h3, h4, h5, h6 {
+  font-family: var(--font-heading);
+  letter-spacing: -0.011em;
+}
+
+/* Primary surface: a clean white card, hairline border, soft shadow. */
+@utility glass-panel {
+  background: var(--color-surface);
+  border: 1px solid var(--color-surface-border);
+  border-radius: 0.75rem;
+  box-shadow:
+    0 1px 2px 0 rgba(16, 24, 40, 0.04),
+    0 1px 3px 0 rgba(16, 24, 40, 0.05);
+}
+
+/* Motion — subtle, and disabled for users who prefer reduced motion. */
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(4px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+@keyframes fadeInFast {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* Scanner viewfinder line (top-bar Scan dialog) */
+@keyframes scanline {
+  0%, 100% { top: 18%; }
+  50% { top: 82%; }
+}
+
+/* ── Dark theme (opt-in via the top-bar toggle) ──────────────────────────────
+   Pages are light-authored with Tailwind utilities, so the toggle remaps the
+   common neutral utilities to dark equivalents. Card surfaces (glass-panel)
+   flip automatically via the surface tokens; brand/status/accent colors keep
+   their meaning. */
+.dark {
+  --background: #0b1220;
+  --foreground: #e5e7eb;
+  --color-surface: #111a2e;
+  --color-surface-border: #1f2a44;
+}
+.dark .bg-white,
+.dark [class~="bg-white/95"],
+.dark [class~="bg-white/90"],
+.dark [class~="bg-white/80"],
+.dark [class~="bg-white/50"] { background-color: #111a2e !important; }
+.dark .bg-slate-50,
+.dark [class~="bg-slate-50/60"],
+.dark [class~="bg-slate-50/50"],
+.dark [class~="bg-slate-50/40"] { background-color: #0f1729 !important; }
+.dark .bg-slate-100 { background-color: #1c2740 !important; }
+.dark .text-slate-900 { color: #f1f5f9 !important; }
+.dark .text-slate-800 { color: #e5ebf3 !important; }
+.dark .text-slate-700 { color: #cbd5e1 !important; }
+.dark .text-slate-600 { color: #aeb9c9 !important; }
+.dark .text-slate-500 { color: #94a3b8 !important; }
+.dark .text-slate-400 { color: #6b7a90 !important; }
+.dark .border-slate-100 { border-color: #1c2740 !important; }
+.dark .border-slate-200 { border-color: #1f2a44 !important; }
+.dark .border-slate-300 { border-color: #2a3958 !important; }
+.dark [class~="divide-slate-100"] > *,
+.dark [class~="divide-slate-200"] > * { border-color: #1f2a44 !important; }
+.dark [class~="hover:bg-slate-50"]:hover,
+.dark [class~="hover:bg-slate-100"]:hover { background-color: #1c2740 !important; }
+/* Blue Cloud Softech logo is dark-on-transparent — keep it on a light chip in dark mode */
+.dark img[alt="Blue Cloud Softech Solutions Ltd."] {
+  background: #ffffff;
+  padding: 6px 8px;
+  border-radius: 6px;
+}
+
+/* Tasteful thin scrollbars */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: #cbd5e1 transparent;
+}
+*::-webkit-scrollbar { width: 8px; height: 8px; }
+*::-webkit-scrollbar-thumb { background-color: #cbd5e1; border-radius: 9999px; }
+*::-webkit-scrollbar-thumb:hover { background-color: #94a3b8; }
+
+/* Print: hide app chrome so label sheets / reports print clean */
+@media print {
+  aside, header { display: none !important; }
+  main { overflow: visible !important; padding: 0 !important; }
+}

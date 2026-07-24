@@ -1,0 +1,18 @@
+[
+  {
+    "id": "WH-1",
+    "name": "IT Main Storeroom",
+    "location": "HQ · Floor 1",
+    "binCount": 480,
+    "skuCount": 1240,
+    "valueInr": 95000000
+  },
+  {
+    "id": "WH-3",
+    "name": "Data Center Spares",
+    "location": "Chennai Data Center",
+    "binCount": 60,
+    "skuCount": 175,
+    "valueInr": 22000000
+  }
+]
