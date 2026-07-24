@@ -11,6 +11,7 @@ import { relTime } from '@/lib/utils';
 // Flagship capabilities — the demo spotlight. Each pillar deep-links to the
 // live workflow that demonstrates it.
 // ─────────────────────────────────────────────────────────────────────────────
+type TrackingTag = { label: string; id: string };
 type Feature = {
   title: string;
   blurb: string;
@@ -18,7 +19,7 @@ type Feature = {
   icon: string;
   accent: string;
   tint: string;
-  tags?: string[];
+  tags?: TrackingTag[];
 };
 
 const flagshipFeatures: Feature[] = [
@@ -29,7 +30,13 @@ const flagshipFeatures: Feature[] = [
     icon: '🛰️',
     accent: '#0ea5e9',
     tint: 'rgba(14,165,233,0.12)',
-    tags: ['RFID', 'BLE', 'GPS', 'QR', 'UWB'],
+    tags: [
+      { label: 'RFID', id: 'E2801160' },
+      { label: 'BLE', id: 'C3:9A:6F' },
+      { label: 'GPS', id: '37.77,-122.41' },
+      { label: 'QR', id: 'AG-QR-1001' },
+      { label: 'UWB', id: 'ANCH-04' },
+    ],
   },
   {
     title: 'AI Asset Intelligence & Utilization',
@@ -146,11 +153,13 @@ export default function WorkspacePage() {
                     <div className="mt-2 flex flex-wrap gap-1">
                       {f.tags.map((t) => (
                         <span
-                          key={t}
-                          className="rounded-full px-1.5 py-0.5 text-[10px] font-semibold tracking-wide"
+                          key={t.label}
+                          className="inline-flex items-center gap-1 rounded-full px-1.5 py-0.5 text-[10px] tracking-wide"
                           style={{ backgroundColor: f.tint, color: f.accent }}
+                          title={`${t.label} tag id`}
                         >
-                          {t}
+                          <span className="font-semibold">{t.label}</span>
+                          <span className="font-mono opacity-80">{t.id}</span>
                         </span>
                       ))}
                     </div>

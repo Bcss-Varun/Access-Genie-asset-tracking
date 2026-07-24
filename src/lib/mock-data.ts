@@ -774,17 +774,177 @@ export function getWorkOrderDetail(id: string): WorkOrderDetail {
   return { checklist, parts, laborLog, comments };
 }
 
-export const mockModels: Model[] = [];
-export const getModel = (id: string): Model | undefined => undefined;
+export const mockModels: Model[] = [
+  {
+    id: 'MDL-FAIL', name: 'Asset Failure Predictor', task: 'Predictive failure (survival + gradient boosting)',
+    status: 'Production', version: 'v4.2.1', accuracy: 93, driftPct: 6, lastTrained: daysAgo(9),
+    owner: 'ML Platform', framework: 'XGBoost 2.0', predictionsPerDay: 4820,
+    features: [
+      { feature: 'Thermal trend (7d)', importance: 0.28 },
+      { feature: 'Battery cycle count', importance: 0.22 },
+      { feature: 'Vibration variance', importance: 0.18 },
+      { feature: 'Age vs. MTBF', importance: 0.16 },
+      { feature: 'Prior fault history', importance: 0.16 },
+    ],
+    versions: [
+      { version: 'v4.2.1', trainedAt: daysAgo(9), accuracy: 93, status: 'Production', notes: 'Added thermal-trend feature; +2.1% recall on servers.' },
+      { version: 'v4.1.0', trainedAt: daysAgo(48), accuracy: 91, status: 'Retired', notes: 'Baseline gradient-boosted model.' },
+    ],
+  },
+  {
+    id: 'MDL-UTIL', name: 'Utilization Optimizer', task: 'Utilization & rebalancing (regression)',
+    status: 'Production', version: 'v2.7.0', accuracy: 89, driftPct: 5, lastTrained: daysAgo(14),
+    owner: 'ML Platform', framework: 'LightGBM 4.3', predictionsPerDay: 2110,
+    features: [
+      { feature: 'Idle-time ratio (30d)', importance: 0.34 },
+      { feature: 'Location demand index', importance: 0.26 },
+      { feature: 'Check-out frequency', importance: 0.22 },
+      { feature: 'Peer-group utilization', importance: 0.18 },
+    ],
+    versions: [
+      { version: 'v2.7.0', trainedAt: daysAgo(14), accuracy: 89, status: 'Production', notes: 'Recalibrated demand index for HQ endpoints.' },
+    ],
+  },
+  {
+    id: 'MDL-THEFT', name: 'Theft & Custody Anomaly', task: 'Security / custody anomaly (isolation forest)',
+    status: 'Production', version: 'v3.1.2', accuracy: 90, driftPct: 8, lastTrained: daysAgo(6),
+    owner: 'Security Data Science', framework: 'scikit-learn 1.5', predictionsPerDay: 9600,
+    features: [
+      { feature: 'Time since last scan', importance: 0.31 },
+      { feature: 'Geofence exit w/o checkout', importance: 0.29 },
+      { feature: 'After-hours movement', importance: 0.22 },
+      { feature: 'Custody chain gaps', importance: 0.18 },
+    ],
+    versions: [
+      { version: 'v3.1.2', trainedAt: daysAgo(6), accuracy: 90, status: 'Production', notes: 'Tuned sensitivity for BLE dropout false positives.' },
+      { version: 'v3.0.0', trainedAt: daysAgo(70), accuracy: 87, status: 'Retired', notes: 'Initial isolation-forest rollout.' },
+    ],
+  },
+  {
+    id: 'MDL-FORECAST', name: 'CapEx & Demand Forecaster', task: 'Time-series forecasting (temporal fusion)',
+    status: 'Staging', version: 'v1.9.0-rc2', accuracy: 86, driftPct: 11, lastTrained: daysAgo(3),
+    owner: 'FinOps Analytics', framework: 'PyTorch Forecasting', predictionsPerDay: 340,
+    features: [
+      { feature: 'Refresh-cycle schedule', importance: 0.30 },
+      { feature: 'Warranty-expiry curve', importance: 0.27 },
+      { feature: 'Headcount growth', importance: 0.24 },
+      { feature: 'Vendor price index', importance: 0.19 },
+    ],
+    versions: [
+      { version: 'v1.9.0-rc2', trainedAt: daysAgo(3), accuracy: 86, status: 'Staging', notes: 'Release candidate — validating drift before promotion.' },
+      { version: 'v1.8.0', trainedAt: daysAgo(34), accuracy: 84, status: 'Production', notes: 'Current production CapEx forecaster.' },
+    ],
+  },
+  {
+    id: 'MDL-ANOM', name: 'Telemetry Anomaly Detector', task: 'Streaming anomaly detection (autoencoder)',
+    status: 'Production', version: 'v5.0.3', accuracy: 94, driftPct: 4, lastTrained: daysAgo(11),
+    owner: 'ML Platform', framework: 'TensorFlow 2.16', predictionsPerDay: 128000,
+    features: [
+      { feature: 'Reconstruction error', importance: 0.40 },
+      { feature: 'Temperature z-score', importance: 0.24 },
+      { feature: 'Power-draw deviation', importance: 0.20 },
+      { feature: 'Signal-strength drop', importance: 0.16 },
+    ],
+    versions: [
+      { version: 'v5.0.3', trainedAt: daysAgo(11), accuracy: 94, status: 'Production', notes: 'Quantized encoder — 3x faster edge inference.' },
+    ],
+  },
+  {
+    id: 'MDL-HEALTH', name: 'Asset Health Scorer', task: 'Lifecycle health scoring (ensemble)',
+    status: 'Production', version: 'v3.4.0', accuracy: 91, driftPct: 7, lastTrained: daysAgo(20),
+    owner: 'ML Platform', framework: 'XGBoost 2.0', predictionsPerDay: 14205,
+    features: [
+      { feature: 'Composite health trend', importance: 0.33 },
+      { feature: 'Warranty / EOL distance', importance: 0.25 },
+      { feature: 'Open work-order load', importance: 0.22 },
+      { feature: 'Book-value ratio', importance: 0.20 },
+    ],
+    versions: [
+      { version: 'v3.4.0', trainedAt: daysAgo(20), accuracy: 91, status: 'Production', notes: 'Blended lifecycle + telemetry signals.' },
+      { version: 'v3.3.1', trainedAt: daysAgo(60), accuracy: 90, status: 'Shadow', notes: 'Shadow-scored against production for two weeks.' },
+    ],
+  },
+];
+export const getModel = (id: string): Model | undefined => mockModels.find((m) => m.id === id);
 
-export const mockForecasts: ForecastSeries[] = [];
+export const mockForecasts: ForecastSeries[] = [
+  {
+    id: 'FCST-1',
+    name: 'Server Utilization',
+    unit: '%',
+    points: [
+      { label: 'Jan', actual: 65, forecast: 68, lower: 60, upper: 75 },
+      { label: 'Feb', actual: 70, forecast: 72, lower: 65, upper: 80 },
+    ],
+  },
+  {
+    id: 'FC-CAPEX', name: 'Capital Expenditure', unit: '$000s',
+    points: [
+      { label: 'Jan', actual: 210, forecast: 205, lower: 190, upper: 220 },
+      { label: 'Feb', actual: 240, forecast: 232, lower: 215, upper: 250 },
+      { label: 'Mar', actual: 198, forecast: 220, lower: 200, upper: 240 },
+      { label: 'Apr', actual: 305, forecast: 290, lower: 265, upper: 315 },
+      { label: 'May', actual: 260, forecast: 268, lower: 245, upper: 292 },
+      { label: 'Jun', actual: 288, forecast: 279, lower: 255, upper: 305 },
+      { label: 'Jul', actual: 312, forecast: 300, lower: 274, upper: 330 },
+      { label: 'Aug', forecast: 330, lower: 298, upper: 365 },
+      { label: 'Sep', forecast: 352, lower: 314, upper: 392 },
+      { label: 'Oct', forecast: 375, lower: 330, upper: 421 },
+      { label: 'Nov', forecast: 360, lower: 314, upper: 408 },
+      { label: 'Dec', forecast: 398, lower: 344, upper: 452 },
+    ],
+  },
+  {
+    id: 'FC-UTIL', name: 'Fleet Utilization', unit: '%',
+    points: [
+      { label: 'Jan', actual: 68, forecast: 67, lower: 63, upper: 71 },
+      { label: 'Feb', actual: 71, forecast: 70, lower: 66, upper: 74 },
+      { label: 'Mar', actual: 74, forecast: 73, lower: 69, upper: 77 },
+      { label: 'Apr', actual: 72, forecast: 74, lower: 70, upper: 78 },
+      { label: 'May', actual: 79, forecast: 77, lower: 72, upper: 82 },
+      { label: 'Jun', actual: 83, forecast: 80, lower: 75, upper: 85 },
+      { label: 'Jul', actual: 84, forecast: 83, lower: 78, upper: 88 },
+      { label: 'Aug', forecast: 85, lower: 79, upper: 90 },
+      { label: 'Sep', forecast: 86, lower: 80, upper: 92 },
+      { label: 'Oct', forecast: 87, lower: 80, upper: 93 },
+      { label: 'Nov', forecast: 88, lower: 81, upper: 94 },
+      { label: 'Dec', forecast: 89, lower: 82, upper: 95 },
+    ],
+  },
+  {
+    id: 'FC-FAILURE', name: 'Predicted Failures', unit: '/mo',
+    points: [
+      { label: 'Jan', actual: 12, forecast: 11, lower: 8, upper: 15 },
+      { label: 'Feb', actual: 10, forecast: 11, lower: 8, upper: 14 },
+      { label: 'Mar', actual: 14, forecast: 12, lower: 9, upper: 16 },
+      { label: 'Apr', actual: 9, forecast: 11, lower: 8, upper: 14 },
+      { label: 'May', actual: 11, forecast: 10, lower: 7, upper: 13 },
+      { label: 'Jun', actual: 8, forecast: 9, lower: 6, upper: 12 },
+      { label: 'Jul', actual: 9, forecast: 9, lower: 6, upper: 12 },
+      { label: 'Aug', forecast: 8, lower: 5, upper: 12 },
+      { label: 'Sep', forecast: 8, lower: 5, upper: 11 },
+      { label: 'Oct', forecast: 7, lower: 4, upper: 11 },
+      { label: 'Nov', forecast: 7, lower: 4, upper: 10 },
+      { label: 'Dec', forecast: 6, lower: 3, upper: 10 },
+    ],
+  },
+];
 export const mockAnomalies: AnomalyEvent[] = [
   { id: 'AN-02', assetId: 'AST-1001', assetName: 'Dell PowerEdge R740 Server', metric: 'Temperature', severity: 'Critical', detectedAt: hoursAgo(6), description: 'Inlet temperature 85°C sustained — 4σ over normal operating envelope.', zScore: 4.0, confidence: 96 },
 ];
 
 export const getHealthMatrix = () => mockAssets.map((a) => ({ id: a.id, name: a.name, category: a.category, health: a.healthScore, risk: a.riskScore ?? 0, utilization: a.utilization ?? 0, status: a.status }));
 
-export const mockReports: Report[] = [];
+export const mockReports: Report[] = [
+  { id: 'RPT-001', name: 'Executive Asset Summary', category: 'Executive', persona: 'CIO / CFO', description: 'Portfolio value, health and risk at a glance for leadership.', format: 'Dashboard', lastRun: hoursAgo(6), metrics: ['Total value', 'Avg health', 'Critical alerts', 'Utilization'], scheduled: true },
+  { id: 'RPT-002', name: 'Depreciation & Book Value', category: 'Financial', persona: 'Finance', description: 'Straight-line depreciation and current book value by category.', format: 'Excel', lastRun: daysAgo(1), metrics: ['Book value', 'Accumulated depreciation', 'CapEx forecast'], scheduled: true },
+  { id: 'RPT-003', name: 'Maintenance Backlog & SLA', category: 'Maintenance', persona: 'IT Ops', description: 'Open work orders, ageing and SLA compliance by team.', format: 'PDF', lastRun: hoursAgo(20), metrics: ['Open WOs', 'MTTR', 'SLA %', 'PM compliance'], scheduled: false },
+  { id: 'RPT-004', name: 'Utilization & Rebalancing', category: 'Utilization', persona: 'IT Ops', description: 'Idle vs. over-used assets and rebalancing opportunities.', format: 'Dashboard', lastRun: daysAgo(2), metrics: ['Avg utilization', 'Idle assets', 'Rebalance savings'], scheduled: false },
+  { id: 'RPT-005', name: 'Compliance & Audit Evidence', category: 'Compliance', persona: 'Risk & Compliance', description: 'Framework coverage (SOC 2, ISO 27001, NIST CSF) with linked evidence.', format: 'PDF', lastRun: daysAgo(3), metrics: ['Coverage %', 'Open findings', 'Evidence count'], scheduled: true },
+  { id: 'RPT-006', name: 'Security & Custody Exceptions', category: 'Compliance', persona: 'Security', description: 'Geofence breaches, custody gaps and missing-asset incidents.', format: 'PDF', lastRun: hoursAgo(9), metrics: ['Breaches 24h', 'Custody gaps', 'Missing assets'], scheduled: true },
+  { id: 'RPT-007', name: 'AI Model Performance', category: 'AI', persona: 'ML Platform', description: 'Accuracy, drift and prediction volume across the model registry.', format: 'Dashboard', lastRun: daysAgo(1), metrics: ['Avg accuracy', 'Models in drift', 'Predictions/day'], scheduled: false },
+  { id: 'RPT-008', name: 'Inventory & Spares Levels', category: 'Inventory', persona: 'IT Ops', description: 'On-hand vs. reorder point for critical spares and consumables.', format: 'Excel', lastRun: daysAgo(4), metrics: ['SKUs below reorder', 'Stock value', 'Lead time'], scheduled: true },
+];
 export const getReport = (id: string): Report | undefined => mockReports.find((r) => r.id === id);
 
 export const mockAlerts: Alert[] = [
