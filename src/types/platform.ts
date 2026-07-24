@@ -75,9 +75,20 @@ export interface NavItem {
   comingSoon?: boolean;
 }
 
+/**
+ * A main section of the app. The sidebar shows one row per section; the section's
+ * `items` are sub-pages that only unfold while that section is the active one.
+ */
 export interface NavGroup {
   id: string;
-  label: string; // section header, e.g. "ASSETS"
+  label: string; // short sidebar label, e.g. "Real-Time Tracking"
+  /** Full capability name — tooltip + command palette grouping. */
+  fullLabel?: string;
+  /** Hub route the section row navigates to. */
+  href: string;
+  icon: string; // emoji for the demo
   module: ModuleKey; // gate: shown only if session has this module
+  /** Optional badge count shown on the section row. */
+  badge?: number;
   items: NavItem[];
 }

@@ -1,19 +1,21 @@
 import { NavGroup, Session } from '@/types/platform';
 import { mockAlerts } from '@/lib/mock-data';
 
-/** Alerts still demanding attention — badged on the Alert Center nav item. */
+/** Alerts still demanding attention — badged on the Security & Compliance section. */
 const openAlertCount = mockAlerts.filter((a) => a.status === 'Open' || a.status === 'Escalated').length;
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Navigation. The six flagship capability pillars lead the sidebar, directly
-// under Workspace; supporting groups (analytics, inventory, admin) follow.
-// Groups are gated by module; items marked `comingSoon` render a stub state.
+// Navigation. The sidebar shows MAIN SECTIONS ONLY — one row each — with the six
+// flagship capability pillars leading, right under Workspace. Each section's
+// sub-pages live in `items`: they unfold in the sidebar only while that section
+// is active, and are always reachable from the ⌘K palette.
+// Sections are gated by module; items marked `comingSoon` render a stub state.
 // ─────────────────────────────────────────────────────────────────────────────
 export const navConfig: NavGroup[] = [
   {
-    id: 'workspace', label: 'Workspace', module: 'workspace',
+    id: 'workspace', label: 'My Workspace', module: 'workspace',
+    href: '/', icon: '🏠',
     items: [
-      { label: 'My Workspace', href: '/', icon: '🏠' },
       { label: 'Dashboards', href: '/dashboards', icon: '📊' },
       { label: 'AI Copilot', href: '/copilot', icon: '🤖' },
       { label: 'Notifications', href: '/notifications', icon: '📬' },
@@ -22,7 +24,9 @@ export const navConfig: NavGroup[] = [
 
   // ── Pillar 1 ───────────────────────────────────────────────────────────────
   {
-    id: 'tracking', label: 'Real-Time Asset Tracking', module: 'tracking',
+    id: 'tracking', label: 'Real-Time Tracking', module: 'tracking',
+    fullLabel: 'Real-Time Asset Tracking (RFID, BLE, GPS, QR, UWB)',
+    href: '/tracking', icon: '🗺️',
     items: [
       { label: 'Live Asset Map', href: '/tracking', icon: '🗺️' },
       { label: 'Geofencing Zones', href: '/geofences', icon: '📍' },
@@ -38,7 +42,9 @@ export const navConfig: NavGroup[] = [
 
   // ── Pillar 2 ───────────────────────────────────────────────────────────────
   {
-    id: 'ai', label: 'AI Intelligence & Utilization', module: 'ai',
+    id: 'ai', label: 'AI Asset Intelligence', module: 'ai',
+    fullLabel: 'AI-Powered Asset Intelligence and Utilization Analytics',
+    href: '/ai-insights', icon: '✨',
     items: [
       { label: 'AI Insights Feed', href: '/ai-insights', icon: '✨' },
       { label: 'Utilization Analytics', href: '/ai/utilization', icon: '⚖️' },
@@ -55,7 +61,9 @@ export const navConfig: NavGroup[] = [
 
   // ── Pillar 3 ───────────────────────────────────────────────────────────────
   {
-    id: 'assets', label: 'Digital Passport & Lifecycle', module: 'assets',
+    id: 'assets', label: 'Passport & Lifecycle', module: 'assets',
+    fullLabel: 'Digital Asset Passport and Lifecycle Management',
+    href: '/assets', icon: '🪪',
     items: [
       { label: 'IT Asset Registry', href: '/assets', icon: '💻' },
       { label: 'Register Asset', href: '/assets/new', icon: '➕' },
@@ -71,7 +79,9 @@ export const navConfig: NavGroup[] = [
 
   // ── Pillar 4 ───────────────────────────────────────────────────────────────
   {
-    id: 'maintenance', label: 'Predictive Maintenance & Work Orders', module: 'maintenance',
+    id: 'maintenance', label: 'Predictive Maintenance', module: 'maintenance',
+    fullLabel: 'Predictive Maintenance and Automated Work Orders',
+    href: '/maintenance', icon: '🔧',
     items: [
       { label: 'Automated Work Orders', href: '/maintenance', icon: '🔧' },
       { label: 'Maintenance Calendar', href: '/maintenance/calendar', icon: '🗓️' },
@@ -85,7 +95,9 @@ export const navConfig: NavGroup[] = [
 
   // ── Pillar 5 ───────────────────────────────────────────────────────────────
   {
-    id: 'compliance', label: 'Security, Geo-fencing & Compliance', module: 'compliance',
+    id: 'compliance', label: 'Security & Compliance', module: 'compliance',
+    fullLabel: 'Asset Security, Geo-fencing and Compliance Monitoring',
+    href: '/compliance-reports', icon: '🛡️', badge: openAlertCount,
     items: [
       { label: 'Compliance Monitoring', href: '/compliance-reports', icon: '🛡️' },
       { label: 'Regulatory Frameworks', href: '/regulatory', icon: '📜' },
@@ -102,7 +114,9 @@ export const navConfig: NavGroup[] = [
 
   // ── Pillar 6 ───────────────────────────────────────────────────────────────
   {
-    id: 'operations', label: 'Mobile Workforce Enablement', module: 'operations',
+    id: 'operations', label: 'Mobile Workforce', module: 'operations',
+    fullLabel: 'Mobile Workforce Enablement',
+    href: '/field-ops', icon: '📱',
     items: [
       { label: 'Field Operations', href: '/field-ops', icon: '📱' },
       { label: 'My Work Queue', href: '/my-work', icon: '🧰' },
@@ -114,9 +128,10 @@ export const navConfig: NavGroup[] = [
     ],
   },
 
-  // ── Supporting groups ──────────────────────────────────────────────────────
+  // ── Supporting sections ────────────────────────────────────────────────────
   {
     id: 'analytics', label: 'Analytics & Reporting', module: 'analytics',
+    href: '/reports', icon: '📄',
     items: [
       { label: 'Report Library', href: '/reports', icon: '📄' },
       { label: 'Report Builder', href: '/reports/builder', icon: '🛠️' },
@@ -127,6 +142,7 @@ export const navConfig: NavGroup[] = [
   },
   {
     id: 'inventory', label: 'Inventory & Parts', module: 'inventory',
+    href: '/inventory', icon: '📦',
     items: [
       { label: 'IT Spares Overview', href: '/inventory', icon: '📦' },
       { label: 'Warehouses & Bins', href: '/warehouses', icon: '🏬' },
@@ -137,6 +153,7 @@ export const navConfig: NavGroup[] = [
   },
   {
     id: 'admin', label: 'Administration', module: 'admin',
+    href: '/admin/users', icon: '⚙️',
     items: [
       { label: 'Users & Roles', href: '/admin/users', icon: '👥' },
       { label: 'Roles & Permissions', href: '/admin/roles', icon: '🔐' },
@@ -153,12 +170,17 @@ export const navConfig: NavGroup[] = [
   },
 ];
 
-/** Groups visible to the current session (role-adaptive: hidden, not greyed). */
+/** Sections visible to the current session (role-adaptive: hidden, not greyed). */
 export function navForSession(session: Session): NavGroup[] {
   return navConfig.filter((g) => session.modules.includes(g.module));
 }
 
-/** Flat list of all nav items (for the ⌘K command palette). */
-export const allNavItems = navConfig.flatMap((g) =>
-  g.items.map((i) => ({ ...i, group: g.label })),
-);
+/** Flat list of every nav destination — section hubs + sub-pages (for ⌘K). */
+export const allNavItems = navConfig.flatMap((g) => {
+  const group = g.fullLabel ?? g.label;
+  const section = { label: g.label, href: g.href, icon: g.icon, badge: g.badge, group };
+  const children = g.items
+    .filter((i) => i.href !== g.href) // hub already listed above
+    .map((i) => ({ ...i, group }));
+  return [section, ...children];
+});

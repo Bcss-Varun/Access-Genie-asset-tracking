@@ -6,41 +6,30 @@ import { useEffect, useState } from 'react';
 import { useSession } from '@/components/providers/SessionProvider';
 import { navForSession } from '@/lib/nav-config';
 import { cn } from '@/lib/utils';
-
-const STORAGE_KEY = 'ag.collapsedNavGroups';
+import type { NavGroup } from '@/types/platform';
 
 function isActive(pathname: string, href: string): boolean {
   if (href === '/') return pathname === '/';
   return pathname === href || pathname.startsWith(href + '/');
 }
 
+/** A section owns the route if its hub or any of its sub-pages matches. */
+function ownsRoute(pathname: string, section: NavGroup): boolean {
+  return isActive(pathname, section.href) || section.items.some((i) => isActive(pathname, i.href));
+}
+
 export function Sidebar() {
   const pathname = usePathname();
   const { session } = useSession();
-  const groups = navForSession(session);
-  const [collapsed, setCollapsed] = useState<Set<string>>(new Set());
+  const sections = navForSession(session);
 
-  useEffect(() => {
-    try {
-      const saved = window.localStorage.getItem(STORAGE_KEY);
-      if (saved) setCollapsed(new Set(JSON.parse(saved)));
-    } catch {
-      /* ignore */
-    }
-  }, []);
+  // `null` = follow the route (the active section unfolds). A manual toggle pins
+  // one section open ('' pins everything shut); navigating hands control back.
+  const [pinned, setPinned] = useState<string | null>(null);
+  useEffect(() => setPinned(null), [pathname]);
 
-  const toggleGroup = (id: string) => {
-    setCollapsed((prev) => {
-      const next = new Set(prev);
-      next.has(id) ? next.delete(id) : next.add(id);
-      try {
-        window.localStorage.setItem(STORAGE_KEY, JSON.stringify([...next]));
-      } catch {
-        /* ignore */
-      }
-      return next;
-    });
-  };
+  const activeId = sections.find((s) => ownsRoute(pathname, s))?.id ?? null;
+  const openId = pinned ?? activeId;
 
   return (
     <aside className="w-64 h-full bg-white border-r border-slate-200 flex flex-col">
@@ -52,23 +41,57 @@ export function Sidebar() {
         </Link>
       </div>
 
-      {/* Nav groups */}
-      <nav className="flex-1 overflow-y-auto py-3 px-2.5 space-y-0.5">
-        {groups.map((group) => {
-          const isCollapsed = collapsed.has(group.id);
+      {/* Main sections — six capability pillars first, supporting sections after */}
+      <nav className="flex-1 overflow-y-auto py-3 px-2.5 space-y-0.5" aria-label="Main">
+        {sections.map((section) => {
+          const owns = section.id === activeId;
+          const open = section.id === openId;
+          const hasChildren = section.items.length > 0;
           return (
-            <div key={group.id} className="pb-1">
-              <button
-                onClick={() => toggleGroup(group.id)}
-                className="flex w-full items-center justify-between px-2.5 py-1.5 text-[10px] font-bold uppercase tracking-wider text-slate-400 hover:text-slate-600"
-                aria-expanded={!isCollapsed}
+            <div key={section.id}>
+              <div
+                className={cn(
+                  'group flex items-center rounded-lg transition-colors',
+                  owns ? 'bg-primary-50' : 'hover:bg-slate-100',
+                )}
               >
-                {group.label}
-                <span className={cn('transition-transform text-slate-300', isCollapsed && '-rotate-90')}>▾</span>
-              </button>
-              {!isCollapsed && (
-                <div className="mt-0.5 space-y-0.5">
-                  {group.items.map((item) => {
+                <Link
+                  href={section.href}
+                  title={section.fullLabel ?? section.label}
+                  aria-current={isActive(pathname, section.href) ? 'page' : undefined}
+                  className={cn(
+                    'flex flex-1 min-w-0 items-center gap-2.5 rounded-lg px-2.5 py-2 text-sm',
+                    owns ? 'text-primary-700 font-semibold' : 'text-slate-600 group-hover:text-slate-900',
+                  )}
+                >
+                  <span className="h-5 w-5 flex items-center justify-center text-[13px] shrink-0">{section.icon}</span>
+                  <span className="truncate flex-1">{section.label}</span>
+                  {typeof section.badge === 'number' && section.badge > 0 && (
+                    <span className="text-[10px] font-semibold text-white bg-health-critical rounded-full px-1.5 py-0.5 leading-none">
+                      {section.badge}
+                    </span>
+                  )}
+                </Link>
+                {hasChildren && (
+                  <button
+                    type="button"
+                    onClick={() => setPinned(open ? '' : section.id)}
+                    aria-expanded={open}
+                    aria-label={`${open ? 'Hide' : 'Show'} ${section.label} pages`}
+                    className={cn(
+                      'shrink-0 px-2 py-2 text-slate-300 hover:text-slate-600 transition-transform',
+                      !open && '-rotate-90',
+                    )}
+                  >
+                    ▾
+                  </button>
+                )}
+              </div>
+
+              {/* Sub-pages — only for the section you're in (or one you pinned open) */}
+              {open && hasChildren && (
+                <div className="ml-5 mt-0.5 mb-1 pl-3 border-l border-slate-200 space-y-0.5">
+                  {section.items.map((item) => {
                     const active = isActive(pathname, item.href);
                     return (
                       <Link
@@ -76,20 +99,12 @@ export function Sidebar() {
                         href={item.href}
                         aria-current={active ? 'page' : undefined}
                         className={cn(
-                          'group flex items-center gap-2.5 rounded-lg px-2.5 py-2 text-sm transition-colors',
+                          'flex items-center gap-2 rounded-md px-2 py-1.5 text-[13px] transition-colors',
                           active
-                            ? 'bg-primary-50 text-primary-700 font-semibold'
-                            : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900',
+                            ? 'text-primary-700 font-semibold bg-primary-50/70'
+                            : 'text-slate-500 hover:bg-slate-100 hover:text-slate-900',
                         )}
                       >
-                        <span
-                          className={cn(
-                            'h-5 w-5 flex items-center justify-center text-[13px] shrink-0',
-                            item.comingSoon && !active && 'opacity-60',
-                          )}
-                        >
-                          {item.icon}
-                        </span>
                         <span className="truncate flex-1">{item.label}</span>
                         {item.comingSoon && (
                           <span className="text-[9px] uppercase tracking-wide text-slate-300 font-semibold">soon</span>
