@@ -44,9 +44,9 @@ export function CommandPalette() {
 
     const assets: Result[] = q
       ? mockAssets
-          .filter((a) => a.name.toLowerCase().includes(q) || a.id.toLowerCase().includes(q) || a.serialNumber.toLowerCase().includes(q))
+          .filter((a) => a.name.toLowerCase().includes(q) || a.id.toLowerCase().includes(q) || a.serialNumber.toLowerCase().includes(q) || (a.trackingId?.toLowerCase().includes(q) ?? false))
           .slice(0, 5)
-          .map((a) => ({ kind: 'asset', label: a.name, sub: `${a.id} · ${a.category}`, icon: '📦', href: `/assets/${a.id}` }))
+          .map((a) => ({ kind: 'asset', label: a.name, sub: `${a.id} · ${a.category}${a.trackingId ? ` · ${a.trackingId}` : ''}`, icon: '📦', href: `/assets/${a.id}` }))
       : [];
 
     const ai: Result[] = q.length > 3

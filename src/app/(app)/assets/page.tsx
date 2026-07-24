@@ -71,7 +71,7 @@ export default function AssetRegistryPage() {
     const rows = mockAssets.filter((a) => {
       if (status !== 'All' && a.status !== status) return false;
       if (category !== 'All' && a.category !== category) return false;
-      if (q && !`${a.name} ${a.id} ${a.serialNumber} ${a.tags.join(' ')} ${a.custodian}`.toLowerCase().includes(q)) return false;
+      if (q && !`${a.name} ${a.id} ${a.serialNumber} ${a.trackingId ?? ''} ${a.tags.join(' ')} ${a.custodian}`.toLowerCase().includes(q)) return false;
       return true;
     });
     const dir = sortDir === 'asc' ? 1 : -1;
@@ -238,7 +238,7 @@ export default function AssetRegistryPage() {
                       <div className="w-8 h-8 rounded bg-slate-100 flex items-center justify-center text-base mr-3 shrink-0">{categoryEmoji(a.category)}</div>
                       <div className="min-w-0">
                         <Link href={`/assets/${a.id}`} className="font-medium text-slate-900 hover:text-primary-600">{a.name}</Link>
-                        <div className="text-xs text-slate-400">{a.id} · SN {a.serialNumber}</div>
+                        <div className="text-xs text-slate-400">{a.id} · SN {a.serialNumber}{a.trackingId ? ` · ${a.trackingId}` : ''}</div>
                       </div>
                     </div>
                   </td>

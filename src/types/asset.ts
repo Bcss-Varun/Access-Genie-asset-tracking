@@ -56,6 +56,7 @@ export interface Asset {
   depreciationMethod?: string;
   warrantyExpiry?: string;    // ISO date
   trackingTech?: string;      // e.g. "UWB", "BLE", "GPS"
+  trackingId?: string;        // physical tag identifier (RFID EPC / BLE MAC / QR code / UWB anchor)
   lifecycleStage?: string;    // e.g. "In Service", "Commissioning", "EOL Planning"
   /** Position on the facility floor-plan SVG, as % (0-100) of width/height. */
   mapPosition?: { x: number; y: number };

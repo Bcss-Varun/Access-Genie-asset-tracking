@@ -581,6 +581,7 @@ export default function AssetProfilePage({ params }: { params: Promise<{ id: str
               <KV label="Serial" value={<span className="font-mono">{asset.serialNumber}</span>} />
               <KV label="Custodian" value={asset.custodian} />
               <KV label="Tracking" value={asset.trackingTech} />
+              <KV label="Tracking ID" value={asset.trackingId ? <span className="font-mono">{asset.trackingId}</span> : undefined} />
               <KV label="Lifecycle" value={asset.lifecycleStage} />
               {taxonomyClass && <KV label="Class" value={`${taxonomyClass.icon} ${taxonomyClass.name}`} />}
             </dl>

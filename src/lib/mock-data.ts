@@ -469,6 +469,26 @@ export const mockAssets: Asset[] = [
   },
 ];
 
+// Physical tag identifiers, formatted by each asset's tracking technology
+// (RFID EPC · BLE MAC · QR code · UWB anchor). Searchable in ⌘K and the registry.
+const ASSET_TRACKING_IDS: Record<string, string> = {
+  'AST-1001': 'RFID-E28011606001',
+  'AST-1002': 'RFID-E28011606002',
+  'AST-1003': 'QR-AG-1003',
+  'AST-1004': 'BLE-C39A6F2B1004',
+  'AST-1005': 'BLE-C39A6F2B1005',
+  'AST-1006': 'BLE-C39A6F2B1006',
+  'AST-1007': 'UWB-ANCH-1007',
+  'AST-1008': 'RFID-E28011606008',
+  'AST-1009': 'UWB-ANCH-1009',
+  'AST-1010': 'QR-AG-1010',
+  'AST-1011': 'BLE-C39A6F2B1011',
+  'AST-1012': 'RFID-E28011606012',
+  'AST-1013': 'QR-AG-1013',
+  'AST-1014': 'BLE-C39A6F2B1014',
+};
+mockAssets.forEach((a) => { a.trackingId = ASSET_TRACKING_IDS[a.id]; });
+
 // ─────────────────────────────────────────────────────────────────────────────
 // Work Orders — IT maintenance pipeline
 // ─────────────────────────────────────────────────────────────────────────────
