@@ -10,13 +10,7 @@ import { useToast } from '@/components/providers/ToastProvider';
 import { cn, formatMoney } from '@/lib/utils';
 
 const categoryEmoji = (c: Asset['category']): string =>
-  c === 'Vehicles' ? '🚗'
-    : c === 'IT' ? '💻'
-      : c === 'Medical' ? '⚕️'
-        : c === 'Heavy Machinery' ? '🏗️'
-          : c === 'Facilities' ? '🏭'
-            : c === 'Sensors' ? '📡'
-              : '⚙️';
+  c === 'Endpoints' ? '📱' : c === 'Compute' ? '💻' : c === 'Network' ? '🌐' : c === 'Sensors' ? '📡' : c === 'Infrastructure' ? '⚡' : '⚙️';
 
 const typeTone = (t: AssetGroup['type']): 'primary' | 'emerald' | 'amber' =>
   t === 'Fleet' ? 'primary' : t === 'Kit' ? 'amber' : 'emerald';

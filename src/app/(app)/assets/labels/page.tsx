@@ -38,7 +38,7 @@ const SIZE_SPEC: Record<LabelSize, { card: string; code: number; name: string; m
 };
 
 const categoryEmoji = (c: Asset['category']) =>
-  c === 'Vehicles' ? '🚗' : c === 'IT' ? '💻' : c === 'Medical' ? '⚕️' : c === 'Sensors' ? '📡' : c === 'Facilities' ? '🏭' : '⚙️';
+  c === 'Endpoints' ? '📱' : c === 'Compute' ? '💻' : c === 'Network' ? '🌐' : c === 'Sensors' ? '📡' : c === 'Infrastructure' ? '⚡' : '⚙️';
 
 // ── The hand-rolled "code" glyph (QR / Barcode / RFID) — deterministic by id ──
 function CodeGlyph({ id, format, px }: { id: string; format: LabelFormat; px: number }) {

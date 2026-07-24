@@ -10,7 +10,7 @@ import { useToast } from '@/components/providers/ToastProvider';
 import { cn } from '@/lib/utils';
 
 // ── Constants ─────────────────────────────────────────────────────────────────
-const CATEGORIES: AssetCategory[] = ['Heavy Machinery', 'Medical', 'IT', 'Vehicles', 'Facilities', 'Sensors'];
+const CATEGORIES: AssetCategory[] = ['Compute', 'Network', 'Endpoints', 'Infrastructure', 'Sensors'];
 const CRITICALITIES: Criticality[] = ['Low', 'Medium', 'High', 'Critical'];
 
 // ── Form state shape ──────────────────────────────────────────────────────────
@@ -251,7 +251,7 @@ export function AssetForm({ mode, asset }: { mode: 'create' | 'edit'; asset?: As
               className={cn(inputCls, showError('name') && 'border-health-critical focus:ring-red-500/30')}
               value={form.name}
               onChange={(e) => set('name', e.target.value)}
-              placeholder="e.g. Forklift Toyota 8FGCU25"
+              placeholder="e.g. Dell PowerEdge R740 Server"
             />
           </Field>
 
@@ -277,7 +277,7 @@ export function AssetForm({ mode, asset }: { mode: 'create' | 'edit'; asset?: As
               className={inputCls}
               value={form.manufacturer}
               onChange={(e) => set('manufacturer', e.target.value)}
-              placeholder="e.g. Toyota"
+              placeholder="e.g. Dell"
             />
           </Field>
 
@@ -287,7 +287,7 @@ export function AssetForm({ mode, asset }: { mode: 'create' | 'edit'; asset?: As
               className={inputCls}
               value={form.model}
               onChange={(e) => set('model', e.target.value)}
-              placeholder="e.g. 8FGCU25"
+              placeholder="e.g. PowerEdge R740"
             />
           </Field>
 

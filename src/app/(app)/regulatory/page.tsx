@@ -23,8 +23,8 @@ const FRAMEWORKS: Framework[] = [
   { id: 'soc2', name: 'SOC 2 Type II', scope: 'Trust Services Criteria — security, availability, confidentiality', status: 'Certified', coverage: 98, lastAssessment: daysAgo(52), evidence: 214 },
   { id: 'iso27001', name: 'ISO 27001', scope: 'Information Security Management System (ISMS)', status: 'Certified', coverage: 95, lastAssessment: daysAgo(120), evidence: 176 },
   { id: 'gdpr', name: 'GDPR', scope: 'EU data protection & privacy for personal data', status: 'In Progress', coverage: 82, lastAssessment: daysAgo(30), evidence: 88 },
-  { id: 'hipaa', name: 'HIPAA', scope: 'Protected health information (PHI) safeguards', status: 'In Progress', coverage: 76, lastAssessment: daysAgo(18), evidence: 141 },
-  { id: 'jc', name: 'Joint Commission', scope: 'Healthcare facility accreditation & environment of care', status: 'Gap', coverage: 61, lastAssessment: daysAgo(9), evidence: 63 },
+  { id: 'nist', name: 'NIST CSF 2.0', scope: 'Cybersecurity risk management — identify, protect, detect, respond', status: 'In Progress', coverage: 76, lastAssessment: daysAgo(18), evidence: 141 },
+  { id: 'cis', name: 'CIS Controls v8', scope: 'Prioritized security controls & asset inventory hygiene', status: 'Gap', coverage: 61, lastAssessment: daysAgo(9), evidence: 63 },
 ];
 
 const statusTone = (s: FrameworkStatus): 'emerald' | 'amber' | 'red' =>

@@ -72,7 +72,7 @@ function initials(name: string): string {
 
 function categoryEmoji(assetId: string): string {
   const c = getAssetById(assetId)?.category;
-  return c === "Vehicles" ? "🚗" : c === "IT" ? "💻" : c === "Medical" ? "⚕️" : "⚙️";
+  return c === 'Endpoints' ? '📱' : c === 'Compute' ? '💻' : c === 'Network' ? '🌐' : '⚙️';
 }
 
 function typeEmoji(t: WorkOrderType): string {

@@ -190,8 +190,7 @@ export function InsightPanel({
 
 // ── Small helpers ────────────────────────────────────────────────────────────
 export const categoryEmoji = (c: string): string =>
-  c === 'Vehicles' ? '🚗' : c === 'IT' ? '💻' : c === 'Medical' ? '⚕️'
-    : c === 'Heavy Machinery' ? '⚙️' : c === 'Facilities' ? '🏭' : c === 'Sensors' ? '📡' : '📦';
+  c === 'Endpoints' ? '📱' : c === 'Compute' ? '💻' : c === 'Network' ? '🌐' : c === 'Sensors' ? '📡' : c === 'Infrastructure' ? '⚡' : '📦';
 
 export function riskTone(score: number): string {
   return score > 70 ? 'text-health-critical' : score > 40 ? 'text-amber-600' : 'text-emerald-600';

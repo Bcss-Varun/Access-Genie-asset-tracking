@@ -34,13 +34,13 @@ const typeEmoji = (t: WorkOrderType): string =>
   t === 'Preventive' ? '🛡️' : t === 'Corrective' ? '🔧' : t === 'Predictive' ? '📈' : '🔍';
 
 const categoryEmoji = (c?: string): string =>
-  c === 'Vehicles' ? '🚗'
-    : c === 'IT' ? '💻'
-      : c === 'Medical' ? '⚕️'
-        : c === 'Heavy Machinery' ? '🏗️'
-          : c === 'Facilities' ? '🏭'
+  c === 'Compute' ? '💻'
+    : c === 'Endpoints' ? '📱'
+      : c === 'Network' ? '🌐'
+        : c === 'Infrastructure' ? '⚡'
+          : c === 'Facilities' ? '🏢'
             : c === 'Sensors' ? '📡'
-              : '⚙️';
+              : '🖥️';
 
 const initials = (name: string): string => {
   if (!name || name === 'Unassigned') return '—';

@@ -5,7 +5,7 @@
 
 export type AssetStatus = 'Active' | 'Maintenance' | 'Missing' | 'End_Of_Life' | 'Staging';
 export type AssetHealth = 'Good' | 'Warning' | 'Critical';
-export type AssetCategory = 'IT' | 'Vehicles' | 'Heavy Machinery' | 'Medical' | 'Facilities' | 'Sensors';
+export type AssetCategory = 'Compute' | 'Network' | 'Endpoints' | 'Infrastructure' | 'Sensors';
 export type Criticality = 'Low' | 'Medium' | 'High' | 'Critical';
 
 export interface Location {

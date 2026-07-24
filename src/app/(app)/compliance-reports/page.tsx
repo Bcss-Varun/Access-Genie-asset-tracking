@@ -22,7 +22,7 @@ interface StandardPack {
 const standardPacks: StandardPack[] = [
   { id: 'STD-SOC2', name: 'SOC 2 Evidence Pack', framework: 'SOC 2 Type II', description: 'Access controls, asset inventory completeness and change-log evidence for the audit period.', format: 'PDF + Excel' },
   { id: 'STD-GDPR', name: 'GDPR Data Map', framework: 'GDPR', description: 'Data-bearing asset register, processing locations and retention posture.', format: 'PDF' },
-  { id: 'STD-JCAHO', name: 'Joint Commission Pack', framework: 'Joint Commission', description: 'Biomedical equipment inspection, calibration and preventive-maintenance compliance.', format: 'PDF' },
+  { id: 'STD-SOC2', name: 'SOC 2 Type II Evidence', framework: 'AICPA SOC 2', description: 'IT equipment inspection, firmware patching, and network device compliance.', format: 'PDF' },
 ];
 
 export default function ComplianceReportsPage() {

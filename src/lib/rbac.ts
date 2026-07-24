@@ -45,7 +45,7 @@ export function resolveModules(roleId: RoleId): ModuleKey[] {
 // Demo users (one per role) — the persona switcher in the user menu swaps these.
 // ─────────────────────────────────────────────────────────────────────────────
 export const mockUsers: User[] = [
-  { id: 'U-001', name: 'John Doe', email: 'john.doe@accessgenie.ai', initials: 'JD', roleId: 'super_admin', title: 'Super Admin', homeScopeId: 'ORG-1' },
+  { id: 'U-001', name: 'Raj', email: 'raj@bcss.in', initials: 'R', roleId: 'super_admin', title: 'Super Admin', homeScopeId: 'ORG-1' },
   { id: 'U-002', name: 'Sarah Jenkins', email: 'sarah.jenkins@accessgenie.ai', initials: 'SJ', roleId: 'facility_manager', title: 'Facility Manager — Central Warehouse', homeScopeId: 'FAC-WH1' },
   { id: 'U-003', name: 'Miguel Ortiz', email: 'miguel.ortiz@accessgenie.ai', initials: 'MO', roleId: 'maintenance_manager', title: 'Maintenance Manager', homeScopeId: 'FAC-WH1' },
   { id: 'U-004', name: 'Diego Martinez', email: 'diego.martinez@accessgenie.ai', initials: 'DM', roleId: 'technician', title: 'Field Technician', homeScopeId: 'FAC-WH1' },
@@ -81,14 +81,14 @@ export const scopeTree: ScopeNode = {
               children: [
                 { id: 'ZN-DOCK', name: 'Loading Dock', level: 'zone', assetCount: 340 },
                 { id: 'ZN-WH', name: 'Main Warehouse', level: 'zone', assetCount: 1180 },
-                { id: 'ZN-COLD', name: 'Cold Storage', level: 'zone', assetCount: 210 },
-                { id: 'ZN-PROD', name: 'Production Bay', level: 'zone', assetCount: 370 },
+                { id: 'ZN-COLD', name: 'Secure Cage', level: 'zone', assetCount: 210 },
+                { id: 'ZN-PROD', name: 'Staging Bay', level: 'zone', assetCount: 370 },
               ],
             },
           ],
         },
         {
-          id: 'FAC-HOSP', name: 'General Hospital', level: 'facility', assetCount: 2450,
+          id: 'FAC-HQ', name: 'HQ Building', level: 'facility', assetCount: 2450,
           children: [
             { id: 'BLD-N', name: 'North Wing', level: 'building', assetCount: 1310 },
             { id: 'BLD-S', name: 'South Wing', level: 'building', assetCount: 1140 },

@@ -31,9 +31,9 @@ const IN_MOTION = new Set(['AST-1001', 'AST-1005', 'AST-1014']);
 const ZONE_STYLE: Record<ZoneType, { fill: string; stroke: string; label: string }> = {
   warehouse: { fill: 'rgba(14,165,233,0.07)', stroke: 'rgba(14,165,233,0.40)', label: 'Warehouse' },
   dock: { fill: 'rgba(245,158,11,0.08)', stroke: 'rgba(245,158,11,0.40)', label: 'Loading Dock' },
-  office: { fill: 'rgba(139,92,246,0.08)', stroke: 'rgba(139,92,246,0.40)', label: 'Office / Clinical' },
+  office: { fill: 'rgba(139,92,246,0.08)', stroke: 'rgba(139,92,246,0.40)', label: 'Office' },
   restricted: { fill: 'rgba(239,68,68,0.07)', stroke: 'rgba(239,68,68,0.45)', label: 'Restricted' },
-  lab: { fill: 'rgba(20,184,166,0.09)', stroke: 'rgba(20,184,166,0.40)', label: 'Lab / Cold Storage' },
+  lab: { fill: 'rgba(20,184,166,0.09)', stroke: 'rgba(20,184,166,0.40)', label: 'Test Lab' },
   yard: { fill: 'rgba(16,185,129,0.07)', stroke: 'rgba(16,185,129,0.40)', label: 'Yard' },
 };
 
@@ -136,7 +136,7 @@ export default function LiveTrackingPage() {
         actions={
           <select className="bg-white border border-slate-200 rounded-lg px-4 py-2 text-sm font-medium">
             <option>Central Warehouse — Building A</option>
-            <option>General Hospital — North Wing</option>
+            <option>HQ Building — Floor 3</option>
             <option>Primary Data Center</option>
           </select>
         }

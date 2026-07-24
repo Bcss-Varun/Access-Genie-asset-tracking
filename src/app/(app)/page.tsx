@@ -7,13 +7,79 @@ import { KpiCard, Badge } from '@/components/ui/primitives';
 import { mockAssets, mockWorkOrders, mockInsights } from '@/lib/mock-data';
 import { relTime } from '@/lib/utils';
 
+// ─────────────────────────────────────────────────────────────────────────────
+// Flagship capabilities — the demo spotlight. Each pillar deep-links to the
+// live workflow that demonstrates it.
+// ─────────────────────────────────────────────────────────────────────────────
+type Feature = {
+  title: string;
+  blurb: string;
+  href: string;
+  icon: string;
+  accent: string;
+  tint: string;
+  tags?: string[];
+};
+
+const flagshipFeatures: Feature[] = [
+  {
+    title: 'Real-Time Asset Tracking',
+    blurb: 'Live RTLS positioning across the floor-plan with multi-technology tag support.',
+    href: '/tracking',
+    icon: '🛰️',
+    accent: '#0ea5e9',
+    tint: 'rgba(14,165,233,0.12)',
+    tags: ['RFID', 'BLE', 'GPS', 'QR', 'UWB'],
+  },
+  {
+    title: 'AI Asset Intelligence & Utilization',
+    blurb: 'Ranked, explainable AI insights and utilization analytics across the whole fleet.',
+    href: '/ai-insights',
+    icon: '✨',
+    accent: '#6366f1',
+    tint: 'rgba(99,102,241,0.12)',
+  },
+  {
+    title: 'Digital Asset Passport & Lifecycle',
+    blurb: 'A complete passport per asset — procurement, service history and end-of-life.',
+    href: '/lifecycle',
+    icon: '🪪',
+    accent: '#10b981',
+    tint: 'rgba(16,185,129,0.12)',
+  },
+  {
+    title: 'Predictive Maintenance & Auto Work Orders',
+    blurb: 'Failure predictions that auto-generate prioritized work orders before downtime.',
+    href: '/maintenance',
+    icon: '🔧',
+    accent: '#f59e0b',
+    tint: 'rgba(245,158,11,0.12)',
+  },
+  {
+    title: 'Security, Geo-fencing & Compliance',
+    blurb: 'Geofenced zones, custody exceptions and audit-ready compliance monitoring.',
+    href: '/geofences',
+    icon: '🛡️',
+    accent: '#ef4444',
+    tint: 'rgba(239,68,68,0.12)',
+  },
+  {
+    title: 'Mobile Workforce Enablement',
+    blurb: 'Field-ops tooling to scan, check in / out and close work from any device.',
+    href: '/field-ops',
+    icon: '📱',
+    accent: '#14b8a6',
+    tint: 'rgba(20,184,166,0.12)',
+  },
+];
+
 const quickActions = [
-  { label: 'Asset Registry', href: '/assets', icon: '📦' },
-  { label: 'Live Tracking', href: '/tracking', icon: '🗺️' },
-  { label: 'Work Orders', href: '/maintenance', icon: '🔧' },
-  { label: 'AI Insights', href: '/ai-insights', icon: '✨' },
-  { label: 'Dashboards', href: '/dashboards', icon: '📊' },
-  { label: 'Ask Copilot', href: '/copilot', icon: '🤖' },
+  { label: 'Real-Time Tracking', href: '/tracking', icon: '🗺️' },
+  { label: 'AI Asset Intelligence', href: '/ai-insights', icon: '✨' },
+  { label: 'Digital Passports & Lifecycle', href: '/lifecycle', icon: '♻️' },
+  { label: 'Predictive Maintenance', href: '/maintenance', icon: '🔧' },
+  { label: 'Security & Compliance', href: '/compliance-reports', icon: '🛡️' },
+  { label: 'Mobile Workforce', href: '/field-ops', icon: '📱' },
 ];
 
 const severityTone = { Critical: 'red', Warning: 'amber', Opportunity: 'emerald', Info: 'primary' } as const;
@@ -48,6 +114,56 @@ export default function WorkspacePage() {
         <KpiCard label="Critical Alerts" value={criticalAlerts} sub={<span>needs attention</span>} tone="red" />
         <KpiCard label="AI Health Score" value={<>92<span className="text-lg text-slate-400">/100</span></>} sub={<span>Optimal state</span>} tone="emerald" accent />
       </div>
+
+      {/* Flagship capabilities — demo spotlight */}
+      <section className="glass-panel rounded-xl p-6">
+        <div className="flex items-center justify-between gap-3 mb-4">
+          <div>
+            <h2 className="text-base font-semibold font-heading text-slate-800">Flagship Capabilities</h2>
+            <p className="text-xs text-slate-500 mt-0.5">The six pillars of Access Genie — jump straight into any live workflow.</p>
+          </div>
+          <Badge tone="primary">Demo spotlight</Badge>
+        </div>
+        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-3">
+          {flagshipFeatures.map((f) => (
+            <Link
+              key={f.href}
+              href={f.href}
+              className="group relative overflow-hidden rounded-xl border border-slate-200 bg-white/70 p-4 hover:border-primary-300 hover:shadow-md hover:-translate-y-0.5 transition-all"
+            >
+              <span aria-hidden className="absolute inset-y-0 left-0 w-1" style={{ backgroundColor: f.accent }} />
+              <div className="flex items-start gap-3 pl-1.5">
+                <div
+                  className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg text-xl"
+                  style={{ backgroundColor: f.tint, color: f.accent }}
+                >
+                  {f.icon}
+                </div>
+                <div className="min-w-0 flex-1">
+                  <h3 className="text-sm font-semibold text-slate-800 leading-snug">{f.title}</h3>
+                  <p className="text-xs text-slate-500 mt-1 leading-relaxed">{f.blurb}</p>
+                  {f.tags && (
+                    <div className="mt-2 flex flex-wrap gap-1">
+                      {f.tags.map((t) => (
+                        <span
+                          key={t}
+                          className="rounded-full px-1.5 py-0.5 text-[10px] font-semibold tracking-wide"
+                          style={{ backgroundColor: f.tint, color: f.accent }}
+                        >
+                          {t}
+                        </span>
+                      ))}
+                    </div>
+                  )}
+                  <span className="mt-2 inline-flex items-center gap-1 text-xs font-medium text-slate-400 group-hover:text-primary-600 transition-colors">
+                    Explore <span aria-hidden>→</span>
+                  </span>
+                </div>
+              </div>
+            </Link>
+          ))}
+        </div>
+      </section>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 flex-1">
         {/* Left: insights + work */}

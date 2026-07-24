@@ -66,7 +66,7 @@ const severityMeta = (sev: string): { color: string; ring: string; emoji: string
         : { color: '#6366f1', ring: 'border-l-primary-500', emoji: 'ℹ️' };
 
 const activityMeta = (t: string): { emoji: string; color: string } =>
-  t === 'Movement' ? { emoji: '🚚', color: '#6366f1' }
+  t === 'Movement' ? { emoji: '🧭', color: '#6366f1' }
     : t === 'Maintenance' ? { emoji: '🔧', color: '#f59e0b' }
       : t === 'Custody' ? { emoji: '🤝', color: '#8b5cf6' }
         : t === 'Alert' ? { emoji: '🚨', color: '#ef4444' }
@@ -607,7 +607,7 @@ export default function AssetProfilePage({ params }: { params: Promise<{ id: str
                   {groups.map((g) => (
                     <div key={g.id} className="flex items-center gap-2 text-sm">
                       <span className="text-slate-400">
-                        {g.type === 'Fleet' ? '🚚' : g.type === 'Kit' ? '📦' : '🗂️'}
+                        {g.type === 'Fleet' ? '💻' : g.type === 'Kit' ? '📦' : '🗂️'}
                       </span>
                       <span className="text-slate-700 truncate">{g.name}</span>
                       <span className="text-[10px] text-slate-400">{g.type}</span>

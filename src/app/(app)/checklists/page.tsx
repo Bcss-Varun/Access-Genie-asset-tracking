@@ -16,11 +16,11 @@ interface Template {
 
 /** Standard library templates seeded alongside those derived from inspections. */
 const STANDARD: Record<string, { category: string; itemCount: number; icon: string }> = {
-  'OSHA Forklift Daily': { category: 'Safety', itemCount: 4, icon: '🚜' },
-  'HVAC Mechanical': { category: 'Facilities', itemCount: 4, icon: '❄️' },
-  'Joint Commission Biomed': { category: 'Medical', itemCount: 3, icon: '⚕️' },
+  'Endpoint Provisioning': { category: 'IT Ops', itemCount: 4, icon: '💻' },
+  'Data Center Cooling (CRAC)': { category: 'Facilities', itemCount: 4, icon: '❄️' },
+  'Data Center Security': { category: 'Infrastructure', itemCount: 3, icon: '🛡️' },
   'Backup Power': { category: 'Facilities', itemCount: 4, icon: '⚡' },
-  'Cold Chain Compliance': { category: 'Compliance', itemCount: 3, icon: '🧊' },
+  'Media Sanitization': { category: 'Compliance', itemCount: 3, icon: '🔒' },
 };
 
 export default function ChecklistsPage() {

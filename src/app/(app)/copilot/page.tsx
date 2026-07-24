@@ -80,7 +80,7 @@ function ValueAnswer() {
     <div className="space-y-4">
       <p className="text-sm text-slate-700 leading-relaxed">
         Total portfolio value (TCO) is <span className="font-semibold text-primary-600">{formatMoney(total)}</span> across{' '}
-        {categoryBreakdown.reduce((s, c) => s + c.count, 0).toLocaleString()} assets. Heavy Machinery leads the mix.
+        {categoryBreakdown.reduce((s, c) => s + c.count, 0).toLocaleString()} assets. Compute endpoints lead the mix.
       </p>
       <div className="grid grid-cols-3 gap-3">
         <div className="rounded-lg border border-slate-200 p-3">

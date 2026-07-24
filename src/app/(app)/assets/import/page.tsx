@@ -20,17 +20,17 @@ const TARGET_FIELDS: { value: TargetField; label: string }[] = [
   { value: 'ignore', label: '— Ignore —' },
 ];
 
-const KNOWN_CATEGORIES = ['Heavy Machinery', 'Medical', 'IT', 'Vehicles', 'Facilities', 'Sensors'];
+const KNOWN_CATEGORIES = ['Compute', 'Network', 'Endpoints', 'Infrastructure', 'Sensors'];
 
 // ── Sample CSV (raw rows) ──────────────────────────────────────────────────────
 const SAMPLE_HEADERS = ['Asset Name', 'Serial', 'Category', 'Custodian', 'Purchase Price', 'Status'];
 const SAMPLE_ROWS: string[][] = [
-  ['Forklift Toyota 8FGU25', 'SN-FK-1042', 'Heavy Machinery', 'M. Alvarez', '38500', 'Active'],
-  ['MRI Scanner Aera 1.5T', 'SN-MRI-0077', 'Medical', 'Dr. Chen', '1250000', 'Active'],
-  ['Dell Latitude 7440', 'SN-FK-1042', 'IT', 'J. Okafor', '1899', 'Staging'],       // duplicate serial
-  ['Ford Transit Cargo', 'SN-VAN-3310', 'Automobiles', 'R. Singh', '42000', 'Active'], // unknown category
+  ['Dell PowerEdge R740 Server', 'SN-SVR-1042', 'Compute', 'IT Ops', '8500', 'Active'],
+  ['Cisco Catalyst 9500', 'SN-NET-0077', 'Network', 'Network Team', '12000', 'Active'],
+  ['Dell Latitude 7440', 'SN-FK-1042', 'Compute', 'J. Okafor', '1899', 'Staging'],       // duplicate serial
+  ['Smart TV — Break Room', 'SN-AV-3310', 'AV Equipment', 'R. Singh', '1200', 'Active'], // unknown category
   ['', 'SN-SEN-9921', 'Sensors', 'Facilities Team', '240', 'Active'],                  // missing name
-  ['Cold Storage Unit CS-4', 'SN-FAC-5567', 'Facilities', 'K. Novak', '15750', 'Maintenance'],
+  ['CRAC Cooling Unit CR-4', 'SN-FAC-5567', 'Facilities', 'K. Novak', '15750', 'Maintenance'],
 ];
 
 // ── Validation ─────────────────────────────────────────────────────────────────

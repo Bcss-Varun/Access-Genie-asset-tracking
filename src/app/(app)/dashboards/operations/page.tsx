@@ -35,7 +35,7 @@ export default function OperationsDashboard() {
         actions={
           <select defaultValue="Central Warehouse" className="bg-white border border-slate-200 rounded-lg px-3 py-2 text-sm font-medium text-slate-700">
             <option>Central Warehouse</option>
-            <option>General Hospital</option>
+            <option>HQ Building</option>
             <option>Primary Data Center</option>
             <option>All Facilities</option>
           </select>

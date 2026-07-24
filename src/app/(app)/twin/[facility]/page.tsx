@@ -15,7 +15,7 @@ import { cn, relTime } from '@/lib/utils';
 type Facility = { slug: string; name: string; locationName: string; building: string };
 const FACILITIES: Facility[] = [
   { slug: 'central-warehouse', name: 'Central Warehouse', locationName: 'Central Warehouse', building: 'Building A' },
-  { slug: 'general-hospital', name: 'General Hospital', locationName: 'General Hospital', building: 'North & South Wings' },
+  { slug: 'hq-building', name: 'HQ Building', locationName: 'HQ Building', building: 'Floors 1–4 · Offices & IT Storeroom' },
   { slug: 'primary-data-center', name: 'Primary Data Center', locationName: 'Primary Data Center', building: 'Server Room Alpha' },
 ];
 
@@ -23,9 +23,9 @@ const FACILITIES: Facility[] = [
 const ZONE_STYLE: Record<ZoneType, { fill: string; stroke: string; label: string }> = {
   warehouse: { fill: 'rgba(14,165,233,0.07)', stroke: 'rgba(14,165,233,0.40)', label: 'Warehouse' },
   dock: { fill: 'rgba(245,158,11,0.08)', stroke: 'rgba(245,158,11,0.40)', label: 'Loading Dock' },
-  office: { fill: 'rgba(139,92,246,0.08)', stroke: 'rgba(139,92,246,0.40)', label: 'Office / Clinical' },
+  office: { fill: 'rgba(139,92,246,0.08)', stroke: 'rgba(139,92,246,0.40)', label: 'Office' },
   restricted: { fill: 'rgba(239,68,68,0.07)', stroke: 'rgba(239,68,68,0.45)', label: 'Restricted' },
-  lab: { fill: 'rgba(20,184,166,0.09)', stroke: 'rgba(20,184,166,0.40)', label: 'Lab / Cold Storage' },
+  lab: { fill: 'rgba(20,184,166,0.09)', stroke: 'rgba(20,184,166,0.40)', label: 'Test Lab' },
   yard: { fill: 'rgba(16,185,129,0.07)', stroke: 'rgba(16,185,129,0.40)', label: 'Yard' },
 };
 

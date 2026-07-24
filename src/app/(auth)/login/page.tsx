@@ -5,11 +5,6 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { Button } from '@/components/ui/Button';
 
-const ssoProviders = [
-  { id: 'okta', label: 'Okta', icon: '🔷' },
-  { id: 'azure', label: 'Microsoft', icon: '🪟' },
-  { id: 'google', label: 'Google', icon: '🇬' },
-];
 
 function LoginInner() {
   const router = useRouter();
@@ -29,19 +24,22 @@ function LoginInner() {
     }
     setLoading(true);
     setTimeout(() => {
-      // Mock auth: any 4+ char password succeeds → MFA step.
-      if (password.length < 4) {
+      // Mock auth: only allow specific credentials
+      const validAdmin = email === 'admin' && password === 'admin123';
+      const validRaj = email === 'raj@bcss.in' && password === 'admin123';
+
+      if (!validAdmin && !validRaj) {
         setLoading(false);
         setError('Incorrect email or password. Please try again.');
         return;
       }
-      router.push(`/mfa?next=${encodeURIComponent(next)}`);
+      router.push(next);
     }, 700);
   };
 
   const useDemo = () => {
-    setEmail('john.doe@accessgenie.ai');
-    setPassword('demodemo');
+    setEmail('raj@bcss.in');
+    setPassword('admin123');
     setError(null);
   };
 
@@ -50,22 +48,6 @@ function LoginInner() {
       <h2 className="text-2xl font-heading font-bold text-slate-900">Sign in</h2>
       <p className="text-sm text-slate-500 mt-1">Welcome back. Sign in to your workspace.</p>
 
-      <div className="mt-6 grid grid-cols-3 gap-2">
-        {ssoProviders.map((p) => (
-          <button
-            key={p.id}
-            onClick={() => router.push(`/mfa?next=${encodeURIComponent(next)}`)}
-            className="flex items-center justify-center gap-1.5 rounded-lg border border-slate-300 bg-white py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 transition-colors"
-          >
-            <span>{p.icon}</span>
-            <span className="hidden sm:inline">{p.label}</span>
-          </button>
-        ))}
-      </div>
-
-      <div className="my-5 flex items-center gap-3 text-xs text-slate-400">
-        <span className="h-px flex-1 bg-slate-200" /> or <span className="h-px flex-1 bg-slate-200" />
-      </div>
 
       <form onSubmit={submit} className="space-y-4">
         {error && (
@@ -74,7 +56,7 @@ function LoginInner() {
         <label className="block">
           <span className="text-sm font-medium text-slate-700">Work email</span>
           <input
-            type="email"
+            type="text"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             placeholder="you@company.com"

@@ -11,13 +11,13 @@ import { useToast } from '@/components/providers/ToastProvider';
 import { relTime, cn } from '@/lib/utils';
 
 const categoryEmoji = (c: Asset['category']) =>
-  c === 'Vehicles' ? '🚗' : c === 'IT' ? '💻' : c === 'Medical' ? '⚕️' : c === 'Sensors' ? '📡' : c === 'Facilities' ? '🏭' : '⚙️';
+  c === 'Endpoints' ? '📱' : c === 'Compute' ? '💻' : c === 'Network' ? '🌐' : c === 'Sensors' ? '📡' : c === 'Infrastructure' ? '⚡' : '⚙️';
 
 const statusTone = (s: Asset['status']) =>
   s === 'Active' ? 'emerald' : s === 'Maintenance' ? 'amber' : s === 'Missing' ? 'red' : 'slate';
 
 const STATUSES = ['All', 'Active', 'Maintenance', 'Missing', 'Staging', 'End_Of_Life'] as const;
-const CATEGORIES = ['All', 'Heavy Machinery', 'Medical', 'IT', 'Vehicles', 'Facilities', 'Sensors'] as const;
+const CATEGORIES = ['All', 'Compute', 'Network', 'Endpoints', 'Infrastructure', 'Sensors'] as const;
 
 type SortKey = 'name' | 'status' | 'healthScore' | 'category' | 'utilization' | 'riskScore' | 'lastPing';
 const OPTIONAL_COLUMNS = ['category', 'location', 'custodian', 'utilization', 'riskScore', 'lastPing'] as const;
@@ -31,7 +31,7 @@ const BUILT_IN_VIEWS: SavedView[] = [
   { name: 'All Assets', status: 'All', category: 'All', search: '' },
   { name: 'In Maintenance', status: 'Maintenance', category: 'All', search: '' },
   { name: 'Missing', status: 'Missing', category: 'All', search: '' },
-  { name: 'Medical Devices', status: 'All', category: 'Medical', search: '' },
+  { name: 'Endpoints', status: 'All', category: 'Endpoints', search: '' },
 ];
 
 const PAGE_SIZE = 10;

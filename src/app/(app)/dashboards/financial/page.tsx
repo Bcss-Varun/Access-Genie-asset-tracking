@@ -14,7 +14,7 @@ const capexFc = mockForecasts.find((f) => f.id === 'FC-CAPEX');
 const capexForecast = (capexFc?.points.filter((p) => p.actual == null).reduce((s, p) => s + p.forecast, 0) ?? 0) * 1000;
 
 // Book vs purchase by category
-const cats = ['Heavy Machinery', 'Medical', 'IT', 'Vehicles', 'Facilities', 'Sensors'];
+const cats = ['Compute', 'Network', 'Endpoints', 'Infrastructure', 'Sensors'];
 const byCategory = cats.map((c) => {
   const items = mockAssets.filter((a) => a.category === c);
   return {

@@ -17,8 +17,8 @@ interface TeamDef {
 }
 
 const TEAMS: TeamDef[] = [
-  { id: 'fleet', name: 'Fleet Maintenance', emoji: '🚚', department: 'Operations', description: 'Keeps vehicles and heavy machinery serviced and road-ready.', extra: 11 },
-  { id: 'biomed', name: 'Biomed', emoji: '⚕️', department: 'Clinical Engineering', description: 'Maintains and calibrates medical devices across hospital wings.', extra: 8 },
+    { id: 'network', name: 'Network Ops', emoji: '🌐', department: 'IT', description: 'Maintains core network switches, routers, and firewalls.', extra: 11 },
+  { id: 'helpdesk', name: 'IT Helpdesk', emoji: '💻', department: 'IT Support', description: 'Maintains and calibrates endpoint devices across all offices.', extra: 8 },
   { id: 'itops', name: 'IT Ops', emoji: '💻', department: 'Technology', description: 'Runs data-center infrastructure, gateways, and connectivity.', extra: 6 },
   { id: 'facilities', name: 'Facilities', emoji: '🏭', department: 'Operations', description: 'Manages buildings, zones, and site-level asset logistics.', extra: 9 },
   { id: 'security', name: 'Security', emoji: '🛡️', department: 'Risk & Compliance', description: 'Monitors geofences, theft alerts, and physical access.', extra: 4 },
@@ -26,7 +26,7 @@ const TEAMS: TeamDef[] = [
 
 const deptTone: Record<string, 'primary' | 'emerald' | 'amber' | 'slate'> = {
   Operations: 'emerald',
-  'Clinical Engineering': 'primary',
+  IT: 'primary',
   Technology: 'amber',
   'Risk & Compliance': 'slate',
 };

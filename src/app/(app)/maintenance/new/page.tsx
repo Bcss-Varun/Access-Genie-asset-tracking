@@ -20,13 +20,13 @@ const priorityTone = (p: WorkOrderPriority): 'slate' | 'primary' | 'amber' | 're
   p === 'Critical' ? 'red' : p === 'High' ? 'amber' : p === 'Medium' ? 'primary' : 'slate';
 
 const categoryEmoji = (c: string): string =>
-  c === 'Vehicles' ? '🚗'
-    : c === 'IT' ? '💻'
-      : c === 'Medical' ? '⚕️'
-        : c === 'Heavy Machinery' ? '🏗️'
-          : c === 'Facilities' ? '🏭'
+  c === 'Compute' ? '💻'
+    : c === 'Endpoints' ? '📱'
+      : c === 'Network' ? '🌐'
+        : c === 'Infrastructure' ? '⚡'
+          : c === 'Facilities' ? '🏢'
             : c === 'Sensors' ? '📡'
-              : '⚙️';
+              : '🖥️';
 
 /** Unique, sorted list of technicians seen across the mock work orders. */
 const ASSIGNEES = [

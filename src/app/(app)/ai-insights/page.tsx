@@ -32,7 +32,7 @@ function fmtUsd(n: number): string {
 }
 
 function catEmoji(cat?: string): string {
-  return cat === "Vehicles" ? "🚗" : cat === "IT" ? "💻" : cat === "Medical" ? "⚕️" : "⚙️";
+  return cat === 'Endpoints' ? '📱' : cat === 'Compute' ? '💻' : cat === 'Network' ? '🌐' : cat === 'Sensors' ? '📡' : cat === 'Infrastructure' ? '⚡' : '⚙️';
 }
 
 const TYPE_META: Record<InsightType, string> = {

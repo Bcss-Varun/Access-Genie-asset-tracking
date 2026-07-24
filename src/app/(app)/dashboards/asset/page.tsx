@@ -41,9 +41,11 @@ export default function AssetDashboard() {
         actions={
           <select defaultValue="All Categories" className="bg-white border border-slate-200 rounded-lg px-3 py-2 text-sm font-medium text-slate-700">
             <option>All Categories</option>
-            <option>Heavy Machinery</option>
-            <option>Medical</option>
-            <option>IT</option>
+            <option>Compute</option>
+            <option>Network</option>
+            <option>Endpoints</option>
+            <option>Infrastructure</option>
+            <option>Sensors</option>
           </select>
         }
       />

@@ -20,7 +20,7 @@ const INITIAL: RetentionPolicy[] = [
   { id: 'RP-03', dataClass: 'Chain of Custody', retention: '7 years', disposal: 'Secure delete', legalHold: true },
   { id: 'RP-04', dataClass: 'Telemetry / Sensor Data', retention: '18 months', disposal: 'Aggregate & purge', legalHold: false },
   { id: 'RP-05', dataClass: 'Maintenance Work Orders', retention: '5 years', disposal: 'Secure delete', legalHold: false },
-  { id: 'RP-06', dataClass: 'PHI / Patient-linked Assets', retention: '6 years', disposal: 'Crypto-shred', legalHold: false },
+  { id: 'RP-06', dataClass: 'Decommissioned Media (Sanitization)', retention: '6 years', disposal: 'Crypto-shred', legalHold: false },
 ];
 
 export default function RetentionPage() {

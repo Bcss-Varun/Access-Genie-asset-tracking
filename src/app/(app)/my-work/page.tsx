@@ -52,17 +52,17 @@ export default function MyWorkPage() {
   const tasks = useMemo<Task[]>(() => {
     if (!canMaintain) return [];
     return [
-      { id: 'TSK-01', title: 'Review predictive alert for HVAC Rooftop Unit B', priority: 'High', due: hoursAgo(-6), href: '/maintenance/WO-5001' },
-      { id: 'TSK-02', title: 'Confirm refrigerant delivery for Cold Chain Reefer', priority: 'Medium', due: hoursAgo(-30), href: '/maintenance/WO-5007' },
-      { id: 'TSK-03', title: 'Close out completed van brake-pad job', priority: 'Low', due: hoursAgo(-2), href: '/maintenance/WO-5011' },
+      { id: 'TSK-01', title: 'Review predictive alert for MacBook Pro 16" battery', priority: 'High', due: hoursAgo(-6), href: '/maintenance/WO-5001' },
+      { id: 'TSK-02', title: 'Confirm cold-spare SSD delivery for Synology NAS', priority: 'Medium', due: hoursAgo(-30), href: '/maintenance/WO-5004' },
+      { id: 'TSK-03', title: 'Close out completed switch firmware OTA job', priority: 'Low', due: hoursAgo(-2), href: '/maintenance/WO-5010' },
     ];
   }, [canMaintain]);
 
   const approvals = useMemo<Approval[]>(() => {
     if (!isApprover) return [];
     return [
-      { id: 'TR-4001', title: 'Transfer: Portable X-Ray → South Wing', requestedBy: 'Dr. Robert Chen', at: hoursAgo(2) },
-      { id: 'TR-4004', title: 'Transfer: AMR-7 → Main Warehouse', requestedBy: 'Automation Team', at: hoursAgo(3) },
+      { id: 'TR-4001', title: 'Transfer: Cisco Catalyst 9500 → Server Room Beta', requestedBy: 'James Park', at: hoursAgo(2) },
+      { id: 'TR-4004', title: 'Transfer: Fluke DSX-8000 → Central Warehouse', requestedBy: 'Network Team', at: hoursAgo(3) },
     ];
   }, [isApprover]);
 

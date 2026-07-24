@@ -10,19 +10,13 @@ import { useToast } from '@/components/providers/ToastProvider';
 import { cn } from '@/lib/utils';
 
 const categoryEmoji = (c: Asset['category']): string =>
-  c === 'Vehicles' ? '🚗'
-    : c === 'IT' ? '💻'
-      : c === 'Medical' ? '⚕️'
-        : c === 'Heavy Machinery' ? '🏗️'
-          : c === 'Facilities' ? '🏭'
-            : c === 'Sensors' ? '📡'
-              : '⚙️';
+  c === 'Endpoints' ? '📱' : c === 'Compute' ? '💻' : c === 'Network' ? '🌐' : c === 'Sensors' ? '📡' : c === 'Infrastructure' ? '⚡' : '⚙️';
 
 const typeTone = (t: AssetGroup['type']): 'primary' | 'emerald' | 'amber' =>
   t === 'Fleet' ? 'primary' : t === 'Kit' ? 'amber' : 'emerald';
 
 const typeEmoji = (t: AssetGroup['type']): string =>
-  t === 'Fleet' ? '🚚' : t === 'Kit' ? '📦' : '🗂️';
+  t === 'Fleet' ? '💻' : t === 'Kit' ? '📦' : '🗂️';
 
 const FILTERS = ['All', 'Group', 'Fleet'] as const;
 
@@ -55,7 +49,7 @@ export default function GroupsPage() {
 
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         <KpiCard label="Groups" value={totalGroups} sub={`${mockGroups.length} collections total`} tone="emerald" />
-        <KpiCard label="Fleets" value={totalFleets} sub="Vehicle & equipment fleets" tone="primary" accent />
+        <KpiCard label="Fleets" value={totalFleets} sub="Device & hardware fleets" tone="primary" accent />
         <KpiCard label="Kits" value={totalKits} sub="Bundled / BOM assets" tone="amber" />
         <KpiCard label="Assets Grouped" value={groupedAssets} sub={`of ${mockAssets.length} total assets`} />
       </div>

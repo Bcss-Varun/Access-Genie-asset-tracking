@@ -35,13 +35,13 @@ const POLICIES: Policy[] = [
   },
   {
     id: 'ESC-02',
-    name: 'Medical Equipment',
-    scope: 'Biomed & imaging assets',
+    name: 'Data Center Core',
+    scope: 'Servers, storage & network core',
     tone: 'amber',
     severity: 'Critical',
     tiers: [
-      { tier: 1, notify: 'Biomed Technician', afterMin: 0, channels: ['Push', 'In-app'] },
-      { tier: 2, notify: 'Clinical Engineering', afterMin: 15, channels: ['SMS', 'Email'] },
+      { tier: 1, notify: 'Data Center Technician', afterMin: 0, channels: ['Push', 'In-app'] },
+      { tier: 2, notify: 'Infrastructure Engineering', afterMin: 15, channels: ['SMS', 'Email'] },
     ],
   },
   {

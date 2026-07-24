@@ -32,7 +32,7 @@ const stageTheme: Record<Stage, { dot: string; bar: string; head: string; badge:
 };
 
 const categoryEmoji = (c: Asset['category']) =>
-  c === 'Vehicles' ? '🚗' : c === 'IT' ? '💻' : c === 'Medical' ? '⚕️' : c === 'Sensors' ? '📡' : c === 'Facilities' ? '🏭' : '⚙️';
+  c === 'Endpoints' ? '📱' : c === 'Compute' ? '💻' : c === 'Network' ? '🌐' : c === 'Sensors' ? '📡' : c === 'Infrastructure' ? '⚡' : '⚙️';
 
 const healthColor = (h: number) =>
   h > 80 ? 'bg-health-good' : h > 50 ? 'bg-health-warning' : 'bg-health-critical';
