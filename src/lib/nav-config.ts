@@ -61,18 +61,21 @@ export const navConfig: NavGroup[] = [
 
   // ── Pillar 3 ───────────────────────────────────────────────────────────────
   {
-    id: 'assets', label: 'Passport & Lifecycle', module: 'assets',
-    fullLabel: 'Digital Asset Passport and Lifecycle Management',
+    id: 'assets', label: 'Asset Management', module: 'assets',
+    fullLabel: 'Asset registry, lifecycle, collections and financials',
     href: '/assets', icon: '🪪',
     items: [
       { label: 'IT Asset Registry', href: '/assets', icon: '💻' },
-      { label: 'Register Asset', href: '/assets/new', icon: '➕' },
-      { label: 'Digital Asset Passports', href: '/taxonomy', icon: '🪪' },
+      { label: 'Add Asset', href: '/assets/new', icon: '➕' },
       { label: 'Lifecycle Management', href: '/lifecycle', icon: '♻️' },
-      { label: 'Groups & Fleets', href: '/groups', icon: '🧩' },
-      { label: 'Kits & Bundles', href: '/kits', icon: '🎒' },
+      // Groups & Fleets and Kits & Bundles removed (docs/22 §22.4): they were one
+      // array behind two rows, and for IT the job is done better by saved views
+      // on the Registry (rule-based, shareable) and by parent/child components
+      // on Asset 360.
       { label: 'Asset Financials', href: '/financials', icon: '💰' },
-      { label: 'Depreciation Schedules', href: '/depreciation', icon: '🧾' },
+      // Depreciation Schedules removed (docs/22 §22.2 item 9): it duplicated
+      // Financials — same source data, same book-value KPI, same per-asset
+      // table. The per-asset schedule lives on Asset 360 ▸ Commercial.
       { label: 'Bulk Import', href: '/assets/import', icon: '📥' },
     ],
   },
@@ -155,6 +158,9 @@ export const navConfig: NavGroup[] = [
     id: 'admin', label: 'Administration', module: 'admin',
     href: '/admin/users', icon: '⚙️',
     items: [
+      // Configuration, not operations: a class decides how thousands of assets
+      // behave, so it is edited deliberately from Administration (docs/22 §22.2).
+      { label: 'Asset Classes & Templates', href: '/admin/classes', icon: '🧬' },
       { label: 'Users & Roles', href: '/admin/users', icon: '👥' },
       { label: 'Roles & Permissions', href: '/admin/roles', icon: '🔐' },
       { label: 'Teams', href: '/admin/teams', icon: '🧑‍🤝‍🧑' },

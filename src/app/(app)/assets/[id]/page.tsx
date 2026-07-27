@@ -4,7 +4,6 @@ import { use, useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import {
-  getAssetById,
   getWorkOrdersForAsset,
   getActivityForAsset,
   getInsightsForAsset,
@@ -17,6 +16,8 @@ import { PageHeader, Badge, EmptyState, Avatar } from '@/components/ui/primitive
 import { Button } from '@/components/ui/Button';
 import { Dropdown, MenuItem } from '@/components/ui/Dropdown';
 import { useToast } from '@/components/providers/ToastProvider';
+import { useRegistry } from '@/components/providers/RegistryProvider';
+import { SetupChecklist } from '@/components/onboarding/SetupChecklist';
 import { cn, formatMoney, formatDate, relTime, DEMO_NOW } from '@/lib/utils';
 
 // ── token helpers ─────────────────────────────────────────────────────────────
@@ -359,7 +360,10 @@ function TimelineList({ events }: { events: ActivityEvent[] }) {
 // ═══════════════════════════════════════════════════════════════════════════════
 export default function AssetProfilePage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
-  const asset = getAssetById(id);
+  // Read through the in-session registry, so an asset registered a minute ago
+  // resolves here exactly like one that shipped with the demo data.
+  const { getAsset } = useRegistry();
+  const asset = getAsset(id);
   const { toast } = useToast();
   const router = useRouter();
 
@@ -517,6 +521,11 @@ export default function AssetProfilePage({ params }: { params: Promise<{ id: str
 
       {/* Chip row */}
       <div className="flex flex-wrap items-center gap-2 -mt-2">
+        {asset.onboarding.state !== 'Active' && (
+          <Badge tone={asset.onboarding.state === 'Pending Approval' ? 'amber' : 'primary'}>
+            {asset.onboarding.state === 'Pending Approval' ? '⏳ Pending approval' : '📝 Draft — setup incomplete'}
+          </Badge>
+        )}
         <Badge tone={statusTone(asset.status)}>{asset.status.replace('_', ' ')}</Badge>
         <Badge tone={healthTone(asset.healthStatus)}>
           <span className="h-2 w-2 rounded-full" style={{ backgroundColor: healthHex(asset.healthScore) }} />
@@ -537,6 +546,22 @@ export default function AssetProfilePage({ params }: { params: Promise<{ id: str
           </span>
         )}
       </div>
+
+      {/* ── Setup checklist — the wizard's Configure stage, in place ──────────────
+          Same component the registration flow renders. A user who abandoned the
+          wizard finds the identical list waiting here, which is what makes
+          "leave any time" a real promise rather than a slogan. */}
+      {asset.onboarding.state !== 'Active' && (
+        <SetupChecklist
+          asset={asset}
+          onJump={() => router.push(`/assets/new?resume=${asset.id}`)}
+          footer={
+            <Link href={`/assets/new?resume=${asset.id}`}>
+              <Button>Resume setup →</Button>
+            </Link>
+          }
+        />
+      )}
 
       {/* ── Two-column body ────────────────────────────────────────────────────── */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
