@@ -437,12 +437,25 @@ ASSETS
 │     actions: + Add Asset ▾ (new · from PO · scan · clone · bulk · ERP · adopt tag)
 │              Export · Print labels · Bulk edit · Bulk transfer
 │
+├── Label & Tag Printing      ← designer · print queue · templates · tag coverage
+│     media:  QR · Data Matrix · Barcode · RFID · NFC
+│     a print run mints AND binds the identity tag — one event, not two
+│
 ├── Collections               ← Groups + Fleets, unified
 │     membership: Static | Dynamic (rule)
 │     mode:       Reference | Operational (owner + KPIs + substitution pool)
 │
 └── Lifecycle & Disposal      ← portfolio pipeline: EOL, replacement, retirement, disposal certificates
 ```
+
+**Why Label & Tag Printing earns a row when "Print labels" is also a bulk action.** T2 says a verb does not get a
+sidebar entry, and "print a label" is a verb — which is exactly why it stays on the Registry bulk bar and in the
+Asset 360 overflow, both deep-linking into the module with the selection in the URL (`?ids=…`). The *module* is
+not the verb. It owns standing state that outlives any one print run — a device queue with jobs that fail and get
+re-assigned, a shared template library, and the identity-tag coverage ledger (**Unlabelled · Bound · Verified**,
+docs/21 M7). Someone opens it to answer "which assets still cannot be scanned?" with nothing selected, so it passes
+T1. It sits under Assets rather than under Tracking, where it used to live, because the job is *make this asset
+scannable* — a registry concern — and because printing the label and binding the tag it carries are the same event.
 
 ### What moves out of Assets, and where
 

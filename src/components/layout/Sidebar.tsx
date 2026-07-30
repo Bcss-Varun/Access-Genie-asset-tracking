@@ -19,9 +19,10 @@ function matches(pathname: string, href: string): boolean {
  * Prefix matching alone lit two rows at once: on `/assets/new`, both
  * `/assets` (Asset Registry) and `/assets/new` (Add Asset) matched. Resolving
  * the longest match — globally, not per section — means the child wins where a
- * child exists, the parent still wins for its own detail pages
- * (`/assets/AST-1001` → Registry), and a route claimed by another section
- * (`/assets/labels` → Tracking) no longer highlights two sections at once.
+ * child exists (`/assets/labels` → Label & Tag Printing, not Registry), and the
+ * parent still wins for its own detail pages (`/assets/AST-1001` → Registry).
+ * Matching globally rather than per section also stops a route owned by one
+ * section from lighting a row in another.
  */
 function bestMatch(pathname: string, sections: NavGroup[]): string | null {
   const hrefs: string[] = [];

@@ -1,5 +1,6 @@
 import { NavGroup, Session } from '@/types/platform';
 import { mockAlerts } from '@/lib/mock-data';
+import { openTrackingAlertCount } from '@/lib/tracking-data';
 
 /** Alerts still demanding attention — badged on the Security & Compliance section. */
 const openAlertCount = mockAlerts.filter((a) => a.status === 'Open' || a.status === 'Escalated').length;
@@ -23,20 +24,30 @@ export const navConfig: NavGroup[] = [
   },
 
   // ── Pillar 1 ───────────────────────────────────────────────────────────────
+  // Five operational rows, then one for the hardware. Each row is a question an
+  // operator actually asks, and each asks exactly one:
+  //
+  //   Where is it now?          → Live Tracking
+  //   Is everything accounted   → Inventory Tracking
+  //   for where it should be?
+  //   Where has it been?        → Asset Journey
+  //   Did it break a rule?      → Geofence Monitoring
+  //   What needs me right now?  → Alerts & Incidents
+  //   Can we still hear?        → Tracking Infrastructure
+  //
+  // Nothing is named after a technology or a screen. The Digital Twin is a
+  // visualisation launched from Live Tracking, not a destination of its own.
   {
-    id: 'tracking', label: 'Real-Time Tracking', module: 'tracking',
-    fullLabel: 'Real-Time Asset Tracking (RFID, BLE, GPS, QR, UWB)',
-    href: '/tracking', icon: '🗺️',
+    id: 'tracking', label: 'Asset Tracking', module: 'tracking',
+    fullLabel: 'Asset Tracking & Monitoring',
+    href: '/tracking', icon: '🗺️', badge: openTrackingAlertCount,
     items: [
-      { label: 'Live Asset Map', href: '/tracking', icon: '🗺️' },
-      { label: 'Geofencing Zones', href: '/geofences', icon: '📍' },
-      { label: 'Movement History', href: '/movement', icon: '🧭' },
-      { label: 'Tag & Device Registry', href: '/sensors', icon: '🏷️' },
-      { label: 'Gateways & Readers', href: '/gateways', icon: '📡' },
-      { label: 'Zone Heatmaps', href: '/heatmaps', icon: '🔥' },
-      { label: 'Digital Twin', href: '/twin', icon: '🏢' },
-      { label: 'Telemetry Explorer', href: '/telemetry', icon: '📈' },
-      { label: 'Label & Tag Printing', href: '/assets/labels', icon: '🖨️' },
+      { label: 'Live Tracking', href: '/tracking', icon: '🛰️' },
+      { label: 'Inventory Tracking', href: '/tracking/inventory', icon: '📦' },
+      { label: 'Asset Journey', href: '/tracking/journey', icon: '🧭' },
+      { label: 'Geofence Monitoring', href: '/tracking/geofences', icon: '🚧' },
+      { label: 'Alerts & Incidents', href: '/tracking/alerts', icon: '🚨', badge: openTrackingAlertCount },
+      { label: 'Tracking Infrastructure', href: '/tracking/infrastructure', icon: '📡' },
     ],
   },
 
@@ -67,6 +78,10 @@ export const navConfig: NavGroup[] = [
     items: [
       { label: 'IT Asset Registry', href: '/assets', icon: '💻' },
       { label: 'Add Asset', href: '/assets/new', icon: '➕' },
+      // Labelling belongs to the registry, not to Tracking (where it used to
+      // sit): the job is "make this asset scannable", and printing the label is
+      // the same event as binding the tag it carries.
+      { label: 'Label & Tag Printing', href: '/assets/labels', icon: '🏷️' },
       { label: 'Lifecycle Management', href: '/lifecycle', icon: '♻️' },
       // Groups & Fleets and Kits & Bundles removed (docs/22 §22.4): they were one
       // array behind two rows, and for IT the job is done better by saved views

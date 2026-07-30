@@ -285,6 +285,15 @@ export default function AssetRegistryPage() {
               </button>
             )}
             <div className="flex items-center gap-1.5">
+              {/* Labelling is a real destination, not a toast: the selection is
+                  handed to the label module through the URL so the designer
+                  opens on exactly these assets. */}
+              <Link
+                href={`/assets/labels?ids=${[...selected].join(',')}`}
+                className="rounded-md px-2.5 py-1 text-xs font-medium text-primary-700 hover:bg-primary-100"
+              >
+                Print Labels
+              </Link>
               {['Export', 'Assign Custodian', 'Start Transfer', 'Apply Class Policy', 'Retire'].map((a) => (
                 <button key={a} onClick={() => toast({ title: a, description: `${selected.size} assets`, tone: 'info' })} className="rounded-md px-2.5 py-1 text-xs font-medium text-primary-700 hover:bg-primary-100">{a}</button>
               ))}
