@@ -497,7 +497,7 @@ export default function AssetProfilePage({ params }: { params: Promise<{ id: str
             <MenuItem onClick={() => { router.push('/tracking'); close(); }}>Locate on Map</MenuItem>
             <MenuItem onClick={() => { notify('Transfer request drafted'); close(); }}>Transfer</MenuItem>
             <MenuItem onClick={() => { notify('Asset checked out'); close(); }}>Check-out</MenuItem>
-            <MenuItem onClick={() => { router.push('/assets/labels'); close(); }}>Print Label</MenuItem>
+            <MenuItem onClick={() => { router.push(`/assets/labels?ids=${asset.id}`); close(); }}>Print Label</MenuItem>
             <MenuItem onClick={() => { notify('Retirement workflow started', 'info'); close(); }}>Retire</MenuItem>
           </>
         )}

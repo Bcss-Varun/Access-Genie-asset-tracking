@@ -8,6 +8,7 @@
 
 import { scopeTree } from '@/lib/rbac';
 import { getClassTemplate, getMonitoringProfile, GATE_LABELS } from '@/lib/asset-classes';
+import { mockSensors, TAG_ID_PREFIX } from '@/lib/mock-data';
 import { DEMO_NOW } from '@/lib/utils';
 import type { Asset, SensorKind } from '@/types/asset';
 import type {
@@ -360,6 +361,28 @@ export function roleForKind(kind: SensorKind): 'identity' | 'location' | 'teleme
  * to be heard by a gateway first, so they land in `Bound` and wait.
  */
 export const verifiesOnPrint = (kind: SensorKind): boolean => kind === 'QR Label';
+
+/**
+ * Every tag id already spoken for, across the seeded estate and the registry.
+ * Shared by the Track card and the label printer so a tag minted on one screen
+ * can never collide with one minted on the other.
+ */
+export function takenTagIds(assets: RegisteredAsset[]): Set<string> {
+  const s = new Set<string>();
+  for (const sensor of mockSensors) if (sensor.assetId && sensor.tagId) s.add(sensor.tagId);
+  for (const a of assets) for (const b of a.onboarding.bindings) if (!b.retiredAt) s.add(b.tagId);
+  return s;
+}
+
+/** Mint an unused tag id for a technology. Pass the set from `takenTagIds`. */
+export function mintTagId(kind: SensorKind, taken: Set<string>): string {
+  const prefix = TAG_ID_PREFIX[kind] ?? 'TAG-';
+  for (let n = 9100; n < 9999; n++) {
+    const candidate = `${prefix}${n}`;
+    if (!taken.has(candidate)) return candidate;
+  }
+  return `${prefix}${taken.size + 9999}`;
+}
 
 export const trackingTechLabel = (kind: SensorKind): string =>
   kind === 'RFID Tag' ? 'RFID'

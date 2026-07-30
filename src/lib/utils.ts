@@ -43,6 +43,27 @@ export function formatDate(iso: string): string {
   return `${String(d.getUTCDate()).padStart(2, '0')} ${MONTHS[d.getUTCMonth()]} ${d.getUTCFullYear()}`;
 }
 
+/** Clock time, "14:02". UTC-fixed for the same reason as `formatDate`. */
+export function formatTime(iso: string): string {
+  const t = Date.parse(iso);
+  if (Number.isNaN(t)) return '';
+  const d = new Date(t);
+  return `${String(d.getUTCHours()).padStart(2, '0')}:${String(d.getUTCMinutes()).padStart(2, '0')}`;
+}
+
+/** "23 Jul 2026 · 14:02" — a whole timestamp on one line. */
+export function formatDateTime(iso: string): string {
+  const date = formatDate(iso);
+  return date ? `${date} · ${formatTime(iso)}` : '';
+}
+
+/** Calendar day key, for grouping a list of timestamps under date headings. */
+export function dayKey(iso: string): string {
+  const t = Date.parse(iso);
+  if (Number.isNaN(t)) return '';
+  return new Date(t).toISOString().slice(0, 10);
+}
+
 //
 /** Demo clock — mock data anchors timestamps here (deterministic, no hydration drift). */
 export const DEMO_NOW = Date.parse('2026-07-23T09:00:00.000Z');

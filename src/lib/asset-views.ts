@@ -9,7 +9,8 @@
 // For a view to genuinely replace a group it has to be three things: named,
 // durable beyond the page you created it on, and usable as a target for bulk
 // actions. All three are handled here + in SavedViewsProvider.
-// ─────────────────────────────────────────────────────────────────────────────
+// ────────────────
+// ─────────────────────────────────────────────────────────────
 
 import { deriveCommercial, evaluateGates, isLocated, requiredGates } from '@/lib/onboarding';
 import type { RegisteredAsset } from '@/types/onboarding';

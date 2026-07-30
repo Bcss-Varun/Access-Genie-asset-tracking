@@ -1,7 +1,7 @@
 # Access Genie AI — Enterprise Asset Intelligence Platform
 
 **Product Blueprint & Product Requirements Document (PRD)**
-Version 2.0 · Owner: Product Architecture · Status: Planning (blueprint complete — 23 documents, ~9,600 lines)
+Version 2.0 · Owner: Product Architecture · Status: Planning (blueprint complete — 24 documents)
 
 > **Start here:** [00-master-blueprint.md](./00-master-blueprint.md) is the control document — it defines every
 > section, the coverage matrix (all 18 deliverables proven covered), the full page inventory (login → every
@@ -50,6 +50,7 @@ Incumbents bolt these together across acquired products; Access Genie is built o
 | 20 | Implementation Plan (plan → build → beautify) | [20-implementation-plan.md](./20-implementation-plan.md) |
 | 21 | Asset Onboarding — UX architecture & flow redesign | [21-asset-onboarding-ux.md](./21-asset-onboarding-ux.md) |
 | 22 | Navigation & Information Architecture — the Assets pillar | [22-navigation-ia.md](./22-navigation-ia.md) |
+| 23 | Real-Time Tracking — product architecture & functional spec | [23-realtime-tracking-architecture.md](./23-realtime-tracking-architecture.md) |
 
 ## The demo build (parallel track)
 

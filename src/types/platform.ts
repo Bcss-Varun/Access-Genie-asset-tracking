@@ -81,7 +81,7 @@ export interface NavItem {
  */
 export interface NavGroup {
   id: string;
-  label: string; // short sidebar label, e.g. "Real-Time Tracking"
+  label: string; // short sidebar label, e.g. "Asset Tracking"
   /** Full capability name — tooltip + command palette grouping. */
   fullLabel?: string;
   /** Hub route the section row navigates to. */

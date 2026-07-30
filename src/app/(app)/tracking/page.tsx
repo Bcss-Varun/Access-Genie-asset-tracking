@@ -1,471 +1,684 @@
 'use client';
 
-import { useState } from 'react';
+// ─────────────────────────────────────────────────────────────────────────────
+// Asset Tracking ▸ Live Tracking
+//
+// The module home, and the answer to one question: **where is it right now?**
+// Two views of the same set of assets — a floor-plan for "show me", a table for
+// "list them" — and one drawer that opens from either.
+//
+// This landing page used to be a Dashboard that summarised four other screens.
+// It was a lobby: every tile linked somewhere else, so the first click never did
+// any work. Now the landing page *is* the work, and the numbers across the top
+// filter the list in place instead of navigating away.
+//
+// Precision is the only location language here. The radio behind a fix is never
+// named: an operator acts on "Room-level, 88% confident", never on which
+// technology produced it.
+// ─────────────────────────────────────────────────────────────────────────────
+
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
-import { mockAssets, mockZones } from '@/lib/mock-data';
-import type { Asset, AssetStatus, ZoneType } from '@/types/asset';
-import { PageHeader } from '@/components/ui/primitives';
+import { EmptyState, PageHeader } from '@/components/ui/primitives';
+import { Button } from '@/components/ui/Button';
+import { useToast } from '@/components/providers/ToastProvider';
+import { FacilityMap, MapLegend } from '@/components/tracking/FacilityMap';
+import {
+  Drawer, Field, LiveStamp, ScopePicker, Tabs, TimelineRail, useFacilityScope, useTabs,
+  type TabDef,
+} from '@/components/tracking/shell';
+import {
+  BatteryPill, Chip, ChipFilter, FilterSelect, Meter, Panel, PrecisionChip, PresencePill,
+  StatTile, TONE_HEX, TableShell, presenceTone, scoreTone, td, th, type Tone,
+} from '@/components/tracking/bits';
+import {
+  CRIT_FILTERS, CUSTODY_FILTERS, FacilitySwitch, STATE_FILTERS, STATE_RANK,
+  categoryEmoji, isMisplaced, matchesState, slugFor, stopItem, type StateFilter,
+} from '@/lib/tracking-ui';
+import {
+  TRACKED_FACILITIES, alertById, facilityBySlug, journeyForAsset, presenceById,
+  presenceForFacility, trackedZones, trackingKpis, zoneById, zonesForFacility,
+} from '@/lib/tracking-data';
+import { cn, formatMoney, relTime } from '@/lib/utils';
+import type { PresenceState } from '@/types/tracking';
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Demo clock — the mock data anchors all timestamps to this instant, so we
-// measure "time ago" against it (deterministic → no hydration drift).
-// ─────────────────────────────────────────────────────────────────────────────
-const DEMO_NOW = Date.parse('2026-07-23T09:00:00.000Z');
+const TAB_KEYS = ['map', 'list'] as const;
+type TabKey = (typeof TAB_KEYS)[number];
 
-function relTime(iso: string): string {
-  const s = Math.max(0, Math.floor((DEMO_NOW - Date.parse(iso)) / 1000));
-  if (s < 60) return `${s}s ago`;
-  const m = Math.floor(s / 60);
-  if (m < 60) return `${m}m ago`;
-  const h = Math.floor(m / 60);
-  if (h < 24) return `${h}h ago`;
-  const d = Math.floor(h / 24);
-  return `${d}d ago`;
+const PAGE_SIZE = 15;
+
+type SortKey = 'name' | 'state' | 'zone' | 'custodian' | 'lastSeen' | 'battery';
+interface Sort { key: SortKey; dir: 'asc' | 'desc' }
+
+function SortHead({ k, label, sort, onSort }: { k: SortKey; label: string; sort: Sort; onSort: (k: SortKey) => void }) {
+  return (
+    <th
+      className={cn(th, 'cursor-pointer hover:text-slate-800')}
+      onClick={() => onSort(k)}
+      aria-sort={sort.key === k ? (sort.dir === 'asc' ? 'ascending' : 'descending') : 'none'}
+    >
+      <span className="inline-flex items-center gap-1">
+        {label}
+        {sort.key === k && <span className="text-primary-500">{sort.dir === 'asc' ? '▲' : '▼'}</span>}
+      </span>
+    </th>
+  );
 }
 
-// Assets we flag as physically moving right now (drives the "In Motion" KPI +
-// a subtle drift animation on the map). Deterministic, mobile asset classes.
-const IN_MOTION = new Set(['AST-1001', 'AST-1005', 'AST-1014']);
-
-// ── Zone styling by type (muted, glass-friendly fills) ───────────────────────
-const ZONE_STYLE: Record<ZoneType, { fill: string; stroke: string; label: string }> = {
-  warehouse: { fill: 'rgba(14,165,233,0.07)', stroke: 'rgba(14,165,233,0.40)', label: 'Warehouse' },
-  dock: { fill: 'rgba(245,158,11,0.08)', stroke: 'rgba(245,158,11,0.40)', label: 'Loading Dock' },
-  office: { fill: 'rgba(139,92,246,0.08)', stroke: 'rgba(139,92,246,0.40)', label: 'Office' },
-  restricted: { fill: 'rgba(239,68,68,0.07)', stroke: 'rgba(239,68,68,0.45)', label: 'Restricted' },
-  lab: { fill: 'rgba(20,184,166,0.09)', stroke: 'rgba(20,184,166,0.40)', label: 'Test Lab' },
-  yard: { fill: 'rgba(16,185,129,0.07)', stroke: 'rgba(16,185,129,0.40)', label: 'Yard' },
-};
-
-// ── Marker visual by status / health ─────────────────────────────────────────
-type MarkerVisual = { color: string; pulse: boolean; ring: boolean };
-function markerVisual(a: Asset): MarkerVisual {
-  if (a.status === 'Missing') return { color: '#ef4444', pulse: true, ring: true };
-  if (a.status === 'Maintenance') return { color: '#ef4444', pulse: false, ring: false };
-  if (a.healthStatus === 'Critical') return { color: '#ef4444', pulse: true, ring: false };
-  if (a.healthStatus === 'Warning') return { color: '#f59e0b', pulse: false, ring: false };
-  return { color: '#10b981', pulse: false, ring: false };
-}
-
-type FilterKey = 'All' | 'Active' | 'Warning' | 'Missing';
-function matchesFilter(a: Asset, f: FilterKey): boolean {
-  if (f === 'All') return true;
-  if (f === 'Active') return a.status === 'Active';
-  if (f === 'Warning') return a.healthStatus === 'Warning';
-  return a.status === 'Missing';
-}
-
-// ── Status pill (matches the Asset Registry pattern) ─────────────────────────
-function statusPillClass(status: AssetStatus): string {
-  switch (status) {
-    case 'Active':
-      return 'bg-emerald-100 text-emerald-800 border-emerald-200 dark:bg-emerald-500/10 dark:text-emerald-400 dark:border-emerald-500/20';
-    case 'Maintenance':
-      return 'bg-amber-100 text-amber-800 border-amber-200 dark:bg-amber-500/10 dark:text-amber-400 dark:border-amber-500/20';
-    case 'Missing':
-      return 'bg-red-100 text-red-800 border-red-200 dark:bg-red-500/10 dark:text-red-400 dark:border-red-500/20';
-    default:
-      return 'bg-slate-100 text-slate-800 border-slate-200 dark:bg-slate-500/10 dark:text-slate-400 dark:border-slate-500/20';
-  }
-}
-
-function healthFillClass(score: number): string {
-  if (score > 80) return 'bg-health-good';
-  if (score > 50) return 'bg-health-warning';
-  return 'bg-health-critical';
-}
+const BULK_BTN = 'rounded-md px-2.5 py-1 text-xs font-medium text-primary-700 hover:bg-primary-100';
+const BULK_ACTIONS = [
+  { label: 'Assign custodian', description: 'custody request sent for approval' },
+  { label: 'Start transfer', description: 'draft movement created, awaiting sign-off' },
+  { label: 'Export', description: 'positions and custody written to CSV' },
+] as const;
 
 export default function LiveTrackingPage() {
-  const [filter, setFilter] = useState<FilterKey>('All');
-  const [hoveredId, setHoveredId] = useState<string | null>(null);
-  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const { toast } = useToast();
+  const [scope, setScope] = useFacilityScope();
+  const [tab, setTab] = useTabs<TabKey>(TAB_KEYS, 'map');
 
-  const activeId = hoveredId ?? selectedId;
-  const activeAsset = activeId ? mockAssets.find((a) => a.id === activeId) ?? null : null;
+  // Reporting an asset missing rewrites its row here and now — the operator
+  // should see the estate change, not just read a toast about it.
+  const [reported, setReported] = useState<Set<string>>(new Set());
 
-  // ── KPI values ─────────────────────────────────────────────────────────────
-  const totalTracked = mockAssets.length;
-  const activeCount = mockAssets.filter((a) => a.status === 'Active').length;
-  const missingCount = mockAssets.filter((a) => a.status === 'Missing').length;
-  const warningCount = mockAssets.filter((a) => a.healthStatus === 'Warning').length;
-  const batteryAssets = mockAssets.filter((a) => typeof a.telemetry?.batteryLevel === 'number');
-  const avgBattery = batteryAssets.length
-    ? Math.round(
-        batteryAssets.reduce((sum, a) => sum + (a.telemetry!.batteryLevel ?? 0), 0) /
-          batteryAssets.length,
-      )
-    : 0;
+  // ── Selection shared by the map, the list and the drawer ───────────────────
+  const [selectedAsset, setSelectedAsset] = useState<string | null>(null);
+  const [hovered, setHovered] = useState<string | null>(null);
+  const [mapSlug, setMapSlug] = useState(TRACKED_FACILITIES[0].slug);
+  const rowRefs = useRef<Record<string, HTMLLIElement | null>>({});
 
-  const filterChips: { key: FilterKey; label: string; count: number }[] = [
-    { key: 'All', label: 'All', count: totalTracked },
-    { key: 'Active', label: 'Active', count: activeCount },
-    { key: 'Warning', label: 'Warning', count: warningCount },
-    { key: 'Missing', label: 'Missing', count: missingCount },
+  // ── Map view filters ───────────────────────────────────────────────────────
+  const [mapQuery, setMapQuery] = useState('');
+  const [mapState, setMapState] = useState<PresenceState | 'all'>('all');
+  const [mapCustody, setMapCustody] = useState<string>('All');
+  const [mapMisplaced, setMapMisplaced] = useState(false);
+
+  // ── List view ──────────────────────────────────────────────────────────────
+  const [query, setQuery] = useState('');
+  const [stateFilter, setStateFilter] = useState<StateFilter>('All');
+  const [custodyFilter, setCustodyFilter] = useState<string>('All');
+  const [critFilter, setCritFilter] = useState<string>('All');
+  const [misplacedOnly, setMisplacedOnly] = useState(false);
+  const [sort, setSort] = useState<Sort>({ key: 'name', dir: 'asc' });
+  const [page, setPage] = useState(0);
+  const [selected, setSelected] = useState<Set<string>>(new Set());
+
+  const facilityName = scope === 'all' ? null : facilityBySlug(scope)?.name ?? null;
+
+  const scoped = useMemo(() => {
+    const base = presenceForFacility(scope);
+    if (reported.size === 0) return base;
+    return base.map((p) =>
+      reported.has(p.assetId) && p.state !== 'Missing'
+        ? { ...p, state: 'Missing' as PresenceState, custody: 'Unaccounted' as const }
+        : p,
+    );
+  }, [scope, reported]);
+
+  const kpis = useMemo(() => trackingKpis(scope), [scope]);
+  const live = useMemo(() => ({
+    online: scoped.filter((p) => p.state === 'Online').length,
+    notSeen: scoped.filter((p) => p.state === 'Offline' || p.state === 'Stale').length,
+    missing: scoped.filter((p) => p.state === 'Missing').length,
+    checkedOut: scoped.filter((p) => p.custody === 'Checked Out').length,
+    misplaced: scoped.filter(isMisplaced).length,
+  }), [scoped]);
+
+  // A plan needs a building. With the estate in scope we show one and say so.
+  const mapFacility = useMemo(
+    () => (facilityName ? facilityBySlug(slugFor(facilityName)) : facilityBySlug(mapSlug)) ?? TRACKED_FACILITIES[0],
+    [facilityName, mapSlug],
+  );
+  const mapZones = useMemo(() => zonesForFacility(mapFacility.name), [mapFacility.name]);
+  const onPlan = useMemo(
+    () => scoped.filter((p) => p.facility === mapFacility.name && p.position),
+    [scoped, mapFacility.name],
+  );
+
+  // ── Deep links — the alert queue, Asset 360 and the retired routes land here.
+  // The query string can only be read after mount without breaking hydration,
+  // so this one effect seeds state from the link exactly once.
+  /* eslint-disable react-hooks/set-state-in-effect */
+  useEffect(() => {
+    const p = new URLSearchParams(window.location.search);
+    const s = p.get('state');
+    if (s === 'Online' || s === 'Missing' || s === 'In Transit') { setStateFilter(s); setTab('list'); }
+    else if (s === 'Offline' || s === 'Stale') { setStateFilter('Not seen'); setTab('list'); }
+    const z = p.get('zone');
+    if (z) {
+      const zone = zoneById(z);
+      if (zone) setMapSlug(slugFor(zone.facility));
+    }
+    const a = p.get('asset');
+    if (a) {
+      const hit = presenceById(a);
+      if (hit) { setMapSlug(slugFor(hit.facility)); setSelectedAsset(a); }
+    }
+  }, [setTab]);
+
+  // Narrowing the list puts you back at the top of it, as in the Registry.
+  useEffect(() => { setPage(0); }, [query, stateFilter, custodyFilter, critFilter, misplacedOnly, scope]);
+  /* eslint-enable react-hooks/set-state-in-effect */
+
+  // ── Actions ────────────────────────────────────────────────────────────────
+
+  const reportMissing = useCallback((ids: string[]) => {
+    if (ids.length === 0) return;
+    setReported((prev) => { const n = new Set(prev); ids.forEach((i) => n.add(i)); return n; });
+    toast({
+      title: ids.length === 1 ? 'Recovery search opened' : `${ids.length} recovery searches opened`,
+      description: 'Security has the last known position, custodian and time of loss',
+      tone: 'error',
+    });
+  }, [toast]);
+
+  /** Every map filter has to come off, or "locate" can land on a plan that is
+   *  filtering out the very asset it was asked to point at. */
+  const locateOnMap = useCallback((assetId: string) => {
+    const hit = presenceById(assetId);
+    if (hit) setMapSlug(slugFor(hit.facility));
+    setMapState('all');
+    setMapQuery('');
+    setMapCustody('All');
+    setMapMisplaced(false);
+    setSelectedAsset(assetId);
+    setTab('map');
+  }, [setTab]);
+
+  // ── Map data ───────────────────────────────────────────────────────────────
+
+  const mapCounts = useMemo(() => {
+    const c: Record<PresenceState | 'all', number> = {
+      all: onPlan.length, Online: 0, Stale: 0, Offline: 0, 'In Transit': 0, Missing: 0,
+    };
+    onPlan.forEach((p) => { c[p.state] += 1; });
+    return c;
+  }, [onPlan]);
+
+  const mapRows = useMemo(() => {
+    const q = mapQuery.trim().toLowerCase();
+    return onPlan.filter((p) => {
+      if (mapState !== 'all' && p.state !== mapState) return false;
+      if (mapCustody !== 'All' && p.custody !== mapCustody) return false;
+      if (mapMisplaced && !isMisplaced(p)) return false;
+      if (q && !`${p.assetName} ${p.assetId} ${p.zone} ${p.custodian}`.toLowerCase().includes(q)) return false;
+      return true;
+    }).sort((a, b) => STATE_RANK[a.state] - STATE_RANK[b.state] || a.assetName.localeCompare(b.assetName));
+  }, [onPlan, mapQuery, mapState, mapCustody, mapMisplaced]);
+
+  const selectFromMap = (id: string | null) => {
+    setSelectedAsset(id);
+    if (id) rowRefs.current[id]?.scrollIntoView({ block: 'nearest' });
+  };
+
+  // ── List data ──────────────────────────────────────────────────────────────
+
+  const filtered = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    const rows = scoped.filter((p) => {
+      if (!matchesState(p, stateFilter)) return false;
+      if (custodyFilter !== 'All' && p.custody !== custodyFilter) return false;
+      if (critFilter !== 'All' && p.criticality !== critFilter) return false;
+      if (misplacedOnly && !isMisplaced(p)) return false;
+      if (q && !`${p.assetName} ${p.assetId} ${p.zone} ${p.custodian} ${p.facility}`.toLowerCase().includes(q)) return false;
+      return true;
+    });
+    const dir = sort.dir === 'asc' ? 1 : -1;
+    return rows.sort((a, b) => {
+      if (sort.key === 'state') return (STATE_RANK[a.state] - STATE_RANK[b.state]) * dir;
+      if (sort.key === 'lastSeen') return (Date.parse(a.lastSeen) - Date.parse(b.lastSeen)) * dir;
+      if (sort.key === 'battery') return ((a.batteryPct ?? 999) - (b.batteryPct ?? 999)) * dir;
+      const av = sort.key === 'zone' ? a.zone : sort.key === 'custodian' ? a.custodian : a.assetName;
+      const bv = sort.key === 'zone' ? b.zone : sort.key === 'custodian' ? b.custodian : b.assetName;
+      return av.localeCompare(bv) * dir;
+    });
+  }, [scoped, query, stateFilter, custodyFilter, critFilter, misplacedOnly, sort]);
+
+  const pageCount = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
+  // Reporting assets missing can shrink the list under your feet, so the page
+  // is clamped rather than trusted — no "showing 46–45 of 44".
+  const safePage = Math.min(page, pageCount - 1);
+  const pageRows = filtered.slice(safePage * PAGE_SIZE, safePage * PAGE_SIZE + PAGE_SIZE);
+  const allOnPage = pageRows.length > 0 && pageRows.every((r) => selected.has(r.assetId));
+  const toggleSort = (k: SortKey) =>
+    setSort((s) => (s.key === k ? { key: k, dir: s.dir === 'asc' ? 'desc' : 'asc' } : { key: k, dir: 'asc' }));
+  const toggleRow = (id: string) => setSelected((prev) => {
+    const n = new Set(prev);
+    if (n.has(id)) n.delete(id); else n.add(id);
+    return n;
+  });
+  const resetList = () => {
+    setQuery(''); setStateFilter('All'); setCustodyFilter('All'); setCritFilter('All'); setMisplacedOnly(false);
+  };
+
+  // ── Drawer subject ─────────────────────────────────────────────────────────
+
+  const asset = useMemo(
+    () => (selectedAsset ? scoped.find((p) => p.assetId === selectedAsset) ?? presenceById(selectedAsset) ?? null : null),
+    [selectedAsset, scoped],
+  );
+  const assetJourney = asset ? journeyForAsset(asset.assetId) : undefined;
+  const homeZone = asset
+    ? trackedZones.find((z) => z.facility === asset.facility && z.name === asset.homeZone)
+    : undefined;
+
+  const TABS: TabDef<TabKey>[] = [
+    { key: 'map', label: 'Map', count: mapRows.length },
+    { key: 'list', label: 'List', count: filtered.length },
   ];
 
-  // Live feed — newest ping first, filtered by the active chip.
-  const feed = mockAssets
-    .filter((a) => matchesFilter(a, filter))
-    .slice()
-    .sort(
-      (a, b) =>
-        Date.parse(b.telemetry?.lastPing ?? '') - Date.parse(a.telemetry?.lastPing ?? ''),
-    );
+  const facilitySwitch = scope === 'all' ? <FacilitySwitch value={mapSlug} onChange={setMapSlug} /> : undefined;
 
-  const markers = mockAssets.filter((a) => a.mapPosition);
-
-  type Kpi = {
-    label: string;
-    value: string;
-    sub: string;
-    accent: string;
-    battery?: number;
-  };
-  const kpis: Kpi[] = [
-    { label: 'Total Tracked', value: String(totalTracked), sub: 'Assets on RTLS grid', accent: 'text-slate-900' },
-    { label: 'Active', value: String(activeCount), sub: 'Online & in service', accent: 'text-health-good' },
-    { label: 'Missing', value: String(missingCount), sub: 'Custody exception', accent: 'text-health-critical' },
-    { label: 'Avg Battery', value: `${avgBattery}%`, sub: `${batteryAssets.length} tagged devices`, accent: 'text-slate-900', battery: avgBattery },
+  /** The six numbers this screen exists to answer — each one a filter. */
+  const tiles: { label: string; value: number; tone: Tone; sub: string; on: boolean; apply: () => void }[] = [
+    { label: 'Tracked', value: kpis.tracked, tone: 'slate', sub: facilityName ?? 'across the estate',
+      on: stateFilter === 'All' && custodyFilter === 'All' && !misplacedOnly, apply: () => {} },
+    { label: 'Online', value: live.online, tone: 'emerald', sub: 'seen within their window',
+      on: stateFilter === 'Online', apply: () => setStateFilter('Online') },
+    { label: 'Not seen', value: live.notSeen, tone: live.notSeen > 12 ? 'amber' : 'slate', sub: 'no recent detection',
+      on: stateFilter === 'Not seen', apply: () => setStateFilter('Not seen') },
+    { label: 'Missing', value: live.missing, tone: live.missing ? 'red' : 'emerald', sub: live.missing ? 'recovery open' : 'all accounted for',
+      on: stateFilter === 'Missing', apply: () => setStateFilter('Missing') },
+    { label: 'Checked out', value: live.checkedOut, tone: 'primary', sub: 'held by a person',
+      on: custodyFilter === 'Checked Out', apply: () => setCustodyFilter('Checked Out') },
+    { label: 'Misplaced', value: live.misplaced, tone: live.misplaced ? 'amber' : 'emerald', sub: 'outside their home zone',
+      on: misplacedOnly, apply: () => setMisplacedOnly(true) },
   ];
 
   return (
-    <div className="h-full flex flex-col space-y-6">
+    <div className="space-y-5 pb-4">
       <PageHeader
         title="Live Tracking"
-        subtitle="Real-time RTLS & GPS positioning across the facility floor-plan."
+        subtitle="Where every tracked asset is right now, who is holding it, and whether it belongs there."
+        breadcrumb={[{ label: 'Asset Tracking' }, { label: 'Live Tracking' }]}
         actions={
-          <select className="bg-white border border-slate-200 rounded-lg px-4 py-2 text-sm font-medium">
-            <option>Hyderabad Central Warehouse — Building A</option>
-            <option>Bengaluru HQ — Floor 3</option>
-            <option>Chennai Data Center</option>
-          </select>
+          <>
+            <LiveStamp />
+            <ScopePicker value={scope} onChange={setScope} />
+            <Link href={`/tracking/twin/${mapFacility.slug}`}>
+              <Button variant="outline">🏢 Digital twin</Button>
+            </Link>
+            <Button
+              variant="outline"
+              onClick={() => toast({ title: 'Position export queued', description: `${filtered.length} assets with their latest fix`, tone: 'success' })}
+            >
+              ⤓ Export
+            </Button>
+          </>
         }
       />
 
-      {/* ── KPI strip ──────────────────────────────────────────────────────── */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        {kpis.map((k) => (
-          <div key={k.label} className="glass-panel p-5 rounded-xl">
-            <div className="text-[11px] font-semibold uppercase tracking-wide text-slate-500 mb-1">{k.label}</div>
-            <div className={`text-2xl sm:text-[28px] font-semibold font-heading tabular-nums ${k.accent}`}>{k.value}</div>
-            {typeof k.battery === 'number' ? (
-              <div className="mt-2 h-1.5 w-full rounded-full bg-slate-200 overflow-hidden">
-                <div
-                  className={`h-full rounded-full ${healthFillClass(k.battery)}`}
-                  style={{ width: `${k.battery}%` }}
-                />
-              </div>
-            ) : (
-              <div className="mt-2 text-xs font-medium text-slate-400">{k.sub}</div>
-            )}
-          </div>
+      {/* ── KPI strip — every tile is a filter, applied to the list in place ─── */}
+      <div className="grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-6">
+        {tiles.map((t) => (
+          <StatTile
+            key={t.label} label={t.label} value={t.value} tone={t.tone} sub={t.sub}
+            active={tab === 'list' && t.on} onClick={() => { resetList(); t.apply(); setTab('list'); }}
+          />
         ))}
       </div>
 
-      {/* ── Main: map + live feed ──────────────────────────────────────────── */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 flex-1 min-h-0">
-        {/* Facility map */}
-        <div className="glass-panel rounded-xl p-5 lg:col-span-2 flex flex-col">
-          <div className="mb-4">
-            <h3 className="text-base font-semibold text-slate-800">Facility Floor-Plan</h3>
-            <p className="text-xs text-slate-500 mt-0.5">
-              Hyderabad Central Warehouse · Building A · {markers.length} tracked signals
-            </p>
+      <Tabs tabs={TABS} value={tab} onChange={setTab} />
+
+      {/* ═══ MAP ════════════════════════════════════════════════════════════ */}
+      {tab === 'map' && (
+        <div className="grid grid-cols-1 gap-4 lg:grid-cols-12">
+          <Panel title="Narrow it down" subtitle={`${mapRows.length} of ${onPlan.length} on this plan`} className="lg:col-span-3">
+            <input
+              value={mapQuery} onChange={(e) => setMapQuery(e.target.value)}
+              placeholder="Name, id, zone or custodian…" aria-label="Search assets on this floor-plan"
+              className="w-full rounded-md bg-slate-100 px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-primary-500"
+            />
+            <div className="mt-3 text-[11px] font-semibold uppercase tracking-wide text-slate-500">Presence</div>
+            <ChipFilter
+              className="mt-2" value={mapState} onChange={setMapState}
+              options={[
+                { key: 'all', label: 'All', count: mapCounts.all },
+                { key: 'Online', label: 'Online', count: mapCounts.Online, tone: 'emerald' },
+                { key: 'Stale', label: 'Not seen recently', count: mapCounts.Stale, tone: 'amber' },
+                { key: 'Offline', label: 'No signal', count: mapCounts.Offline, tone: 'slate' },
+                { key: 'In Transit', label: 'In transit', count: mapCounts['In Transit'], tone: 'primary' },
+                { key: 'Missing', label: 'Missing', count: mapCounts.Missing, tone: 'red' },
+              ]}
+            />
+            <div className="mt-4 text-[11px] font-semibold uppercase tracking-wide text-slate-500">Custody</div>
+            <div className="mt-2">
+              <FilterSelect value={mapCustody} onChange={setMapCustody} options={CUSTODY_FILTERS} label="Any custody" />
+            </div>
+            <button
+              type="button" onClick={() => setMapMisplaced((v) => !v)} aria-pressed={mapMisplaced}
+              className={cn('mt-4 w-full rounded-lg border px-3 py-2 text-left text-xs font-medium transition-colors',
+                mapMisplaced ? 'border-amber-200 bg-amber-50 text-amber-700' : 'border-slate-200 text-slate-600 hover:bg-slate-50')}
+            >
+              📍 Only misplaced assets
+            </button>
+            <button
+              type="button"
+              onClick={() => { setMapQuery(''); setMapState('all'); setMapCustody('All'); setMapMisplaced(false); }}
+              className="mt-2 w-full rounded-lg px-3 py-2 text-xs font-medium text-slate-500 hover:bg-slate-50"
+            >
+              Reset filters
+            </button>
+          </Panel>
+
+          <Panel
+            title={`${mapFacility.name} — live floor`}
+            subtitle={scope === 'all'
+              ? `Showing ${mapFacility.short} — a plan needs one building, so pick the one you are working`
+              : `${mapZones.length} zones · ${mapFacility.coverage}% coverage · ${mapRows.length} signals shown`}
+            className="lg:col-span-6"
+            actions={facilitySwitch}
+          >
+            <FacilityMap
+              zones={mapZones} markers={mapRows} mode="presence"
+              selectedId={selectedAsset} onSelect={selectFromMap}
+              hoveredId={hovered} onHover={setHovered}
+              ariaLabel={`${mapFacility.name} live asset positions`}
+            />
+            <div className="mt-3"><MapLegend mode="presence" /></div>
+          </Panel>
+
+          <Panel title="Results" subtitle="Hover to light the marker · click for the record" className="lg:col-span-3" padded={false}>
+            {mapRows.length === 0 ? (
+              <EmptyState variant="no-results" title="Nothing matches" description="No asset on this plan fits the current filters." />
+            ) : (
+              <ul className="max-h-[560px] divide-y divide-slate-100 overflow-y-auto">
+                {mapRows.map((p) => (
+                  <li key={p.assetId} ref={(el) => { rowRefs.current[p.assetId] = el; }}>
+                    <button
+                      type="button"
+                      onMouseEnter={() => setHovered(p.assetId)} onMouseLeave={() => setHovered(null)}
+                      onFocus={() => setHovered(p.assetId)} onBlur={() => setHovered(null)}
+                      onClick={() => setSelectedAsset(p.assetId)}
+                      className={cn('flex w-full items-start gap-2.5 px-3 py-2.5 text-left transition-colors hover:bg-slate-50',
+                        (hovered === p.assetId || selectedAsset === p.assetId) && 'bg-primary-50/60')}
+                    >
+                      <span className="mt-1.5 h-2 w-2 shrink-0 rounded-full" style={{ backgroundColor: TONE_HEX[presenceTone[p.state]] }} aria-hidden />
+                      <span className="min-w-0 flex-1">
+                        <span className="block truncate text-xs font-medium text-slate-800">{p.assetName}</span>
+                        <span className="block truncate text-[11px] text-slate-500">{p.zone} · {p.custodian}</span>
+                      </span>
+                      <span className="shrink-0 text-[10px] tabular-nums text-slate-400">{relTime(p.lastSeen)}</span>
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </Panel>
+        </div>
+      )}
+
+      {/* ═══ LIST ═══════════════════════════════════════════════════════════ */}
+      {tab === 'list' && (
+        <div className="glass-panel flex flex-col overflow-hidden">
+          <div className="flex flex-wrap items-center gap-2 border-b border-slate-200 p-3">
+            <input
+              value={query} onChange={(e) => setQuery(e.target.value)}
+              placeholder="Search name, id, zone, custodian…" aria-label="Search tracked assets"
+              className="w-64 max-w-full rounded-md bg-slate-100 px-3 py-1.5 text-sm outline-none focus:ring-2 focus:ring-primary-500"
+            />
+            <FilterSelect value={stateFilter} onChange={(v) => setStateFilter(v as StateFilter)} options={STATE_FILTERS} label="Any state" />
+            <FilterSelect value={custodyFilter} onChange={setCustodyFilter} options={CUSTODY_FILTERS} label="Any custody" />
+            <FilterSelect value={critFilter} onChange={setCritFilter} options={CRIT_FILTERS} label="Any criticality" />
+            <button
+              type="button" onClick={() => setMisplacedOnly((v) => !v)} aria-pressed={misplacedOnly}
+              className={cn('rounded-md border px-2.5 py-1.5 text-xs font-medium transition-colors',
+                misplacedOnly ? 'border-amber-200 bg-amber-50 text-amber-700' : 'border-slate-200 text-slate-500 hover:bg-slate-50')}
+            >
+              📍 Misplaced only
+            </button>
+            <div className="ml-auto flex items-center gap-2">
+              <span className="text-xs tabular-nums text-slate-400">{filtered.length} of {scoped.length}</span>
+              <button onClick={resetList} className="rounded-md border border-slate-200 px-2.5 py-1.5 text-xs text-slate-500 hover:bg-slate-50">
+                Clear
+              </button>
+            </div>
           </div>
 
-          <div className="relative w-full rounded-lg overflow-hidden border border-slate-200 bg-slate-50">
-            <svg viewBox="0 0 100 100" className="w-full h-auto block" role="img" aria-label="Facility live asset map">
-              <defs>
-                <pattern id="floorGrid" width="5" height="5" patternUnits="userSpaceOnUse">
-                  <path d="M 5 0 L 0 0 0 5" fill="none" stroke="rgba(100,116,139,0.14)" strokeWidth="0.15" />
-                </pattern>
-              </defs>
-
-              {/* Backdrop */}
-              <rect x="0" y="0" width="100" height="100" fill="#ffffff" />
-              <rect x="0" y="0" width="100" height="100" fill="url(#floorGrid)" />
-              <rect x="0.5" y="0.5" width="99" height="99" rx="2" fill="none" stroke="rgba(100,116,139,0.22)" strokeWidth="0.3" />
-
-              {/* Zones */}
-              {mockZones.map((z) => {
-                const style = ZONE_STYLE[z.type];
-                return (
-                  <g key={z.id}>
-                    <rect
-                      x={z.x}
-                      y={z.y}
-                      width={z.width}
-                      height={z.height}
-                      rx="1.5"
-                      fill={style.fill}
-                      stroke={style.stroke}
-                      strokeWidth="0.35"
-                    />
-                    <text
-                      x={z.x + 2}
-                      y={z.y + 4}
-                      fontSize="2.4"
-                      fontWeight="600"
-                      fill="rgba(51,65,85,0.75)"
-                      className="font-heading select-none"
-                    >
-                      {z.name}
-                    </text>
-                  </g>
-                );
-              })}
-
-              {/* Asset markers */}
-              {markers.map((a) => {
-                const p = a.mapPosition!;
-                const v = markerVisual(a);
-                const isActive = a.id === activeId;
-                const emphasized = filter === 'All' || matchesFilter(a, filter) || isActive;
-                const moving = IN_MOTION.has(a.id);
-                return (
-                  <g
-                    key={a.id}
-                    className="transition-opacity duration-300 cursor-pointer"
-                    opacity={emphasized ? 1 : 0.2}
-                    onMouseEnter={() => setHoveredId(a.id)}
-                    onMouseLeave={() => setHoveredId(null)}
-                    onClick={() => setSelectedId((prev) => (prev === a.id ? null : a.id))}
+          {selected.size > 0 && (
+            <div className="flex flex-wrap items-center gap-3 border-b border-primary-100 bg-primary-50 px-4 py-2 text-sm">
+              <span className="font-medium text-primary-700">{selected.size} selected</span>
+              {selected.size < filtered.length && (
+                <button
+                  onClick={() => setSelected(new Set(filtered.map((p) => p.assetId)))}
+                  className="rounded-md border border-primary-200 bg-white px-2.5 py-1 text-xs font-semibold text-primary-700 hover:bg-primary-50"
+                >
+                  Select all {filtered.length} matching
+                </button>
+              )}
+              <div className="flex flex-wrap items-center gap-1.5">
+                <button onClick={() => { const first = Array.from(selected)[0]; if (first) locateOnMap(first); }} className={BULK_BTN}>
+                  Locate on map
+                </button>
+                {BULK_ACTIONS.map((a) => (
+                  <button
+                    key={a.label} className={BULK_BTN}
+                    onClick={() => toast({ title: a.label, description: `${selected.size} assets · ${a.description}`, tone: 'info' })}
                   >
-                    {/* Larger invisible hit area for easier hover/click */}
-                    <circle cx={p.x} cy={p.y} r="3.4" fill="transparent" />
+                    {a.label}
+                  </button>
+                ))}
+                <button
+                  onClick={() => { reportMissing(Array.from(selected)); setSelected(new Set()); }}
+                  className="rounded-md px-2.5 py-1 text-xs font-medium text-health-critical hover:bg-red-100"
+                >
+                  Report missing
+                </button>
+              </div>
+              <button onClick={() => setSelected(new Set())} className="ml-auto text-xs text-slate-500 hover:text-slate-800">Clear</button>
+            </div>
+          )}
 
-                    <g>
-                      {moving && (
-                        <animateTransform
-                          attributeName="transform"
-                          type="translate"
-                          values="0 0; 1.4 0.8; 0 0; -1.1 0.6; 0 0"
-                          dur="6s"
-                          repeatCount="indefinite"
-                        />
-                      )}
-
-                      {/* Predictive / missing pulse */}
-                      {v.pulse && (
-                        <circle cx={p.x} cy={p.y} r="1.6" fill="none" stroke={v.color} strokeWidth="0.4">
-                          <animate attributeName="r" values="1.6;5.5" dur="1.9s" repeatCount="indefinite" />
-                          <animate attributeName="opacity" values="0.55;0" dur="1.9s" repeatCount="indefinite" />
-                        </circle>
-                      )}
-
-                      {/* Missing → rotating "searching" ring */}
-                      {v.ring && (
-                        <circle
-                          cx={p.x}
-                          cy={p.y}
-                          r="3"
-                          fill="none"
-                          stroke="#ef4444"
-                          strokeWidth="0.45"
-                          strokeDasharray="1.2 1.2"
-                          opacity="0.85"
-                        >
-                          <animateTransform
-                            attributeName="transform"
-                            type="rotate"
-                            from={`0 ${p.x} ${p.y}`}
-                            to={`360 ${p.x} ${p.y}`}
-                            dur="7s"
-                            repeatCount="indefinite"
-                          />
-                        </circle>
-                      )}
-
-                      {/* Selection highlight */}
-                      {isActive && (
-                        <circle cx={p.x} cy={p.y} r="3.4" fill="none" stroke="#6366f1" strokeWidth="0.5" opacity="0.9">
-                          <animate attributeName="r" values="3;3.6;3" dur="1.6s" repeatCount="indefinite" />
-                        </circle>
-                      )}
-
-                      {/* Soft halo + dot */}
-                      <circle cx={p.x} cy={p.y} r="2.4" fill={v.color} opacity="0.22" />
-                      <circle cx={p.x} cy={p.y} r="1.7" fill={v.color} stroke="#ffffff" strokeWidth="0.5" />
-                    </g>
-                  </g>
-                );
-              })}
-            </svg>
-
-            {/* Floating callout (HTML overlay for crisp, readable text) */}
-            {activeAsset?.mapPosition && (
-              <div
-                className="pointer-events-none absolute z-20 w-56"
-                style={{
-                  left: `${activeAsset.mapPosition.x}%`,
-                  top: `${activeAsset.mapPosition.y}%`,
-                  transform: `translate(${
-                    activeAsset.mapPosition.x < 24 ? '0%' : activeAsset.mapPosition.x > 76 ? '-100%' : '-50%'
-                  }, ${activeAsset.mapPosition.y < 34 ? '16%' : '-116%'})`,
-                }}
-              >
-                <div className="pointer-events-auto glass-panel rounded-xl border border-slate-200 dark:border-slate-700 bg-white/90 dark:bg-slate-900/90 p-3 shadow-xl">
-                  <div className="flex items-start justify-between gap-2">
-                    <div>
-                      <div className="text-sm font-bold font-heading leading-tight">{activeAsset.name}</div>
-                      <div className="text-[11px] text-slate-500 mt-0.5">
-                        {activeAsset.id} · {activeAsset.category}
+          <TableShell>
+            <thead className="sticky top-0 z-10 border-b border-slate-200 bg-slate-50">
+              <tr>
+                <th className="w-10 px-4 py-2.5">
+                  <input
+                    type="checkbox" checked={allOnPage} aria-label="Select all on this page" className="accent-primary-600"
+                    onChange={() => setSelected((prev) => {
+                      const n = new Set(prev);
+                      pageRows.forEach((r) => (allOnPage ? n.delete(r.assetId) : n.add(r.assetId)));
+                      return n;
+                    })}
+                  />
+                </th>
+                <SortHead k="name" label="Asset" sort={sort} onSort={toggleSort} />
+                <SortHead k="state" label="Presence" sort={sort} onSort={toggleSort} />
+                <th className={th}>Precision</th>
+                <SortHead k="zone" label="Zone" sort={sort} onSort={toggleSort} />
+                <SortHead k="custodian" label="Custodian" sort={sort} onSort={toggleSort} />
+                <th className={th}>Custody</th>
+                <SortHead k="lastSeen" label="Last seen" sort={sort} onSort={toggleSort} />
+                <SortHead k="battery" label="Battery" sort={sort} onSort={toggleSort} />
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-100">
+              {pageRows.map((p) => (
+                <tr
+                  key={p.assetId} onClick={() => setSelectedAsset(p.assetId)}
+                  className={cn('cursor-pointer transition-colors hover:bg-slate-50', selected.has(p.assetId) && 'bg-primary-50/40')}
+                >
+                  <td className={td} onClick={(e) => e.stopPropagation()}>
+                    <input
+                      type="checkbox" checked={selected.has(p.assetId)} onChange={() => toggleRow(p.assetId)}
+                      aria-label={`Select ${p.assetName}`} className="accent-primary-600"
+                    />
+                  </td>
+                  <td className={td}>
+                    <div className="flex items-center gap-2.5">
+                      <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded bg-slate-100 text-base" aria-hidden>
+                        {categoryEmoji(p.category)}
+                      </span>
+                      <div className="min-w-0">
+                        <div className="flex items-center gap-1.5">
+                          <span className="truncate font-medium text-slate-900">{p.assetName}</span>
+                          {reported.has(p.assetId) && <Chip tone="red">Reported</Chip>}
+                          {isMisplaced(p) && <Chip tone="amber">Misplaced</Chip>}
+                        </div>
+                        <div className="text-xs text-slate-400">{p.assetId} · {p.category}</div>
                       </div>
                     </div>
-                    <span
-                      className={`inline-flex shrink-0 items-center px-2 py-0.5 rounded-full text-[10px] font-medium border ${statusPillClass(
-                        activeAsset.status,
-                      )}`}
-                    >
-                      {activeAsset.status}
-                    </span>
-                  </div>
+                  </td>
+                  <td className={td}><PresencePill state={p.state} /></td>
+                  <td className={td}><PrecisionChip precision={p.precision} confidence={p.confidence} /></td>
+                  <td className={cn(td, 'text-slate-600')}>
+                    <div className="truncate">{p.zone}</div>
+                    {scope === 'all' && <div className="truncate text-xs text-slate-400">{p.facility}</div>}
+                  </td>
+                  <td className={cn(td, 'text-slate-600')}>{p.custodian}</td>
+                  <td className={td}>
+                    <Chip tone={p.custody === 'Unaccounted' ? 'red' : p.custody === 'In Place' ? 'emerald' : 'primary'}>{p.custody}</Chip>
+                  </td>
+                  <td className={cn(td, 'whitespace-nowrap text-xs tabular-nums text-slate-500')}>{relTime(p.lastSeen)}</td>
+                  <td className={td}><BatteryPill pct={p.batteryPct} /></td>
+                </tr>
+              ))}
+            </tbody>
+          </TableShell>
 
-                  <div className="mt-2 flex items-center gap-2">
-                    <div className="h-1.5 flex-1 rounded-full bg-slate-200 dark:bg-slate-700 overflow-hidden">
-                      <div
-                        className={`h-full rounded-full ${healthFillClass(activeAsset.healthScore)}`}
-                        style={{ width: `${activeAsset.healthScore}%` }}
-                      />
-                    </div>
-                    <span className="text-[11px] font-semibold">{activeAsset.healthScore}</span>
-                  </div>
+          {pageRows.length === 0 && (
+            <EmptyState
+              variant="no-results" title="No assets match these filters"
+              description="Widen the state or custody filter, or clear the search."
+              action={<Button variant="outline" onClick={resetList}>Clear filters</Button>}
+            />
+          )}
 
-                  <div className="mt-2 grid grid-cols-1 gap-1 text-[11px] text-slate-500">
-                    <div className="flex justify-between gap-2">
-                      <span>Zone</span>
-                      <span className="text-slate-700 dark:text-slate-300 text-right truncate">
-                        {activeAsset.location.zone ?? activeAsset.location.name}
-                      </span>
-                    </div>
-                    <div className="flex justify-between gap-2">
-                      <span>Last ping</span>
-                      <span className="text-slate-700 dark:text-slate-300">
-                        {activeAsset.telemetry?.lastPing ? relTime(activeAsset.telemetry.lastPing) : 'Unknown'}
-                      </span>
-                    </div>
-                  </div>
+          {filtered.length > 0 && (
+            <div className="flex items-center justify-between border-t border-slate-200 px-4 py-2.5 text-sm text-slate-500">
+              <span className="tabular-nums">
+                Showing {safePage * PAGE_SIZE + 1}–{Math.min((safePage + 1) * PAGE_SIZE, filtered.length)} of {filtered.length}
+              </span>
+              <div className="flex items-center gap-1">
+                <button disabled={safePage === 0} onClick={() => setPage(safePage - 1)} className="rounded-md border border-slate-200 px-3 py-1 text-xs hover:bg-slate-50 disabled:opacity-40">← Prev</button>
+                <span className="px-2 text-xs tabular-nums">Page {safePage + 1} of {pageCount}</span>
+                <button disabled={safePage >= pageCount - 1} onClick={() => setPage(safePage + 1)} className="rounded-md border border-slate-200 px-3 py-1 text-xs hover:bg-slate-50 disabled:opacity-40">Next →</button>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
 
+      {/* ── Asset drawer — shared by the map and the list ──────────────────── */}
+      <Drawer
+        open={!!asset} onClose={() => setSelectedAsset(null)} title={asset?.assetName ?? ''}
+        subtitle={asset ? `${asset.assetId} · ${asset.category} · ${formatMoney(asset.valueInr)}` : undefined}
+        eyebrow={asset && (
+          <>
+            <PresencePill state={asset.state} />
+            <PrecisionChip precision={asset.precision} confidence={asset.confidence} />
+            <Chip tone={asset.criticality === 'Critical' ? 'red' : asset.criticality === 'High' ? 'amber' : 'slate'}>{asset.criticality}</Chip>
+            {asset.movingNow && <Chip tone="primary" dot>Moving now</Chip>}
+          </>
+        )}
+        footer={asset && (
+          <>
+            <Link href={`/assets/${asset.assetId}`}>
+              <Button size="sm" variant="outline">Open asset profile</Button>
+            </Link>
+            {assetJourney && (
+              <Link href={`/tracking/journey?asset=${asset.assetId}`}>
+                <Button size="sm" variant="outline">Replay journey</Button>
+              </Link>
+            )}
+            <Button
+              size="sm" variant="outline"
+              onClick={() => toast({ title: 'Custody request sent', description: `${asset.assetName} · awaiting acceptance by the new custodian`, tone: 'info' })}
+            >
+              Assign custodian
+            </Button>
+            <Button
+              size="sm" variant="danger" className="ml-auto"
+              disabled={reported.has(asset.assetId) || asset.state === 'Missing'}
+              onClick={() => reportMissing([asset.assetId])}
+            >
+              {reported.has(asset.assetId) || asset.state === 'Missing' ? 'Recovery open' : 'Report missing'}
+            </Button>
+          </>
+        )}
+      >
+        {asset && (
+          <div className="space-y-5">
+            {asset.zone !== asset.homeZone && (
+              <div className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2.5">
+                <div className="text-sm font-semibold text-amber-800">
+                  {asset.custody === 'Unaccounted' ? 'Last seen away from its home zone' : 'Not where it belongs'}
+                </div>
+                <p className="mt-0.5 text-xs text-amber-700">
+                  {asset.custody === 'Unaccounted' ? 'Last detected in ' : 'Detected in '}{asset.zone}, home zone is {asset.homeZone}
+                  {asset.custody === 'Checked Out' ? ' — but it is checked out, so this may be legitimate.'
+                    : asset.custody === 'Unaccounted' ? ' — that is where the trail went cold, so start the search there.'
+                      : '. Return it or update the home zone.'}
+                </p>
+                {homeZone && (
                   <Link
-                    href={`/assets/${activeAsset.id}`}
-                    className="mt-2.5 inline-flex items-center gap-1 text-xs font-medium text-primary-500 hover:underline"
+                    href={`/tracking/geofences?zone=${homeZone.id}`}
+                    className="mt-1.5 inline-block text-xs font-semibold text-amber-900 underline underline-offset-2"
                   >
-                    View asset profile →
+                    Open {homeZone.name} →
                   </Link>
-                </div>
+                )}
               </div>
             )}
-          </div>
 
-          {/* Legend — asset status */}
-          <div className="mt-4 flex flex-wrap items-center gap-x-5 gap-y-2 text-[11px] text-slate-500">
-            <span className="inline-flex items-center gap-1.5">
-              <span className="h-2.5 w-2.5 rounded-full bg-health-good" /> Good / Active
-            </span>
-            <span className="inline-flex items-center gap-1.5">
-              <span className="h-2.5 w-2.5 rounded-full bg-health-warning" /> Warning
-            </span>
-            <span className="inline-flex items-center gap-1.5">
-              <span className="h-2.5 w-2.5 rounded-full bg-health-critical" /> Critical / Maint.
-            </span>
-            <span className="inline-flex items-center gap-1.5">
-              <span className="h-2.5 w-2.5 rounded-full border border-dashed border-health-critical bg-health-critical/40" />{' '}
-              Missing
-            </span>
-          </div>
-        </div>
-
-        {/* Live feed */}
-        <div className="glass-panel rounded-xl p-5 flex flex-col lg:col-span-1">
-          <div className="flex items-center justify-between mb-3">
-            <h3 className="text-base font-semibold text-slate-800">Live Asset Feed</h3>
-            <span className="text-xs font-medium px-2 py-1 bg-primary-50 text-primary-700 rounded-full">
-              {feed.length} shown
-            </span>
-          </div>
-
-          {/* Filter chips */}
-          <div className="flex flex-wrap gap-2 mb-4">
-            {filterChips.map((c) => {
-              const on = filter === c.key;
-              return (
-                <button
-                  key={c.key}
-                  onClick={() => setFilter(c.key)}
-                  className={`px-3 py-1 rounded-full text-xs font-medium border transition-colors ${
-                    on
-                      ? 'bg-primary-600 text-white border-primary-600'
-                      : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 border-transparent hover:bg-slate-200 dark:hover:bg-slate-700'
-                  }`}
-                >
-                  {c.label}
-                  <span className={`ml-1.5 ${on ? 'text-primary-100' : 'text-slate-400'}`}>{c.count}</span>
-                </button>
-              );
-            })}
-          </div>
-
-          <div className="flex-1 min-h-0 max-h-[520px] lg:max-h-none overflow-y-auto pr-1 -mr-1 space-y-2">
-            {feed.map((a) => {
-              const v = markerVisual(a);
-              const isActive = a.id === activeId;
-              return (
-                <div
-                  key={a.id}
-                  onMouseEnter={() => setHoveredId(a.id)}
-                  onMouseLeave={() => setHoveredId(null)}
-                  onClick={() => setSelectedId((prev) => (prev === a.id ? null : a.id))}
-                  className={`group flex items-center gap-3 rounded-lg border p-3 cursor-pointer transition-colors ${
-                    isActive
-                      ? 'border-primary-500/60 bg-primary-500/5'
-                      : 'border-slate-200 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800/30'
-                  }`}
-                >
-                  <span className="relative flex h-2.5 w-2.5 shrink-0">
-                    {v.pulse && (
-                      <span
-                        className="absolute inline-flex h-full w-full animate-ping rounded-full opacity-75"
-                        style={{ backgroundColor: v.color }}
-                      />
-                    )}
-                    <span
-                      className="relative inline-flex h-2.5 w-2.5 rounded-full"
-                      style={{ backgroundColor: v.color }}
-                    />
+            <div>
+              <div className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">Live position</div>
+              <dl className="mt-1 divide-y divide-slate-100">
+                <Field label="Facility">{asset.facility}</Field>
+                <Field label="Zone">{asset.zone}</Field>
+                <Field label="Home zone">{asset.homeZone}</Field>
+                <Field label="Confidence">
+                  <span className="inline-flex items-center gap-2">
+                    <Meter value={asset.confidence} tone={scoreTone(asset.confidence, 85, 60)} className="w-20" />
+                    <span className="tabular-nums">{asset.confidence}%</span>
                   </span>
+                </Field>
+                <Field label="Last seen">{relTime(asset.lastSeen)}</Field>
+              </dl>
+            </div>
 
-                  <div className="min-w-0 flex-1">
-                    <div className="flex items-center justify-between gap-2">
-                      <span className="truncate text-sm font-medium">{a.name}</span>
-                      <span className="shrink-0 text-[11px] text-slate-400">
-                        {a.telemetry?.lastPing ? relTime(a.telemetry.lastPing) : '—'}
-                      </span>
-                    </div>
-                    <div className="flex items-center justify-between gap-2">
-                      <span className="truncate text-xs text-slate-500">
-                        {a.location.zone ?? a.location.name}
-                      </span>
-                      <Link
-                        href={`/assets/${a.id}`}
-                        onClick={(e) => e.stopPropagation()}
-                        className="shrink-0 text-[11px] font-medium text-primary-500 opacity-0 transition-opacity group-hover:opacity-100 hover:underline"
-                      >
-                        View →
-                      </Link>
-                    </div>
-                  </div>
+            <div>
+              <div className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">Custody & condition</div>
+              <dl className="mt-1 divide-y divide-slate-100">
+                <Field label="Custody">
+                  <Chip tone={asset.custody === 'Unaccounted' ? 'red' : asset.custody === 'In Place' ? 'emerald' : 'primary'}>{asset.custody}</Chip>
+                </Field>
+                <Field label="Held by">{asset.custodian}</Field>
+                <Field label="Tag battery"><BatteryPill pct={asset.batteryPct} /></Field>
+              </dl>
+            </div>
+
+            {asset.alertIds.length > 0 && (
+              <div>
+                <div className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">Open alerts</div>
+                <ul className="mt-2 space-y-2">
+                  {asset.alertIds.map((id) => {
+                    const a = alertById(id);
+                    return (
+                      <li key={id}>
+                        <Link href={`/tracking/alerts?tab=queue&alert=${id}`} className="block rounded-lg border border-slate-200 px-3 py-2 transition-colors hover:bg-slate-50">
+                          <div className="text-sm font-medium text-slate-800">{a?.title ?? id}</div>
+                          <div className="mt-0.5 text-xs text-slate-500">{a ? `${a.priority} · ${a.state} · ${a.team}` : 'Open alert'}</div>
+                        </Link>
+                      </li>
+                    );
+                  })}
+                </ul>
+              </div>
+            )}
+
+            {assetJourney && (
+              <div>
+                <div className="flex items-center justify-between">
+                  <div className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">Recent journey</div>
+                  <span className="text-[11px] tabular-nums text-slate-400">{assetJourney.distanceM} m · {assetJourney.zonesVisited} zones</span>
                 </div>
-              );
-            })}
-
-            {feed.length === 0 && (
-              <div className="flex h-32 items-center justify-center text-sm text-slate-400">
-                No assets match this filter.
+                <div className="mt-3"><TimelineRail items={assetJourney.stops.map(stopItem)} /></div>
               </div>
             )}
           </div>
-        </div>
-      </div>
+        )}
+      </Drawer>
     </div>
   );
 }

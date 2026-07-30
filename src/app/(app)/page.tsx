@@ -65,7 +65,7 @@ const flagshipFeatures: Feature[] = [
   {
     title: 'Security, Geo-fencing & Compliance',
     blurb: 'Geofenced zones, custody exceptions and audit-ready compliance monitoring.',
-    href: '/geofences',
+    href: '/compliance-reports',
     icon: '🛡️',
     accent: '#ef4444',
     tint: 'rgba(239,68,68,0.12)',
@@ -81,7 +81,7 @@ const flagshipFeatures: Feature[] = [
 ];
 
 const quickActions = [
-  { label: 'Real-Time Tracking', href: '/tracking', icon: '🗺️' },
+  { label: 'Asset Tracking', href: '/tracking', icon: '🗺️' },
   { label: 'AI Asset Intelligence', href: '/ai-insights', icon: '✨' },
   { label: 'Digital Passports & Lifecycle', href: '/lifecycle', icon: '♻️' },
   { label: 'Predictive Maintenance', href: '/maintenance', icon: '🔧' },

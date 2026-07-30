@@ -19,9 +19,9 @@ import { useToast } from '@/components/providers/ToastProvider';
 import { Button } from '@/components/ui/Button';
 import { Badge } from '@/components/ui/primitives';
 import { ConfigCard, Field, Note, inputCls } from './fields';
-import { mockSensors, TAG_ID_PREFIX } from '@/lib/mock-data';
+import { mockSensors } from '@/lib/mock-data';
 import { getClassTemplate } from '@/lib/asset-classes';
-import { roleForKind, verifiesOnPrint, trackingTechLabel } from '@/lib/onboarding';
+import { mintTagId, roleForKind, takenTagIds, trackingTechLabel, verifiesOnPrint } from '@/lib/onboarding';
 import { cn, relTime, DEMO_NOW } from '@/lib/utils';
 import type { SensorKind } from '@/types/asset';
 import type { GateResult, RegisteredAsset, TagBinding } from '@/types/onboarding';
@@ -36,15 +36,6 @@ const KINDS: { kind: SensorKind; blurb: string }[] = [
 ];
 
 const ROLE_LABEL = { identity: 'Identity', location: 'Location', telemetry: 'Telemetry' } as const;
-
-function mintTagId(kind: SensorKind, taken: Set<string>): string {
-  const prefix = TAG_ID_PREFIX[kind] ?? 'TAG-';
-  for (let n = 9100; n < 9999; n++) {
-    const candidate = `${prefix}${n}`;
-    if (!taken.has(candidate)) return candidate;
-  }
-  return `${prefix}${Date.parse('2026-07-23')}`;
-}
 
 export function TrackCard({
   asset, gates, step,
@@ -67,12 +58,7 @@ export function TrackCard({
   const [replacing, setReplacing] = useState<string | null>(null);
 
   // Every tag id already spoken for, across the mock estate and the registry.
-  const takenTags = useMemo(() => {
-    const s = new Set<string>();
-    for (const sensor of mockSensors) if (sensor.assetId && sensor.tagId) s.add(sensor.tagId);
-    for (const a of assets) for (const b of a.onboarding.bindings) if (!b.retiredAt) s.add(b.tagId);
-    return s;
-  }, [assets]);
+  const takenTags = useMemo(() => takenTagIds(assets), [assets]);
 
   const live = ob.bindings.filter((b) => !b.retiredAt);
   const retired = ob.bindings.filter((b) => b.retiredAt);
