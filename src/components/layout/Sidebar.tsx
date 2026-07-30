@@ -8,14 +8,37 @@ import { navForSession } from '@/lib/nav-config';
 import { cn } from '@/lib/utils';
 import type { NavGroup } from '@/types/platform';
 
-function isActive(pathname: string, href: string): boolean {
+function matches(pathname: string, href: string): boolean {
   if (href === '/') return pathname === '/';
   return pathname === href || pathname.startsWith(href + '/');
 }
 
-/** A section owns the route if its hub or any of its sub-pages matches. */
-function ownsRoute(pathname: string, section: NavGroup): boolean {
-  return isActive(pathname, section.href) || section.items.some((i) => isActive(pathname, i.href));
+/**
+ * Only the MOST SPECIFIC destination lights up.
+ *
+ * Prefix matching alone lit two rows at once: on `/assets/new`, both
+ * `/assets` (Asset Registry) and `/assets/new` (Add Asset) matched. Resolving
+ * the longest match — globally, not per section — means the child wins where a
+ * child exists, the parent still wins for its own detail pages
+ * (`/assets/AST-1001` → Registry), and a route claimed by another section
+ * (`/assets/labels` → Tracking) no longer highlights two sections at once.
+ */
+function bestMatch(pathname: string, sections: NavGroup[]): string | null {
+  const hrefs: string[] = [];
+  for (const s of sections) {
+    hrefs.push(s.href);
+    for (const i of s.items) hrefs.push(i.href);
+  }
+  let best: string | null = null;
+  for (const href of hrefs) {
+    if (matches(pathname, href) && (best === null || href.length > best.length)) best = href;
+  }
+  return best;
+}
+
+/** A section owns the route when it, or one of its sub-pages, is the best match. */
+function ownsRoute(section: NavGroup, best: string | null): boolean {
+  return best !== null && (section.href === best || section.items.some((i) => i.href === best));
 }
 
 export function Sidebar() {
@@ -28,7 +51,8 @@ export function Sidebar() {
   const [pinned, setPinned] = useState<string | null>(null);
   useEffect(() => setPinned(null), [pathname]);
 
-  const activeId = sections.find((s) => ownsRoute(pathname, s))?.id ?? null;
+  const best = bestMatch(pathname, sections);
+  const activeId = sections.find((s) => ownsRoute(s, best))?.id ?? null;
   const openId = pinned ?? activeId;
 
   return (
@@ -58,7 +82,7 @@ export function Sidebar() {
                 <Link
                   href={section.href}
                   title={section.fullLabel ?? section.label}
-                  aria-current={isActive(pathname, section.href) ? 'page' : undefined}
+                  aria-current={section.href === best ? 'page' : undefined}
                   className={cn(
                     'flex flex-1 min-w-0 items-center gap-2.5 rounded-lg px-2.5 py-2 text-sm',
                     owns ? 'text-primary-700 font-semibold' : 'text-slate-600 group-hover:text-slate-900',
@@ -92,7 +116,7 @@ export function Sidebar() {
               {open && hasChildren && (
                 <div className="ml-5 mt-0.5 mb-1 pl-3 border-l border-slate-200 space-y-0.5">
                   {section.items.map((item) => {
-                    const active = isActive(pathname, item.href);
+                    const active = item.href === best;
                     return (
                       <Link
                         key={item.href}
