@@ -1,0 +1,167 @@
+[
+  {
+    "id": "INSP-01",
+    "title": "Quarterly Firewall Rule-base Audit",
+    "assetId": "AST-1008",
+    "assetName": "Fortinet FortiGate 100F Firewall",
+    "template": "Network Security Standard",
+    "status": "Passed",
+    "dueDate": "2026-07-20T09:00:00.000Z",
+    "inspector": "Tarun Fernandes",
+    "items": [
+      {
+        "label": "Rule-base reviewed",
+        "result": "Pass"
+      },
+      {
+        "label": "Unused rules removed",
+        "result": "Pass"
+      },
+      {
+        "label": "Firmware at supported release",
+        "result": "Pass"
+      },
+      {
+        "label": "Admin MFA enforced",
+        "result": "Pass"
+      }
+    ]
+  },
+  {
+    "id": "INSP-02",
+    "title": "UPS Load Bank Test",
+    "assetId": "AST-1005",
+    "assetName": "APC Smart-UPS 3000",
+    "template": "Power Resilience Check",
+    "status": "In Progress",
+    "dueDate": "2026-07-25T09:00:00.000Z",
+    "inspector": "Facilities Team",
+    "items": [
+      {
+        "label": "Battery impedance within spec",
+        "result": "Pass"
+      },
+      {
+        "label": "Runtime at full load ≥ 12 min",
+        "result": "Pending"
+      },
+      {
+        "label": "Self-test log clean",
+        "result": "Pass"
+      },
+      {
+        "label": "Ventilation clearance",
+        "result": "Pending"
+      }
+    ]
+  },
+  {
+    "id": "INSP-03",
+    "title": "Data Center Audit",
+    "assetId": "AST-1001",
+    "assetName": "Dell PowerEdge R740 Server",
+    "template": "DC Security Standard",
+    "status": "Scheduled",
+    "dueDate": "2026-08-01T09:00:00.000Z",
+    "inspector": "Security",
+    "items": [
+      {
+        "label": "Physical Security",
+        "result": "Pending"
+      },
+      {
+        "label": "Cable Management",
+        "result": "Pending"
+      },
+      {
+        "label": "Rack door lock audit",
+        "result": "Pending"
+      },
+      {
+        "label": "Asset tag legibility",
+        "result": "Pending"
+      }
+    ]
+  },
+  {
+    "id": "INSP-04",
+    "title": "RAID Health & Spare Verification",
+    "assetId": "AST-1009",
+    "assetName": "Synology RS2418+ NAS",
+    "template": "Storage Integrity Check",
+    "status": "Failed",
+    "dueDate": "2026-07-22T09:00:00.000Z",
+    "inspector": "Storage Team",
+    "items": [
+      {
+        "label": "All drives SMART-clean",
+        "result": "Fail",
+        "note": "Drive 4 reported reallocated sectors."
+      },
+      {
+        "label": "Cold spare available on site",
+        "result": "Pass"
+      },
+      {
+        "label": "Backup job completed in 24h",
+        "result": "Pass"
+      },
+      {
+        "label": "Rebuild window agreed",
+        "result": "N/A"
+      }
+    ]
+  },
+  {
+    "id": "INSP-05",
+    "title": "RFID Portal Read-Rate Verification",
+    "assetId": "AST-1012",
+    "assetName": "Zebra RFID Gateway G-4",
+    "template": "Tracking Device Standard",
+    "status": "Passed",
+    "dueDate": "2026-07-15T09:00:00.000Z",
+    "inspector": "IoT Platform",
+    "items": [
+      {
+        "label": "Read rate ≥ 98% at dock speed",
+        "result": "Pass"
+      },
+      {
+        "label": "Antenna alignment verified",
+        "result": "Pass"
+      },
+      {
+        "label": "WPC ETA certificate on file",
+        "result": "Pass"
+      }
+    ]
+  },
+  {
+    "id": "INSP-06",
+    "title": "Endpoint Commissioning — Cable Tester",
+    "assetId": "AST-1014",
+    "assetName": "Fluke Networks DSX-8000",
+    "template": "New Asset Commissioning",
+    "status": "In Progress",
+    "dueDate": "2026-07-27T09:00:00.000Z",
+    "inspector": "Network Team",
+    "items": [
+      {
+        "label": "NABL calibration certificate filed",
+        "result": "Pass"
+      },
+      {
+        "label": "Asset tag applied & scanned",
+        "result": "Pass"
+      },
+      {
+        "label": "LinkWare cloud sync configured",
+        "result": "Pending"
+      },
+      {
+        "label": "Custodian assigned",
+        "result": "Pending"
+      }
+    ]
+  }
+]

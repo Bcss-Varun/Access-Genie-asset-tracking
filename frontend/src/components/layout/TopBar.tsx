@@ -1,11 +1,11 @@
 import { useEffect, useRef, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
-import { useAuth, useSession } from '@/features/auth/AuthProvider';
+import { useAuth, useSession } from '@/api/auth';
 import { useScope } from '@/components/providers/ScopeProvider';
-import { notificationsApi } from '@/features/notifications/notifications-api';
+import { notificationsApi } from '@/api/catalog';
 import { Avatar, Kbd } from '@/components/ui/primitives';
-import { cn } from '@/lib/format';
+import { cn } from '@/lib/utils';
 import { useTheme } from '@/app/ThemeProvider';
 import { flattenScope } from '@/lib/rbac';
 

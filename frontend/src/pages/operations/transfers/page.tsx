@@ -4,85 +4,29 @@ import { PageHeader, KpiCard, Badge } from '@/components/ui/primitives';
 import { Button } from '@/components/ui/Button';
 import { useToast } from '@/components/providers/ToastProvider';
 import { relTime } from '@/lib/utils';
+import type { Transfer, TransferStatus } from '@access-genie/shared';
+import { allTransfers } from '@/lib/dataset';
+import { operationsApi } from '@/api/operations';
+import { useMutate } from '@/api/mutate';
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Transfers & movements — asset relocation requests with Segregation-of-Duties
-// (requester ≠ approver). Deterministic seed, in-session mock CRUD.
+// Transfers & movements — asset relocation requests with segregation of duties.
+// The API refuses an approval from whoever raised the request, so that control
+// is enforced rather than merely displayed.
 // ─────────────────────────────────────────────────────────────────────────────
-
-const NOW = Date.parse('2026-07-23T09:00:00.000Z');
-const hoursAgo = (h: number) => new Date(NOW - h * 3_600_000).toISOString();
-
-type TransferStatus = 'Pending' | 'Approved' | 'In Transit' | 'Received';
-
-interface Transfer {
-  id: string;
-  assetId: string;
-  assetName: string;
-  from: string;
-  to: string;
-  requester: string;
-  approver: string;
-  status: TransferStatus;
-  requestedAt: string;
-  reason: string;
-}
-
-const SEED: Transfer[] = [
-  {
-    id: 'TR-4001', assetId: 'AST-1002', assetName: 'Cisco Catalyst 9500 Switch',
-    from: 'Chennai Data Center · Server Room Alpha', to: 'Chennai Data Center · Server Room Beta',
-    requester: 'Arjun Menon', approver: 'Sneha Iyer',
-    status: 'Pending', requestedAt: hoursAgo(2),
-    reason: 'Rebalance switching capacity to the growing Beta row.',
-  },
-  {
-    id: 'TR-4002', assetId: 'AST-1009', assetName: 'Synology RS2418+ NAS',
-    from: 'Chennai Data Center · Server Room Beta', to: 'Chennai Data Center · Server Room Alpha',
-    requester: 'Storage Team', approver: 'Manoj Reddy',
-    status: 'Approved', requestedAt: hoursAgo(6),
-    reason: 'Return to Alpha rack after RAID array rebuild.',
-  },
-  {
-    id: 'TR-4003', assetId: 'AST-1005', assetName: 'APC Smart-UPS 3000',
-    from: 'Hyderabad Central Warehouse · IT Storeroom', to: 'Chennai Data Center · Utility Room',
-    requester: 'Facilities Team', approver: 'Sneha Iyer',
-    status: 'In Transit', requestedAt: hoursAgo(9),
-    reason: 'Deploy spare UPS to Power Row A.',
-  },
-  {
-    id: 'TR-4004', assetId: 'AST-1014', assetName: 'Fluke Networks DSX-8000',
-    from: 'Bengaluru HQ · IT Tool Room', to: 'Hyderabad Central Warehouse · Building A',
-    requester: 'Network Team', approver: 'Sneha Iyer',
-    status: 'Pending', requestedAt: hoursAgo(3),
-    reason: 'Cable-certification sweep of the new pick-zone drops.',
-  },
-  {
-    id: 'TR-4005', assetId: 'AST-1011', assetName: 'Zebra TC52 Mobile Computer',
-    from: 'Hyderabad Central Warehouse · Picking Zone', to: 'Bengaluru HQ · IT Storeroom',
-    requester: 'Warehouse Team', approver: 'Manoj Reddy',
-    status: 'Received', requestedAt: hoursAgo(28),
-    reason: 'Return rugged scanner for battery service.',
-  },
-  {
-    id: 'TR-4006', assetId: 'AST-1012', assetName: 'Zebra RFID Gateway G-4',
-    from: 'Hyderabad Central Warehouse · Loading Dock 4', to: 'Hyderabad Central Warehouse · Picking Zone',
-    requester: 'IoT Platform', approver: 'Sneha Iyer',
-    status: 'In Transit', requestedAt: hoursAgo(5),
-    reason: 'Improve RFID read coverage over the pick aisle.',
-  },
-];
 
 const STATUS_TONE: Record<TransferStatus, 'amber' | 'primary' | 'slate' | 'emerald'> = {
   Pending: 'amber',
   Approved: 'primary',
   'In Transit': 'slate',
   Received: 'emerald',
+  Rejected: 'slate',
 };
 
 export default function TransfersPage() {
   const { toast } = useToast();
-  const [transfers, setTransfers] = useState<Transfer[]>(() => SEED.map((t) => ({ ...t })));
+  const { run } = useMutate();
+  const [transfers, setTransfers] = useState<Transfer[]>(allTransfers);
 
   const kpis = useMemo(() => {
     const open = transfers.filter((t) => t.status !== 'Received').length;
@@ -93,18 +37,42 @@ export default function TransfersPage() {
   }, [transfers]);
 
   function approve(t: Transfer) {
+    const before = transfers;
     setTransfers((prev) => prev.map((x) => (x.id === t.id ? { ...x, status: 'Approved' } : x)));
-    toast({ title: `${t.id} approved`, description: `${t.approver} authorized the move.`, tone: 'success' });
+    void run(operationsApi.advanceTransfer(t.id, 'Approved'), {
+      success: `${t.id} approved`,
+      successDetail: `Move authorised.`,
+      describe: 'approve that transfer',
+      rollback: () => setTransfers(before),
+      // A received transfer moves the asset, so the map has to follow.
+      refreshTracking: false,
+    });
   }
 
   function dispatch(t: Transfer) {
+    const before = transfers;
     setTransfers((prev) => prev.map((x) => (x.id === t.id ? { ...x, status: 'In Transit' } : x)));
-    toast({ title: `${t.id} dispatched`, description: `${t.assetName} is now in transit.`, tone: 'info' });
+    void run(operationsApi.advanceTransfer(t.id, 'In Transit'), {
+      success: `${t.id} dispatched`,
+      successDetail: `${t.assetName} is now in transit.`,
+      describe: 'dispatch that transfer',
+      rollback: () => setTransfers(before),
+      // A received transfer moves the asset, so the map has to follow.
+      refreshTracking: false,
+    });
   }
 
   function receive(t: Transfer) {
+    const before = transfers;
     setTransfers((prev) => prev.map((x) => (x.id === t.id ? { ...x, status: 'Received' } : x)));
-    toast({ title: `${t.id} received`, description: `${t.assetName} confirmed at ${t.to}.`, tone: 'success' });
+    void run(operationsApi.advanceTransfer(t.id, 'Received'), {
+      success: `${t.id} received`,
+      successDetail: `${t.assetName} confirmed at ${t.to}.`,
+      describe: 'receive that transfer',
+      rollback: () => setTransfers(before),
+      // A received transfer moves the asset, so the map has to follow.
+      refreshTracking: true,
+    });
   }
 
   function newTransfer() {

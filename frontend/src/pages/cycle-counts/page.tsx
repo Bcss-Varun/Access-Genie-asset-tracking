@@ -1,5 +1,5 @@
-import { mockCycleCounts } from '@/lib/mock-data';
-import type { CycleCountStatus } from '@/types/asset';
+import { allCycleCounts } from '@/lib/dataset';
+import type { CycleCountStatus } from '@access-genie/shared';
 import { PageHeader, KpiCard, Badge } from '@/components/ui/primitives';
 import { Button } from '@/components/ui/Button';
 import { useToast } from '@/components/providers/ToastProvider';
@@ -10,7 +10,7 @@ const statusTone = (s: CycleCountStatus): 'emerald' | 'amber' | 'red' | 'slate' 
 
 export default function CycleCountsPage() {
   const { toast } = useToast();
-  const counts = mockCycleCounts;
+  const counts = allCycleCounts;
 
   const has = (s: CycleCountStatus) => counts.filter((c) => c.status === s).length;
 

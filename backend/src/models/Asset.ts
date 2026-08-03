@@ -12,6 +12,7 @@ import {
   type TrackingTech,
 } from '@access-genie/shared';
 import { baseSchemaPlugin } from '../utils/mongoose.js';
+import { onboardingSchema } from './onboarding.schema.js';
 
 /**
  * The asset graph's root document — "one asset graph": the record, where it is,
@@ -59,6 +60,11 @@ export interface AssetDoc {
   lifecycleStage?: string;
   mapPosition?: { x: number; y: number };
   healthTrend?: { label: string; value: number }[];
+  /**
+   * The registration record — readiness gates, tag bindings, commercial terms.
+   * Embedded rather than kept alongside; see models/onboarding.schema.ts.
+   */
+  onboarding?: Record<string, unknown>;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -119,6 +125,7 @@ const assetSchema = new Schema<AssetDoc>(
     lifecycleStage: String,
     mapPosition: { type: { x: Number, y: Number }, required: false },
     healthTrend: { type: [trendPointSchema], default: undefined },
+    onboarding: { type: onboardingSchema, required: false },
   },
   { timestamps: true },
 );

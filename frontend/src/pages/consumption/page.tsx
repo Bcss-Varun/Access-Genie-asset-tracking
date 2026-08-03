@@ -1,6 +1,6 @@
 import { useMemo } from 'react';
-import { mockParts } from '@/lib/mock-data';
-import type { Part } from '@/types/asset';
+import { allParts } from '@/lib/dataset';
+import type { Part } from '@access-genie/shared';
 import { PageHeader, Badge, KpiCard } from '@/components/ui/primitives';
 import { formatMoney } from '@/lib/utils';
 
@@ -16,7 +16,7 @@ export default function ConsumptionPage() {
   const { categories, topParts, totalIssued, totalValue, topCategory } = useMemo(() => {
     // Aggregate by category.
     const byCat = new Map<string, { category: string; qty: number; value: number }>();
-    for (const p of mockParts) {
+    for (const p of allParts) {
       const row = byCat.get(p.category) ?? { category: p.category, qty: 0, value: 0 };
       row.qty += issuedQty(p);
       row.value += issuedValue(p);
@@ -24,12 +24,12 @@ export default function ConsumptionPage() {
     }
     const categories = [...byCat.values()].sort((a, b) => b.value - a.value);
 
-    const topParts = [...mockParts]
+    const topParts = [...allParts]
       .map((p) => ({ part: p, qty: issuedQty(p), value: issuedValue(p) }))
       .sort((a, b) => b.value - a.value)
       .slice(0, 6);
 
-    const totalIssued = mockParts.reduce((s, p) => s + issuedQty(p), 0);
+    const totalIssued = allParts.reduce((s, p) => s + issuedQty(p), 0);
     const totalValue = categories.reduce((s, c) => s + c.value, 0);
     const topCategory = categories[0]?.category ?? '—';
 

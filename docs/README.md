@@ -51,6 +51,10 @@ Incumbents bolt these together across acquired products; Access Genie is built o
 | 21 | Asset Onboarding — UX architecture & flow redesign | [21-asset-onboarding-ux.md](./21-asset-onboarding-ux.md) |
 | 22 | Navigation & Information Architecture — the Assets pillar | [22-navigation-ia.md](./22-navigation-ia.md) |
 | 23 | Real-Time Tracking — product architecture & functional spec | [23-realtime-tracking-architecture.md](./23-realtime-tracking-architecture.md) |
+| 24 | **Build Status** — what exists, what is verified, what is left | [24-build-status.md](./24-build-status.md) |
+
+> Documents 00–23 are the **plan**. Document 24 is the **state of the build against it** — start there
+> if you want to know what actually runs today.
 
 ## The demo build (parallel track)
 

@@ -1,26 +1,46 @@
 {
-  "name": "tmp-app",
-  "version": "0.1.0",
+  "name": "access-genie",
+  "version": "1.0.0",
   "private": true,
-  "scripts": {
-    "dev": "next dev",
-    "build": "next build",
-    "start": "next start",
-    "lint": "eslint"
+  "description": "Access Genie AI \u2014 Enterprise Asset Intelligence Platform (Express + MongoDB API, React + Vite client)",
+  "type": "module",
+  "engines": {
+    "node": ">=20.19"
   },
-  "dependencies": {
-    "next": "16.2.11",
-    "react": "19.2.4",
-    "react-dom": "19.2.4"
+  "workspaces": [
+    "shared",
+    "backend",
+    "frontend"
+  ],
+  "scripts": {
+    "dev": "npm run build:shared && concurrently -n api,web -c cyan,magenta \"npm:dev:api\" \"npm:dev:web\"",
+    "dev:api": "npm run dev -w @access-genie/backend",
+    "dev:web": "npm run dev -w @access-genie/frontend",
+    "build": "npm run build:shared && npm run build -w @access-genie/backend && npm run build -w @access-genie/frontend",
+    "build:shared": "npm run build -w @access-genie/shared",
+    "start": "npm run start -w @access-genie/backend",
+    "seed": "npm run seed -w @access-genie/backend",
+    "seed:fresh": "npm run seed:fresh -w @access-genie/backend",
+    "seed:demo": "npm run seed:demo -w @access-genie/backend",
+    "seed:demo:fresh": "npm run seed:demo:fresh -w @access-genie/backend",
+    "db:indexes": "npm run db:indexes -w @access-genie/backend",
+    "typecheck": "npm run build:shared && npm run typecheck --workspaces --if-present",
+    "lint": "eslint .",
+    "clean": "rimraf shared/dist backend/dist frontend/dist"
   },
   "devDependencies": {
-    "@tailwindcss/postcss": "^4",
-    "@types/node": "^20",
-    "@types/react": "^19",
-    "@types/react-dom": "^19",
-    "eslint": "^9",
-    "eslint-config-next": "16.2.11",
-    "tailwindcss": "^4",
-    "typescript": "^5"
+    "@eslint/js": "^9.18.0",
+    "concurrently": "^9.1.2",
+    "eslint": "^9.18.0",
+    "eslint-plugin-react-hooks": "^5.1.0",
+    "eslint-plugin-react-refresh": "^0.4.18",
+    "globals": "^15.14.0",
+    "rimraf": "^6.0.1",
+    "typescript": "^5.9.3",
+    "typescript-eslint": "^8.20.0"
+  },
+  "allowScripts": {
+    "esbuild@0.28.1": true,
+    "esbuild@0.25.12": true
   }
 }

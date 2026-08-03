@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
-import { mockAssets } from '@/lib/mock-data';
-import type { Asset } from '@/types/asset';
+import { allAssets } from '@/lib/dataset';
+import type { Asset } from '@access-genie/shared';
 import { PageHeader, Badge } from '@/components/ui/primitives';
 import { Button } from '@/components/ui/Button';
 import { useToast } from '@/components/providers/ToastProvider';
@@ -71,9 +71,9 @@ export default function BiExplorerPage() {
   const rows = useMemo(() => {
     const fn = DIMENSIONS[dim];
     const m = MEASURES[measure];
-    const keys = Array.from(new Set(mockAssets.map(fn))).sort();
+    const keys = Array.from(new Set(allAssets.map(fn))).sort();
     return keys.map((k) => {
-      const group = mockAssets.filter((a) => fn(a) === k);
+      const group = allAssets.filter((a) => fn(a) === k);
       return { label: k, value: m.agg(group), count: group.length };
     });
   }, [dim, measure]);
@@ -131,7 +131,7 @@ export default function BiExplorerPage() {
       <div className="glass-panel rounded-xl p-5 flex-1 min-h-0">
         <div className="flex items-center justify-between mb-4">
           <h2 className="text-base font-semibold text-slate-800">{measure} by {dim}</h2>
-          <Badge tone="slate">{rows.length} groups · {mockAssets.length} assets</Badge>
+          <Badge tone="slate">{rows.length} groups · {allAssets.length} assets</Badge>
         </div>
 
         {view === 'Chart' ? (

@@ -1,0 +1,124 @@
+[
+  {
+    "id": "RPT-001",
+    "name": "Executive Asset Summary",
+    "category": "Executive",
+    "persona": "CIO / CFO",
+    "description": "Portfolio value, health and risk at a glance for leadership.",
+    "format": "Dashboard",
+    "lastRun": "2026-07-23T03:00:00.000Z",
+    "metrics": [
+      "Total value",
+      "Avg health",
+      "Critical alerts",
+      "Utilization"
+    ],
+    "scheduled": true
+  },
+  {
+    "id": "RPT-002",
+    "name": "Depreciation & Book Value",
+    "category": "Financial",
+    "persona": "Finance",
+    "description": "Straight-line depreciation and current book value by category.",
+    "format": "Excel",
+    "lastRun": "2026-07-22T09:00:00.000Z",
+    "metrics": [
+      "Book value",
+      "Accumulated depreciation",
+      "CapEx forecast"
+    ],
+    "scheduled": true
+  },
+  {
+    "id": "RPT-003",
+    "name": "Maintenance Backlog & SLA",
+    "category": "Maintenance",
+    "persona": "IT Ops",
+    "description": "Open work orders, ageing and SLA compliance by team.",
+    "format": "PDF",
+    "lastRun": "2026-07-22T13:00:00.000Z",
+    "metrics": [
+      "Open WOs",
+      "MTTR",
+      "SLA %",
+      "PM compliance"
+    ],
+    "scheduled": false
+  },
+  {
+    "id": "RPT-004",
+    "name": "Utilization & Rebalancing",
+    "category": "Utilization",
+    "persona": "IT Ops",
+    "description": "Idle vs. over-used assets and rebalancing opportunities.",
+    "format": "Dashboard",
+    "lastRun": "2026-07-21T09:00:00.000Z",
+    "metrics": [
+      "Avg utilization",
+      "Idle assets",
+      "Rebalance savings"
+    ],
+    "scheduled": false
+  },
+  {
+    "id": "RPT-005",
+    "name": "Compliance & Audit Evidence",
+    "category": "Compliance",
+    "persona": "Risk & Compliance",
+    "description": "Framework coverage (ISO 27001, SOC 2, DPDP Act, CERT-In) with linked evidence.",
+    "format": "PDF",
+    "lastRun": "2026-07-20T09:00:00.000Z",
+    "metrics": [
+      "Coverage %",
+      "Open findings",
+      "Evidence count"
+    ],
+    "scheduled": true
+  },
+  {
+    "id": "RPT-006",
+    "name": "Security & Custody Exceptions",
+    "category": "Compliance",
+    "persona": "Security",
+    "description": "Geofence breaches, custody gaps and missing-asset incidents.",
+    "format": "PDF",
+    "lastRun": "2026-07-23T00:00:00.000Z",
+    "metrics": [
+      "Breaches 24h",
+      "Custody gaps",
+      "Missing assets"
+    ],
+    "scheduled": true
+  },
+  {
+    "id": "RPT-007",
+    "name": "AI Model Performance",
+    "category": "AI",
+    "persona": "ML Platform",
+    "description": "Accuracy, drift and prediction volume across the model registry.",
+    "format": "Dashboard",
+    "lastRun": "2026-07-22T09:00:00.000Z",
+    "metrics": [
+      "Avg accuracy",
+      "Models in drift",
+      "Predictions/day"
+    ],
+    "scheduled": false
+  },
+  {
+    "id": "RPT-008",
+    "name": "Inventory & Spares Levels",
+    "category": "Inventory",
+    "persona": "IT Ops",
+    "description": "On-hand vs. reorder point for critical spares and consumables.",
+    "format": "Excel",
+    "lastRun": "2026-07-19T09:00:00.000Z",
+    "metrics": [
+      "SKUs below reorder",
+      "Stock value",
+      "Lead time"
+    ],
+    "scheduled": true
+  }
+]

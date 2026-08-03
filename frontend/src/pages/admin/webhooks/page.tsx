@@ -1,32 +1,14 @@
+import { allWebhooks } from '@/lib/dataset';
+import type { Webhook } from '@access-genie/shared';
 import { useState } from 'react';
 import { PageHeader, Badge, KpiCard } from '@/components/ui/primitives';
 import { Button } from '@/components/ui/Button';
 import { useToast } from '@/components/providers/ToastProvider';
 import { cn, relTime } from '@/lib/utils';
 
-const anchor = Date.parse('2026-07-23T09:00:00.000Z');
-const minsAgoIso = (m: number) => new Date(anchor - m * 60_000).toISOString();
-const hoursAgoIso = (h: number) => minsAgoIso(h * 60);
-
-interface Webhook {
-  id: string;
-  url: string;
-  events: string[];
-  enabled: boolean;
-  lastDelivery: string;
-  ok: boolean;
-}
-
-const initialHooks: Webhook[] = [
-  { id: 'WH-01', url: 'https://ops.acme.com/hooks/assets', events: ['asset.created', 'asset.updated'], enabled: true, lastDelivery: minsAgoIso(4), ok: true },
-  { id: 'WH-02', url: 'https://sn.acme.com/api/workorders', events: ['workorder.created', 'workorder.closed'], enabled: true, lastDelivery: minsAgoIso(22), ok: true },
-  { id: 'WH-03', url: 'https://slack.acme.com/genie/alerts', events: ['alert.raised', 'asset.missing'], enabled: true, lastDelivery: minsAgoIso(1), ok: true },
-  { id: 'WH-04', url: 'https://legacy.acme.com/inbound', events: ['asset.retired'], enabled: false, lastDelivery: hoursAgoIso(30), ok: false },
-];
-
 export default function WebhooksPage() {
   const { toast } = useToast();
-  const [hooks, setHooks] = useState<Webhook[]>(initialHooks);
+  const [hooks, setHooks] = useState<Webhook[]>(() => allWebhooks);
 
   const active = hooks.filter((h) => h.enabled).length;
   const failing = hooks.filter((h) => !h.ok).length;

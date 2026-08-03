@@ -2,9 +2,9 @@ import { useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import { PageHeader, Badge, EmptyState, KpiCard } from '@/components/ui/primitives';
 import { useSession } from '@/components/providers/SessionProvider';
-import { mockWorkOrders } from '@/lib/mock-data';
-import { relTime } from '@/lib/utils';
-import type { WorkOrder, WorkOrderPriority } from '@/types/asset';
+import { allWorkOrders } from '@/lib/dataset';
+import { nowMs, relTime } from '@/lib/utils';
+import type { WorkOrder, WorkOrderPriority } from '@access-genie/shared';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // My Work — the signed-in persona's prioritized queue: assigned work orders,
@@ -31,7 +31,7 @@ interface Approval {
   at: string;
 }
 
-const NOW = Date.parse('2026-07-23T09:00:00.000Z');
+const NOW = nowMs();
 const hoursAgo = (h: number) => new Date(NOW - h * 3_600_000).toISOString();
 
 export default function MyWorkPage() {
@@ -42,8 +42,8 @@ export default function MyWorkPage() {
 
   // Work orders: match by name, else fall back to open ones (only for roles that maintain).
   const workOrders = useMemo<WorkOrder[]>(() => {
-    const mine = mockWorkOrders.filter((w) => w.assignedTo === user.name);
-    const base = mine.length > 0 ? mine : canMaintain ? mockWorkOrders.filter((w) => w.status !== 'Completed') : [];
+    const mine = allWorkOrders.filter((w) => w.assignedTo === user.name);
+    const base = mine.length > 0 ? mine : canMaintain ? allWorkOrders.filter((w) => w.status !== 'Completed') : [];
     return [...base].sort((a, b) => PRIORITY_RANK[b.priority] - PRIORITY_RANK[a.priority]);
   }, [user.name, canMaintain]);
 

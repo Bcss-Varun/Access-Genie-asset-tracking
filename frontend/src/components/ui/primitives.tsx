@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react';
 import { Link } from 'react-router-dom';
-import { cn } from '@/lib/format';
+import { cn } from '@/lib/utils';
 import type { Tone } from '@/lib/tone';
 
 // ── Badge ────────────────────────────────────────────────────────────────────

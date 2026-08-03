@@ -1,5 +1,5 @@
 import { QueryClient } from '@tanstack/react-query';
-import { ApiRequestError } from '@/lib/api-client';
+import { ApiRequestError } from '@/api/client';
 
 /**
  * One query client for the app.

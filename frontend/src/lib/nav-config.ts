@@ -1,8 +1,25 @@
 import type { ModuleKey } from '@access-genie/shared';
 
+/**
+ * A live count rendered as a red pill on a nav row.
+ *
+ * The nav declares *which* count a row wants, never the number itself — the
+ * numbers come from the API and change while the app is open. Keeping the
+ * config declarative is what lets this module stay a plain data file with no
+ * dependency on the data layer.
+ */
+export type BadgeKey = 'openAlerts' | 'openTrackingAlerts';
+
+/** The live values behind every `BadgeKey`, resolved once by the chrome. */
+export type BadgeCounts = Partial<Record<BadgeKey, number>>;
+
 export interface NavItem {
   label: string;
   to: string;
+  icon: string;
+  badgeKey?: BadgeKey;
+  /** Specced in the blueprint, not built yet — the row renders a "soon" chip. */
+  comingSoon?: boolean;
 }
 
 export interface NavSection {
@@ -15,55 +32,63 @@ export interface NavSection {
   to: string;
   icon: string;
   module: ModuleKey;
+  badgeKey?: BadgeKey;
   items: NavItem[];
 }
 
-/**
- * Navigation: main sections only.
- *
- * The sidebar shows one row per section, with the six flagship capability
- * pillars leading. A section's sub-pages unfold only while that section is
- * active, which keeps the rail at ten rows instead of seventy while leaving
- * every destination reachable (here, and from the ⌘K palette).
- *
- * `module` gates the section against the session's grants — the same matrix the
- * API enforces with `requireModule`, so a hidden section is also a refused
- * request rather than merely an absent menu item.
- */
+// ─────────────────────────────────────────────────────────────────────────────
+// Navigation. The sidebar shows MAIN SECTIONS ONLY — one row each — with the six
+// flagship capability pillars leading, right under Workspace. Each section's
+// sub-pages live in `items`: they unfold in the sidebar only while that section
+// is active, and are always reachable from the ⌘K palette.
+//
+// `module` gates the section against the session's grants — the same matrix the
+// API enforces with `requireModule`, so a hidden section is also a refused
+// request rather than merely an absent menu item.
+// ─────────────────────────────────────────────────────────────────────────────
 export const navSections: NavSection[] = [
   {
     id: 'workspace',
     label: 'My Workspace',
+    module: 'workspace',
     to: '/',
     icon: '🏠',
-    module: 'workspace',
     items: [
-      { label: 'Dashboards', to: '/dashboards' },
-      { label: 'AI Copilot', to: '/copilot' },
-      { label: 'Notifications', to: '/notifications' },
-      { label: "What's New", to: '/whats-new' },
-      { label: 'Help Center', to: '/help' },
+      { label: 'Dashboards', to: '/dashboards', icon: '📊' },
+      { label: 'AI Copilot', to: '/copilot', icon: '🤖' },
+      { label: 'Notifications', to: '/notifications', icon: '📬' },
     ],
   },
 
   // ── Pillar 1 ───────────────────────────────────────────────────────────────
+  // Five operational rows, then one for the hardware. Each row is a question an
+  // operator actually asks, and each asks exactly one:
+  //
+  //   Where is it now?          → Live Tracking
+  //   Is everything accounted   → Inventory Tracking
+  //   for where it should be?
+  //   Where has it been?        → Asset Journey
+  //   Did it break a rule?      → Geofence Monitoring
+  //   What needs me right now?  → Alerts & Incidents
+  //   Can we still hear?        → Tracking Infrastructure
+  //
+  // Nothing is named after a technology or a screen. The Digital Twin is a
+  // visualisation launched from Live Tracking, not a destination of its own.
   {
     id: 'tracking',
-    label: 'Real-Time Tracking',
-    fullLabel: 'Real-Time Asset Tracking (RFID, BLE, GPS, QR, UWB)',
+    label: 'Asset Tracking',
+    fullLabel: 'Asset Tracking & Monitoring',
+    module: 'tracking',
     to: '/tracking',
     icon: '🗺️',
-    module: 'tracking',
+    badgeKey: 'openTrackingAlerts',
     items: [
-      { label: 'Live Asset Map', to: '/tracking' },
-      { label: 'Geofencing Zones', to: '/geofences' },
-      { label: 'Movement History', to: '/movement' },
-      { label: 'Tag & Device Registry', to: '/sensors' },
-      { label: 'Gateways & Readers', to: '/gateways' },
-      { label: 'Zone Heatmaps', to: '/heatmaps' },
-      { label: 'Digital Twin', to: '/twin' },
-      { label: 'Telemetry Explorer', to: '/telemetry' },
-      { label: 'Label & Tag Printing', to: '/assets/labels' },
+      { label: 'Live Tracking', to: '/tracking', icon: '🛰️' },
+      { label: 'Inventory Tracking', to: '/tracking/inventory', icon: '📦' },
+      { label: 'Asset Journey', to: '/tracking/journey', icon: '🧭' },
+      { label: 'Geofence Monitoring', to: '/tracking/geofences', icon: '🚧' },
+      { label: 'Alerts & Incidents', to: '/tracking/alerts', icon: '🚨', badgeKey: 'openTrackingAlerts' },
+      { label: 'Tracking Infrastructure', to: '/tracking/infrastructure', icon: '📡' },
     ],
   },
 
@@ -72,41 +97,48 @@ export const navSections: NavSection[] = [
     id: 'ai',
     label: 'AI Asset Intelligence',
     fullLabel: 'AI-Powered Asset Intelligence and Utilization Analytics',
+    module: 'ai',
     to: '/ai-insights',
     icon: '✨',
-    module: 'ai',
     items: [
-      { label: 'AI Insights Feed', to: '/ai-insights' },
-      { label: 'Utilization Analytics', to: '/ai/utilization' },
-      { label: 'Predictive Failure', to: '/ai/predictive' },
-      { label: 'Theft & Custody Anomaly', to: '/ai/theft' },
-      { label: 'Anomaly Detection', to: '/ai/anomaly' },
-      { label: 'CapEx Forecasting', to: '/ai/forecasting' },
-      { label: 'Fleet Health Scoring', to: '/ai/health' },
-      { label: 'Model Registry', to: '/ai/models' },
-      { label: 'Explainability', to: '/ai/explainability' },
-      { label: 'Model Feedback', to: '/ai/feedback' },
+      { label: 'AI Insights Feed', to: '/ai-insights', icon: '✨' },
+      { label: 'Utilization Analytics', to: '/ai/utilization', icon: '⚖️' },
+      { label: 'Predictive Failure', to: '/ai/predictive', icon: '🔮' },
+      { label: 'Theft & Custody Anomaly', to: '/ai/theft', icon: '🚨' },
+      { label: 'Anomaly Detection', to: '/ai/anomaly', icon: '〽️' },
+      { label: 'CapEx Forecasting', to: '/ai/forecasting', icon: '📉' },
+      { label: 'Fleet Health Scoring', to: '/ai/health', icon: '💚' },
+      { label: 'Model Registry', to: '/ai/models', icon: '🧠' },
+      { label: 'Explainability', to: '/ai/explainability', icon: '🔍' },
+      { label: 'Model Feedback', to: '/ai/feedback', icon: '👍' },
     ],
   },
 
   // ── Pillar 3 ───────────────────────────────────────────────────────────────
   {
     id: 'assets',
-    label: 'Passport & Lifecycle',
-    fullLabel: 'Digital Asset Passport and Lifecycle Management',
+    label: 'Asset Management',
+    fullLabel: 'Asset registry, lifecycle, collections and financials',
+    module: 'assets',
     to: '/assets',
     icon: '🪪',
-    module: 'assets',
     items: [
-      { label: 'IT Asset Registry', to: '/assets' },
-      { label: 'Register Asset', to: '/assets/new' },
-      { label: 'Digital Asset Passports', to: '/taxonomy' },
-      { label: 'Lifecycle Management', to: '/lifecycle' },
-      { label: 'Groups & Fleets', to: '/groups' },
-      { label: 'Kits & Bundles', to: '/kits' },
-      { label: 'Asset Financials', to: '/financials' },
-      { label: 'Depreciation Schedules', to: '/depreciation' },
-      { label: 'Bulk Import', to: '/assets/import' },
+      { label: 'IT Asset Registry', to: '/assets', icon: '💻' },
+      { label: 'Add Asset', to: '/assets/new', icon: '➕' },
+      // Labelling belongs to the registry, not to Tracking (where it used to
+      // sit): the job is "make this asset scannable", and printing the label is
+      // the same event as binding the tag it carries.
+      { label: 'Label & Tag Printing', to: '/assets/labels', icon: '🏷️' },
+      { label: 'Lifecycle Management', to: '/lifecycle', icon: '♻️' },
+      // Groups & Fleets and Kits & Bundles removed (docs/22 §22.4): they were one
+      // array behind two rows, and for IT the job is done better by saved views
+      // on the Registry (rule-based, shareable) and by parent/child components
+      // on Asset 360.
+      { label: 'Asset Financials', to: '/financials', icon: '💰' },
+      // Depreciation Schedules removed (docs/22 §22.2 item 9): it duplicated
+      // Financials — same source data, same book-value KPI, same per-asset
+      // table. The per-asset schedule lives on Asset 360 ▸ Commercial.
+      { label: 'Bulk Import', to: '/assets/import', icon: '📥' },
     ],
   },
 
@@ -115,18 +147,17 @@ export const navSections: NavSection[] = [
     id: 'maintenance',
     label: 'Predictive Maintenance',
     fullLabel: 'Predictive Maintenance and Automated Work Orders',
+    module: 'maintenance',
     to: '/maintenance',
     icon: '🔧',
-    module: 'maintenance',
     items: [
-      { label: 'Automated Work Orders', to: '/maintenance' },
-      { label: 'Raise Work Order', to: '/maintenance/new' },
-      { label: 'Maintenance Calendar', to: '/maintenance/calendar' },
-      { label: 'Predictive Alerts', to: '/predictive' },
-      { label: 'Preventive (PM)', to: '/pm' },
-      { label: 'Inspections', to: '/inspections' },
-      { label: 'Checklists', to: '/checklists' },
-      { label: 'Spares Consumption', to: '/consumption' },
+      { label: 'Automated Work Orders', to: '/maintenance', icon: '🔧' },
+      { label: 'Maintenance Calendar', to: '/maintenance/calendar', icon: '🗓️' },
+      { label: 'Predictive Alerts', to: '/predictive', icon: '⚡' },
+      { label: 'Preventive (PM)', to: '/pm', icon: '🔁' },
+      { label: 'Inspections', to: '/inspections', icon: '🔎' },
+      { label: 'Checklists', to: '/checklists', icon: '✅' },
+      { label: 'Spares Consumption', to: '/consumption', icon: '🧯' },
     ],
   },
 
@@ -135,20 +166,21 @@ export const navSections: NavSection[] = [
     id: 'compliance',
     label: 'Security & Compliance',
     fullLabel: 'Asset Security, Geo-fencing and Compliance Monitoring',
-    to: '/alerts',
-    icon: '🛡️',
     module: 'compliance',
+    to: '/compliance-reports',
+    icon: '🛡️',
+    badgeKey: 'openAlerts',
     items: [
-      { label: 'Alert Center', to: '/alerts' },
-      { label: 'Alert Rules', to: '/alert-rules' },
-      { label: 'Escalation Policies', to: '/escalations' },
-      { label: 'Compliance Monitoring', to: '/compliance-reports' },
-      { label: 'Regulatory Frameworks', to: '/regulatory' },
-      { label: 'Chain of Custody', to: '/custody' },
-      { label: 'Certifications', to: '/certifications' },
-      { label: 'Audit Center', to: '/audit' },
-      { label: 'Immutable Audit Log', to: '/audit-log' },
-      { label: 'Data Retention', to: '/retention' },
+      { label: 'Compliance Monitoring', to: '/compliance-reports', icon: '🛡️' },
+      { label: 'Regulatory Frameworks', to: '/regulatory', icon: '📜' },
+      { label: 'Alert Center', to: '/alerts', icon: '🔔', badgeKey: 'openAlerts' },
+      { label: 'Alert Rules', to: '/alert-rules', icon: '⚙️' },
+      { label: 'Escalation Policies', to: '/escalations', icon: '📣' },
+      { label: 'Chain of Custody', to: '/custody', icon: '🔗' },
+      { label: 'Certifications', to: '/certifications', icon: '🎖️' },
+      { label: 'Audit Center', to: '/audit', icon: '🕵️' },
+      { label: 'Immutable Audit Log', to: '/audit-log', icon: '📒' },
+      { label: 'Data Retention', to: '/retention', icon: '🗄️' },
     ],
   },
 
@@ -157,17 +189,17 @@ export const navSections: NavSection[] = [
     id: 'operations',
     label: 'Mobile Workforce',
     fullLabel: 'Mobile Workforce Enablement',
+    module: 'operations',
     to: '/field-ops',
     icon: '📱',
-    module: 'operations',
     items: [
-      { label: 'Field Operations', to: '/field-ops' },
-      { label: 'My Work Queue', to: '/my-work' },
-      { label: 'Check-in / Check-out', to: '/checkinout' },
-      { label: 'Technician Scheduling', to: '/scheduling' },
-      { label: 'Asset Transfers', to: '/operations/transfers' },
-      { label: 'Cycle Counts', to: '/cycle-counts' },
-      { label: 'Reservations', to: '/reservations' },
+      { label: 'Field Operations', to: '/field-ops', icon: '📱' },
+      { label: 'My Work Queue', to: '/my-work', icon: '🧰' },
+      { label: 'Check-in / Check-out', to: '/checkinout', icon: '🎫' },
+      { label: 'Technician Scheduling', to: '/scheduling', icon: '👷' },
+      { label: 'Asset Transfers', to: '/operations/transfers', icon: '🚚' },
+      { label: 'Cycle Counts', to: '/cycle-counts', icon: '🔢' },
+      { label: 'Reservations', to: '/reservations', icon: '📆' },
     ],
   },
 
@@ -175,49 +207,52 @@ export const navSections: NavSection[] = [
   {
     id: 'analytics',
     label: 'Analytics & Reporting',
+    module: 'analytics',
     to: '/reports',
     icon: '📄',
-    module: 'analytics',
     items: [
-      { label: 'Report Library', to: '/reports' },
-      { label: 'Report Builder', to: '/reports/builder' },
-      { label: 'BI & Warehouse Sync', to: '/bi' },
-      { label: 'Scheduled Subscriptions', to: '/subscriptions' },
-      { label: 'Export Center', to: '/exports' },
+      { label: 'Report Library', to: '/reports', icon: '📄' },
+      { label: 'Report Builder', to: '/reports/builder', icon: '🛠️' },
+      { label: 'BI & Warehouse Sync', to: '/bi', icon: '🧮' },
+      { label: 'Scheduled Subscriptions', to: '/subscriptions', icon: '📮' },
+      { label: 'Export Center', to: '/exports', icon: '📤' },
     ],
   },
   {
     id: 'inventory',
     label: 'Inventory & Parts',
+    module: 'inventory',
     to: '/inventory',
     icon: '📦',
-    module: 'inventory',
     items: [
-      { label: 'IT Spares Overview', to: '/inventory' },
-      { label: 'Warehouses & Bins', to: '/warehouses' },
-      { label: 'Reorder Planning', to: '/reorder' },
-      { label: 'Purchase Orders', to: '/procurement' },
-      { label: 'Suppliers', to: '/suppliers' },
+      { label: 'IT Spares Overview', to: '/inventory', icon: '📦' },
+      { label: 'Warehouses & Bins', to: '/warehouses', icon: '🏬' },
+      { label: 'Reorder Planning', to: '/reorder', icon: '🛒' },
+      { label: 'Purchase Orders', to: '/procurement', icon: '🧾' },
+      { label: 'Suppliers', to: '/suppliers', icon: '🤝' },
     ],
   },
   {
     id: 'admin',
     label: 'Administration',
+    module: 'admin',
     to: '/admin/users',
     icon: '⚙️',
-    module: 'admin',
     items: [
-      { label: 'Users & Roles', to: '/admin/users' },
-      { label: 'Roles & Permissions', to: '/admin/roles' },
-      { label: 'Teams', to: '/admin/teams' },
-      { label: 'Org & Facilities', to: '/admin/org' },
-      { label: 'Approval Workflows', to: '/admin/workflows' },
-      { label: 'Integrations & API', to: '/admin/integrations' },
-      { label: 'Webhooks', to: '/admin/webhooks' },
-      { label: 'API Keys', to: '/admin/api-keys' },
-      { label: 'Branding & White-Label', to: '/admin/branding' },
-      { label: 'Data Management', to: '/admin/data' },
-      { label: 'Billing & Subscription', to: '/admin/billing' },
+      // Configuration, not operations: a class decides how thousands of assets
+      // behave, so it is edited deliberately from Administration (docs/22 §22.2).
+      { label: 'Asset Classes & Templates', to: '/admin/classes', icon: '🧬' },
+      { label: 'Users & Roles', to: '/admin/users', icon: '👥' },
+      { label: 'Roles & Permissions', to: '/admin/roles', icon: '🔐' },
+      { label: 'Teams', to: '/admin/teams', icon: '🧑‍🤝‍🧑' },
+      { label: 'Org & Facilities', to: '/admin/org', icon: '🏛️' },
+      { label: 'Approval Workflows', to: '/admin/workflows', icon: '🔀' },
+      { label: 'Integrations & API', to: '/admin/integrations', icon: '🔌' },
+      { label: 'Webhooks', to: '/admin/webhooks', icon: '🪝' },
+      { label: 'API Keys', to: '/admin/api-keys', icon: '🗝️' },
+      { label: 'Branding & White-Label', to: '/admin/branding', icon: '🎨' },
+      { label: 'Data Management', to: '/admin/data', icon: '🗃️' },
+      { label: 'Billing & Subscription', to: '/admin/billing', icon: '💳' },
     ],
   },
 ];
@@ -230,10 +265,10 @@ export function navForModules(modules: ModuleKey[]): NavSection[] {
 /** Every destination, flattened — the ⌘K palette's index. */
 export const allNavItems = navSections.flatMap((section) => {
   const group = section.fullLabel ?? section.label;
-  const hub = { label: section.label, to: section.to, icon: section.icon, group };
+  const hub = { label: section.label, to: section.to, icon: section.icon, badgeKey: section.badgeKey, group };
   const children = section.items
-    .filter((item) => item.to !== section.to)
-    .map((item) => ({ ...item, icon: section.icon, group }));
+    .filter((item) => item.to !== section.to) // the hub is already listed above
+    .map((item) => ({ ...item, group }));
 
   return [hub, ...children];
 });

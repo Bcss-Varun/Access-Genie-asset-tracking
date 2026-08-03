@@ -1,0 +1,31 @@
+[
+  {
+    "id": "GRP-1",
+    "name": "Executive Laptops",
+    "type": "Group",
+    "description": "High-priority VIP endpoint devices",
+    "memberIds": [
+      "AST-1004"
+    ]
+  },
+  {
+    "id": "GRP-2",
+    "name": "Core Network Infrastructure",
+    "type": "Group",
+    "description": "Critical switches, routers, and firewalls",
+    "memberIds": [
+      "AST-1002",
+      "AST-1008"
+    ]
+  },
+  {
+    "id": "GRP-3",
+    "name": "Data Center Rack 42",
+    "type": "Kit",
+    "description": "Server + switch provisioned together",
+    "memberIds": [
+      "AST-1001",
+      "AST-1005"
+    ]
+  }
+]

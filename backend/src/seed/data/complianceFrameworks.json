@@ -1,0 +1,47 @@
+[
+  {
+    "id": "soc2",
+    "name": "SOC 2 Type II",
+    "scope": "Trust Services Criteria — security, availability, confidentiality",
+    "status": "Certified",
+    "coverage": 98,
+    "lastAssessment": "2026-06-01T09:00:00.000Z",
+    "evidence": 214
+  },
+  {
+    "id": "iso27001",
+    "name": "ISO 27001",
+    "scope": "Information Security Management System (ISMS)",
+    "status": "Certified",
+    "coverage": 95,
+    "lastAssessment": "2026-03-25T09:00:00.000Z",
+    "evidence": 176
+  },
+  {
+    "id": "dpdp",
+    "name": "DPDP Act 2023",
+    "scope": "India digital personal data protection — consent, retention & breach duties",
+    "status": "In Progress",
+    "coverage": 82,
+    "lastAssessment": "2026-06-23T09:00:00.000Z",
+    "evidence": 88
+  },
+  {
+    "id": "certin",
+    "name": "CERT-In Directions",
+    "scope": "Six-hour incident reporting, 180-day log retention & NTP sync (MeitY)",
+    "status": "In Progress",
+    "coverage": 76,
+    "lastAssessment": "2026-07-05T09:00:00.000Z",
+    "evidence": 141
+  },
+  {
+    "id": "bis",
+    "name": "BIS / MeitY CRS",
+    "scope": "Compulsory Registration Scheme — IT hardware conformity & e-waste rules",
+    "status": "Gap",
+    "coverage": 61,
+    "lastAssessment": "2026-07-14T09:00:00.000Z",
+    "evidence": 63
+  }
+]

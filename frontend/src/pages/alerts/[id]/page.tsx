@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
-import { getAlert } from '@/lib/mock-data';
-import type { Alert, AlertStatus } from '@/types/asset';
+import { getAlert } from '@/lib/dataset';
+import type { Alert, AlertStatus } from '@access-genie/shared';
 import { PageHeader, Badge, EmptyState } from '@/components/ui/primitives';
 import { Button } from '@/components/ui/Button';
 import { useToast } from '@/components/providers/ToastProvider';

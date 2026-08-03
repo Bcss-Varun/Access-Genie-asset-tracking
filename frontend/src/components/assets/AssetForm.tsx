@@ -1,10 +1,13 @@
 import { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useNavigate } from 'react-router-dom';
-import { mockTaxonomy } from '@/lib/mock-data';
-import type { Asset, AssetCategory, Criticality, AttributeDef } from '@/types/asset';
+import { allAssetClasses } from '@/lib/dataset';
+import type { Asset, AssetCategory, Criticality, AttributeDef } from '@access-genie/shared';
 import { Button } from '@/components/ui/Button';
 import { useToast } from '@/components/providers/ToastProvider';
+import { assetsApi } from '@/api/assets';
+import { useRefreshDataset } from '@/api/dataset';
+import { ApiRequestError } from '@/api/client';
 import { cn } from '@/lib/utils';
 
 // ── Constants ─────────────────────────────────────────────────────────────────
@@ -33,7 +36,7 @@ interface FormState {
 
 function seedFromAsset(asset?: Asset): FormState {
   // Pre-select the taxonomy class whose name matches the asset's category.
-  const cls = asset ? mockTaxonomy.find((c) => c.name === asset.category) : undefined;
+  const cls = asset ? allAssetClasses.find((c) => c.name === asset.category) : undefined;
   return {
     name: asset?.name ?? '',
     category: asset?.category ?? '',
@@ -176,6 +179,7 @@ function AttributeField({
 export function AssetForm({ mode, asset }: { mode: 'create' | 'edit'; asset?: Asset }) {
   const navigate = useNavigate();
   const { toast } = useToast();
+  const refreshDataset = useRefreshDataset();
 
   const initial = useMemo(() => seedFromAsset(asset), [asset]);
   const [form, setForm] = useState<FormState>(initial);
@@ -187,7 +191,7 @@ export function AssetForm({ mode, asset }: { mode: 'create' | 'edit'; asset?: As
     setForm((f) => ({ ...f, [key]: value }));
 
   const selectedClass = useMemo(
-    () => mockTaxonomy.find((c) => c.id === form.taxonomyClassId),
+    () => allAssetClasses.find((c) => c.id === form.taxonomyClassId),
     [form.taxonomyClassId],
   );
 
@@ -217,29 +221,80 @@ export function AssetForm({ mode, asset }: { mode: 'create' | 'edit'; asset?: As
   const removeTag = (tag: string) => setForm((f) => ({ ...f, tags: f.tags.filter((t) => t !== tag) }));
 
   // ── Submit ──────────────────────────────────────────────────────────────────
-  const handleSubmit = (e: React.FormEvent) => {
+
+  /**
+   * The form's fields, in the shape the API takes.
+   *
+   * Location is nested and needs an id of its own; money and dates arrive from
+   * the inputs as strings. Doing that conversion in one place means the create
+   * and update paths cannot disagree about it.
+   */
+  const toBody = (): Record<string, unknown> => {
+    const locationName = form.locationName.trim() || 'Unassigned';
+    return {
+      name: form.name.trim(),
+      category: form.category,
+      serialNumber: form.serialNumber.trim(),
+      custodian: form.custodian.trim() || 'Unassigned',
+      criticality: form.criticality,
+      manufacturer: form.manufacturer.trim() || undefined,
+      model: form.model.trim() || undefined,
+      tags: form.tags,
+      location: {
+        // Reuse the existing location id on edit so the asset stays attached to
+        // the same place rather than being re-pointed at a new one on every save.
+        id: asset?.location.id ?? `LOC-${locationName.toUpperCase().replace(/[^A-Z0-9]+/g, '-').slice(0, 24)}`,
+        name: locationName,
+        building: form.building.trim() || undefined,
+        zone: form.zone.trim() || undefined,
+      },
+      purchasePrice: Number(form.purchasePrice) || 0,
+      // The API requires a purchase date; an asset registered without one is
+      // dated today rather than rejected at the last step of a long form.
+      purchaseDate: form.purchaseDate || new Date().toISOString().slice(0, 10),
+      warrantyExpiry: form.warrantyExpiry || undefined,
+    };
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setTouched(true);
     if (tagDraft.trim()) commitTags(tagDraft);
     if (!isValid) return;
 
     setSaving(true);
-    // Frontend-only demo: simulate a save, then toast + navigate.
-    setTimeout(() => {
+    try {
+      const saved =
+        mode === 'create'
+          ? await assetsApi.create(toBody())
+          : await assetsApi.update(asset!.id, toBody());
+
+      // Every other screen reads the same asset, so the dataset is re-read
+      // before navigating — otherwise the registry you land on still shows the
+      // record as it was before this save.
+      await refreshDataset();
+
       toast({
         title: mode === 'create' ? 'Asset created' : 'Changes saved',
-        description: form.name || 'Asset',
+        description: `${saved.name} · ${saved.id}`,
         tone: 'success',
       });
+      navigate(mode === 'create' ? `/assets/${saved.id}` : `/assets/${asset?.id ?? ''}`);
+    } catch (err) {
+      toast({
+        title: mode === 'create' ? 'Could not create that asset' : 'Could not save those changes',
+        description: err instanceof ApiRequestError ? err.message : 'The request failed. Please try again.',
+        tone: 'error',
+      });
+    } finally {
       setSaving(false);
-      navigate(mode === 'create' ? '/assets' : `/assets/${asset?.id ?? ''}`);
-    }, 650);
+    }
   };
 
   const cancelHref = mode === 'edit' && asset ? `/assets/${asset.id}` : '/assets';
 
   return (
-    <form onSubmit={handleSubmit} className="flex-1 min-h-0 flex flex-col space-y-6">
+    <form onSubmit={(e) => void handleSubmit(e)} className="flex-1 min-h-0 flex flex-col space-y-6">
       {/* Identity */}
       <FormSection title="Identity" description="Core details that identify this asset.">
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-5 gap-y-4">
@@ -311,7 +366,7 @@ export function AssetForm({ mode, asset }: { mode: 'create' | 'edit'; asset?: As
             onChange={(e) => set('taxonomyClassId', e.target.value)}
           >
             <option value="">No class selected</option>
-            {mockTaxonomy.map((c) => (
+            {allAssetClasses.map((c) => (
               <option key={c.id} value={c.id}>
                 {c.icon} {c.name}
               </option>

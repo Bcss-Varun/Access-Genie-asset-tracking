@@ -55,3 +55,19 @@ export function buildMeta(page: number, limit: number, total: number): ApiMeta {
     hasPrev: page > 1,
   };
 }
+
+/**
+ * Re-expose a collection's `_id` under its domain name.
+ *
+ * A few collections are keyed by a business identifier that the wire contract
+ * also names explicitly — presence by `assetId`, a facility by `slug`, a
+ * coverage cell by `zoneId`. A Mongoose virtual looks like the answer and is
+ * not: every read here uses `.lean()`, which does not run virtuals, so the field
+ * would silently never arrive and every client-side lookup by that name would
+ * return nothing.
+ *
+ * Doing it explicitly at the point of read is the version that actually works.
+ */
+export function aliasId<T extends { _id: unknown }>(rows: T[], name: string): (T & Record<string, unknown>)[] {
+  return rows.map((row) => ({ ...row, [name]: row._id }));
+}

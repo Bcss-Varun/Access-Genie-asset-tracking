@@ -1,25 +1,17 @@
+import { allApiKeys } from '@/lib/dataset';
 import { PageHeader, Badge, EmptyState } from '@/components/ui/primitives';
 import { Button } from '@/components/ui/Button';
 import { SettingsNav } from '@/components/settings/SettingsNav';
 import { useToast } from '@/components/providers/ToastProvider';
 import { relTime } from '@/lib/utils';
 
-interface Token {
-  id: string;
-  name: string;
-  masked: string;
-  scopes: string[];
-  created: string;
-  lastUsed: string | null;
-}
-
-const TOKENS: Token[] = [
-  { id: 'T-1', name: 'CI/CD Pipeline', masked: 'agk_live_••••••••7f3a', scopes: ['assets:read', 'assets:write'], created: '2026-06-01T09:00:00.000Z', lastUsed: '2026-07-23T07:10:00.000Z' },
-  { id: 'T-2', name: 'Grafana Exporter', masked: 'agk_live_••••••••1c9d', scopes: ['telemetry:read', 'analytics:read'], created: '2026-04-14T12:30:00.000Z', lastUsed: '2026-07-22T23:45:00.000Z' },
-  { id: 'T-3', name: 'Mobile Scanner App', masked: 'agk_live_••••••••b204', scopes: ['assets:read', 'movement:write'], created: '2026-02-20T08:15:00.000Z', lastUsed: '2026-07-21T16:02:00.000Z' },
-  { id: 'T-4', name: 'Legacy Import Script', masked: 'agk_live_••••••••9e51', scopes: ['inventory:write'], created: '2025-11-03T10:45:00.000Z', lastUsed: null },
-];
-
+// NOTE: sample content. This section has no backing collection yet — sessions,
+// tokens and tickets are all platform records that need their own models and
+// endpoints before this screen can read live data. Everything else in the app
+// reads from MongoDB; these three lists are the exception, and are marked so
+// they are not mistaken for wired-up data.
+// This screen shows the signed-in user's own tokens, not the org's keys.
+const TOKENS = allApiKeys.filter((k) => k.scope === 'personal');
 const th = 'px-4 py-3 text-left font-semibold uppercase tracking-wider text-[11px] text-slate-500';
 const td = 'px-4 py-3.5';
 
@@ -64,14 +56,14 @@ export default function ApiTokensSettingsPage() {
                       <div className="text-xs text-slate-400">{t.id}</div>
                     </td>
                     <td className={td}>
-                      <span className="font-mono text-xs text-slate-600">{t.masked}</span>
+                      <span className="font-mono text-xs text-slate-600">{`agk_••••••••${t.last4}`}</span>
                     </td>
                     <td className={td}>
                       <div className="flex flex-wrap gap-1">
                         {t.scopes.map((s) => <Badge key={s} tone="slate">{s}</Badge>)}
                       </div>
                     </td>
-                    <td className={td + ' text-slate-500 whitespace-nowrap'}>{relTime(t.created)}</td>
+                    <td className={td + ' text-slate-500 whitespace-nowrap'}>{relTime(t.createdAt)}</td>
                     <td className={td + ' whitespace-nowrap'}>
                       {t.lastUsed ? <span className="text-slate-500">{relTime(t.lastUsed)}</span> : <span className="text-slate-400">Never</span>}
                     </td>

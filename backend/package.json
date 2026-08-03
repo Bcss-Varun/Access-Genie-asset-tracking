@@ -1,6 +1,6 @@
 {
-  "name": "@access-genie/server",
-  "version": "0.1.0",
+  "name": "@access-genie/backend",
+  "version": "1.0.0",
   "private": true,
   "description": "Access Genie AI — Express + MongoDB REST API",
   "type": "module",
@@ -11,11 +11,13 @@
     "start": "node dist/index.js",
     "seed": "tsx src/seed/index.ts",
     "seed:fresh": "tsx src/seed/index.ts --fresh",
-    "typecheck": "tsc -p tsconfig.json --noEmit",
-    "lint": "eslint src --ext .ts"
+    "seed:demo": "tsx src/seed/demo.ts",
+    "seed:demo:fresh": "tsx src/seed/demo.ts --fresh",
+    "db:indexes": "tsx src/scripts/syncIndexes.ts",
+    "typecheck": "tsc -p tsconfig.json --noEmit"
   },
   "dependencies": {
-    "@access-genie/shared": "file:../shared",
+    "@access-genie/shared": "*",
     "bcryptjs": "^3.0.2",
     "compression": "^1.8.0",
     "cookie-parser": "^1.4.7",
@@ -37,7 +39,6 @@
     "@types/jsonwebtoken": "^9.0.7",
     "@types/morgan": "^1.9.9",
     "@types/node": "^22.10.0",
-    "mongodb-memory-server": "^10.1.4",
     "tsx": "^4.19.2",
     "typescript": "^5.9.3"
   }

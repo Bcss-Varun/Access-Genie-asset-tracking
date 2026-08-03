@@ -1,11 +1,11 @@
 import { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { mockInsights } from '@/lib/mock-data';
+import { allInsights } from '@/lib/dataset';
 import { PageHeader, KpiCard, Badge } from '@/components/ui/primitives';
 import { Button } from '@/components/ui/Button';
 import { useToast } from '@/components/providers/ToastProvider';
 import { cn, relTime } from '@/lib/utils';
-import type { InsightType, InsightSeverity } from '@/types/asset';
+import type { InsightType, InsightSeverity } from '@access-genie/shared';
 
 const TYPE_EMOJI: Record<InsightType, string> = {
   'Predictive Failure': '🔧',
@@ -46,7 +46,7 @@ const emptyRow = (): RowState => ({ vote: null, reason: '', label: LABEL_OPTIONS
 export default function FeedbackPage() {
   const { toast } = useToast();
   const [rows, setRows] = useState<Record<string, RowState>>(() =>
-    Object.fromEntries(mockInsights.map((i) => [i.id, emptyRow()])),
+    Object.fromEntries(allInsights.map((i) => [i.id, emptyRow()])),
   );
 
   const update = (id: string, patch: Partial<RowState>) =>
@@ -54,7 +54,7 @@ export default function FeedbackPage() {
 
   const submit = (id: string) => {
     const row = rows[id];
-    const insight = mockInsights.find((i) => i.id === id);
+    const insight = allInsights.find((i) => i.id === id);
     if (!row.vote) {
       toast({ title: 'Pick a verdict first', description: 'Agree or disagree before submitting.', tone: 'error' });
       return;
@@ -71,7 +71,7 @@ export default function FeedbackPage() {
   const submittedRows = Object.values(rows).filter((r) => r.submitted);
   const reviewedThisSession = submittedRows.length;
   const agreedThisSession = submittedRows.filter((r) => r.vote === 'up').length;
-  const pending = mockInsights.length - reviewedThisSession;
+  const pending = allInsights.length - reviewedThisSession;
 
   const kpis = useMemo(() => {
     // baseline demo history + this session's reviews
@@ -98,7 +98,7 @@ export default function FeedbackPage() {
       <div className="grid grid-cols-2 xl:grid-cols-4 gap-4">
         <KpiCard label="Predictions reviewed" value={kpis.totalReviewed.toLocaleString()} sub="All-time, human-verified" tone="primary" />
         <KpiCard label="Agree rate" value={`${kpis.agreeRate}%`} sub="Reviewer agrees with model" tone="emerald" />
-        <KpiCard label="Pending review" value={pending} sub={`${mockInsights.length} in this queue`} tone="amber" />
+        <KpiCard label="Pending review" value={pending} sub={`${allInsights.length} in this queue`} tone="amber" />
         <KpiCard label="Improvements shipped" value={14} sub="Retrains from feedback" tone="slate" />
       </div>
 
@@ -113,7 +113,7 @@ export default function FeedbackPage() {
         </div>
 
         <ul className="divide-y divide-slate-200">
-          {mockInsights.map((ins) => {
+          {allInsights.map((ins) => {
             const row = rows[ins.id];
             return (
               <li key={ins.id} className={cn('p-5 transition-colors', row.submitted && 'bg-emerald-50/40')}>

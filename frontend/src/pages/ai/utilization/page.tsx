@@ -1,6 +1,6 @@
 import { useMemo } from 'react';
 import { Link } from 'react-router-dom';
-import { mockAssets, mockInsights } from '@/lib/mock-data';
+import { allAssets, allInsights } from '@/lib/dataset';
 import { cn, formatMoney, relTime } from '@/lib/utils';
 import { Button } from '@/components/ui/Button';
 import { PageHeader, Badge, KpiCard, EmptyState } from '@/components/ui/primitives';
@@ -37,7 +37,7 @@ export default function UtilizationPage() {
 
   const assets = useMemo(
     () =>
-      [...mockAssets]
+      [...allAssets]
         .map((a) => ({ ...a, util: a.utilization ?? 0 }))
         .sort((a, b) => b.util - a.util),
     [],
@@ -48,15 +48,15 @@ export default function UtilizationPage() {
   const overCount = assets.filter((a) => a.util > OVER_THRESHOLD).length;
 
   const rebalanceInsights = useMemo(
-    () => mockInsights.filter((i) => i.type === 'Utilization'),
+    () => allInsights.filter((i) => i.type === 'Utilization'),
     [],
   );
   const rebalanceInr = rebalanceInsights.reduce((s, i) => s + (i.impactInr ?? 0), 0);
 
-  // Per-zone aggregation (deterministic — driven by asset order in mock-data).
+  // Per-zone aggregation (deterministic — driven by asset order in the dataset).
   const zones = useMemo(() => {
     const map = new Map<string, { total: number; count: number }>();
-    for (const a of mockAssets) {
+    for (const a of allAssets) {
       const zone = a.location.zone ?? a.location.name;
       const entry = map.get(zone) ?? { total: 0, count: 0 };
       entry.total += a.utilization ?? 0;

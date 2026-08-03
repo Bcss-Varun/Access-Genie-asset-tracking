@@ -1,0 +1,2641 @@
+[
+  {
+    "id": "DEV-RD-01",
+    "name": "Server Room Alpha Reader",
+    "role": "Reader",
+    "state": "Healthy",
+    "technology": "RFID",
+    "facility": "Chennai Data Center",
+    "zone": "Server Room Alpha",
+    "firmware": "v4.8.2",
+    "firmwareLatest": "v4.8.2",
+    "uptimePct": 99.9,
+    "signalPct": 96,
+    "serves": 142,
+    "lastSeen": "2026-07-23T08:59:00.000Z",
+    "installedAt": "2024-09-11T09:00:00.000Z",
+    "ip": "10.4.1.11",
+    "diagnostics": [
+      {
+        "label": "Read rate",
+        "value": "2,140 /min",
+        "state": "ok"
+      },
+      {
+        "label": "Uplink latency",
+        "value": "18 ms",
+        "state": "ok"
+      },
+      {
+        "label": "Antenna ports",
+        "value": "4 of 4 active",
+        "state": "ok"
+      }
+    ]
+  },
+  {
+    "id": "DEV-RD-09",
+    "name": "Secure Cage Reader",
+    "role": "Reader",
+    "state": "Offline",
+    "technology": "RFID",
+    "facility": "Hyderabad Central Warehouse",
+    "zone": "Secure Cage",
+    "firmware": "v4.6.0",
+    "firmwareLatest": "v4.8.2",
+    "uptimePct": 81.3,
+    "signalPct": 0,
+    "serves": 0,
+    "lastSeen": "2026-07-22T19:00:00.000Z",
+    "installedAt": "2023-06-29T09:00:00.000Z",
+    "replaceBy": "2026-09-06T09:00:00.000Z",
+    "ip": "10.6.1.29",
+    "diagnostics": [
+      {
+        "label": "Power",
+        "value": "No response",
+        "state": "bad"
+      },
+      {
+        "label": "Uplink",
+        "value": "Unreachable",
+        "state": "bad"
+      },
+      {
+        "label": "Firmware",
+        "value": "2 releases behind",
+        "state": "warn"
+      }
+    ]
+  },
+  {
+    "id": "DEV-RD-03",
+    "name": "Dock 4 Portal Reader",
+    "role": "Reader",
+    "state": "Healthy",
+    "technology": "RFID",
+    "facility": "Hyderabad Central Warehouse",
+    "zone": "Loading Dock 4",
+    "firmware": "v4.8.2",
+    "firmwareLatest": "v4.8.2",
+    "uptimePct": 99.4,
+    "signalPct": 93,
+    "serves": 96,
+    "lastSeen": "2026-07-23T08:59:00.000Z",
+    "installedAt": "2025-01-29T09:00:00.000Z",
+    "ip": "10.6.1.21",
+    "diagnostics": [
+      {
+        "label": "Read rate",
+        "value": "1,860 /min",
+        "state": "ok"
+      },
+      {
+        "label": "Portal beam",
+        "value": "Aligned",
+        "state": "ok"
+      },
+      {
+        "label": "Duplicate reads",
+        "value": "1.2% (elevated)",
+        "state": "warn"
+      }
+    ]
+  },
+  {
+    "id": "DEV-GW-02",
+    "name": "Bengaluru HQ Gateway",
+    "role": "Gateway",
+    "state": "Healthy",
+    "technology": "BLE",
+    "facility": "Bengaluru HQ",
+    "zone": "Lobby",
+    "firmware": "v3.2.0",
+    "firmwareLatest": "v3.2.0",
+    "uptimePct": 99.7,
+    "signalPct": 91,
+    "serves": 118,
+    "lastSeen": "2026-07-23T08:59:00.000Z",
+    "installedAt": "2025-06-18T09:00:00.000Z",
+    "ip": "10.4.1.12",
+    "diagnostics": [
+      {
+        "label": "Connected tags",
+        "value": "118",
+        "state": "ok"
+      },
+      {
+        "label": "Packet loss",
+        "value": "0.3%",
+        "state": "ok"
+      },
+      {
+        "label": "Uplink latency",
+        "value": "24 ms",
+        "state": "ok"
+      }
+    ]
+  },
+  {
+    "id": "DEV-AN-05",
+    "name": "Floor 3 Anchor Cluster",
+    "role": "Anchor",
+    "state": "Degraded",
+    "technology": "UWB",
+    "facility": "Bengaluru HQ",
+    "zone": "Floor 3 Desks",
+    "firmware": "v2.3.7",
+    "firmwareLatest": "v2.4.1",
+    "uptimePct": 94.2,
+    "signalPct": 62,
+    "serves": 28,
+    "lastSeen": "2026-07-23T08:51:00.000Z",
+    "installedAt": "2025-09-16T09:00:00.000Z",
+    "ip": "10.5.3.14",
+    "diagnostics": [
+      {
+        "label": "Anchors reporting",
+        "value": "5 of 8",
+        "state": "bad"
+      },
+      {
+        "label": "Ranging error",
+        "value": "±1.8 m (target ±0.3 m)",
+        "state": "warn"
+      },
+      {
+        "label": "Firmware",
+        "value": "v2.3.7 — upgrade available",
+        "state": "warn"
+      }
+    ]
+  },
+  {
+    "id": "DEV-AN-04",
+    "name": "Warehouse Anchor Cluster",
+    "role": "Anchor",
+    "state": "Healthy",
+    "technology": "UWB",
+    "facility": "Hyderabad Central Warehouse",
+    "zone": "Main Warehouse",
+    "firmware": "v2.4.1",
+    "firmwareLatest": "v2.4.1",
+    "uptimePct": 99.1,
+    "signalPct": 88,
+    "serves": 64,
+    "lastSeen": "2026-07-23T08:58:00.000Z",
+    "installedAt": "2025-07-28T09:00:00.000Z",
+    "ip": "10.6.1.22",
+    "diagnostics": [
+      {
+        "label": "Anchors reporting",
+        "value": "12 of 12",
+        "state": "ok"
+      },
+      {
+        "label": "Ranging error",
+        "value": "±0.28 m",
+        "state": "ok"
+      },
+      {
+        "label": "Clock sync",
+        "value": "Locked",
+        "state": "ok"
+      }
+    ]
+  },
+  {
+    "id": "DEV-GW-06",
+    "name": "Chennai DC Sensor Gateway",
+    "role": "Gateway",
+    "state": "Healthy",
+    "technology": "LoRaWAN",
+    "facility": "Chennai Data Center",
+    "zone": "Utility Room",
+    "firmware": "v1.9.4",
+    "firmwareLatest": "v1.9.4",
+    "uptimePct": 99.8,
+    "signalPct": 94,
+    "serves": 37,
+    "lastSeen": "2026-07-23T08:57:00.000Z",
+    "installedAt": "2025-03-10T09:00:00.000Z",
+    "ip": "10.4.1.31",
+    "diagnostics": [
+      {
+        "label": "Connected sensors",
+        "value": "37",
+        "state": "ok"
+      },
+      {
+        "label": "Spreading factor",
+        "value": "SF7 (optimal)",
+        "state": "ok"
+      },
+      {
+        "label": "Duty cycle",
+        "value": "4.1%",
+        "state": "ok"
+      }
+    ]
+  },
+  {
+    "id": "DEV-GW-07",
+    "name": "In-Transit Bridge",
+    "role": "Gateway",
+    "state": "Healthy",
+    "technology": "GPS",
+    "facility": "Hyderabad Central Warehouse",
+    "zone": "Outbound Yard",
+    "firmware": "v5.1.0",
+    "firmwareLatest": "v5.1.0",
+    "uptimePct": 98.6,
+    "signalPct": 74,
+    "serves": 12,
+    "lastSeen": "2026-07-23T08:54:00.000Z",
+    "installedAt": "2025-12-15T09:00:00.000Z",
+    "ip": "10.9.0.7",
+    "diagnostics": [
+      {
+        "label": "Satellites",
+        "value": "9 locked",
+        "state": "ok"
+      },
+      {
+        "label": "Cellular",
+        "value": "LTE −87 dBm",
+        "state": "ok"
+      },
+      {
+        "label": "In-transit assets",
+        "value": "12",
+        "state": "ok"
+      }
+    ]
+  },
+  {
+    "id": "DEV-SS-08",
+    "name": "IT Storeroom Scan Station",
+    "role": "Scan Station",
+    "state": "Healthy",
+    "technology": "QR",
+    "facility": "Bengaluru HQ",
+    "zone": "IT Storeroom",
+    "firmware": "v3.0.2",
+    "firmwareLatest": "v3.0.2",
+    "uptimePct": 99.9,
+    "signalPct": 100,
+    "serves": 210,
+    "lastSeen": "2026-07-23T08:59:00.000Z",
+    "installedAt": "2025-10-16T09:00:00.000Z",
+    "ip": "10.5.1.44",
+    "diagnostics": [
+      {
+        "label": "Scans today",
+        "value": "184",
+        "state": "ok"
+      },
+      {
+        "label": "Failed decodes",
+        "value": "0.4%",
+        "state": "ok"
+      },
+      {
+        "label": "Kiosk session",
+        "value": "Idle",
+        "state": "ok"
+      }
+    ]
+  },
+  {
+    "id": "DEV-TG-09",
+    "name": "Synology NAS Tag",
+    "role": "Tag",
+    "state": "Degraded",
+    "technology": "UWB",
+    "facility": "Chennai Data Center",
+    "zone": "Server Room Beta",
+    "firmware": "v2.3.7",
+    "firmwareLatest": "v2.4.1",
+    "uptimePct": 96.4,
+    "batteryPct": 17,
+    "signalPct": 58,
+    "serves": 1,
+    "parentId": "DEV-AN-05",
+    "lastSeen": "2026-07-23T08:46:00.000Z",
+    "installedAt": "2025-06-08T09:00:00.000Z",
+    "replaceBy": "2026-07-29T09:00:00.000Z",
+    "assetId": "AST-1009",
+    "assetName": "Synology RS2418+ NAS",
+    "diagnostics": [
+      {
+        "label": "Battery",
+        "value": "17% — ~6 days left",
+        "state": "bad"
+      },
+      {
+        "label": "Signal",
+        "value": "58%",
+        "state": "warn"
+      },
+      {
+        "label": "Firmware",
+        "value": "v2.3.7 — upgrade available",
+        "state": "warn"
+      }
+    ]
+  },
+  {
+    "id": "DEV-TG-20",
+    "name": "Spare Tag (unassigned)",
+    "role": "Tag",
+    "state": "Degraded",
+    "technology": "UWB",
+    "facility": "Hyderabad Central Warehouse",
+    "zone": "Staging Bay",
+    "firmware": "v2.3.7",
+    "firmwareLatest": "v2.4.1",
+    "uptimePct": 92,
+    "batteryPct": 14,
+    "signalPct": 41,
+    "serves": 0,
+    "parentId": "DEV-AN-04",
+    "lastSeen": "2026-07-23T06:00:00.000Z",
+    "installedAt": "2025-06-28T09:00:00.000Z",
+    "replaceBy": "2026-07-27T09:00:00.000Z",
+    "diagnostics": [
+      {
+        "label": "Battery",
+        "value": "14% — retire",
+        "state": "bad"
+      },
+      {
+        "label": "Binding",
+        "value": "Unassigned",
+        "state": "warn"
+      },
+      {
+        "label": "Signal",
+        "value": "41%",
+        "state": "warn"
+      }
+    ]
+  },
+  {
+    "id": "DEV-RD-11",
+    "name": "Goods Inward Reader",
+    "role": "Reader",
+    "state": "Unprovisioned",
+    "technology": "RFID",
+    "facility": "Chennai Data Center",
+    "zone": "Goods Inward",
+    "firmware": "v4.8.2",
+    "firmwareLatest": "v4.8.2",
+    "uptimePct": 0,
+    "signalPct": 0,
+    "serves": 0,
+    "lastSeen": "2026-07-21T09:00:00.000Z",
+    "installedAt": "2026-07-21T09:00:00.000Z",
+    "diagnostics": [
+      {
+        "label": "Provisioning",
+        "value": "Awaiting site assignment",
+        "state": "warn"
+      },
+      {
+        "label": "Power",
+        "value": "Connected",
+        "state": "ok"
+      },
+      {
+        "label": "Uplink",
+        "value": "Connected",
+        "state": "ok"
+      }
+    ]
+  },
+  {
+    "id": "DEV-SN-100",
+    "name": "DC Storeroom Environmental Sensor 01",
+    "role": "Sensor",
+    "state": "Healthy",
+    "technology": "LoRaWAN",
+    "facility": "Chennai Data Center",
+    "zone": "DC Storeroom",
+    "firmware": "v3.2.0",
+    "firmwareLatest": "v1.9.4",
+    "uptimePct": 97.1,
+    "batteryPct": 59,
+    "signalPct": 98,
+    "serves": 0,
+    "parentId": "DEV-RD-01",
+    "lastSeen": "2026-07-23T07:59:00.000Z",
+    "installedAt": "2026-02-13T09:00:00.000Z",
+    "diagnostics": [
+      {
+        "label": "Battery",
+        "value": "59%",
+        "state": "ok"
+      },
+      {
+        "label": "Signal",
+        "value": "50%",
+        "state": "ok"
+      },
+      {
+        "label": "Last heard",
+        "value": "Minutes ago",
+        "state": "ok"
+      }
+    ]
+  },
+  {
+    "id": "DEV-TG-101",
+    "name": "Main Exit & Reception Asset Tag 02",
+    "role": "Tag",
+    "state": "Healthy",
+    "technology": "BLE",
+    "facility": "Bengaluru HQ",
+    "zone": "Main Exit & Reception",
+    "firmware": "v1.9.4",
+    "firmwareLatest": "v2.4.1",
+    "uptimePct": 94.9,
+    "batteryPct": 29,
+    "signalPct": 50,
+    "serves": 1,
+    "parentId": "DEV-GW-02",
+    "lastSeen": "2026-07-23T07:53:00.000Z",
+    "installedAt": "2024-09-29T09:00:00.000Z",
+    "diagnostics": [
+      {
+        "label": "Battery",
+        "value": "29%",
+        "state": "warn"
+      },
+      {
+        "label": "Signal",
+        "value": "56%",
+        "state": "ok"
+      },
+      {
+        "label": "Last heard",
+        "value": "Minutes ago",
+        "state": "ok"
+      }
+    ]
+  },
+  {
+    "id": "DEV-SN-102",
+    "name": "Main Warehouse Environmental Sensor 03",
+    "role": "Sensor",
+    "state": "Healthy",
+    "technology": "LoRaWAN",
+    "facility": "Hyderabad Central Warehouse",
+    "zone": "Main Warehouse",
+    "firmware": "v2.4.1",
+    "firmwareLatest": "v1.9.4",
+    "uptimePct": 92.2,
+    "batteryPct": 96,
+    "signalPct": 96,
+    "serves": 0,
+    "parentId": "DEV-RD-09",
+    "lastSeen": "2026-07-23T08:30:00.000Z",
+    "installedAt": "2024-02-29T09:00:00.000Z",
+    "diagnostics": [
+      {
+        "label": "Battery",
+        "value": "96%",
+        "state": "ok"
+      },
+      {
+        "label": "Signal",
+        "value": "72%",
+        "state": "ok"
+      },
+      {
+        "label": "Last heard",
+        "value": "Minutes ago",
+        "state": "ok"
+      }
+    ]
+  },
+  {
+    "id": "DEV-TG-103",
+    "name": "Server Room Alpha Asset Tag 04",
+    "role": "Tag",
+    "state": "Healthy",
+    "technology": "QR",
+    "facility": "Chennai Data Center",
+    "zone": "Server Room Alpha",
+    "firmware": "v4.8.2",
+    "firmwareLatest": "v2.4.1",
+    "uptimePct": 92.7,
+    "signalPct": 75,
+    "serves": 1,
+    "parentId": "DEV-RD-01",
+    "lastSeen": "2026-07-23T07:37:00.000Z",
+    "installedAt": "2025-03-30T09:00:00.000Z",
+    "diagnostics": [
+      {
+        "label": "Battery",
+        "value": "Passive — none",
+        "state": "ok"
+      },
+      {
+        "label": "Signal",
+        "value": "86%",
+        "state": "ok"
+      },
+      {
+        "label": "Last heard",
+        "value": "Minutes ago",
+        "state": "ok"
+      }
+    ]
+  },
+  {
+    "id": "DEV-TG-104",
+    "name": "Loading Dock 4 Asset Tag 05",
+    "role": "Tag",
+    "state": "Healthy",
+    "technology": "QR",
+    "facility": "Hyderabad Central Warehouse",
+    "zone": "Loading Dock 4",
+    "firmware": "v2.4.1",
+    "firmwareLatest": "v2.4.1",
+    "uptimePct": 96.5,
+    "signalPct": 72,
+    "serves": 1,
+    "parentId": "DEV-RD-09",
+    "lastSeen": "2026-07-23T08:38:00.000Z",
+    "installedAt": "2025-07-25T09:00:00.000Z",
+    "diagnostics": [
+      {
+        "label": "Battery",
+        "value": "Passive — none",
+        "state": "ok"
+      },
+      {
+        "label": "Signal",
+        "value": "68%",
+        "state": "ok"
+      },
+      {
+        "label": "Last heard",
+        "value": "Minutes ago",
+        "state": "ok"
+      }
+    ]
+  },
+  {
+    "id": "DEV-TG-105",
+    "name": "Design Studio Asset Tag 06",
+    "role": "Tag",
+    "state": "Healthy",
+    "technology": "RFID",
+    "facility": "Bengaluru HQ",
+    "zone": "Design Studio",
+    "firmware": "v2.3.7",
+    "firmwareLatest": "v2.4.1",
+    "uptimePct": 97.1,
+    "signalPct": 42,
+    "serves": 1,
+    "parentId": "DEV-GW-02",
+    "lastSeen": "2026-07-23T08:22:00.000Z",
+    "installedAt": "2025-11-17T09:00:00.000Z",
+    "diagnostics": [
+      {
+        "label": "Battery",
+        "value": "Passive — none",
+        "state": "ok"
+      },
+      {
+        "label": "Signal",
+        "value": "73%",
+        "state": "ok"
+      },
+      {
+        "label": "Last heard",
+        "value": "Minutes ago",
+        "state": "ok"
+      }
+    ]
+  },
+  {
+    "id": "DEV-TG-106",
+    "name": "Design Studio Asset Tag 07",
+    "role": "Tag",
+    "state": "Healthy",
+    "technology": "QR",
+    "facility": "Bengaluru HQ",
+    "zone": "Design Studio",
+    "firmware": "v2.4.1",
+    "firmwareLatest": "v2.4.1",
+    "uptimePct": 96.4,
+    "signalPct": 85,
+    "serves": 1,
+    "parentId": "DEV-GW-02",
+    "lastSeen": "2026-07-23T07:25:00.000Z",
+    "installedAt": "2024-02-20T09:00:00.000Z",
+    "diagnostics": [
+      {
+        "label": "Battery",
+        "value": "Passive — none",
+        "state": "ok"
+      },
+      {
+        "label": "Signal",
+        "value": "83%",
+        "state": "ok"
+      },
+      {
+        "label": "Last heard",
+        "value": "Minutes ago",
+        "state": "ok"
+      }
+    ]
+  },
+  {
+    "id": "DEV-SN-107",
+    "name": "IT Tool Room Environmental Sensor 08",
+    "role": "Sensor",
+    "state": "Healthy",
+    "technology": "LoRaWAN",
+    "facility": "Bengaluru HQ",
+    "zone": "IT Tool Room",
+    "firmware": "v3.2.0",
+    "firmwareLatest": "v1.9.4",
+    "uptimePct": 94,
+    "batteryPct": 40,
+    "signalPct": 88,
+    "serves": 0,
+    "parentId": "DEV-GW-02",
+    "lastSeen": "2026-07-23T08:52:00.000Z",
+    "installedAt": "2024-09-16T09:00:00.000Z",
+    "diagnostics": [
+      {
+        "label": "Battery",
+        "value": "40%",
+        "state": "ok"
+      },
+      {
+        "label": "Signal",
+        "value": "46%",
+        "state": "ok"
+      },
+      {
+        "label": "Last heard",
+        "value": "Minutes ago",
+        "state": "ok"
+      }
+    ]
+  },
+  {
+    "id": "DEV-TG-108",
+    "name": "Design Studio Asset Tag 09",
+    "role": "Tag",
+    "state": "Healthy",
+    "technology": "RFID",
+    "facility": "Bengaluru HQ",
+    "zone": "Design Studio",
+    "firmware": "v2.3.7",
+    "firmwareLatest": "v2.4.1",
+    "uptimePct": 99.5,
+    "signalPct": 99,
+    "serves": 1,
+    "parentId": "DEV-GW-02",
+    "lastSeen": "2026-07-23T07:12:00.000Z",
+    "installedAt": "2025-10-03T09:00:00.000Z",
+    "diagnostics": [
+      {
+        "label": "Battery",
+        "value": "Passive — none",
+        "state": "ok"
+      },
+      {
+        "label": "Signal",
+        "value": "67%",
+        "state": "ok"
+      },
+      {
+        "label": "Last heard",
+        "value": "Minutes ago",
+        "state": "ok"
+      }
+    ]
+  },
+  {
+    "id": "DEV-TG-109",
+    "name": "MDF / Carrier Room Asset Tag 10",
+    "role": "Tag",
+    "state": "Healthy",
+    "technology": "BLE",
+    "facility": "Chennai Data Center",
+    "zone": "MDF / Carrier Room",
+    "firmware": "v3.2.0",
+    "firmwareLatest": "v2.4.1",
+    "uptimePct": 90.2,
+    "batteryPct": 32,
+    "signalPct": 44,
+    "serves": 1,
+    "parentId": "DEV-RD-01",
+    "lastSeen": "2026-07-23T08:34:00.000Z",
+    "installedAt": "2025-07-01T09:00:00.000Z",
+    "diagnostics": [
+      {
+        "label": "Battery",
+        "value": "32%",
+        "state": "warn"
+      },
+      {
+        "label": "Signal",
+        "value": "58%",
+        "state": "ok"
+      },
+      {
+        "label": "Last heard",
+        "value": "Minutes ago",
+        "state": "ok"
+      }
+    ]
+  },
+  {
+    "id": "DEV-TG-110",
+    "name": "Server Room Beta Asset Tag 11",
+    "role": "Tag",
+    "state": "Healthy",
+    "technology": "RFID",
+    "facility": "Chennai Data Center",
+    "zone": "Server Room Beta",
+    "firmware": "v3.2.0",
+    "firmwareLatest": "v2.4.1",
+    "uptimePct": 92.9,
+    "signalPct": 67,
+    "serves": 1,
+    "parentId": "DEV-RD-01",
+    "lastSeen": "2026-07-23T07:35:00.000Z",
+    "installedAt": "2025-05-10T09:00:00.000Z",
+    "diagnostics": [
+      {
+        "label": "Battery",
+        "value": "Passive — none",
+        "state": "ok"
+      },
+      {
+        "label": "Signal",
+        "value": "99%",
+        "state": "ok"
+      },
+      {
+        "label": "Last heard",
+        "value": "Minutes ago",
+        "state": "ok"
+      }
+    ]
+  },
+  {
+    "id": "DEV-TG-111",
+    "name": "DC Storeroom Asset Tag 12",
+    "role": "Tag",
+    "state": "Healthy",
+    "technology": "QR",
+    "facility": "Chennai Data Center",
+    "zone": "DC Storeroom",
+    "firmware": "v2.4.1",
+    "firmwareLatest": "v2.4.1",
+    "uptimePct": 98.6,
+    "signalPct": 66,
+    "serves": 1,
+    "parentId": "DEV-RD-01",
+    "lastSeen": "2026-07-23T08:36:00.000Z",
+    "installedAt": "2024-09-30T09:00:00.000Z",
+    "diagnostics": [
+      {
+        "label": "Battery",
+        "value": "Passive — none",
+        "state": "ok"
+      },
+      {
+        "label": "Signal",
+        "value": "87%",
+        "state": "ok"
+      },
+      {
+        "label": "Last heard",
+        "value": "Minutes ago",
+        "state": "ok"
+      }
+    ]
+  },
+  {
+    "id": "DEV-TG-112",
+    "name": "Server Room Alpha Asset Tag 13",
+    "role": "Tag",
+    "state": "Healthy",
+    "technology": "BLE",
+    "facility": "Chennai Data Center",
+    "zone": "Server Room Alpha",
+    "firmware": "v2.3.7",
+    "firmwareLatest": "v2.4.1",
+    "uptimePct": 98.9,
+    "batteryPct": 58,
+    "signalPct": 54,
+    "serves": 1,
+    "parentId": "DEV-RD-01",
+    "lastSeen": "2026-07-23T08:46:00.000Z",
+    "installedAt": "2025-10-12T09:00:00.000Z",
+    "diagnostics": [
+      {
+        "label": "Battery",
+        "value": "58%",
+        "state": "ok"
+      },
+      {
+        "label": "Signal",
+        "value": "83%",
+        "state": "ok"
+      },
+      {
+        "label": "Last heard",
+        "value": "Minutes ago",
+        "state": "ok"
+      }
+    ]
+  },
+  {
+    "id": "DEV-TG-113",
+    "name": "Server Room Alpha Asset Tag 14",
+    "role": "Tag",
+    "state": "Healthy",
+    "technology": "BLE",
+    "facility": "Chennai Data Center",
+    "zone": "Server Room Alpha",
+    "firmware": "v1.9.4",
+    "firmwareLatest": "v2.4.1",
+    "uptimePct": 95.6,
+    "batteryPct": 45,
+    "signalPct": 88,
+    "serves": 1,
+    "parentId": "DEV-RD-01",
+    "lastSeen": "2026-07-23T07:44:00.000Z",
+    "installedAt": "2025-09-21T09:00:00.000Z",
+    "diagnostics": [
+      {
+        "label": "Battery",
+        "value": "45%",
+        "state": "ok"
+      },
+      {
+        "label": "Signal",
+        "value": "92%",
+        "state": "ok"
+      },
+      {
+        "label": "Last heard",
+        "value": "Minutes ago",
+        "state": "ok"
+      }
+    ]
+  },
+  {
+    "id": "DEV-TG-114",
+    "name": "IT Tool Room Asset Tag 15",
+    "role": "Tag",
+    "state": "Healthy",
+    "technology": "BLE",
+    "facility": "Bengaluru HQ",
+    "zone": "IT Tool Room",
+    "firmware": "v1.9.4",
+    "firmwareLatest": "v2.4.1",
+    "uptimePct": 93.5,
+    "batteryPct": 77,
+    "signalPct": 45,
+    "serves": 1,
+    "parentId": "DEV-GW-02",
+    "lastSeen": "2026-07-23T08:36:00.000Z",
+    "installedAt": "2024-02-13T09:00:00.000Z",
+    "diagnostics": [
+      {
+        "label": "Battery",
+        "value": "77%",
+        "state": "ok"
+      },
+      {
+        "label": "Signal",
+        "value": "72%",
+        "state": "ok"
+      },
+      {
+        "label": "Last heard",
+        "value": "Minutes ago",
+        "state": "ok"
+      }
+    ]
+  },
+  {
+    "id": "DEV-TG-115",
+    "name": "Server Room Alpha Asset Tag 16",
+    "role": "Tag",
+    "state": "Healthy",
+    "technology": "RFID",
+    "facility": "Chennai Data Center",
+    "zone": "Server Room Alpha",
+    "firmware": "v1.9.4",
+    "firmwareLatest": "v2.4.1",
+    "uptimePct": 99.3,
+    "signalPct": 72,
+    "serves": 1,
+    "parentId": "DEV-RD-01",
+    "lastSeen": "2026-07-23T07:06:00.000Z",
+    "installedAt": "2024-12-31T09:00:00.000Z",
+    "diagnostics": [
+      {
+        "label": "Battery",
+        "value": "Passive — none",
+        "state": "ok"
+      },
+      {
+        "label": "Signal",
+        "value": "42%",
+        "state": "ok"
+      },
+      {
+        "label": "Last heard",
+        "value": "Minutes ago",
+        "state": "ok"
+      }
+    ]
+  },
+  {
+    "id": "DEV-TG-116",
+    "name": "Secure Cage Asset Tag 17",
+    "role": "Tag",
+    "state": "Healthy",
+    "technology": "RFID",
+    "facility": "Hyderabad Central Warehouse",
+    "zone": "Secure Cage",
+    "firmware": "v3.2.0",
+    "firmwareLatest": "v2.4.1",
+    "uptimePct": 94.5,
+    "signalPct": 80,
+    "serves": 1,
+    "parentId": "DEV-RD-09",
+    "lastSeen": "2026-07-23T07:57:00.000Z",
+    "installedAt": "2025-06-08T09:00:00.000Z",
+    "diagnostics": [
+      {
+        "label": "Battery",
+        "value": "Passive — none",
+        "state": "ok"
+      },
+      {
+        "label": "Signal",
+        "value": "80%",
+        "state": "ok"
+      },
+      {
+        "label": "Last heard",
+        "value": "Minutes ago",
+        "state": "ok"
+      }
+    ]
+  },
+  {
+    "id": "DEV-TG-117",
+    "name": "Goods Inward Asset Tag 18",
+    "role": "Tag",
+    "state": "Healthy",
+    "technology": "BLE",
+    "facility": "Chennai Data Center",
+    "zone": "Goods Inward",
+    "firmware": "v2.3.7",
+    "firmwareLatest": "v2.4.1",
+    "uptimePct": 95.8,
+    "batteryPct": 87,
+    "signalPct": 52,
+    "serves": 1,
+    "parentId": "DEV-RD-01",
+    "lastSeen": "2026-07-23T08:45:00.000Z",
+    "installedAt": "2025-04-04T09:00:00.000Z",
+    "diagnostics": [
+      {
+        "label": "Battery",
+        "value": "87%",
+        "state": "ok"
+      },
+      {
+        "label": "Signal",
+        "value": "87%",
+        "state": "ok"
+      },
+      {
+        "label": "Last heard",
+        "value": "Minutes ago",
+        "state": "ok"
+      }
+    ]
+  },
+  {
+    "id": "DEV-TG-118",
+    "name": "Loading Dock 4 Asset Tag 19",
+    "role": "Tag",
+    "state": "Healthy",
+    "technology": "BLE",
+    "facility": "Hyderabad Central Warehouse",
+    "zone": "Loading Dock 4",
+    "firmware": "v2.3.7",
+    "firmwareLatest": "v2.4.1",
+    "uptimePct": 95.2,
+    "batteryPct": 53,
+    "signalPct": 65,
+    "serves": 1,
+    "parentId": "DEV-RD-09",
+    "lastSeen": "2026-07-23T07:18:00.000Z",
+    "installedAt": "2024-02-28T09:00:00.000Z",
+    "diagnostics": [
+      {
+        "label": "Battery",
+        "value": "53%",
+        "state": "ok"
+      },
+      {
+        "label": "Signal",
+        "value": "44%",
+        "state": "ok"
+      },
+      {
+        "label": "Last heard",
+        "value": "Minutes ago",
+        "state": "ok"
+      }
+    ]
+  },
+  {
+    "id": "DEV-TG-119",
+    "name": "Staging Bay Asset Tag 20",
+    "role": "Tag",
+    "state": "Healthy",
+    "technology": "UWB",
+    "facility": "Hyderabad Central Warehouse",
+    "zone": "Staging Bay",
+    "firmware": "v2.4.1",
+    "firmwareLatest": "v2.4.1",
+    "uptimePct": 98.1,
+    "batteryPct": 75,
+    "signalPct": 93,
+    "serves": 1,
+    "parentId": "DEV-RD-09",
+    "lastSeen": "2026-07-23T07:24:00.000Z",
+    "installedAt": "2025-01-21T09:00:00.000Z",
+    "diagnostics": [
+      {
+        "label": "Battery",
+        "value": "75%",
+        "state": "ok"
+      },
+      {
+        "label": "Signal",
+        "value": "90%",
+        "state": "ok"
+      },
+      {
+        "label": "Last heard",
+        "value": "Minutes ago",
+        "state": "ok"
+      }
+    ]
+  },
+  {
+    "id": "DEV-TG-120",
+    "name": "IT Storeroom Asset Tag 21",
+    "role": "Tag",
+    "state": "Healthy",
+    "technology": "QR",
+    "facility": "Bengaluru HQ",
+    "zone": "IT Storeroom",
+    "firmware": "v2.4.1",
+    "firmwareLatest": "v2.4.1",
+    "uptimePct": 98.2,
+    "signalPct": 98,
+    "serves": 1,
+    "parentId": "DEV-GW-02",
+    "lastSeen": "2026-07-23T08:07:00.000Z",
+    "installedAt": "2026-04-13T09:00:00.000Z",
+    "diagnostics": [
+      {
+        "label": "Battery",
+        "value": "Passive — none",
+        "state": "ok"
+      },
+      {
+        "label": "Signal",
+        "value": "52%",
+        "state": "ok"
+      },
+      {
+        "label": "Last heard",
+        "value": "Minutes ago",
+        "state": "ok"
+      }
+    ]
+  },
+  {
+    "id": "DEV-SN-121",
+    "name": "Conference Room A Environmental Sensor 22",
+    "role": "Sensor",
+    "state": "Healthy",
+    "technology": "LoRaWAN",
+    "facility": "Bengaluru HQ",
+    "zone": "Conference Room A",
+    "firmware": "v3.2.0",
+    "firmwareLatest": "v1.9.4",
+    "uptimePct": 99.2,
+    "batteryPct": 20,
+    "signalPct": 96,
+    "serves": 0,
+    "parentId": "DEV-GW-02",
+    "lastSeen": "2026-07-23T07:45:00.000Z",
+    "installedAt": "2025-04-08T09:00:00.000Z",
+    "replaceBy": "2026-08-12T09:00:00.000Z",
+    "diagnostics": [
+      {
+        "label": "Battery",
+        "value": "20%",
+        "state": "warn"
+      },
+      {
+        "label": "Signal",
+        "value": "98%",
+        "state": "ok"
+      },
+      {
+        "label": "Last heard",
+        "value": "Minutes ago",
+        "state": "ok"
+      }
+    ]
+  },
+  {
+    "id": "DEV-TG-122",
+    "name": "Floor 3 Desks Asset Tag 23",
+    "role": "Tag",
+    "state": "Healthy",
+    "technology": "QR",
+    "facility": "Bengaluru HQ",
+    "zone": "Floor 3 Desks",
+    "firmware": "v3.2.0",
+    "firmwareLatest": "v2.4.1",
+    "uptimePct": 92.4,
+    "signalPct": 72,
+    "serves": 1,
+    "parentId": "DEV-GW-02",
+    "lastSeen": "2026-07-23T08:46:00.000Z",
+    "installedAt": "2026-02-01T09:00:00.000Z",
+    "diagnostics": [
+      {
+        "label": "Battery",
+        "value": "Passive — none",
+        "state": "ok"
+      },
+      {
+        "label": "Signal",
+        "value": "84%",
+        "state": "ok"
+      },
+      {
+        "label": "Last heard",
+        "value": "Minutes ago",
+        "state": "ok"
+      }
+    ]
+  },
+  {
+    "id": "DEV-TG-123",
+    "name": "IT Tool Room Asset Tag 24",
+    "role": "Tag",
+    "state": "Healthy",
+    "technology": "BLE",
+    "facility": "Bengaluru HQ",
+    "zone": "IT Tool Room",
+    "firmware": "v3.2.0",
+    "firmwareLatest": "v2.4.1",
+    "uptimePct": 99.5,
+    "batteryPct": 27,
+    "signalPct": 58,
+    "serves": 1,
+    "parentId": "DEV-GW-02",
+    "lastSeen": "2026-07-23T08:40:00.000Z",
+    "installedAt": "2025-03-11T09:00:00.000Z",
+    "diagnostics": [
+      {
+        "label": "Battery",
+        "value": "27%",
+        "state": "warn"
+      },
+      {
+        "label": "Signal",
+        "value": "57%",
+        "state": "ok"
+      },
+      {
+        "label": "Last heard",
+        "value": "Minutes ago",
+        "state": "ok"
+      }
+    ]
+  },
+  {
+    "id": "DEV-TG-124",
+    "name": "Main Warehouse Asset Tag 25",
+    "role": "Tag",
+    "state": "Healthy",
+    "technology": "QR",
+    "facility": "Hyderabad Central Warehouse",
+    "zone": "Main Warehouse",
+    "firmware": "v1.9.4",
+    "firmwareLatest": "v2.4.1",
+    "uptimePct": 93.7,
+    "signalPct": 53,
+    "serves": 1,
+    "parentId": "DEV-RD-09",
+    "lastSeen": "2026-07-23T08:18:00.000Z",
+    "installedAt": "2025-05-18T09:00:00.000Z",
+    "diagnostics": [
+      {
+        "label": "Battery",
+        "value": "Passive — none",
+        "state": "ok"
+      },
+      {
+        "label": "Signal",
+        "value": "95%",
+        "state": "ok"
+      },
+      {
+        "label": "Last heard",
+        "value": "Minutes ago",
+        "state": "ok"
+      }
+    ]
+  },
+  {
+    "id": "DEV-SN-125",
+    "name": "Staging Bay Environmental Sensor 26",
+    "role": "Sensor",
+    "state": "Healthy",
+    "technology": "LoRaWAN",
+    "facility": "Hyderabad Central Warehouse",
+    "zone": "Staging Bay",
+    "firmware": "v3.2.0",
+    "firmwareLatest": "v1.9.4",
+    "uptimePct": 99.9,
+    "batteryPct": 32,
+    "signalPct": 77,
+    "serves": 0,
+    "parentId": "DEV-RD-09",
+    "lastSeen": "2026-07-23T07:26:00.000Z",
+    "installedAt": "2026-04-22T09:00:00.000Z",
+    "diagnostics": [
+      {
+        "label": "Battery",
+        "value": "32%",
+        "state": "warn"
+      },
+      {
+        "label": "Signal",
+        "value": "76%",
+        "state": "ok"
+      },
+      {
+        "label": "Last heard",
+        "value": "Minutes ago",
+        "state": "ok"
+      }
+    ]
+  },
+  {
+    "id": "DEV-TG-126",
+    "name": "Server Room Beta Asset Tag 27",
+    "role": "Tag",
+    "state": "Degraded",
+    "technology": "UWB",
+    "facility": "Chennai Data Center",
+    "zone": "Server Room Beta",
+    "firmware": "v1.9.4",
+    "firmwareLatest": "v2.4.1",
+    "uptimePct": 92.2,
+    "batteryPct": 40,
+    "signalPct": 98,
+    "serves": 1,
+    "parentId": "DEV-RD-01",
+    "lastSeen": "2026-07-23T07:15:00.000Z",
+    "installedAt": "2024-10-10T09:00:00.000Z",
+    "diagnostics": [
+      {
+        "label": "Battery",
+        "value": "40%",
+        "state": "ok"
+      },
+      {
+        "label": "Signal",
+        "value": "71%",
+        "state": "ok"
+      },
+      {
+        "label": "Last heard",
+        "value": "Minutes ago",
+        "state": "ok"
+      }
+    ]
+  },
+  {
+    "id": "DEV-TG-127",
+    "name": "MDF / Carrier Room Asset Tag 28",
+    "role": "Tag",
+    "state": "Healthy",
+    "technology": "RFID",
+    "facility": "Chennai Data Center",
+    "zone": "MDF / Carrier Room",
+    "firmware": "v4.8.2",
+    "firmwareLatest": "v2.4.1",
+    "uptimePct": 93.9,
+    "signalPct": 52,
+    "serves": 1,
+    "parentId": "DEV-RD-01",
+    "lastSeen": "2026-07-23T08:41:00.000Z",
+    "installedAt": "2025-06-26T09:00:00.000Z",
+    "diagnostics": [
+      {
+        "label": "Battery",
+        "value": "Passive — none",
+        "state": "ok"
+      },
+      {
+        "label": "Signal",
+        "value": "63%",
+        "state": "ok"
+      },
+      {
+        "label": "Last heard",
+        "value": "Minutes ago",
+        "state": "ok"
+      }
+    ]
+  },
+  {
+    "id": "DEV-TG-128",
+    "name": "Secure Cage Asset Tag 29",
+    "role": "Tag",
+    "state": "Healthy",
+    "technology": "RFID",
+    "facility": "Hyderabad Central Warehouse",
+    "zone": "Secure Cage",
+    "firmware": "v1.9.4",
+    "firmwareLatest": "v2.4.1",
+    "uptimePct": 95.9,
+    "signalPct": 98,
+    "serves": 1,
+    "parentId": "DEV-RD-09",
+    "lastSeen": "2026-07-23T07:47:00.000Z",
+    "installedAt": "2024-07-04T09:00:00.000Z",
+    "diagnostics": [
+      {
+        "label": "Battery",
+        "value": "Passive — none",
+        "state": "ok"
+      },
+      {
+        "label": "Signal",
+        "value": "76%",
+        "state": "ok"
+      },
+      {
+        "label": "Last heard",
+        "value": "Minutes ago",
+        "state": "ok"
+      }
+    ]
+  },
+  {
+    "id": "DEV-SN-129",
+    "name": "IT Storeroom Environmental Sensor 30",
+    "role": "Sensor",
+    "state": "Degraded",
+    "technology": "LoRaWAN",
+    "facility": "Bengaluru HQ",
+    "zone": "IT Storeroom",
+    "firmware": "v2.4.1",
+    "firmwareLatest": "v1.9.4",
+    "uptimePct": 93.9,
+    "batteryPct": 19,
+    "signalPct": 55,
+    "serves": 0,
+    "parentId": "DEV-GW-02",
+    "lastSeen": "2026-07-23T07:45:00.000Z",
+    "installedAt": "2024-02-29T09:00:00.000Z",
+    "replaceBy": "2026-08-15T09:00:00.000Z",
+    "diagnostics": [
+      {
+        "label": "Battery",
+        "value": "19%",
+        "state": "bad"
+      },
+      {
+        "label": "Signal",
+        "value": "69%",
+        "state": "ok"
+      },
+      {
+        "label": "Last heard",
+        "value": "Minutes ago",
+        "state": "ok"
+      }
+    ]
+  },
+  {
+    "id": "DEV-TG-130",
+    "name": "Meeting Rooms 4–9 Asset Tag 31",
+    "role": "Tag",
+    "state": "Healthy",
+    "technology": "RFID",
+    "facility": "Bengaluru HQ",
+    "zone": "Meeting Rooms 4–9",
+    "firmware": "v1.9.4",
+    "firmwareLatest": "v2.4.1",
+    "uptimePct": 98.4,
+    "signalPct": 93,
+    "serves": 1,
+    "parentId": "DEV-GW-02",
+    "lastSeen": "2026-07-23T07:39:00.000Z",
+    "installedAt": "2024-06-14T09:00:00.000Z",
+    "diagnostics": [
+      {
+        "label": "Battery",
+        "value": "Passive — none",
+        "state": "ok"
+      },
+      {
+        "label": "Signal",
+        "value": "89%",
+        "state": "ok"
+      },
+      {
+        "label": "Last heard",
+        "value": "Minutes ago",
+        "state": "ok"
+      }
+    ]
+  },
+  {
+    "id": "DEV-TG-131",
+    "name": "IT Storeroom Asset Tag 32",
+    "role": "Tag",
+    "state": "Offline",
+    "technology": "UWB",
+    "facility": "Bengaluru HQ",
+    "zone": "IT Storeroom",
+    "firmware": "v1.9.4",
+    "firmwareLatest": "v2.4.1",
+    "uptimePct": 94.4,
+    "batteryPct": 64,
+    "signalPct": 0,
+    "serves": 1,
+    "parentId": "DEV-GW-02",
+    "lastSeen": "2026-07-22T12:00:00.000Z",
+    "installedAt": "2024-02-26T09:00:00.000Z",
+    "diagnostics": [
+      {
+        "label": "Battery",
+        "value": "64%",
+        "state": "ok"
+      },
+      {
+        "label": "Signal",
+        "value": "No signal",
+        "state": "bad"
+      },
+      {
+        "label": "Last heard",
+        "value": "Hours ago",
+        "state": "bad"
+      }
+    ]
+  },
+  {
+    "id": "DEV-TG-132",
+    "name": "Staging Bay Asset Tag 33",
+    "role": "Tag",
+    "state": "Healthy",
+    "technology": "BLE",
+    "facility": "Hyderabad Central Warehouse",
+    "zone": "Staging Bay",
+    "firmware": "v3.2.0",
+    "firmwareLatest": "v2.4.1",
+    "uptimePct": 92.1,
+    "batteryPct": 60,
+    "signalPct": 65,
+    "serves": 1,
+    "parentId": "DEV-RD-09",
+    "lastSeen": "2026-07-23T07:21:00.000Z",
+    "installedAt": "2026-05-22T09:00:00.000Z",
+    "diagnostics": [
+      {
+        "label": "Battery",
+        "value": "60%",
+        "state": "ok"
+      },
+      {
+        "label": "Signal",
+        "value": "81%",
+        "state": "ok"
+      },
+      {
+        "label": "Last heard",
+        "value": "Minutes ago",
+        "state": "ok"
+      }
+    ]
+  },
+  {
+    "id": "DEV-TG-133",
+    "name": "Meeting Rooms 4–9 Asset Tag 34",
+    "role": "Tag",
+    "state": "Healthy",
+    "technology": "BLE",
+    "facility": "Bengaluru HQ",
+    "zone": "Meeting Rooms 4–9",
+    "firmware": "v4.8.2",
+    "firmwareLatest": "v2.4.1",
+    "uptimePct": 98,
+    "batteryPct": 96,
+    "signalPct": 60,
+    "serves": 1,
+    "parentId": "DEV-GW-02",
+    "lastSeen": "2026-07-23T07:54:00.000Z",
+    "installedAt": "2024-11-16T09:00:00.000Z",
+    "diagnostics": [
+      {
+        "label": "Battery",
+        "value": "96%",
+        "state": "ok"
+      },
+      {
+        "label": "Signal",
+        "value": "59%",
+        "state": "ok"
+      },
+      {
+        "label": "Last heard",
+        "value": "Minutes ago",
+        "state": "ok"
+      }
+    ]
+  },
+  {
+    "id": "DEV-SN-134",
+    "name": "Floor 3 Desks Environmental Sensor 35",
+    "role": "Sensor",
+    "state": "Healthy",
+    "technology": "LoRaWAN",
+    "facility": "Bengaluru HQ",
+    "zone": "Floor 3 Desks",
+    "firmware": "v3.2.0",
+    "firmwareLatest": "v1.9.4",
+    "uptimePct": 91.8,
+    "batteryPct": 96,
+    "signalPct": 97,
+    "serves": 0,
+    "parentId": "DEV-GW-02",
+    "lastSeen": "2026-07-23T07:40:00.000Z",
+    "installedAt": "2024-05-25T09:00:00.000Z",
+    "diagnostics": [
+      {
+        "label": "Battery",
+        "value": "96%",
+        "state": "ok"
+      },
+      {
+        "label": "Signal",
+        "value": "42%",
+        "state": "ok"
+      },
+      {
+        "label": "Last heard",
+        "value": "Minutes ago",
+        "state": "ok"
+      }
+    ]
+  },
+  {
+    "id": "DEV-TG-135",
+    "name": "Secure Cage Asset Tag 36",
+    "role": "Tag",
+    "state": "Healthy",
+    "technology": "QR",
+    "facility": "Hyderabad Central Warehouse",
+    "zone": "Secure Cage",
+    "firmware": "v4.8.2",
+    "firmwareLatest": "v2.4.1",
+    "uptimePct": 97.5,
+    "signalPct": 72,
+    "serves": 1,
+    "parentId": "DEV-RD-09",
+    "lastSeen": "2026-07-23T07:41:00.000Z",
+    "installedAt": "2024-03-20T09:00:00.000Z",
+    "diagnostics": [
+      {
+        "label": "Battery",
+        "value": "Passive — none",
+        "state": "ok"
+      },
+      {
+        "label": "Signal",
+        "value": "81%",
+        "state": "ok"
+      },
+      {
+        "label": "Last heard",
+        "value": "Minutes ago",
+        "state": "ok"
+      }
+    ]
+  },
+  {
+    "id": "DEV-TG-136",
+    "name": "Meeting Rooms 4–9 Asset Tag 37",
+    "role": "Tag",
+    "state": "Healthy",
+    "technology": "QR",
+    "facility": "Bengaluru HQ",
+    "zone": "Meeting Rooms 4–9",
+    "firmware": "v1.9.4",
+    "firmwareLatest": "v2.4.1",
+    "uptimePct": 98.4,
+    "signalPct": 67,
+    "serves": 1,
+    "parentId": "DEV-GW-02",
+    "lastSeen": "2026-07-23T07:42:00.000Z",
+    "installedAt": "2025-01-26T09:00:00.000Z",
+    "diagnostics": [
+      {
+        "label": "Battery",
+        "value": "Passive — none",
+        "state": "ok"
+      },
+      {
+        "label": "Signal",
+        "value": "58%",
+        "state": "ok"
+      },
+      {
+        "label": "Last heard",
+        "value": "Minutes ago",
+        "state": "ok"
+      }
+    ]
+  },
+  {
+    "id": "DEV-TG-137",
+    "name": "Conference Room A Asset Tag 38",
+    "role": "Tag",
+    "state": "Degraded",
+    "technology": "UWB",
+    "facility": "Bengaluru HQ",
+    "zone": "Conference Room A",
+    "firmware": "v1.9.4",
+    "firmwareLatest": "v2.4.1",
+    "uptimePct": 92.3,
+    "batteryPct": 13,
+    "signalPct": 96,
+    "serves": 1,
+    "parentId": "DEV-GW-02",
+    "lastSeen": "2026-07-23T07:10:00.000Z",
+    "installedAt": "2026-03-07T09:00:00.000Z",
+    "replaceBy": "2026-08-12T09:00:00.000Z",
+    "diagnostics": [
+      {
+        "label": "Battery",
+        "value": "13%",
+        "state": "bad"
+      },
+      {
+        "label": "Signal",
+        "value": "98%",
+        "state": "ok"
+      },
+      {
+        "label": "Last heard",
+        "value": "Minutes ago",
+        "state": "ok"
+      }
+    ]
+  },
+  {
+    "id": "DEV-TG-138",
+    "name": "Server Room Alpha Asset Tag 39",
+    "role": "Tag",
+    "state": "Healthy",
+    "technology": "BLE",
+    "facility": "Chennai Data Center",
+    "zone": "Server Room Alpha",
+    "firmware": "v1.9.4",
+    "firmwareLatest": "v2.4.1",
+    "uptimePct": 98.2,
+    "batteryPct": 57,
+    "signalPct": 51,
+    "serves": 1,
+    "parentId": "DEV-RD-01",
+    "lastSeen": "2026-07-23T07:12:00.000Z",
+    "installedAt": "2024-05-20T09:00:00.000Z",
+    "diagnostics": [
+      {
+        "label": "Battery",
+        "value": "57%",
+        "state": "ok"
+      },
+      {
+        "label": "Signal",
+        "value": "43%",
+        "state": "ok"
+      },
+      {
+        "label": "Last heard",
+        "value": "Minutes ago",
+        "state": "ok"
+      }
+    ]
+  },
+  {
+    "id": "DEV-TG-139",
+    "name": "Meeting Rooms 4–9 Asset Tag 40",
+    "role": "Tag",
+    "state": "Healthy",
+    "technology": "BLE",
+    "facility": "Bengaluru HQ",
+    "zone": "Meeting Rooms 4–9",
+    "firmware": "v4.8.2",
+    "firmwareLatest": "v2.4.1",
+    "uptimePct": 96.9,
+    "batteryPct": 28,
+    "signalPct": 60,
+    "serves": 1,
+    "parentId": "DEV-GW-02",
+    "lastSeen": "2026-07-23T07:24:00.000Z",
+    "installedAt": "2024-09-12T09:00:00.000Z",
+    "diagnostics": [
+      {
+        "label": "Battery",
+        "value": "28%",
+        "state": "warn"
+      },
+      {
+        "label": "Signal",
+        "value": "52%",
+        "state": "ok"
+      },
+      {
+        "label": "Last heard",
+        "value": "Minutes ago",
+        "state": "ok"
+      }
+    ]
+  },
+  {
+    "id": "DEV-TG-140",
+    "name": "Floor 3 Desks Asset Tag 41",
+    "role": "Tag",
+    "state": "Healthy",
+    "technology": "UWB",
+    "facility": "Bengaluru HQ",
+    "zone": "Floor 3 Desks",
+    "firmware": "v2.3.7",
+    "firmwareLatest": "v2.4.1",
+    "uptimePct": 91.1,
+    "batteryPct": 54,
+    "signalPct": 96,
+    "serves": 1,
+    "parentId": "DEV-GW-02",
+    "lastSeen": "2026-07-23T08:56:00.000Z",
+    "installedAt": "2025-04-09T09:00:00.000Z",
+    "diagnostics": [
+      {
+        "label": "Battery",
+        "value": "54%",
+        "state": "ok"
+      },
+      {
+        "label": "Signal",
+        "value": "54%",
+        "state": "ok"
+      },
+      {
+        "label": "Last heard",
+        "value": "Minutes ago",
+        "state": "ok"
+      }
+    ]
+  },
+  {
+    "id": "DEV-TG-141",
+    "name": "Secure Cage Asset Tag 42",
+    "role": "Tag",
+    "state": "Healthy",
+    "technology": "BLE",
+    "facility": "Hyderabad Central Warehouse",
+    "zone": "Secure Cage",
+    "firmware": "v3.2.0",
+    "firmwareLatest": "v2.4.1",
+    "uptimePct": 94.9,
+    "batteryPct": 81,
+    "signalPct": 86,
+    "serves": 1,
+    "parentId": "DEV-RD-09",
+    "lastSeen": "2026-07-23T08:42:00.000Z",
+    "installedAt": "2024-08-21T09:00:00.000Z",
+    "diagnostics": [
+      {
+        "label": "Battery",
+        "value": "81%",
+        "state": "ok"
+      },
+      {
+        "label": "Signal",
+        "value": "86%",
+        "state": "ok"
+      },
+      {
+        "label": "Last heard",
+        "value": "Minutes ago",
+        "state": "ok"
+      }
+    ]
+  },
+  {
+    "id": "DEV-TG-142",
+    "name": "Secure Cage Asset Tag 43",
+    "role": "Tag",
+    "state": "Degraded",
+    "technology": "BLE",
+    "facility": "Hyderabad Central Warehouse",
+    "zone": "Secure Cage",
+    "firmware": "v1.9.4",
+    "firmwareLatest": "v2.4.1",
+    "uptimePct": 97.3,
+    "batteryPct": 8,
+    "signalPct": 42,
+    "serves": 1,
+    "parentId": "DEV-RD-09",
+    "lastSeen": "2026-07-23T07:05:00.000Z",
+    "installedAt": "2024-06-08T09:00:00.000Z",
+    "replaceBy": "2026-08-15T09:00:00.000Z",
+    "diagnostics": [
+      {
+        "label": "Battery",
+        "value": "8%",
+        "state": "bad"
+      },
+      {
+        "label": "Signal",
+        "value": "74%",
+        "state": "ok"
+      },
+      {
+        "label": "Last heard",
+        "value": "Minutes ago",
+        "state": "ok"
+      }
+    ]
+  },
+  {
+    "id": "DEV-TG-143",
+    "name": "DC Storeroom Asset Tag 44",
+    "role": "Tag",
+    "state": "Healthy",
+    "technology": "BLE",
+    "facility": "Chennai Data Center",
+    "zone": "DC Storeroom",
+    "firmware": "v2.4.1",
+    "firmwareLatest": "v2.4.1",
+    "uptimePct": 94.9,
+    "batteryPct": 74,
+    "signalPct": 67,
+    "serves": 1,
+    "parentId": "DEV-RD-01",
+    "lastSeen": "2026-07-23T08:15:00.000Z",
+    "installedAt": "2024-10-17T09:00:00.000Z",
+    "diagnostics": [
+      {
+        "label": "Battery",
+        "value": "74%",
+        "state": "ok"
+      },
+      {
+        "label": "Signal",
+        "value": "48%",
+        "state": "ok"
+      },
+      {
+        "label": "Last heard",
+        "value": "Minutes ago",
+        "state": "ok"
+      }
+    ]
+  },
+  {
+    "id": "DEV-TG-144",
+    "name": "Picking Zone Asset Tag 45",
+    "role": "Tag",
+    "state": "Healthy",
+    "technology": "RFID",
+    "facility": "Hyderabad Central Warehouse",
+    "zone": "Picking Zone",
+    "firmware": "v4.8.2",
+    "firmwareLatest": "v2.4.1",
+    "uptimePct": 98.2,
+    "signalPct": 45,
+    "serves": 1,
+    "parentId": "DEV-RD-09",
+    "lastSeen": "2026-07-23T08:00:00.000Z",
+    "installedAt": "2024-11-24T09:00:00.000Z",
+    "diagnostics": [
+      {
+        "label": "Battery",
+        "value": "Passive — none",
+        "state": "ok"
+      },
+      {
+        "label": "Signal",
+        "value": "99%",
+        "state": "ok"
+      },
+      {
+        "label": "Last heard",
+        "value": "Minutes ago",
+        "state": "ok"
+      }
+    ]
+  },
+  {
+    "id": "DEV-TG-145",
+    "name": "Meeting Rooms 4–9 Asset Tag 46",
+    "role": "Tag",
+    "state": "Healthy",
+    "technology": "BLE",
+    "facility": "Bengaluru HQ",
+    "zone": "Meeting Rooms 4–9",
+    "firmware": "v1.9.4",
+    "firmwareLatest": "v2.4.1",
+    "uptimePct": 93,
+    "batteryPct": 82,
+    "signalPct": 95,
+    "serves": 1,
+    "parentId": "DEV-GW-02",
+    "lastSeen": "2026-07-23T08:19:00.000Z",
+    "installedAt": "2024-06-19T09:00:00.000Z",
+    "diagnostics": [
+      {
+        "label": "Battery",
+        "value": "82%",
+        "state": "ok"
+      },
+      {
+        "label": "Signal",
+        "value": "46%",
+        "state": "ok"
+      },
+      {
+        "label": "Last heard",
+        "value": "Minutes ago",
+        "state": "ok"
+      }
+    ]
+  },
+  {
+    "id": "DEV-TG-146",
+    "name": "Meeting Rooms 4–9 Asset Tag 47",
+    "role": "Tag",
+    "state": "Healthy",
+    "technology": "BLE",
+    "facility": "Bengaluru HQ",
+    "zone": "Meeting Rooms 4–9",
+    "firmware": "v4.8.2",
+    "firmwareLatest": "v2.4.1",
+    "uptimePct": 91.5,
+    "batteryPct": 98,
+    "signalPct": 54,
+    "serves": 1,
+    "parentId": "DEV-GW-02",
+    "lastSeen": "2026-07-23T08:44:00.000Z",
+    "installedAt": "2025-08-15T09:00:00.000Z",
+    "diagnostics": [
+      {
+        "label": "Battery",
+        "value": "98%",
+        "state": "ok"
+      },
+      {
+        "label": "Signal",
+        "value": "79%",
+        "state": "ok"
+      },
+      {
+        "label": "Last heard",
+        "value": "Minutes ago",
+        "state": "ok"
+      }
+    ]
+  },
+  {
+    "id": "DEV-SN-147",
+    "name": "Server Room Beta Environmental Sensor 48",
+    "role": "Sensor",
+    "state": "Degraded",
+    "technology": "LoRaWAN",
+    "facility": "Chennai Data Center",
+    "zone": "Server Room Beta",
+    "firmware": "v1.9.4",
+    "firmwareLatest": "v1.9.4",
+    "uptimePct": 99.7,
+    "batteryPct": 13,
+    "signalPct": 85,
+    "serves": 0,
+    "parentId": "DEV-RD-01",
+    "lastSeen": "2026-07-23T08:09:00.000Z",
+    "installedAt": "2025-12-20T09:00:00.000Z",
+    "replaceBy": "2026-07-28T09:00:00.000Z",
+    "diagnostics": [
+      {
+        "label": "Battery",
+        "value": "13%",
+        "state": "bad"
+      },
+      {
+        "label": "Signal",
+        "value": "53%",
+        "state": "ok"
+      },
+      {
+        "label": "Last heard",
+        "value": "Minutes ago",
+        "state": "ok"
+      }
+    ]
+  },
+  {
+    "id": "DEV-TG-148",
+    "name": "Goods Inward Asset Tag 49",
+    "role": "Tag",
+    "state": "Degraded",
+    "technology": "QR",
+    "facility": "Chennai Data Center",
+    "zone": "Goods Inward",
+    "firmware": "v1.9.4",
+    "firmwareLatest": "v2.4.1",
+    "uptimePct": 95.7,
+    "signalPct": 44,
+    "serves": 1,
+    "parentId": "DEV-RD-01",
+    "lastSeen": "2026-07-23T07:53:00.000Z",
+    "installedAt": "2025-04-21T09:00:00.000Z",
+    "diagnostics": [
+      {
+        "label": "Battery",
+        "value": "Passive — none",
+        "state": "ok"
+      },
+      {
+        "label": "Signal",
+        "value": "87%",
+        "state": "ok"
+      },
+      {
+        "label": "Last heard",
+        "value": "Minutes ago",
+        "state": "ok"
+      }
+    ]
+  },
+  {
+    "id": "DEV-TG-149",
+    "name": "Main Warehouse Asset Tag 50",
+    "role": "Tag",
+    "state": "Healthy",
+    "technology": "BLE",
+    "facility": "Hyderabad Central Warehouse",
+    "zone": "Main Warehouse",
+    "firmware": "v4.8.2",
+    "firmwareLatest": "v2.4.1",
+    "uptimePct": 90.2,
+    "batteryPct": 94,
+    "signalPct": 72,
+    "serves": 1,
+    "parentId": "DEV-RD-09",
+    "lastSeen": "2026-07-23T08:55:00.000Z",
+    "installedAt": "2026-04-10T09:00:00.000Z",
+    "diagnostics": [
+      {
+        "label": "Battery",
+        "value": "94%",
+        "state": "ok"
+      },
+      {
+        "label": "Signal",
+        "value": "94%",
+        "state": "ok"
+      },
+      {
+        "label": "Last heard",
+        "value": "Minutes ago",
+        "state": "ok"
+      }
+    ]
+  },
+  {
+    "id": "DEV-TG-150",
+    "name": "MDF / Carrier Room Asset Tag 51",
+    "role": "Tag",
+    "state": "Healthy",
+    "technology": "BLE",
+    "facility": "Chennai Data Center",
+    "zone": "MDF / Carrier Room",
+    "firmware": "v4.8.2",
+    "firmwareLatest": "v2.4.1",
+    "uptimePct": 90.8,
+    "batteryPct": 51,
+    "signalPct": 80,
+    "serves": 1,
+    "parentId": "DEV-RD-01",
+    "lastSeen": "2026-07-23T08:16:00.000Z",
+    "installedAt": "2024-07-13T09:00:00.000Z",
+    "diagnostics": [
+      {
+        "label": "Battery",
+        "value": "51%",
+        "state": "ok"
+      },
+      {
+        "label": "Signal",
+        "value": "61%",
+        "state": "ok"
+      },
+      {
+        "label": "Last heard",
+        "value": "Minutes ago",
+        "state": "ok"
+      }
+    ]
+  },
+  {
+    "id": "DEV-TG-151",
+    "name": "Picking Zone Asset Tag 52",
+    "role": "Tag",
+    "state": "Healthy",
+    "technology": "UWB",
+    "facility": "Hyderabad Central Warehouse",
+    "zone": "Picking Zone",
+    "firmware": "v3.2.0",
+    "firmwareLatest": "v2.4.1",
+    "uptimePct": 90.5,
+    "batteryPct": 73,
+    "signalPct": 45,
+    "serves": 1,
+    "parentId": "DEV-RD-09",
+    "lastSeen": "2026-07-23T07:10:00.000Z",
+    "installedAt": "2024-08-06T09:00:00.000Z",
+    "diagnostics": [
+      {
+        "label": "Battery",
+        "value": "73%",
+        "state": "ok"
+      },
+      {
+        "label": "Signal",
+        "value": "78%",
+        "state": "ok"
+      },
+      {
+        "label": "Last heard",
+        "value": "Minutes ago",
+        "state": "ok"
+      }
+    ]
+  },
+  {
+    "id": "DEV-SN-152",
+    "name": "Lobby Environmental Sensor 53",
+    "role": "Sensor",
+    "state": "Healthy",
+    "technology": "LoRaWAN",
+    "facility": "Bengaluru HQ",
+    "zone": "Lobby",
+    "firmware": "v3.2.0",
+    "firmwareLatest": "v1.9.4",
+    "uptimePct": 91.7,
+    "batteryPct": 44,
+    "signalPct": 65,
+    "serves": 0,
+    "parentId": "DEV-GW-02",
+    "lastSeen": "2026-07-23T08:47:00.000Z",
+    "installedAt": "2024-04-30T09:00:00.000Z",
+    "diagnostics": [
+      {
+        "label": "Battery",
+        "value": "44%",
+        "state": "ok"
+      },
+      {
+        "label": "Signal",
+        "value": "68%",
+        "state": "ok"
+      },
+      {
+        "label": "Last heard",
+        "value": "Minutes ago",
+        "state": "ok"
+      }
+    ]
+  },
+  {
+    "id": "DEV-SN-153",
+    "name": "Outbound Yard Environmental Sensor 54",
+    "role": "Sensor",
+    "state": "Healthy",
+    "technology": "LoRaWAN",
+    "facility": "Hyderabad Central Warehouse",
+    "zone": "Outbound Yard",
+    "firmware": "v1.9.4",
+    "firmwareLatest": "v1.9.4",
+    "uptimePct": 91.3,
+    "batteryPct": 63,
+    "signalPct": 78,
+    "serves": 0,
+    "parentId": "DEV-RD-09",
+    "lastSeen": "2026-07-23T07:13:00.000Z",
+    "installedAt": "2025-01-23T09:00:00.000Z",
+    "diagnostics": [
+      {
+        "label": "Battery",
+        "value": "63%",
+        "state": "ok"
+      },
+      {
+        "label": "Signal",
+        "value": "79%",
+        "state": "ok"
+      },
+      {
+        "label": "Last heard",
+        "value": "Minutes ago",
+        "state": "ok"
+      }
+    ]
+  },
+  {
+    "id": "DEV-TG-154",
+    "name": "Lobby Asset Tag 55",
+    "role": "Tag",
+    "state": "Healthy",
+    "technology": "UWB",
+    "facility": "Bengaluru HQ",
+    "zone": "Lobby",
+    "firmware": "v1.9.4",
+    "firmwareLatest": "v2.4.1",
+    "uptimePct": 93,
+    "batteryPct": 64,
+    "signalPct": 61,
+    "serves": 1,
+    "parentId": "DEV-GW-02",
+    "lastSeen": "2026-07-23T08:37:00.000Z",
+    "installedAt": "2025-12-09T09:00:00.000Z",
+    "diagnostics": [
+      {
+        "label": "Battery",
+        "value": "64%",
+        "state": "ok"
+      },
+      {
+        "label": "Signal",
+        "value": "47%",
+        "state": "ok"
+      },
+      {
+        "label": "Last heard",
+        "value": "Minutes ago",
+        "state": "ok"
+      }
+    ]
+  },
+  {
+    "id": "DEV-TG-155",
+    "name": "IT Tool Room Asset Tag 56",
+    "role": "Tag",
+    "state": "Healthy",
+    "technology": "BLE",
+    "facility": "Bengaluru HQ",
+    "zone": "IT Tool Room",
+    "firmware": "v1.9.4",
+    "firmwareLatest": "v2.4.1",
+    "uptimePct": 91,
+    "batteryPct": 47,
+    "signalPct": 75,
+    "serves": 1,
+    "parentId": "DEV-GW-02",
+    "lastSeen": "2026-07-23T07:28:00.000Z",
+    "installedAt": "2024-04-29T09:00:00.000Z",
+    "diagnostics": [
+      {
+        "label": "Battery",
+        "value": "47%",
+        "state": "ok"
+      },
+      {
+        "label": "Signal",
+        "value": "46%",
+        "state": "ok"
+      },
+      {
+        "label": "Last heard",
+        "value": "Minutes ago",
+        "state": "ok"
+      }
+    ]
+  },
+  {
+    "id": "DEV-TG-156",
+    "name": "Lobby Asset Tag 57",
+    "role": "Tag",
+    "state": "Healthy",
+    "technology": "UWB",
+    "facility": "Bengaluru HQ",
+    "zone": "Lobby",
+    "firmware": "v2.4.1",
+    "firmwareLatest": "v2.4.1",
+    "uptimePct": 99,
+    "batteryPct": 81,
+    "signalPct": 63,
+    "serves": 1,
+    "parentId": "DEV-GW-02",
+    "lastSeen": "2026-07-23T08:04:00.000Z",
+    "installedAt": "2025-12-27T09:00:00.000Z",
+    "diagnostics": [
+      {
+        "label": "Battery",
+        "value": "81%",
+        "state": "ok"
+      },
+      {
+        "label": "Signal",
+        "value": "71%",
+        "state": "ok"
+      },
+      {
+        "label": "Last heard",
+        "value": "Minutes ago",
+        "state": "ok"
+      }
+    ]
+  },
+  {
+    "id": "DEV-TG-157",
+    "name": "Lobby Asset Tag 58",
+    "role": "Tag",
+    "state": "Healthy",
+    "technology": "BLE",
+    "facility": "Bengaluru HQ",
+    "zone": "Lobby",
+    "firmware": "v1.9.4",
+    "firmwareLatest": "v2.4.1",
+    "uptimePct": 95.3,
+    "batteryPct": 67,
+    "signalPct": 71,
+    "serves": 1,
+    "parentId": "DEV-GW-02",
+    "lastSeen": "2026-07-23T08:05:00.000Z",
+    "installedAt": "2025-11-27T09:00:00.000Z",
+    "diagnostics": [
+      {
+        "label": "Battery",
+        "value": "67%",
+        "state": "ok"
+      },
+      {
+        "label": "Signal",
+        "value": "48%",
+        "state": "ok"
+      },
+      {
+        "label": "Last heard",
+        "value": "Minutes ago",
+        "state": "ok"
+      }
+    ]
+  },
+  {
+    "id": "DEV-TG-158",
+    "name": "Lobby Asset Tag 59",
+    "role": "Tag",
+    "state": "Healthy",
+    "technology": "RFID",
+    "facility": "Bengaluru HQ",
+    "zone": "Lobby",
+    "firmware": "v1.9.4",
+    "firmwareLatest": "v2.4.1",
+    "uptimePct": 94.9,
+    "signalPct": 94,
+    "serves": 1,
+    "parentId": "DEV-GW-02",
+    "lastSeen": "2026-07-23T07:34:00.000Z",
+    "installedAt": "2025-02-06T09:00:00.000Z",
+    "diagnostics": [
+      {
+        "label": "Battery",
+        "value": "Passive — none",
+        "state": "ok"
+      },
+      {
+        "label": "Signal",
+        "value": "57%",
+        "state": "ok"
+      },
+      {
+        "label": "Last heard",
+        "value": "Minutes ago",
+        "state": "ok"
+      }
+    ]
+  },
+  {
+    "id": "DEV-SN-159",
+    "name": "IT Storeroom Environmental Sensor 60",
+    "role": "Sensor",
+    "state": "Healthy",
+    "technology": "LoRaWAN",
+    "facility": "Bengaluru HQ",
+    "zone": "IT Storeroom",
+    "firmware": "v2.3.7",
+    "firmwareLatest": "v1.9.4",
+    "uptimePct": 94.8,
+    "batteryPct": 26,
+    "signalPct": 80,
+    "serves": 0,
+    "parentId": "DEV-GW-02",
+    "lastSeen": "2026-07-23T07:53:00.000Z",
+    "installedAt": "2024-11-09T09:00:00.000Z",
+    "diagnostics": [
+      {
+        "label": "Battery",
+        "value": "26%",
+        "state": "warn"
+      },
+      {
+        "label": "Signal",
+        "value": "44%",
+        "state": "ok"
+      },
+      {
+        "label": "Last heard",
+        "value": "Minutes ago",
+        "state": "ok"
+      }
+    ]
+  },
+  {
+    "id": "DEV-TG-160",
+    "name": "IT Tool Room Asset Tag 61",
+    "role": "Tag",
+    "state": "Degraded",
+    "technology": "BLE",
+    "facility": "Bengaluru HQ",
+    "zone": "IT Tool Room",
+    "firmware": "v1.9.4",
+    "firmwareLatest": "v2.4.1",
+    "uptimePct": 99.4,
+    "batteryPct": 18,
+    "signalPct": 90,
+    "serves": 1,
+    "parentId": "DEV-GW-02",
+    "lastSeen": "2026-07-23T07:24:00.000Z",
+    "installedAt": "2026-02-22T09:00:00.000Z",
+    "replaceBy": "2026-08-09T09:00:00.000Z",
+    "diagnostics": [
+      {
+        "label": "Battery",
+        "value": "18%",
+        "state": "bad"
+      },
+      {
+        "label": "Signal",
+        "value": "85%",
+        "state": "ok"
+      },
+      {
+        "label": "Last heard",
+        "value": "Minutes ago",
+        "state": "ok"
+      }
+    ]
+  },
+  {
+    "id": "DEV-TG-161",
+    "name": "IT Storeroom Asset Tag 62",
+    "role": "Tag",
+    "state": "Healthy",
+    "technology": "QR",
+    "facility": "Bengaluru HQ",
+    "zone": "IT Storeroom",
+    "firmware": "v2.3.7",
+    "firmwareLatest": "v2.4.1",
+    "uptimePct": 93.2,
+    "signalPct": 67,
+    "serves": 1,
+    "parentId": "DEV-GW-02",
+    "lastSeen": "2026-07-23T08:36:00.000Z",
+    "installedAt": "2024-07-18T09:00:00.000Z",
+    "diagnostics": [
+      {
+        "label": "Battery",
+        "value": "Passive — none",
+        "state": "ok"
+      },
+      {
+        "label": "Signal",
+        "value": "72%",
+        "state": "ok"
+      },
+      {
+        "label": "Last heard",
+        "value": "Minutes ago",
+        "state": "ok"
+      }
+    ]
+  },
+  {
+    "id": "DEV-SN-162",
+    "name": "Picking Zone Environmental Sensor 63",
+    "role": "Sensor",
+    "state": "Offline",
+    "technology": "LoRaWAN",
+    "facility": "Hyderabad Central Warehouse",
+    "zone": "Picking Zone",
+    "firmware": "v2.4.1",
+    "firmwareLatest": "v1.9.4",
+    "uptimePct": 96,
+    "batteryPct": 67,
+    "signalPct": 0,
+    "serves": 0,
+    "parentId": "DEV-RD-09",
+    "lastSeen": "2026-07-23T01:00:00.000Z",
+    "installedAt": "2025-07-14T09:00:00.000Z",
+    "diagnostics": [
+      {
+        "label": "Battery",
+        "value": "67%",
+        "state": "ok"
+      },
+      {
+        "label": "Signal",
+        "value": "No signal",
+        "state": "bad"
+      },
+      {
+        "label": "Last heard",
+        "value": "Hours ago",
+        "state": "bad"
+      }
+    ]
+  },
+  {
+    "id": "DEV-TG-163",
+    "name": "Main Exit & Reception Asset Tag 64",
+    "role": "Tag",
+    "state": "Healthy",
+    "technology": "BLE",
+    "facility": "Bengaluru HQ",
+    "zone": "Main Exit & Reception",
+    "firmware": "v2.4.1",
+    "firmwareLatest": "v2.4.1",
+    "uptimePct": 98,
+    "batteryPct": 36,
+    "signalPct": 94,
+    "serves": 1,
+    "parentId": "DEV-GW-02",
+    "lastSeen": "2026-07-23T07:51:00.000Z",
+    "installedAt": "2024-02-28T09:00:00.000Z",
+    "diagnostics": [
+      {
+        "label": "Battery",
+        "value": "36%",
+        "state": "warn"
+      },
+      {
+        "label": "Signal",
+        "value": "80%",
+        "state": "ok"
+      },
+      {
+        "label": "Last heard",
+        "value": "Minutes ago",
+        "state": "ok"
+      }
+    ]
+  }
+]

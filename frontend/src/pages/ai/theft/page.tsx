@@ -1,6 +1,6 @@
 import { useMemo } from 'react';
 import { Link } from 'react-router-dom';
-import { mockInsights, mockAnomalies, mockZones, getAssetById } from '@/lib/mock-data';
+import { allInsights, allAnomalies, allZones, getAssetById } from '@/lib/dataset';
 import { cn, formatMoney, relTime } from '@/lib/utils';
 import { Button } from '@/components/ui/Button';
 import { PageHeader, Badge, KpiCard, EmptyState } from '@/components/ui/primitives';
@@ -29,7 +29,7 @@ const ZONE_FILL: Record<string, string> = {
 function buildRiskItems(): RiskItem[] {
   const byAsset = new Map<string, RiskItem>();
 
-  for (const i of mockInsights.filter((x) => x.type === 'Theft/Security')) {
+  for (const i of allInsights.filter((x) => x.type === 'Theft/Security')) {
     if (!i.assetId) continue;
     const asset = getAssetById(i.assetId);
     byAsset.set(i.assetId, {
@@ -44,7 +44,7 @@ function buildRiskItems(): RiskItem[] {
     });
   }
 
-  for (const a of mockAnomalies.filter((x) => x.metric === 'Signal')) {
+  for (const a of allAnomalies.filter((x) => x.metric === 'Signal')) {
     const asset = getAssetById(a.assetId);
     const existing = byAsset.get(a.assetId);
     if (existing) {
@@ -183,7 +183,7 @@ export default function TheftPage() {
           <h2 className="text-base font-heading font-bold text-slate-900 mb-1">Facility Map</h2>
           <p className="text-xs text-slate-500 mb-3">At-risk asset positions marked in red.</p>
           <svg viewBox="0 0 100 100" className="w-full rounded-lg border border-slate-200 bg-slate-50" role="img" aria-label="Facility map with at-risk assets">
-            {mockZones.map((z) => (
+            {allZones.map((z) => (
               <g key={z.id}>
                 <rect x={z.x} y={z.y} width={z.width} height={z.height} rx={1.5} fill={ZONE_FILL[z.type] ?? '#f1f5f9'} stroke="#cbd5e1" strokeWidth={0.4} />
                 <text x={z.x + 1.5} y={z.y + 4} fontSize={2.3} fill="#64748b" fontWeight={600}>{z.name}</text>

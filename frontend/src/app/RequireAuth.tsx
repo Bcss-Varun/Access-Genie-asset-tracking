@@ -1,6 +1,6 @@
 import { Navigate, Outlet, useLocation } from 'react-router-dom';
 import type { ModuleKey } from '@access-genie/shared';
-import { useAuth } from '@/features/auth/AuthProvider';
+import { useAuth } from '@/api/auth';
 import { ErrorState } from '@/components/ui/primitives';
 
 /** Gate for the whole authenticated tree. */

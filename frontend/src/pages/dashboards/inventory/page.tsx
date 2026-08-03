@@ -1,28 +1,29 @@
 import { Link } from 'react-router-dom';
 import { Card, HBars, InsightPanel } from '@/components/dashboards/DashboardKit';
 import { PageHeader, KpiCard, Badge } from '@/components/ui/primitives';
-import { mockParts, mockWarehouses, reorderParts, getSupplier, mockInsights } from '@/lib/mock-data';
+import { allParts, allWarehouses, reorderParts, getSupplier, allInsights } from '@/lib/dataset';
 import { cn, formatMoney } from '@/lib/utils';
 
-const skus = mockParts.length;
-const stockValue = mockWarehouses.reduce((s, w) => s + w.valueInr, 0);
-const belowReorder = reorderParts();
-const stockouts = mockParts.filter((p) => p.onHand < p.reorderPoint).length;
-const fillRate = Math.round(((skus - belowReorder.length) / skus) * 100);
-
 // ABC analysis by extended value
-const abc = (['A', 'B', 'C'] as const).map((c) => ({
-  label: `Class ${c}`,
-  value: mockParts.filter((p) => p.abcClass === c).reduce((s, p) => s + p.onHand * p.unitCost, 0),
-  color: c === 'A' ? '#ef4444' : c === 'B' ? '#f59e0b' : '#94a3b8',
-  caption: `${mockParts.filter((p) => p.abcClass === c).length} SKUs`,
-}));
-
-const inventoryInsights = mockInsights.filter((i) => ['Cost Optimization', 'Predictive Failure'].includes(i.type)).slice(0, 3);
 
 const abcTone = (c: string): 'red' | 'amber' | 'slate' => (c === 'A' ? 'red' : c === 'B' ? 'amber' : 'slate');
 
 export default function InventoryDashboard() {
+  // Derived per render: the dataset is fetched, so a value computed once at
+  // module scope would never see a refetch.
+  const skus = allParts.length;
+    const stockValue = allWarehouses.reduce((s, w) => s + w.valueInr, 0);
+    const belowReorder = reorderParts();
+    const stockouts = allParts.filter((p) => p.onHand < p.reorderPoint).length;
+    const fillRate = Math.round(((skus - belowReorder.length) / skus) * 100);
+    const abc = (['A', 'B', 'C'] as const).map((c) => ({
+    label: `Class ${c}`,
+    value: allParts.filter((p) => p.abcClass === c).reduce((s, p) => s + p.onHand * p.unitCost, 0),
+    color: c === 'A' ? '#ef4444' : c === 'B' ? '#f59e0b' : '#94a3b8',
+    caption: `${allParts.filter((p) => p.abcClass === c).length} SKUs`,
+  }));
+    const inventoryInsights = allInsights.filter((i) => ['Cost Optimization', 'Predictive Failure'].includes(i.type)).slice(0, 3);
+
   const th = 'px-4 py-3 text-left font-semibold uppercase tracking-wider text-[11px] text-slate-500';
   const td = 'px-4 py-3';
   return (
@@ -34,7 +35,7 @@ export default function InventoryDashboard() {
         actions={
           <select defaultValue="All Warehouses" className="bg-white border border-slate-200 rounded-lg px-3 py-2 text-sm font-medium text-slate-700">
             <option>All Warehouses</option>
-            {mockWarehouses.map((w) => <option key={w.id}>{w.name}</option>)}
+            {allWarehouses.map((w) => <option key={w.id}>{w.name}</option>)}
           </select>
         }
       />

@@ -1,126 +1,82 @@
 import { createBrowserRouter } from 'react-router-dom';
 import { AppShell } from '@/components/layout/AppShell';
-import { RequireAuth, RequireModule } from './RequireAuth';
-import { NotFoundPage } from '@/components/ComingSoon';
+import { AppProviders } from '@/components/providers/AppProviders';
+import { RequireAuth } from './RequireAuth';
+import { RequireDataset, RequireLabelWorkspace, RequireTrackingWorkspace } from './DataGate';
 import { RouteError } from './RouteError';
-import { prototypeRoutes } from './prototype-routes';
+import { LABELS_PATH, pageRoutes, TRACKING_PREFIX } from './page-routes';
 
-import { LoginPage } from '@/features/auth/LoginPage';
-import { DashboardPage } from '@/features/dashboard/DashboardPage';
-import { AssetsPage } from '@/features/assets/AssetsPage';
-import { AssetDetailPage } from '@/features/assets/AssetDetailPage';
-import { NewAssetPage } from '@/features/assets/NewAssetPage';
-import { LiveMapPage } from '@/features/tracking/LiveMapPage';
-import { DevicesPage } from '@/features/tracking/DevicesPage';
-import { GeofencesPage } from '@/features/tracking/GeofencesPage';
-import { GatewaysPage } from '@/features/tracking/GatewaysPage';
-import { AlertsPage } from '@/features/alerts/AlertsPage';
-import { AlertRulesPage } from '@/features/alerts/AlertRulesPage';
-import { WorkOrdersPage } from '@/features/maintenance/WorkOrdersPage';
-import { WorkOrderDetailPage } from '@/features/maintenance/WorkOrderDetailPage';
-import { NewWorkOrderPage } from '@/features/maintenance/NewWorkOrderPage';
-import { InsightsPage } from '@/features/insights/InsightsPage';
-import { UsersPage } from '@/features/admin/UsersPage';
-import { RolesPage } from '@/features/admin/RolesPage';
-import { NotificationsPage } from '@/features/notifications/NotificationsPage';
-import { AuditPage } from '@/features/compliance/AuditPage';
-import { CustodyPage } from '@/features/compliance/CustodyPage';
-import { InventoryPage } from '@/features/inventory/InventoryPage';
+import LoginPage from '@/pages/auth/login/page';
+import ForgotPasswordPage from '@/pages/auth/forgot-password/page';
+import MfaPage from '@/pages/auth/mfa/page';
+import WorkspacePage from '@/pages/page';
+import ComingSoonPage from '@/pages/coming-soon/page';
 
 /**
  * The route tree.
  *
- * Two sources feed it:
+ * Three concentric guards, outermost first:
  *
- *  1. **API-backed screens** (below) — these read and write the live MongoDB
- *     through the REST API.
- *  2. **`prototypeRoutes`** — the remaining 99 screens ported from the Next.js
- *     prototype, rendering the fixture dataset. Code-split, so they cost
- *     nothing until visited.
+ *   RequireAuth      — is there a session? Otherwise → /login.
+ *   RequireDataset   — has the reference dataset arrived? The screens read it
+ *                      from module bindings, so nothing inside may render first.
+ *   AppShell         — the chrome, with the routed screen in its <Outlet/>.
  *
- * The two sets are disjoint: the generator excludes every path declared below,
- * so no path is registered twice. Where both could exist, the live version
- * wins by construction — a fixture-keyed detail page cannot show an asset
- * created through the app, so it must never own that route.
+ * The tracking workspace sits behind a fourth guard of its own, because it has a
+ * separate (larger, live-refreshing) payload that only its own screens need.
  *
- * Module-gated branches sit behind `RequireModule`, mirroring the API's
- * `requireModule` guard, so a user meets one clear explanation instead of a
- * screen full of 403s.
+ * Every screen under `pageRoutes` is code-split — see scripts/port-prototype.mjs,
+ * which generates that file — so opening the app loads the shell and one route,
+ * not a hundred and twenty.
  */
-export const router = createBrowserRouter([
-  { path: '/login', element: <LoginPage />, errorElement: <RouteError /> },
+const isTracking = (r: { path?: string }) => String(r.path).startsWith(TRACKING_PREFIX);
+const isLabels = (r: { path?: string }) => String(r.path) === LABELS_PATH;
 
+const trackingRoutes = pageRoutes.filter(isTracking);
+const labelRoutes = pageRoutes.filter(isLabels);
+const generalRoutes = pageRoutes.filter((r) => !isTracking(r) && !isLabels(r));
+
+export const router = createBrowserRouter([
+  // ── Public ─────────────────────────────────────────────────────────────────
+  { path: '/login', element: <LoginPage />, errorElement: <RouteError /> },
+  { path: '/forgot-password', element: <ForgotPasswordPage />, errorElement: <RouteError /> },
+  { path: '/mfa', element: <MfaPage />, errorElement: <RouteError /> },
+
+  // ── Authenticated ──────────────────────────────────────────────────────────
   {
     element: <RequireAuth />,
     errorElement: <RouteError />,
     children: [
       {
-        element: <AppShell />,
+        element: <RequireDataset />,
         children: [
-          ...prototypeRoutes,
-
-          // ── Workspace ──────────────────────────────────────────────────
-          { index: true, element: <DashboardPage /> },
-          { path: 'notifications', element: <NotificationsPage /> },
-
-          // ── Pillar 1: Real-time tracking ───────────────────────────────
           {
-            element: <RequireModule module="tracking" />,
+            // The data-dependent providers seed from the loaded dataset, so
+            // they mount inside the gate and outside the chrome.
+            element: (
+              <AppProviders>
+                <AppShell />
+              </AppProviders>
+            ),
             children: [
-              { path: 'tracking', element: <LiveMapPage /> },
-              { path: 'sensors', element: <DevicesPage /> },
-              { path: 'geofences', element: <GeofencesPage /> },
-              { path: 'gateways', element: <GatewaysPage /> },
+              { index: true, element: <WorkspacePage /> },
+
+              ...generalRoutes,
+
+              {
+                element: <RequireTrackingWorkspace />,
+                children: trackingRoutes,
+              },
+              {
+                element: <RequireLabelWorkspace />,
+                children: labelRoutes,
+              },
+
+              // Routes the blueprint specifies but the build has not reached
+              // yet resolve here, so navigation never dead-ends on a 404.
+              { path: '*', element: <ComingSoonPage /> },
             ],
           },
-
-          // ── Pillar 2: AI intelligence ──────────────────────────────────
-          {
-            element: <RequireModule module="ai" />,
-            children: [{ path: 'ai-insights', element: <InsightsPage /> }],
-          },
-
-          // ── Pillar 3: Passport & lifecycle ─────────────────────────────
-          {
-            element: <RequireModule module="assets" />,
-            children: [
-              { path: 'assets', element: <AssetsPage /> },
-              // `new` precedes `:id` so it is not swallowed as an asset ID.
-              { path: 'assets/new', element: <NewAssetPage /> },
-              { path: 'assets/:id', element: <AssetDetailPage /> },
-            ],
-          },
-
-          // ── Pillar 4: Predictive maintenance ───────────────────────────
-          {
-            element: <RequireModule module="maintenance" />,
-            children: [
-              { path: 'maintenance', element: <WorkOrdersPage /> },
-              { path: 'maintenance/new', element: <NewWorkOrderPage /> },
-              { path: 'maintenance/:id', element: <WorkOrderDetailPage /> },
-            ],
-          },
-
-          // ── Pillar 5: Security & compliance ────────────────────────────
-          { path: 'alerts', element: <AlertsPage /> },
-          { path: 'alert-rules', element: <AlertRulesPage /> },
-          { path: 'audit-log', element: <AuditPage /> },
-          { path: 'custody', element: <CustodyPage /> },
-
-          // ── Supporting ─────────────────────────────────────────────────
-          {
-            element: <RequireModule module="inventory" />,
-            children: [{ path: 'inventory', element: <InventoryPage /> }],
-          },
-          {
-            element: <RequireModule module="admin" />,
-            children: [
-              { path: 'admin/users', element: <UsersPage /> },
-              { path: 'admin/roles', element: <RolesPage /> },
-            ],
-          },
-
-          { path: '*', element: <NotFoundPage /> },
         ],
       },
     ],

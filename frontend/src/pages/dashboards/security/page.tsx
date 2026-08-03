@@ -1,14 +1,9 @@
 import { Link } from 'react-router-dom';
 import { Card, HBars, InsightPanel } from '@/components/dashboards/DashboardKit';
 import { PageHeader, KpiCard, Badge } from '@/components/ui/primitives';
-import { mockAlerts, mockGeofences, mockCustody, mockAssets, mockInsights } from '@/lib/mock-data';
+import { allAlerts, allGeofences, allCustody, allAssets, allInsights } from '@/lib/dataset';
 import { cn, relTime } from '@/lib/utils';
 
-const activeAlerts = mockAlerts.filter((a) => a.status !== 'Resolved');
-const geofenceBreaches = mockGeofences.reduce((s, g) => s + g.breaches24h, 0);
-const custodyExceptions = mockCustody.filter((c) => c.holder === 'Unknown' || /geofence|no check-out/i.test(c.by));
-const afterHours = custodyExceptions.length;
-const missing = mockAssets.filter((a) => a.status === 'Missing').length;
 const recovered = 0;
 
 // Alerts by type
@@ -16,16 +11,23 @@ const typeColors: Record<string, string> = {
   Predictive: '#6366f1', Threshold: '#f59e0b', Tracking: '#ef4444',
   Geofence: '#f97316', Anomaly: '#8b5cf6', Device: '#94a3b8',
 };
-const types = Array.from(new Set(mockAlerts.map((a) => a.type)));
-const alertsByType = types
-  .map((t) => ({ label: t, value: mockAlerts.filter((a) => a.type === t).length, color: typeColors[t] ?? '#94a3b8' }))
-  .sort((a, b) => b.value - a.value);
-
-const securityInsights = mockInsights.filter((i) => ['Theft/Security', 'Anomaly'].includes(i.type)).slice(0, 3);
 
 const sevTone = (s: string): 'red' | 'amber' | 'slate' => (s === 'Critical' ? 'red' : s === 'Warning' ? 'amber' : 'slate');
 
 export default function SecurityDashboard() {
+  // Derived per render: the dataset is fetched, so a value computed once at
+  // module scope would never see a refetch.
+  const activeAlerts = allAlerts.filter((a) => a.status !== 'Resolved');
+    const geofenceBreaches = allGeofences.reduce((s, g) => s + g.breaches24h, 0);
+    const custodyExceptions = allCustody.filter((c) => c.holder === 'Unknown' || /geofence|no check-out/i.test(c.by));
+    const afterHours = custodyExceptions.length;
+    const missing = allAssets.filter((a) => a.status === 'Missing').length;
+    const types = Array.from(new Set(allAlerts.map((a) => a.type)));
+    const alertsByType = types
+    .map((t) => ({ label: t, value: allAlerts.filter((a) => a.type === t).length, color: typeColors[t] ?? '#94a3b8' }))
+    .sort((a, b) => b.value - a.value);
+    const securityInsights = allInsights.filter((i) => ['Theft/Security', 'Anomaly'].includes(i.type)).slice(0, 3);
+
   const th = 'px-4 py-3 text-left font-semibold uppercase tracking-wider text-[11px] text-slate-500';
   const td = 'px-4 py-3';
   return (
@@ -54,7 +56,7 @@ export default function SecurityDashboard() {
         <Card title="Alerts by Type">
           <div className="flex-1 flex flex-col justify-center">
             <HBars data={alertsByType} />
-            <p className="mt-6 text-xs text-slate-400">{activeAlerts.length} of {mockAlerts.length} alerts still open.</p>
+            <p className="mt-6 text-xs text-slate-400">{activeAlerts.length} of {allAlerts.length} alerts still open.</p>
           </div>
         </Card>
 

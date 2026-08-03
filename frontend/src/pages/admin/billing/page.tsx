@@ -1,24 +1,11 @@
+import { allInvoices } from '@/lib/dataset';
 import { PageHeader, Badge, KpiCard } from '@/components/ui/primitives';
 import { Button } from '@/components/ui/Button';
 import { useToast } from '@/components/providers/ToastProvider';
 import { cn, formatMoney } from '@/lib/utils';
 
-interface Invoice {
-  id: string;
-  date: string;
-  amount: number;
-  status: 'Paid' | 'Due';
-}
-
 // Amounts are INR, exclusive of 18% GST (shown separately on the invoice).
-const invoices: Invoice[] = [
-  { id: 'INV-2026-07', date: '01 Jul 2026', amount: 1800000, status: 'Due' },
-  { id: 'INV-2026-06', date: '01 Jun 2026', amount: 1800000, status: 'Paid' },
-  { id: 'INV-2026-05', date: '01 May 2026', amount: 1800000, status: 'Paid' },
-  { id: 'INV-2026-04', date: '01 Apr 2026', amount: 1650000, status: 'Paid' },
-  { id: 'INV-2026-03', date: '01 Mar 2026', amount: 1650000, status: 'Paid' },
-];
-
+const invoices = allInvoices;
 const MONTHLY_INR = 1800000;
 const GST_RATE = 0.18;
 

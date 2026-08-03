@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { mockCertifications } from '@/lib/mock-data';
-import type { CertStatus } from '@/types/asset';
+import { allCertifications } from '@/lib/dataset';
+import type { CertStatus } from '@access-genie/shared';
 import { PageHeader, KpiCard, Badge, EmptyState } from '@/components/ui/primitives';
 import { Button } from '@/components/ui/Button';
 import { useToast } from '@/components/providers/ToastProvider';
@@ -16,7 +16,7 @@ export default function CertificationsPage() {
   const { toast } = useToast();
   const [filter, setFilter] = useState<'All' | CertStatus>('All');
 
-  const certs = mockCertifications;
+  const certs = allCertifications;
   const filtered = filter === 'All' ? certs : certs.filter((c) => c.status === filter);
   const has = (s: CertStatus) => certs.filter((c) => c.status === s).length;
 

@@ -2,30 +2,18 @@
 // Compliance Reports — filtered report library (compliance/audit) + standard packs.
 // ─────────────────────────────────────────────────────────────────────────────
 
-import { mockReports } from '@/lib/mock-data';
+import { allReports, allReportPacks } from '@/lib/dataset';
 import { PageHeader, Badge, KpiCard } from '@/components/ui/primitives';
 import { Button } from '@/components/ui/Button';
 import { useToast } from '@/components/providers/ToastProvider';
 import { relTime } from '@/lib/utils';
 
-const complianceReports = mockReports.filter((r) => r.category.toLowerCase().includes('compliance'));
-
-interface StandardPack {
-  id: string;
-  name: string;
-  framework: string;
-  description: string;
-  format: string;
-}
-const standardPacks: StandardPack[] = [
-  { id: 'STD-SOC2', name: 'SOC 2 Evidence Pack', framework: 'SOC 2 Type II', description: 'Access controls, asset inventory completeness and change-log evidence for the audit period.', format: 'PDF + Excel' },
-  { id: 'STD-DPDP', name: 'DPDP Act Data Map', framework: 'DPDP Act 2023', description: 'Data-bearing asset register, processing locations in India and retention posture.', format: 'PDF' },
-  { id: 'STD-CERTIN', name: 'CERT-In Incident Pack', framework: 'CERT-In Directions', description: 'Six-hour incident timeline, 180-day log retention proof and NTP-sync attestation.', format: 'PDF' },
-  { id: 'STD-ISO27001', name: 'ISO 27001 Annex A Evidence', framework: 'ISO 27001', description: 'IT equipment inspection, firmware patching and network device compliance mapped to Annex A controls.', format: 'PDF' },
-  { id: 'STD-BIS', name: 'BIS / E-Waste Disposal Pack', framework: 'BIS / MeitY CRS', description: 'CRS registration evidence and E-Waste (Management) Rules disposal manifests per asset.', format: 'PDF + Excel' },
-];
-
+const standardPacks = allReportPacks;
 export default function ComplianceReportsPage() {
+  // Derived per render: the dataset is fetched, so a value computed once at
+  // module scope would never see a refetch.
+  const complianceReports = allReports.filter((r) => r.category.toLowerCase().includes('compliance'));
+
   const { toast } = useToast();
 
   return (

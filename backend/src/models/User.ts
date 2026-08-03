@@ -1,9 +1,8 @@
 import bcrypt from 'bcryptjs';
 import { model, Schema, type HydratedDocument, type Model } from 'mongoose';
 import { ROLE_IDS, type PublicUser, type RoleId } from '@access-genie/shared';
+import { env } from '../config/env.js';
 import { baseSchemaPlugin } from '../utils/mongoose.js';
-
-const BCRYPT_ROUNDS = 12;
 
 export interface UserDoc {
   _id: string;
@@ -61,7 +60,7 @@ userSchema.index({ roleId: 1, status: 1 });
 /** Hash on the way in, so no caller can ever persist a plaintext password. */
 userSchema.pre('save', async function hashPassword(next) {
   if (!this.isModified('passwordHash')) return next();
-  this.passwordHash = await bcrypt.hash(this.passwordHash, BCRYPT_ROUNDS);
+  this.passwordHash = await bcrypt.hash(this.passwordHash, env.BCRYPT_ROUNDS);
   next();
 });
 

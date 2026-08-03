@@ -1,0 +1,38 @@
+[
+  {
+    "id": "getting-started",
+    "label": "Getting Started",
+    "icon": "\ud83d\ude80",
+    "description": "Set up your workspace and invite your team."
+  },
+  {
+    "id": "assets",
+    "label": "Assets & Tracking",
+    "icon": "\ud83d\udce6",
+    "description": "Register assets, tags and live location."
+  },
+  {
+    "id": "maintenance",
+    "label": "Maintenance",
+    "icon": "\ud83d\udee0\ufe0f",
+    "description": "Work orders, PM schedules and inspections."
+  },
+  {
+    "id": "ai",
+    "label": "AI & Insights",
+    "icon": "\ud83e\udd16",
+    "description": "Forecasting, anomalies and explainability."
+  },
+  {
+    "id": "account",
+    "label": "Account & Security",
+    "icon": "\ud83d\udd12",
+    "description": "Profile, MFA, tokens and roles."
+  },
+  {
+    "id": "integrations",
+    "label": "Integrations & API",
+    "icon": "\ud83d\udd0c",
+    "description": "Connect gateways, webhooks and the API."
+  }
+]

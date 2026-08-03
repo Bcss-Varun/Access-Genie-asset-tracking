@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { mockAnomalies } from '@/lib/mock-data';
-import type { AnomalyEvent, AnomalySeverity } from '@/types/asset';
+import { allAnomalies } from '@/lib/dataset';
+import type { AnomalyEvent, AnomalySeverity } from '@access-genie/shared';
 import { cn, relTime } from '@/lib/utils';
 import { Button } from '@/components/ui/Button';
 import { PageHeader, Badge, KpiCard, EmptyState } from '@/components/ui/primitives';
@@ -22,7 +22,7 @@ export default function AnomalyPage() {
   const [dismissed, setDismissed] = useState<Set<string>>(new Set());
   const [severity, setSeverity] = useState<AnomalySeverity | 'All'>('All');
 
-  const live = useMemo(() => mockAnomalies.filter((a) => !dismissed.has(a.id)), [dismissed]);
+  const live = useMemo(() => allAnomalies.filter((a) => !dismissed.has(a.id)), [dismissed]);
 
   const critical = live.filter((a) => a.severity === 'Critical').length;
   const avgZ = live.length ? (live.reduce((s, a) => s + a.zScore, 0) / live.length).toFixed(1) : '0.0';

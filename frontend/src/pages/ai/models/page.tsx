@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { mockModels } from '@/lib/mock-data';
-import type { Model, ModelStatus } from '@/types/asset';
+import { allModels } from '@/lib/dataset';
+import type { AiModel, ModelStatus } from '@access-genie/shared';
 import { PageHeader, Badge, KpiCard, EmptyState } from '@/components/ui/primitives';
 import { Button } from '@/components/ui/Button';
 import { useToast } from '@/components/providers/ToastProvider';
@@ -68,16 +68,16 @@ export default function ModelRegistryPage() {
   const [status, setStatus] = useState<ModelStatus | 'All'>('All');
 
   // ── KPIs ─────────────────────────────────────────────────────────────────────
-  const total = mockModels.length;
-  const inProduction = mockModels.filter((m) => m.status === 'Production').length;
+  const total = allModels.length;
+  const inProduction = allModels.filter((m) => m.status === 'Production').length;
   const avgAccuracy = Math.round(
-    mockModels.reduce((sum, m) => sum + m.accuracy, 0) / (total || 1),
+    allModels.reduce((sum, m) => sum + m.accuracy, 0) / (total || 1),
   );
-  const needRetrain = mockModels.filter((m) => m.driftPct > 10).length;
+  const needRetrain = allModels.filter((m) => m.driftPct > 10).length;
 
   // ── filtered rows ──────────────────────────────────────────────────────────────
-  const rows = useMemo<Model[]>(
-    () => mockModels.filter((m) => status === 'All' || m.status === status),
+  const rows = useMemo<AiModel[]>(
+    () => allModels.filter((m) => status === 'All' || m.status === status),
     [status],
   );
 

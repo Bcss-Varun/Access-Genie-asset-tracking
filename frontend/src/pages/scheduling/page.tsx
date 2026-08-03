@@ -1,11 +1,12 @@
 import { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { mockWorkOrders } from '@/lib/mock-data';
-import { useToast } from '@/components/providers/ToastProvider';
+import { allWorkOrders } from '@/lib/dataset';
+import { maintenanceApi } from '@/api/work-orders';
+import { useMutate } from '@/api/mutate';
 import { PageHeader, KpiCard, Avatar, Badge } from '@/components/ui/primitives';
 import { Dropdown, MenuItem } from '@/components/ui/Dropdown';
 import { cn } from '@/lib/utils';
-import type { WorkOrder, WorkOrderPriority } from '@/types/asset';
+import type { WorkOrder, WorkOrderPriority } from '@access-genie/shared';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Static config (module scope → stable identity)
@@ -40,29 +41,43 @@ const isOpen = (w: WorkOrder) => w.status !== 'Completed';
 // ─────────────────────────────────────────────────────────────────────────────
 
 export default function SchedulingPage() {
-  const { toast } = useToast();
+  const { run } = useMutate();
 
-  // Copy mock data into state so in-session reassignment works.
+  // Seeded from the dataset. Reassignment updates this copy immediately and
+  // persists behind it, so dragging through a morning's queue stays responsive.
   const [workOrders, setWorkOrders] = useState<WorkOrder[]>(() =>
-    mockWorkOrders.map((w) => ({ ...w })),
+    allWorkOrders.map((w) => ({ ...w })),
   );
 
   // Stable technician roster = distinct assignees from the ORIGINAL data (so a
   // column never disappears just because its last WO was reassigned away).
   const roster = useMemo<string[]>(() => {
     const set = new Set<string>();
-    for (const w of mockWorkOrders) {
+    for (const w of allWorkOrders) {
       if (w.assignedTo && w.assignedTo !== UNASSIGNED) set.add(w.assignedTo);
     }
     return [...set].sort((a, b) => a.localeCompare(b));
   }, []);
 
-  // ── Reassignment (mock) ──────────────────────────────────────────────────────
-  function assign(woId: string, tech: string) {
+  // ── Reassignment ────────────────────────────────────────────────────────────
+  // Assigning a new work order also moves it out of `New`: a job with a named
+  // technician is no longer unclaimed, and leaving the status behind is how the
+  // "unassigned" queue ends up disagreeing with the board.
+  async function assign(woId: string, tech: string) {
+    const previous = workOrders;
+    const status = workOrders.find((w) => w.id === woId)?.status;
+    const nextStatus = status === 'New' ? 'Assigned' : status;
+
     setWorkOrders((prev) =>
-      prev.map((w) => (w.id === woId ? { ...w, assignedTo: tech, status: w.status === 'New' ? 'Assigned' : w.status } : w)),
+      prev.map((w) => (w.id === woId ? { ...w, assignedTo: tech, status: nextStatus ?? w.status } : w)),
     );
-    toast({ title: 'Work order assigned', description: `${woId} → ${tech}`, tone: 'success' });
+
+    await run(maintenanceApi.update(woId, { assignedTo: tech, status: nextStatus }), {
+      success: 'Work order assigned',
+      successDetail: `${woId} → ${tech}`,
+      describe: 'assign that work order',
+      rollback: () => setWorkOrders(previous),
+    });
   }
 
   // ── Derived data ─────────────────────────────────────────────────────────────
@@ -182,7 +197,7 @@ export default function SchedulingPage() {
                               <MenuItem
                                 key={tech}
                                 onClick={() => {
-                                  assign(w.id, tech);
+                                  void assign(w.id, tech);
                                   close();
                                 }}
                               >

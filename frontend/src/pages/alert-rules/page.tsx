@@ -1,32 +1,37 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { mockAlertRules } from '@/lib/mock-data';
-import type { AlertRule } from '@/types/asset';
+import { allAlertRules } from '@/lib/dataset';
+import type { AlertRule } from '@access-genie/shared';
 import { PageHeader, Badge, KpiCard, EmptyState } from '@/components/ui/primitives';
 import { Button } from '@/components/ui/Button';
-import { useToast } from '@/components/providers/ToastProvider';
 import { cn } from '@/lib/utils';
+import { alertsApi } from '@/api/alerts';
+import { useMutate } from '@/api/mutate';
 
 type Severity = AlertRule['severity'];
 type Tone = 'slate' | 'primary' | 'emerald' | 'amber' | 'red';
 const severityTone: Record<Severity, Tone> = { Critical: 'red', Warning: 'amber', Info: 'primary' };
 
 export default function AlertRulesPage() {
-  const { toast } = useToast();
-  const [rules, setRules] = useState<AlertRule[]>(mockAlertRules);
+  const { run } = useMutate();
+  const [rules, setRules] = useState<AlertRule[]>(allAlertRules);
 
   const enabledCount = rules.filter((r) => r.enabled).length;
   const triggered = rules.reduce((sum, r) => sum + r.triggered24h, 0);
 
   function toggle(id: string) {
-    setRules((prev) =>
-      prev.map((r) => {
-        if (r.id !== id) return r;
-        const next = !r.enabled;
-        toast({ title: next ? 'Rule enabled' : 'Rule disabled', description: r.name, tone: next ? 'success' : 'info' });
-        return { ...r, enabled: next };
-      }),
-    );
+    const rule = rules.find((r) => r.id === id);
+    if (!rule) return;
+    const next = !rule.enabled;
+
+    setRules((prev) => prev.map((r) => (r.id === id ? { ...r, enabled: next } : r)));
+
+    void run(alertsApi.toggleRule(id, next), {
+      success: next ? 'Rule enabled' : 'Rule disabled',
+      successDetail: rule.name,
+      describe: `${next ? 'enable' : 'disable'} that rule`,
+      rollback: () => setRules((prev) => prev.map((r) => (r.id === id ? { ...r, enabled: !next } : r))),
+    });
   }
 
   return (

@@ -1,6 +1,6 @@
 import { Link, useParams } from 'react-router-dom';
-import { getCustodyForAsset, getAssetById } from '@/lib/mock-data';
-import type { CustodyAction } from '@/types/asset';
+import { getCustodyForAsset, getAssetById } from '@/lib/dataset';
+import type { CustodyAction } from '@access-genie/shared';
 import { PageHeader, EmptyState, Badge } from '@/components/ui/primitives';
 import { Button } from '@/components/ui/Button';
 import { relTime } from '@/lib/utils';

@@ -1,6 +1,6 @@
 import { Link, useParams } from 'react-router-dom';
-import { getPart, getWarehouse, getSupplier } from '@/lib/mock-data';
-import type { AbcClass } from '@/types/asset';
+import { getPart, getWarehouse, getSupplier } from '@/lib/dataset';
+import type { AbcClass } from '@access-genie/shared';
 import { PageHeader, Badge, EmptyState } from '@/components/ui/primitives';
 import { Button } from '@/components/ui/Button';
 import { useToast } from '@/components/providers/ToastProvider';

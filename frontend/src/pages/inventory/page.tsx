@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { mockParts, getWarehouse } from '@/lib/mock-data';
-import type { Part, AbcClass } from '@/types/asset';
+import { allParts, getWarehouse } from '@/lib/dataset';
+import type { Part, AbcClass } from '@access-genie/shared';
 import { PageHeader, Badge, KpiCard, EmptyState } from '@/components/ui/primitives';
 import { Button } from '@/components/ui/Button';
 import { useToast } from '@/components/providers/ToastProvider';
@@ -22,14 +22,14 @@ export default function InventoryPage() {
   const [belowOnly, setBelowOnly] = useState(false);
 
   // KPIs (whole catalog, not filtered view)
-  const totalSkus = mockParts.length;
-  const totalValue = mockParts.reduce((sum, p) => sum + p.onHand * p.unitCost, 0);
-  const belowReorder = mockParts.filter((p) => p.onHand <= p.reorderPoint).length;
-  const aClass = mockParts.filter((p) => p.abcClass === 'A').length;
+  const totalSkus = allParts.length;
+  const totalValue = allParts.reduce((sum, p) => sum + p.onHand * p.unitCost, 0);
+  const belowReorder = allParts.filter((p) => p.onHand <= p.reorderPoint).length;
+  const aClass = allParts.filter((p) => p.abcClass === 'A').length;
 
   const visible = useMemo<Part[]>(() => {
     const q = query.trim().toLowerCase();
-    return mockParts.filter((p) => {
+    return allParts.filter((p) => {
       if (abc !== 'All' && p.abcClass !== abc) return false;
       if (belowOnly && p.onHand > p.reorderPoint) return false;
       if (q && !(`${p.sku} ${p.name} ${p.category}`.toLowerCase().includes(q))) return false;
@@ -38,7 +38,7 @@ export default function InventoryPage() {
   }, [query, abc, belowOnly]);
 
   const countForAbc = (f: AbcFilter): number =>
-    f === 'All' ? totalSkus : mockParts.filter((p) => p.abcClass === f).length;
+    f === 'All' ? totalSkus : allParts.filter((p) => p.abcClass === f).length;
 
   const th = 'px-4 py-3 text-left font-semibold uppercase tracking-wider text-[11px] text-slate-500';
   const td = 'px-4 py-3.5';

@@ -1,0 +1,65 @@
+[
+  {
+    "id": "CC-01",
+    "location": "Hyderabad Central Warehouse · Main Warehouse",
+    "status": "In Progress",
+    "counted": 842,
+    "expected": 1180,
+    "date": "2026-07-23T09:00:00.000Z",
+    "assignedTo": "Warehouse Team"
+  },
+  {
+    "id": "CC-02",
+    "location": "Bengaluru HQ · IT Storeroom",
+    "status": "Reconciled",
+    "counted": 486,
+    "expected": 486,
+    "date": "2026-07-19T09:00:00.000Z",
+    "assignedTo": "Sneha Iyer"
+  },
+  {
+    "id": "CC-03",
+    "location": "Hyderabad Central Warehouse · Secure Cage",
+    "status": "Variance",
+    "counted": 208,
+    "expected": 210,
+    "date": "2026-07-22T09:00:00.000Z",
+    "assignedTo": "Tarun Fernandes"
+  },
+  {
+    "id": "CC-04",
+    "location": "Chennai Data Center · Server Room Alpha",
+    "status": "Scheduled",
+    "counted": 0,
+    "expected": 640,
+    "date": "2026-07-26T09:00:00.000Z",
+    "assignedTo": "IT Ops Team"
+  },
+  {
+    "id": "CC-05",
+    "location": "Hyderabad Central Warehouse · Loading Dock",
+    "status": "Reconciled",
+    "counted": 340,
+    "expected": 340,
+    "date": "2026-07-14T09:00:00.000Z",
+    "assignedTo": "Deepak Nair"
+  },
+  {
+    "id": "CC-06",
+    "location": "Bengaluru HQ · Floor 3",
+    "status": "Variance",
+    "counted": 1296,
+    "expected": 1310,
+    "date": "2026-07-11T09:00:00.000Z",
+    "assignedTo": "Sneha Iyer"
+  },
+  {
+    "id": "CC-07",
+    "location": "Chennai Data Center · Server Room Beta",
+    "status": "Scheduled",
+    "counted": 0,
+    "expected": 410,
+    "date": "2026-08-02T09:00:00.000Z",
+    "assignedTo": "Storage Team"
+  }
+]

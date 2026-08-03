@@ -1,72 +1,11 @@
+import { allEscalationPolicies, allOnCallShifts } from '@/lib/dataset';
 import { PageHeader, Badge } from '@/components/ui/primitives';
 import { Button } from '@/components/ui/Button';
 import { useToast } from '@/components/providers/ToastProvider';
 import { Avatar } from '@/components/ui/primitives';
 
-interface Tier {
-  tier: number;
-  notify: string;
-  afterMin: number;
-  channels: string[];
-}
-interface Policy {
-  id: string;
-  name: string;
-  scope: string;
-  tone: 'red' | 'amber' | 'primary';
-  severity: string;
-  tiers: Tier[];
-}
-
-const POLICIES: Policy[] = [
-  {
-    id: 'ESC-01',
-    name: 'Critical Infrastructure',
-    scope: 'Servers, HVAC, Power',
-    tone: 'red',
-    severity: 'Critical',
-    tiers: [
-      { tier: 1, notify: 'Facilities On-call', afterMin: 0, channels: ['Push', 'SMS'] },
-      { tier: 2, notify: 'IT Ops Lead (Arjun Menon)', afterMin: 10, channels: ['Call', 'Email'] },
-      { tier: 3, notify: 'Site Director (Sneha Iyer)', afterMin: 30, channels: ['Call'] },
-    ],
-  },
-  {
-    id: 'ESC-02',
-    name: 'Data Center Core',
-    scope: 'Servers, storage & network core',
-    tone: 'amber',
-    severity: 'Critical',
-    tiers: [
-      { tier: 1, notify: 'Data Center Technician', afterMin: 0, channels: ['Push', 'In-app'] },
-      { tier: 2, notify: 'Infrastructure Engineering', afterMin: 15, channels: ['SMS', 'Email'] },
-    ],
-  },
-  {
-    id: 'ESC-03',
-    name: 'Tracking & Geofence',
-    scope: 'RTLS, custody exceptions',
-    tone: 'primary',
-    severity: 'Warning',
-    tiers: [
-      { tier: 1, notify: 'Security Officer', afterMin: 0, channels: ['In-app'] },
-      { tier: 2, notify: 'Operations Manager', afterMin: 20, channels: ['Email'] },
-    ],
-  },
-];
-
-interface Shift {
-  day: string;
-  primary: string;
-  secondary: string;
-  window: string;
-}
-const ROTATION: Shift[] = [
-  { day: 'Mon–Tue', primary: 'Arjun Menon', secondary: 'Deepak Nair', window: '08:00 – 20:00' },
-  { day: 'Wed–Thu', primary: 'Sneha Iyer', secondary: 'Arjun Menon', window: '08:00 – 20:00' },
-  { day: 'Fri–Sun', primary: 'Deepak Nair', secondary: 'Sneha Iyer', window: '20:00 – 08:00' },
-];
-
+const POLICIES = allEscalationPolicies;
+const ROTATION = allOnCallShifts;
 const initials = (name: string) =>
   name.split(' ').map((p) => p[0]).slice(0, 2).join('').toUpperCase();
 
@@ -94,7 +33,7 @@ export default function EscalationsPage() {
                 <div className="font-bold font-heading text-slate-900">{p.name}</div>
                 <div className="text-xs text-slate-500 mt-0.5">{p.scope}</div>
               </div>
-              <Badge tone={p.tone}>{p.severity}</Badge>
+              <Badge tone={p.tone as never}>{p.severity}</Badge>
             </div>
 
             <ol className="space-y-3">

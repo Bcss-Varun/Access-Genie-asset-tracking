@@ -1,0 +1,68 @@
+[
+  {
+    "id": "INC-4401",
+    "title": "Suspected theft — Field Ops iPad",
+    "severity": "Sev1",
+    "state": "Investigating",
+    "alertIds": [
+      "TRK-ALT-001",
+      "TRK-ALT-004"
+    ],
+    "openedAt": "2026-07-21T05:00:00.000Z",
+    "commander": "Tarun Fernandes",
+    "facility": "Bengaluru HQ",
+    "assetsAffected": 1,
+    "valueAtRiskInr": 115000,
+    "summary": "An asset left the building without a check-out and has not been detected since. Custodian is unreachable and CCTV review is in progress.",
+    "nextAction": "Complete CCTV review and file a police report if unrecovered by 18:00 IST"
+  },
+  {
+    "id": "INC-4402",
+    "title": "Secure Cage cannot verify its contents",
+    "severity": "Sev2",
+    "state": "Contained",
+    "alertIds": [
+      "TRK-ALT-003",
+      "TRK-ALT-016"
+    ],
+    "openedAt": "2026-07-22T19:00:00.000Z",
+    "commander": "Deepak Nair",
+    "facility": "Hyderabad Central Warehouse",
+    "assetsAffected": 210,
+    "valueAtRiskInr": 8400000,
+    "summary": "The cage reader lost power and uplink. 210 assets are unverifiable and one unit is already flagged missing. Physical access has been locked down pending restoration.",
+    "nextAction": "Technician on site at 14:00 IST — restore power, then run a full re-count"
+  },
+  {
+    "id": "INC-4403",
+    "title": "Bengaluru Floor 3 precision degradation",
+    "severity": "Sev3",
+    "state": "Open",
+    "alertIds": [
+      "TRK-ALT-007",
+      "TRK-ALT-013"
+    ],
+    "openedAt": "2026-07-23T00:00:00.000Z",
+    "commander": "Deepak Nair",
+    "facility": "Bengaluru HQ",
+    "assetsAffected": 1310,
+    "valueAtRiskInr": 0,
+    "summary": "Anchor degradation plus a corridor blind spot have dropped Floor 3 from precise to room-level positioning. No assets lost, but journeys show gaps.",
+    "nextAction": "Bundle the firmware upgrade with the proposed corridor reader"
+  },
+  {
+    "id": "INC-4404",
+    "title": "Q1 stock reconciliation variance",
+    "severity": "Sev3",
+    "state": "Resolved",
+    "alertIds": [],
+    "openedAt": "2026-07-11T09:00:00.000Z",
+    "resolvedAt": "2026-07-14T09:00:00.000Z",
+    "commander": "Sneha Iyer",
+    "facility": "Bengaluru HQ",
+    "assetsAffected": 14,
+    "valueAtRiskInr": 1420000,
+    "summary": "14 endpoints missing from a desk spot-check were confirmed with remote-working staff.",
+    "nextAction": "Closed — home-zone policy updated for remote allocations"
+  }
+]

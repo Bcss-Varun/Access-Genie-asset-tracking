@@ -117,3 +117,18 @@ export interface Persona {
   title: string;
   initials: string;
 }
+
+/**
+ * A live sign-in.
+ *
+ * Backed by the refresh tokens actually issued to this user — so revoking one
+ * genuinely ends that session rather than hiding a row.
+ */
+export interface UserSession {
+  id: string;
+  device: string;
+  location: string;
+  lastActive: string;
+  /** The session making this request. It cannot be revoked from this list. */
+  current: boolean;
+}

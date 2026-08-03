@@ -1,0 +1,82 @@
+[
+  {
+    "id": "INT-01",
+    "name": "Microsoft Entra ID (SSO/SCIM)",
+    "category": "Identity",
+    "status": "Connected",
+    "lastSync": "2026-07-23T08:48:00.000Z",
+    "description": "SAML sign-in and SCIM user provisioning for all 84 seats."
+  },
+  {
+    "id": "INT-02",
+    "name": "ServiceNow ITSM",
+    "category": "Service Desk",
+    "status": "Connected",
+    "lastSync": "2026-07-23T08:30:00.000Z",
+    "description": "Two-way sync of work orders and incident tickets."
+  },
+  {
+    "id": "INT-03",
+    "name": "SAP S/4HANA (Asset Accounting)",
+    "category": "ERP / Finance",
+    "status": "Connected",
+    "lastSync": "2026-07-23T05:00:00.000Z",
+    "description": "Pushes capitalisation, depreciation and disposal postings in INR."
+  },
+  {
+    "id": "INT-04",
+    "name": "Tally Prime",
+    "category": "ERP / Finance",
+    "status": "Connected",
+    "lastSync": "2026-07-23T01:00:00.000Z",
+    "description": "GST-compliant purchase and invoice sync for the India entity."
+  },
+  {
+    "id": "INT-05",
+    "name": "Microsoft Intune MDM",
+    "category": "Endpoint",
+    "status": "Connected",
+    "lastSync": "2026-07-23T08:42:00.000Z",
+    "description": "Device posture, remote lock and wipe for enrolled endpoints."
+  },
+  {
+    "id": "INT-06",
+    "name": "Zebra Savanna (RFID)",
+    "category": "Tracking",
+    "status": "Connected",
+    "lastSync": "2026-07-23T08:58:00.000Z",
+    "description": "Streams RFID read events from FX9600 portals into the asset graph."
+  },
+  {
+    "id": "INT-07",
+    "name": "Slack",
+    "category": "Notifications",
+    "status": "Connected",
+    "lastSync": "2026-07-23T08:54:00.000Z",
+    "description": "Routes critical alerts to #it-ops and #security channels."
+  },
+  {
+    "id": "INT-08",
+    "name": "Power BI",
+    "category": "Analytics",
+    "status": "Connected",
+    "lastSync": "2026-07-22T21:00:00.000Z",
+    "description": "Scheduled dataset refresh for executive and finance dashboards."
+  },
+  {
+    "id": "INT-09",
+    "name": "CERT-In Log Archive (S3)",
+    "category": "Compliance",
+    "status": "Error",
+    "lastSync": "2026-07-21T09:00:00.000Z",
+    "description": "180-day immutable log retention — last export failed on credential expiry."
+  },
+  {
+    "id": "INT-10",
+    "name": "Freshservice",
+    "category": "Service Desk",
+    "status": "Disconnected",
+    "lastSync": "2026-07-02T09:00:00.000Z",
+    "description": "Legacy service-desk connector, retired after the ServiceNow migration."
+  }
+]

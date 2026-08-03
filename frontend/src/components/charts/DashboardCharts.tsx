@@ -4,7 +4,7 @@
 // ─────────────────────────────────────────────────────────────────────────────
 
 import { useMemo, useState } from 'react';
-import { utilizationDowntimeSeries, categoryBreakdown } from '@/lib/mock-data';
+import { utilizationDowntimeSeries, categoryBreakdown } from '@/lib/dataset';
 import { formatMoney } from '@/lib/utils';
 
 // Compact INR (lakh/crore) formatting: ₹28.9Cr / ₹74L / ₹25,000.

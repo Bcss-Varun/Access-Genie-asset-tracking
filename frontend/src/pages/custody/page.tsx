@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { mockCustody } from '@/lib/mock-data';
-import type { CustodyAction } from '@/types/asset';
+import { allCustody } from '@/lib/dataset';
+import type { CustodyAction } from '@access-genie/shared';
 import { PageHeader, KpiCard, Badge, EmptyState } from '@/components/ui/primitives';
 import { cn, relTime } from '@/lib/utils';
 
@@ -16,7 +16,7 @@ const isException = (holder: string, by: string) =>
 export default function CustodyPage() {
   const [filter, setFilter] = useState<'All' | CustodyAction>('All');
 
-  const records = [...mockCustody].sort((a, b) => Date.parse(b.at) - Date.parse(a.at));
+  const records = [...allCustody].sort((a, b) => Date.parse(b.at) - Date.parse(a.at));
   const filtered = filter === 'All' ? records : records.filter((r) => r.action === filter);
 
   const checkedOut = records.filter((r) => r.action === 'Checked Out').length;

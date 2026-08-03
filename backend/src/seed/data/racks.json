@@ -1,0 +1,1716 @@
+[
+  {
+    "id": "RACK-A12",
+    "name": "Rack A12",
+    "roomId": "ROOM-03",
+    "status": "Verified",
+    "heightU": 42,
+    "slots": [
+      {
+        "u": 42,
+        "state": "Empty"
+      },
+      {
+        "u": 41,
+        "state": "Empty"
+      },
+      {
+        "u": 40,
+        "state": "Present",
+        "assetId": "AST-2340",
+        "assetName": "Aruba CX 6300"
+      },
+      {
+        "u": 39,
+        "state": "Empty"
+      },
+      {
+        "u": 38,
+        "state": "Present",
+        "assetId": "AST-2338",
+        "assetName": "Dell Latitude 5440"
+      },
+      {
+        "u": 37,
+        "state": "Empty"
+      },
+      {
+        "u": 36,
+        "state": "Empty"
+      },
+      {
+        "u": 35,
+        "state": "Present",
+        "assetId": "AST-2335",
+        "assetName": "HPE ProLiant DL380"
+      },
+      {
+        "u": 34,
+        "state": "Present",
+        "assetId": "AST-2334",
+        "assetName": "Aruba CX 6300"
+      },
+      {
+        "u": 33,
+        "state": "Empty"
+      },
+      {
+        "u": 32,
+        "state": "Empty"
+      },
+      {
+        "u": 31,
+        "state": "Empty"
+      },
+      {
+        "u": 30,
+        "state": "Present",
+        "assetId": "AST-1002",
+        "assetName": "Cisco Catalyst 9500 Switch",
+        "tagId": "RFID-E28011606030"
+      },
+      {
+        "u": 29,
+        "state": "Empty"
+      },
+      {
+        "u": 28,
+        "state": "Empty"
+      },
+      {
+        "u": 27,
+        "state": "Empty"
+      },
+      {
+        "u": 26,
+        "state": "Empty"
+      },
+      {
+        "u": 25,
+        "state": "Empty"
+      },
+      {
+        "u": 24,
+        "state": "Empty"
+      },
+      {
+        "u": 23,
+        "state": "Empty"
+      },
+      {
+        "u": 22,
+        "state": "Empty"
+      },
+      {
+        "u": 21,
+        "state": "Present",
+        "assetId": "AST-2321",
+        "assetName": "Dell Latitude 5440"
+      },
+      {
+        "u": 20,
+        "state": "Empty"
+      },
+      {
+        "u": 19,
+        "state": "Empty"
+      },
+      {
+        "u": 18,
+        "state": "Empty"
+      },
+      {
+        "u": 17,
+        "state": "Present",
+        "assetId": "AST-2317",
+        "assetName": "Lenovo ThinkPad T14s"
+      },
+      {
+        "u": 16,
+        "state": "Empty"
+      },
+      {
+        "u": 15,
+        "state": "Empty"
+      },
+      {
+        "u": 14,
+        "state": "Present",
+        "assetId": "AST-2314",
+        "assetName": "Lenovo ThinkPad T14s"
+      },
+      {
+        "u": 13,
+        "state": "Present",
+        "assetId": "AST-2313",
+        "assetName": "Dell Latitude 5440"
+      },
+      {
+        "u": 12,
+        "state": "Empty"
+      },
+      {
+        "u": 11,
+        "state": "Present",
+        "assetId": "AST-2311",
+        "assetName": "Aruba AP-635"
+      },
+      {
+        "u": 10,
+        "state": "Empty"
+      },
+      {
+        "u": 9,
+        "state": "Empty"
+      },
+      {
+        "u": 8,
+        "state": "Empty"
+      },
+      {
+        "u": 7,
+        "state": "Empty"
+      },
+      {
+        "u": 6,
+        "state": "Empty"
+      },
+      {
+        "u": 5,
+        "state": "Present",
+        "assetId": "AST-2305",
+        "assetName": "Dell OptiPlex 7010"
+      },
+      {
+        "u": 4,
+        "state": "Present",
+        "assetId": "AST-2304",
+        "assetName": "HPE ProLiant DL380"
+      },
+      {
+        "u": 3,
+        "state": "Empty"
+      },
+      {
+        "u": 2,
+        "state": "Empty"
+      },
+      {
+        "u": 1,
+        "state": "Present",
+        "assetId": "AST-2301",
+        "assetName": "Cisco Nexus 9336"
+      }
+    ],
+    "lastVerified": "2026-07-23T06:14:00.000Z",
+    "loadPct": 40,
+    "inletTempC": 24.3
+  },
+  {
+    "id": "RACK-A42",
+    "name": "Rack A42",
+    "roomId": "ROOM-03",
+    "status": "Variance",
+    "heightU": 42,
+    "slots": [
+      {
+        "u": 42,
+        "state": "Present",
+        "assetId": "AST-2342",
+        "assetName": "Dell PowerEdge R660"
+      },
+      {
+        "u": 41,
+        "state": "Present",
+        "assetId": "AST-2341",
+        "assetName": "Cisco Catalyst 9300"
+      },
+      {
+        "u": 40,
+        "state": "Present",
+        "assetId": "AST-2340",
+        "assetName": "Fortinet FortiSwitch 448E"
+      },
+      {
+        "u": 39,
+        "state": "Missing",
+        "assetId": "AST-2339",
+        "assetName": "Lenovo ThinkSystem SR650"
+      },
+      {
+        "u": 38,
+        "state": "Empty"
+      },
+      {
+        "u": 37,
+        "state": "Empty"
+      },
+      {
+        "u": 36,
+        "state": "Empty"
+      },
+      {
+        "u": 35,
+        "state": "Empty"
+      },
+      {
+        "u": 34,
+        "state": "Present",
+        "assetId": "AST-2334",
+        "assetName": "Dell OptiPlex 7010"
+      },
+      {
+        "u": 33,
+        "state": "Missing",
+        "assetId": "AST-2333",
+        "assetName": "Aruba AP-635"
+      },
+      {
+        "u": 32,
+        "state": "Present",
+        "assetId": "AST-2332",
+        "assetName": "Aruba CX 6300"
+      },
+      {
+        "u": 31,
+        "state": "Empty"
+      },
+      {
+        "u": 30,
+        "state": "Empty"
+      },
+      {
+        "u": 29,
+        "state": "Present",
+        "assetId": "AST-2329",
+        "assetName": "Aruba CX 6300"
+      },
+      {
+        "u": 28,
+        "state": "Empty"
+      },
+      {
+        "u": 27,
+        "state": "Empty"
+      },
+      {
+        "u": 26,
+        "state": "Empty"
+      },
+      {
+        "u": 25,
+        "state": "Present",
+        "assetId": "AST-2325",
+        "assetName": "Aruba AP-635"
+      },
+      {
+        "u": 24,
+        "state": "Empty"
+      },
+      {
+        "u": 23,
+        "state": "Empty"
+      },
+      {
+        "u": 22,
+        "state": "Present",
+        "assetId": "AST-2322",
+        "assetName": "Dell PowerEdge R660"
+      },
+      {
+        "u": 21,
+        "state": "Present",
+        "assetId": "AST-2321",
+        "assetName": "Aruba AP-635"
+      },
+      {
+        "u": 20,
+        "state": "Present",
+        "assetId": "AST-2320",
+        "assetName": "Dell OptiPlex 7010"
+      },
+      {
+        "u": 19,
+        "state": "Empty"
+      },
+      {
+        "u": 18,
+        "state": "Present",
+        "assetId": "AST-1001",
+        "assetName": "Dell PowerEdge R740 Server",
+        "tagId": "RFID-E28011606018"
+      },
+      {
+        "u": 17,
+        "state": "Empty"
+      },
+      {
+        "u": 16,
+        "state": "Present",
+        "assetId": "AST-2316",
+        "assetName": "Dell PowerEdge R660"
+      },
+      {
+        "u": 15,
+        "state": "Empty"
+      },
+      {
+        "u": 14,
+        "state": "Present",
+        "assetId": "AST-2314",
+        "assetName": "Dell PowerEdge R660"
+      },
+      {
+        "u": 13,
+        "state": "Empty"
+      },
+      {
+        "u": 12,
+        "state": "Empty"
+      },
+      {
+        "u": 11,
+        "state": "Empty"
+      },
+      {
+        "u": 10,
+        "state": "Present",
+        "assetId": "AST-2310",
+        "assetName": "Lenovo ThinkPad T14s"
+      },
+      {
+        "u": 9,
+        "state": "Empty"
+      },
+      {
+        "u": 8,
+        "state": "Present",
+        "assetId": "AST-2308",
+        "assetName": "Aruba CX 6300"
+      },
+      {
+        "u": 7,
+        "state": "Empty"
+      },
+      {
+        "u": 6,
+        "state": "Empty"
+      },
+      {
+        "u": 5,
+        "state": "Empty"
+      },
+      {
+        "u": 4,
+        "state": "Empty"
+      },
+      {
+        "u": 3,
+        "state": "Present",
+        "assetId": "AST-2303",
+        "assetName": "Dell Latitude 5440"
+      },
+      {
+        "u": 2,
+        "state": "Empty"
+      },
+      {
+        "u": 1,
+        "state": "Present",
+        "assetId": "AST-2301",
+        "assetName": "Lenovo ThinkSystem SR650"
+      }
+    ],
+    "lastVerified": "2026-07-23T07:57:00.000Z",
+    "loadPct": 52,
+    "inletTempC": 27.4
+  },
+  {
+    "id": "RACK-A01",
+    "name": "Rack A01",
+    "roomId": "ROOM-03",
+    "status": "Verified",
+    "heightU": 42,
+    "slots": [
+      {
+        "u": 42,
+        "state": "Empty"
+      },
+      {
+        "u": 41,
+        "state": "Empty"
+      },
+      {
+        "u": 40,
+        "state": "Empty"
+      },
+      {
+        "u": 39,
+        "state": "Empty"
+      },
+      {
+        "u": 38,
+        "state": "Present",
+        "assetId": "AST-2338",
+        "assetName": "Cisco Nexus 9336"
+      },
+      {
+        "u": 37,
+        "state": "Empty"
+      },
+      {
+        "u": 36,
+        "state": "Empty"
+      },
+      {
+        "u": 35,
+        "state": "Present",
+        "assetId": "AST-2335",
+        "assetName": "Lenovo ThinkSystem SR650"
+      },
+      {
+        "u": 34,
+        "state": "Empty"
+      },
+      {
+        "u": 33,
+        "state": "Empty"
+      },
+      {
+        "u": 32,
+        "state": "Empty"
+      },
+      {
+        "u": 31,
+        "state": "Empty"
+      },
+      {
+        "u": 30,
+        "state": "Empty"
+      },
+      {
+        "u": 29,
+        "state": "Present",
+        "assetId": "AST-2329",
+        "assetName": "Aruba CX 6300"
+      },
+      {
+        "u": 28,
+        "state": "Empty"
+      },
+      {
+        "u": 27,
+        "state": "Empty"
+      },
+      {
+        "u": 26,
+        "state": "Empty"
+      },
+      {
+        "u": 25,
+        "state": "Empty"
+      },
+      {
+        "u": 24,
+        "state": "Empty"
+      },
+      {
+        "u": 23,
+        "state": "Present",
+        "assetId": "AST-2323",
+        "assetName": "Dell Latitude 5440"
+      },
+      {
+        "u": 22,
+        "state": "Empty"
+      },
+      {
+        "u": 21,
+        "state": "Empty"
+      },
+      {
+        "u": 20,
+        "state": "Empty"
+      },
+      {
+        "u": 19,
+        "state": "Empty"
+      },
+      {
+        "u": 18,
+        "state": "Empty"
+      },
+      {
+        "u": 17,
+        "state": "Empty"
+      },
+      {
+        "u": 16,
+        "state": "Present",
+        "assetId": "AST-2316",
+        "assetName": "Aruba AP-635"
+      },
+      {
+        "u": 15,
+        "state": "Present",
+        "assetId": "AST-2315",
+        "assetName": "Cisco Nexus 9336"
+      },
+      {
+        "u": 14,
+        "state": "Empty"
+      },
+      {
+        "u": 13,
+        "state": "Empty"
+      },
+      {
+        "u": 12,
+        "state": "Present",
+        "assetId": "AST-2312",
+        "assetName": "Fortinet FortiSwitch 448E"
+      },
+      {
+        "u": 11,
+        "state": "Empty"
+      },
+      {
+        "u": 10,
+        "state": "Empty"
+      },
+      {
+        "u": 9,
+        "state": "Empty"
+      },
+      {
+        "u": 8,
+        "state": "Present",
+        "assetId": "AST-1008",
+        "assetName": "Fortinet FortiGate 100F Firewall",
+        "tagId": "RFID-E2801160608"
+      },
+      {
+        "u": 7,
+        "state": "Empty"
+      },
+      {
+        "u": 6,
+        "state": "Empty"
+      },
+      {
+        "u": 5,
+        "state": "Empty"
+      },
+      {
+        "u": 4,
+        "state": "Empty"
+      },
+      {
+        "u": 3,
+        "state": "Present",
+        "assetId": "AST-2303",
+        "assetName": "Aruba CX 6300"
+      },
+      {
+        "u": 2,
+        "state": "Present",
+        "assetId": "AST-2302",
+        "assetName": "Dell PowerEdge R660"
+      },
+      {
+        "u": 1,
+        "state": "Empty"
+      }
+    ],
+    "lastVerified": "2026-07-23T04:27:00.000Z",
+    "loadPct": 47,
+    "inletTempC": 22.9
+  },
+  {
+    "id": "RACK-B08",
+    "name": "Rack B08",
+    "roomId": "ROOM-04",
+    "status": "Variance",
+    "heightU": 42,
+    "slots": [
+      {
+        "u": 42,
+        "state": "Empty"
+      },
+      {
+        "u": 41,
+        "state": "Empty"
+      },
+      {
+        "u": 40,
+        "state": "Empty"
+      },
+      {
+        "u": 39,
+        "state": "Empty"
+      },
+      {
+        "u": 38,
+        "state": "Empty"
+      },
+      {
+        "u": 37,
+        "state": "Empty"
+      },
+      {
+        "u": 36,
+        "state": "Missing",
+        "assetId": "AST-2336",
+        "assetName": "Juniper EX4400"
+      },
+      {
+        "u": 35,
+        "state": "Empty"
+      },
+      {
+        "u": 34,
+        "state": "Empty"
+      },
+      {
+        "u": 33,
+        "state": "Missing",
+        "assetId": "AST-2333",
+        "assetName": "Fortinet FortiSwitch 448E"
+      },
+      {
+        "u": 32,
+        "state": "Empty"
+      },
+      {
+        "u": 31,
+        "state": "Empty"
+      },
+      {
+        "u": 30,
+        "state": "Unexpected",
+        "tagId": "RFID-UNKNOWN-30"
+      },
+      {
+        "u": 29,
+        "state": "Present",
+        "assetId": "AST-2329",
+        "assetName": "Dell OptiPlex 7010"
+      },
+      {
+        "u": 28,
+        "state": "Present",
+        "assetId": "AST-2328",
+        "assetName": "Lenovo ThinkPad T14s"
+      },
+      {
+        "u": 27,
+        "state": "Empty"
+      },
+      {
+        "u": 26,
+        "state": "Present",
+        "assetId": "AST-2326",
+        "assetName": "Juniper EX4400"
+      },
+      {
+        "u": 25,
+        "state": "Missing",
+        "assetId": "AST-2325",
+        "assetName": "Lenovo ThinkSystem SR650"
+      },
+      {
+        "u": 24,
+        "state": "Present",
+        "assetId": "AST-2324",
+        "assetName": "Juniper EX4400"
+      },
+      {
+        "u": 23,
+        "state": "Present",
+        "assetId": "AST-2323",
+        "assetName": "Dell Latitude 5440"
+      },
+      {
+        "u": 22,
+        "state": "Present",
+        "assetId": "AST-1009",
+        "assetName": "Synology RS2418+ NAS",
+        "tagId": "RFID-E28011606022"
+      },
+      {
+        "u": 21,
+        "state": "Empty"
+      },
+      {
+        "u": 20,
+        "state": "Empty"
+      },
+      {
+        "u": 19,
+        "state": "Present",
+        "assetId": "AST-2319",
+        "assetName": "Aruba AP-635"
+      },
+      {
+        "u": 18,
+        "state": "Empty"
+      },
+      {
+        "u": 17,
+        "state": "Empty"
+      },
+      {
+        "u": 16,
+        "state": "Empty"
+      },
+      {
+        "u": 15,
+        "state": "Present",
+        "assetId": "AST-2315",
+        "assetName": "Juniper EX4400"
+      },
+      {
+        "u": 14,
+        "state": "Present",
+        "assetId": "AST-2314",
+        "assetName": "Lenovo ThinkSystem SR650"
+      },
+      {
+        "u": 13,
+        "state": "Empty"
+      },
+      {
+        "u": 12,
+        "state": "Present",
+        "assetId": "AST-2312",
+        "assetName": "Lenovo ThinkPad T14s"
+      },
+      {
+        "u": 11,
+        "state": "Empty"
+      },
+      {
+        "u": 10,
+        "state": "Empty"
+      },
+      {
+        "u": 9,
+        "state": "Present",
+        "assetId": "AST-2309",
+        "assetName": "Aruba AP-635"
+      },
+      {
+        "u": 8,
+        "state": "Present",
+        "assetId": "AST-2308",
+        "assetName": "Dell OptiPlex 7010"
+      },
+      {
+        "u": 7,
+        "state": "Present",
+        "assetId": "AST-2307",
+        "assetName": "Dell Latitude 5440"
+      },
+      {
+        "u": 6,
+        "state": "Present",
+        "assetId": "AST-2306",
+        "assetName": "Dell Latitude 5440"
+      },
+      {
+        "u": 5,
+        "state": "Unexpected",
+        "tagId": "RFID-UNKNOWN-05"
+      },
+      {
+        "u": 4,
+        "state": "Empty"
+      },
+      {
+        "u": 3,
+        "state": "Empty"
+      },
+      {
+        "u": 2,
+        "state": "Empty"
+      },
+      {
+        "u": 1,
+        "state": "Present",
+        "assetId": "AST-2301",
+        "assetName": "Cisco Catalyst 9300"
+      }
+    ],
+    "lastVerified": "2026-07-23T07:00:00.000Z",
+    "loadPct": 44,
+    "inletTempC": 27.4
+  },
+  {
+    "id": "RACK-B14",
+    "name": "Rack B14",
+    "roomId": "ROOM-04",
+    "status": "Verified",
+    "heightU": 42,
+    "slots": [
+      {
+        "u": 42,
+        "state": "Empty"
+      },
+      {
+        "u": 41,
+        "state": "Empty"
+      },
+      {
+        "u": 40,
+        "state": "Present",
+        "assetId": "AST-2340",
+        "assetName": "Juniper EX4400"
+      },
+      {
+        "u": 39,
+        "state": "Present",
+        "assetId": "AST-2339",
+        "assetName": "Juniper EX4400"
+      },
+      {
+        "u": 38,
+        "state": "Empty"
+      },
+      {
+        "u": 37,
+        "state": "Empty"
+      },
+      {
+        "u": 36,
+        "state": "Present",
+        "assetId": "AST-2336",
+        "assetName": "Dell PowerEdge R660"
+      },
+      {
+        "u": 35,
+        "state": "Empty"
+      },
+      {
+        "u": 34,
+        "state": "Present",
+        "assetId": "AST-2334",
+        "assetName": "Lenovo ThinkSystem SR650"
+      },
+      {
+        "u": 33,
+        "state": "Present",
+        "assetId": "AST-2333",
+        "assetName": "Juniper EX4400"
+      },
+      {
+        "u": 32,
+        "state": "Empty"
+      },
+      {
+        "u": 31,
+        "state": "Empty"
+      },
+      {
+        "u": 30,
+        "state": "Empty"
+      },
+      {
+        "u": 29,
+        "state": "Empty"
+      },
+      {
+        "u": 28,
+        "state": "Present",
+        "assetId": "AST-2328",
+        "assetName": "HPE ProLiant DL380"
+      },
+      {
+        "u": 27,
+        "state": "Present",
+        "assetId": "AST-2327",
+        "assetName": "Juniper EX4400"
+      },
+      {
+        "u": 26,
+        "state": "Empty"
+      },
+      {
+        "u": 25,
+        "state": "Empty"
+      },
+      {
+        "u": 24,
+        "state": "Empty"
+      },
+      {
+        "u": 23,
+        "state": "Present",
+        "assetId": "AST-2323",
+        "assetName": "Dell Latitude 5440"
+      },
+      {
+        "u": 22,
+        "state": "Empty"
+      },
+      {
+        "u": 21,
+        "state": "Empty"
+      },
+      {
+        "u": 20,
+        "state": "Empty"
+      },
+      {
+        "u": 19,
+        "state": "Present",
+        "assetId": "AST-2319",
+        "assetName": "Lenovo ThinkPad T14s"
+      },
+      {
+        "u": 18,
+        "state": "Present",
+        "assetId": "AST-2318",
+        "assetName": "Juniper EX4400"
+      },
+      {
+        "u": 17,
+        "state": "Empty"
+      },
+      {
+        "u": 16,
+        "state": "Present",
+        "assetId": "AST-2316",
+        "assetName": "Cisco Catalyst 9300"
+      },
+      {
+        "u": 15,
+        "state": "Present",
+        "assetId": "AST-2315",
+        "assetName": "Aruba AP-635"
+      },
+      {
+        "u": 14,
+        "state": "Empty"
+      },
+      {
+        "u": 13,
+        "state": "Empty"
+      },
+      {
+        "u": 12,
+        "state": "Present",
+        "assetId": "AST-2312",
+        "assetName": "Lenovo ThinkSystem SR650"
+      },
+      {
+        "u": 11,
+        "state": "Present",
+        "assetId": "AST-2311",
+        "assetName": "Cisco Nexus 9336"
+      },
+      {
+        "u": 10,
+        "state": "Empty"
+      },
+      {
+        "u": 9,
+        "state": "Present",
+        "assetId": "AST-2309",
+        "assetName": "Cisco Catalyst 9300"
+      },
+      {
+        "u": 8,
+        "state": "Present",
+        "assetId": "AST-2308",
+        "assetName": "Juniper EX4400"
+      },
+      {
+        "u": 7,
+        "state": "Empty"
+      },
+      {
+        "u": 6,
+        "state": "Empty"
+      },
+      {
+        "u": 5,
+        "state": "Empty"
+      },
+      {
+        "u": 4,
+        "state": "Empty"
+      },
+      {
+        "u": 3,
+        "state": "Present",
+        "assetId": "AST-2303",
+        "assetName": "Fortinet FortiSwitch 448E"
+      },
+      {
+        "u": 2,
+        "state": "Empty"
+      },
+      {
+        "u": 1,
+        "state": "Empty"
+      }
+    ],
+    "lastVerified": "2026-07-23T06:26:00.000Z",
+    "loadPct": 42,
+    "inletTempC": 27.5
+  },
+  {
+    "id": "RACK-C02",
+    "name": "Cage Rack C02",
+    "roomId": "ROOM-02",
+    "status": "Unverified",
+    "heightU": 42,
+    "slots": [
+      {
+        "u": 42,
+        "state": "Present",
+        "assetId": "AST-2342",
+        "assetName": "HPE ProLiant DL380"
+      },
+      {
+        "u": 41,
+        "state": "Empty"
+      },
+      {
+        "u": 40,
+        "state": "Present",
+        "assetId": "AST-2340",
+        "assetName": "Dell PowerEdge R660"
+      },
+      {
+        "u": 39,
+        "state": "Present",
+        "assetId": "AST-2339",
+        "assetName": "Fortinet FortiSwitch 448E"
+      },
+      {
+        "u": 38,
+        "state": "Present",
+        "assetId": "AST-2338",
+        "assetName": "Lenovo ThinkSystem SR650"
+      },
+      {
+        "u": 37,
+        "state": "Empty"
+      },
+      {
+        "u": 36,
+        "state": "Empty"
+      },
+      {
+        "u": 35,
+        "state": "Present",
+        "assetId": "AST-2335",
+        "assetName": "Cisco Nexus 9336"
+      },
+      {
+        "u": 34,
+        "state": "Present",
+        "assetId": "AST-2334",
+        "assetName": "Cisco Catalyst 9300"
+      },
+      {
+        "u": 33,
+        "state": "Empty"
+      },
+      {
+        "u": 32,
+        "state": "Present",
+        "assetId": "AST-2332",
+        "assetName": "Aruba AP-635"
+      },
+      {
+        "u": 31,
+        "state": "Present",
+        "assetId": "AST-2331",
+        "assetName": "Lenovo ThinkPad T14s"
+      },
+      {
+        "u": 30,
+        "state": "Empty"
+      },
+      {
+        "u": 29,
+        "state": "Empty"
+      },
+      {
+        "u": 28,
+        "state": "Empty"
+      },
+      {
+        "u": 27,
+        "state": "Empty"
+      },
+      {
+        "u": 26,
+        "state": "Empty"
+      },
+      {
+        "u": 25,
+        "state": "Present",
+        "assetId": "AST-2325",
+        "assetName": "Cisco Catalyst 9300"
+      },
+      {
+        "u": 24,
+        "state": "Present",
+        "assetId": "AST-2324",
+        "assetName": "Dell Latitude 5440"
+      },
+      {
+        "u": 23,
+        "state": "Present",
+        "assetId": "AST-2323",
+        "assetName": "Dell Latitude 5440"
+      },
+      {
+        "u": 22,
+        "state": "Present",
+        "assetId": "AST-2322",
+        "assetName": "Lenovo ThinkSystem SR650"
+      },
+      {
+        "u": 21,
+        "state": "Empty"
+      },
+      {
+        "u": 20,
+        "state": "Present",
+        "assetId": "AST-2320",
+        "assetName": "Dell OptiPlex 7010"
+      },
+      {
+        "u": 19,
+        "state": "Empty"
+      },
+      {
+        "u": 18,
+        "state": "Present",
+        "assetId": "AST-2318",
+        "assetName": "HPE ProLiant DL380"
+      },
+      {
+        "u": 17,
+        "state": "Empty"
+      },
+      {
+        "u": 16,
+        "state": "Present",
+        "assetId": "AST-2316",
+        "assetName": "Dell OptiPlex 7010"
+      },
+      {
+        "u": 15,
+        "state": "Present",
+        "assetId": "AST-2315",
+        "assetName": "Lenovo ThinkSystem SR650"
+      },
+      {
+        "u": 14,
+        "state": "Empty"
+      },
+      {
+        "u": 13,
+        "state": "Empty"
+      },
+      {
+        "u": 12,
+        "state": "Empty"
+      },
+      {
+        "u": 11,
+        "state": "Present",
+        "assetId": "AST-2311",
+        "assetName": "Dell Latitude 5440"
+      },
+      {
+        "u": 10,
+        "state": "Empty"
+      },
+      {
+        "u": 9,
+        "state": "Empty"
+      },
+      {
+        "u": 8,
+        "state": "Present",
+        "assetId": "AST-2308",
+        "assetName": "Aruba CX 6300"
+      },
+      {
+        "u": 7,
+        "state": "Present",
+        "assetId": "AST-2307",
+        "assetName": "HPE ProLiant DL380"
+      },
+      {
+        "u": 6,
+        "state": "Present",
+        "assetId": "AST-2306",
+        "assetName": "Dell Latitude 5440"
+      },
+      {
+        "u": 5,
+        "state": "Present",
+        "assetId": "AST-2305",
+        "assetName": "Lenovo ThinkPad T14s"
+      },
+      {
+        "u": 4,
+        "state": "Empty"
+      },
+      {
+        "u": 3,
+        "state": "Empty"
+      },
+      {
+        "u": 2,
+        "state": "Present",
+        "assetId": "AST-2302",
+        "assetName": "HPE ProLiant DL380"
+      },
+      {
+        "u": 1,
+        "state": "Present",
+        "assetId": "AST-2301",
+        "assetName": "HPE ProLiant DL380"
+      }
+    ],
+    "lastVerified": "2026-07-21T13:00:00.000Z",
+    "loadPct": 64,
+    "inletTempC": 25.9
+  },
+  {
+    "id": "RACK-C03",
+    "name": "Cage Rack C03",
+    "roomId": "ROOM-02",
+    "status": "Variance",
+    "heightU": 42,
+    "slots": [
+      {
+        "u": 42,
+        "state": "Present",
+        "assetId": "AST-2342",
+        "assetName": "HPE ProLiant DL380"
+      },
+      {
+        "u": 41,
+        "state": "Empty"
+      },
+      {
+        "u": 40,
+        "state": "Empty"
+      },
+      {
+        "u": 39,
+        "state": "Empty"
+      },
+      {
+        "u": 38,
+        "state": "Present",
+        "assetId": "AST-2338",
+        "assetName": "Dell OptiPlex 7010"
+      },
+      {
+        "u": 37,
+        "state": "Empty"
+      },
+      {
+        "u": 36,
+        "state": "Empty"
+      },
+      {
+        "u": 35,
+        "state": "Empty"
+      },
+      {
+        "u": 34,
+        "state": "Empty"
+      },
+      {
+        "u": 33,
+        "state": "Empty"
+      },
+      {
+        "u": 32,
+        "state": "Empty"
+      },
+      {
+        "u": 31,
+        "state": "Empty"
+      },
+      {
+        "u": 30,
+        "state": "Empty"
+      },
+      {
+        "u": 29,
+        "state": "Present",
+        "assetId": "AST-2329",
+        "assetName": "Fortinet FortiSwitch 448E"
+      },
+      {
+        "u": 28,
+        "state": "Empty"
+      },
+      {
+        "u": 27,
+        "state": "Empty"
+      },
+      {
+        "u": 26,
+        "state": "Present",
+        "assetId": "AST-2326",
+        "assetName": "Aruba CX 6300"
+      },
+      {
+        "u": 25,
+        "state": "Present",
+        "assetId": "AST-2325",
+        "assetName": "Fortinet FortiSwitch 448E"
+      },
+      {
+        "u": 24,
+        "state": "Empty"
+      },
+      {
+        "u": 23,
+        "state": "Present",
+        "assetId": "AST-2323",
+        "assetName": "Cisco Nexus 9336"
+      },
+      {
+        "u": 22,
+        "state": "Present",
+        "assetId": "AST-2322",
+        "assetName": "Dell PowerEdge R660"
+      },
+      {
+        "u": 21,
+        "state": "Present",
+        "assetId": "AST-2321",
+        "assetName": "HPE ProLiant DL380"
+      },
+      {
+        "u": 20,
+        "state": "Present",
+        "assetId": "AST-2320",
+        "assetName": "Aruba AP-635"
+      },
+      {
+        "u": 19,
+        "state": "Present",
+        "assetId": "AST-2319",
+        "assetName": "Lenovo ThinkPad T14s"
+      },
+      {
+        "u": 18,
+        "state": "Present",
+        "assetId": "AST-2318",
+        "assetName": "Juniper EX4400"
+      },
+      {
+        "u": 17,
+        "state": "Missing",
+        "assetId": "AST-2317",
+        "assetName": "Cisco Catalyst 9300"
+      },
+      {
+        "u": 16,
+        "state": "Present",
+        "assetId": "AST-2316",
+        "assetName": "Lenovo ThinkSystem SR650"
+      },
+      {
+        "u": 15,
+        "state": "Empty"
+      },
+      {
+        "u": 14,
+        "state": "Present",
+        "assetId": "AST-2314",
+        "assetName": "Cisco Nexus 9336"
+      },
+      {
+        "u": 13,
+        "state": "Present",
+        "assetId": "AST-2313",
+        "assetName": "Aruba CX 6300"
+      },
+      {
+        "u": 12,
+        "state": "Empty"
+      },
+      {
+        "u": 11,
+        "state": "Empty"
+      },
+      {
+        "u": 10,
+        "state": "Empty"
+      },
+      {
+        "u": 9,
+        "state": "Empty"
+      },
+      {
+        "u": 8,
+        "state": "Empty"
+      },
+      {
+        "u": 7,
+        "state": "Empty"
+      },
+      {
+        "u": 6,
+        "state": "Empty"
+      },
+      {
+        "u": 5,
+        "state": "Empty"
+      },
+      {
+        "u": 4,
+        "state": "Empty"
+      },
+      {
+        "u": 3,
+        "state": "Empty"
+      },
+      {
+        "u": 2,
+        "state": "Present",
+        "assetId": "AST-2302",
+        "assetName": "Dell OptiPlex 7010"
+      },
+      {
+        "u": 1,
+        "state": "Empty"
+      }
+    ],
+    "lastVerified": "2026-07-23T06:11:00.000Z",
+    "loadPct": 62,
+    "inletTempC": 26.2
+  },
+  {
+    "id": "RACK-S01",
+    "name": "DC Store Rack S01",
+    "roomId": "ROOM-07",
+    "status": "Verified",
+    "heightU": 42,
+    "slots": [
+      {
+        "u": 42,
+        "state": "Present",
+        "assetId": "AST-2342",
+        "assetName": "HPE ProLiant DL380"
+      },
+      {
+        "u": 41,
+        "state": "Present",
+        "assetId": "AST-2341",
+        "assetName": "Cisco Catalyst 9300"
+      },
+      {
+        "u": 40,
+        "state": "Present",
+        "assetId": "AST-2340",
+        "assetName": "Lenovo ThinkSystem SR650"
+      },
+      {
+        "u": 39,
+        "state": "Empty"
+      },
+      {
+        "u": 38,
+        "state": "Empty"
+      },
+      {
+        "u": 37,
+        "state": "Empty"
+      },
+      {
+        "u": 36,
+        "state": "Present",
+        "assetId": "AST-2336",
+        "assetName": "Fortinet FortiSwitch 448E"
+      },
+      {
+        "u": 35,
+        "state": "Empty"
+      },
+      {
+        "u": 34,
+        "state": "Empty"
+      },
+      {
+        "u": 33,
+        "state": "Present",
+        "assetId": "AST-2333",
+        "assetName": "Dell Latitude 5440"
+      },
+      {
+        "u": 32,
+        "state": "Present",
+        "assetId": "AST-2332",
+        "assetName": "Aruba AP-635"
+      },
+      {
+        "u": 31,
+        "state": "Present",
+        "assetId": "AST-2331",
+        "assetName": "Dell OptiPlex 7010"
+      },
+      {
+        "u": 30,
+        "state": "Present",
+        "assetId": "AST-2330",
+        "assetName": "Aruba CX 6300"
+      },
+      {
+        "u": 29,
+        "state": "Empty"
+      },
+      {
+        "u": 28,
+        "state": "Empty"
+      },
+      {
+        "u": 27,
+        "state": "Present",
+        "assetId": "AST-2327",
+        "assetName": "Cisco Catalyst 9300"
+      },
+      {
+        "u": 26,
+        "state": "Empty"
+      },
+      {
+        "u": 25,
+        "state": "Empty"
+      },
+      {
+        "u": 24,
+        "state": "Empty"
+      },
+      {
+        "u": 23,
+        "state": "Present",
+        "assetId": "AST-2323",
+        "assetName": "Cisco Catalyst 9300"
+      },
+      {
+        "u": 22,
+        "state": "Empty"
+      },
+      {
+        "u": 21,
+        "state": "Empty"
+      },
+      {
+        "u": 20,
+        "state": "Present",
+        "assetId": "AST-2320",
+        "assetName": "Dell OptiPlex 7010"
+      },
+      {
+        "u": 19,
+        "state": "Empty"
+      },
+      {
+        "u": 18,
+        "state": "Present",
+        "assetId": "AST-2318",
+        "assetName": "Cisco Nexus 9336"
+      },
+      {
+        "u": 17,
+        "state": "Present",
+        "assetId": "AST-2317",
+        "assetName": "Aruba AP-635"
+      },
+      {
+        "u": 16,
+        "state": "Present",
+        "assetId": "AST-2316",
+        "assetName": "Dell Latitude 5440"
+      },
+      {
+        "u": 15,
+        "state": "Present",
+        "assetId": "AST-2315",
+        "assetName": "HPE ProLiant DL380"
+      },
+      {
+        "u": 14,
+        "state": "Empty"
+      },
+      {
+        "u": 13,
+        "state": "Empty"
+      },
+      {
+        "u": 12,
+        "state": "Empty"
+      },
+      {
+        "u": 11,
+        "state": "Empty"
+      },
+      {
+        "u": 10,
+        "state": "Empty"
+      },
+      {
+        "u": 9,
+        "state": "Empty"
+      },
+      {
+        "u": 8,
+        "state": "Present",
+        "assetId": "AST-2308",
+        "assetName": "Dell OptiPlex 7010"
+      },
+      {
+        "u": 7,
+        "state": "Empty"
+      },
+      {
+        "u": 6,
+        "state": "Present",
+        "assetId": "AST-2306",
+        "assetName": "Lenovo ThinkPad T14s"
+      },
+      {
+        "u": 5,
+        "state": "Empty"
+      },
+      {
+        "u": 4,
+        "state": "Present",
+        "assetId": "AST-2304",
+        "assetName": "Cisco Nexus 9336"
+      },
+      {
+        "u": 3,
+        "state": "Empty"
+      },
+      {
+        "u": 2,
+        "state": "Empty"
+      },
+      {
+        "u": 1,
+        "state": "Empty"
+      }
+    ],
+    "lastVerified": "2026-07-23T05:02:00.000Z",
+    "loadPct": 42,
+    "inletTempC": 26.8
+  }
+]

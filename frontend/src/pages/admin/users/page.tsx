@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { mockUsers, roles, findScope } from '@/lib/rbac';
-import type { RoleId } from '@/types/platform';
+import { allUsers, roles, findScope } from '@/lib/rbac';
+import type { RoleId } from '@access-genie/shared';
 import { PageHeader, Badge, KpiCard, EmptyState, Avatar } from '@/components/ui/primitives';
 import { Button } from '@/components/ui/Button';
 import { useToast } from '@/components/providers/ToastProvider';
@@ -24,7 +24,7 @@ export default function AdminUsersPage() {
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
-    return mockUsers.filter((u) => {
+    return allUsers.filter((u) => {
       if (roleFilter !== 'all' && u.roleId !== roleFilter) return false;
       if (!q) return true;
       return u.name.toLowerCase().includes(q) || u.email.toLowerCase().includes(q);
@@ -33,7 +33,7 @@ export default function AdminUsersPage() {
 
   const tiers = useMemo(() => {
     const counts: Record<string, number> = {};
-    for (const u of mockUsers) {
+    for (const u of allUsers) {
       const tier = roles[u.roleId].tier;
       counts[tier] = (counts[tier] ?? 0) + 1;
     }
@@ -54,7 +54,7 @@ export default function AdminUsersPage() {
       />
 
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        <KpiCard label="Total Users" value={mockUsers.length} sub="With platform access" tone="primary" accent />
+        <KpiCard label="Total Users" value={allUsers.length} sub="With platform access" tone="primary" accent />
         <KpiCard label="Management" value={tiers['Management'] ?? 0} sub="Managers & admins" tone="emerald" />
         <KpiCard label="Field" value={tiers['Field'] ?? 0} sub="Technicians & officers" tone="amber" />
         <KpiCard label="Platform / Tenant" value={(tiers['Platform'] ?? 0) + (tiers['Tenant Admin'] ?? 0)} sub="Admin tiers" tone="slate" />

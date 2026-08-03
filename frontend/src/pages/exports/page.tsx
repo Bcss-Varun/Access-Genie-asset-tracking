@@ -3,48 +3,46 @@
 // ─────────────────────────────────────────────────────────────────────────────
 
 import { useState } from 'react';
-import { mockReports } from '@/lib/mock-data';
+import { allReports, allExportJobs } from '@/lib/dataset';
 import { PageHeader, Badge, KpiCard } from '@/components/ui/primitives';
 import { Button } from '@/components/ui/Button';
 import { useToast } from '@/components/providers/ToastProvider';
-import { relTime, DEMO_NOW } from '@/lib/utils';
+import { exportsApi } from '@/api/platform';
+import { useMutate } from '@/api/mutate';
+import { useSession } from '@/api/auth';
+import { relTime, } from '@/lib/utils';
 
-const iso = (hours: number) => new Date(DEMO_NOW - hours * 3_600_000).toISOString();
-
-type ExportStatus = 'Ready' | 'Processing';
-interface ExportRow {
-  id: string;
-  report: string;
-  format: string;
-  requestedBy: string;
-  at: string;
-  status: ExportStatus;
-  sizeKb: number;
-}
-const exportHistory: ExportRow[] = [
-  { id: 'EXP-2041', report: 'Executive Asset Portfolio', format: 'PDF', requestedBy: 'Kavya Krishnan', at: iso(1), status: 'Ready', sizeKb: 2480 },
-  { id: 'EXP-2040', report: 'Depreciation & Book Value', format: 'Excel', requestedBy: 'Finance Bot', at: iso(3), status: 'Ready', sizeKb: 940 },
-  { id: 'EXP-2039', report: 'Compliance & Audit Pack', format: 'PDF', requestedBy: 'Vikram Bhat', at: iso(6), status: 'Processing', sizeKb: 0 },
-  { id: 'EXP-2038', report: 'Asset Utilization', format: 'CSV', requestedBy: 'Ops Scheduler', at: iso(26), status: 'Ready', sizeKb: 312 },
-  { id: 'EXP-2037', report: 'Security & Loss Prevention', format: 'PDF', requestedBy: 'Security Bot', at: iso(50), status: 'Ready', sizeKb: 1560 },
-  { id: 'EXP-2036', report: 'Warranty Expiry Exposure', format: 'Excel', requestedBy: 'Kavya Krishnan', at: iso(74), status: 'Ready', sizeKb: 688 },
-];
-
+const exportHistory = allExportJobs;
 const FORMATS = ['PDF', 'Excel', 'CSV', 'JSON'];
 const fmtSize = (kb: number) => (kb === 0 ? '—' : kb >= 1024 ? `${(kb / 1024).toFixed(1)} MB` : `${kb} KB`);
 
 export default function ExportsPage() {
   const { toast } = useToast();
-  const [reportId, setReportId] = useState(mockReports[0].id);
+  const { run, isPending } = useMutate();
+  const { user } = useSession();
+  // `allReports[0]` is undefined until a report exists, so the initial value is
+  // the empty option the picker renders in that case — not a report id.
+  const [reportId, setReportId] = useState(allReports[0]?.id ?? '');
   const [format, setFormat] = useState('PDF');
 
   const readyCount = exportHistory.filter((e) => e.status === 'Ready').length;
   const processingCount = exportHistory.filter((e) => e.status === 'Processing').length;
 
-  const submit = (e: React.FormEvent) => {
+  const submit = async (e: React.FormEvent) => {
     e.preventDefault();
-    const report = mockReports.find((r) => r.id === reportId);
-    toast({ title: 'Export queued', description: `${report?.name} → ${format}. It will appear in history when ready.`, tone: 'success' });
+    const report = allReports.find((r) => r.id === reportId);
+    if (!report) {
+      toast({ title: 'Pick a report', description: 'Choose which report to export.', tone: 'error' });
+      return;
+    }
+
+    // The job row is created queued and the pipeline owns it from there, which
+    // is why the history below is read from the server rather than appended to.
+    await run(exportsApi.create({ report: report.name, format, requestedBy: user.name }), {
+      success: 'Export queued',
+      successDetail: `${report.name} → ${format}. It will appear in history when ready.`,
+      describe: 'queue that export',
+    });
   };
 
   return (
@@ -66,7 +64,7 @@ export default function ExportsPage() {
         {/* New export form */}
         <div className="glass-panel rounded-xl p-5 lg:col-span-1">
           <h2 className="text-base font-semibold text-slate-800 mb-4">New Export</h2>
-          <form onSubmit={submit} className="space-y-4">
+          <form onSubmit={(e) => void submit(e)} className="space-y-4">
             <div>
               <label className="block text-xs font-medium text-slate-500 mb-1.5">Report</label>
               <select
@@ -74,7 +72,9 @@ export default function ExportsPage() {
                 onChange={(e) => setReportId(e.target.value)}
                 className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-800 focus:outline-none focus:ring-2 focus:ring-primary-500"
               >
-                {mockReports.map((r) => <option key={r.id} value={r.id}>{r.name}</option>)}
+                {allReports.length === 0
+                  ? <option value="">No reports to export yet</option>
+                  : allReports.map((r) => <option key={r.id} value={r.id}>{r.name}</option>)}
               </select>
             </div>
             <div>
@@ -95,7 +95,7 @@ export default function ExportsPage() {
                 ))}
               </div>
             </div>
-            <Button type="submit" className="w-full">Generate Export</Button>
+            <Button type="submit" disabled={isPending || allReports.length === 0} className="w-full">Generate Export</Button>
           </form>
         </div>
 

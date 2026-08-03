@@ -1,6 +1,6 @@
 import { Link } from 'react-router-dom';
 import { scopeTree } from '@/lib/rbac';
-import type { ScopeNode } from '@/types/platform';
+import type { ScopeNode } from '@access-genie/shared';
 import { PageHeader, Badge, KpiCard } from '@/components/ui/primitives';
 import { Button } from '@/components/ui/Button';
 import { useToast } from '@/components/providers/ToastProvider';

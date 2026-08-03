@@ -1,34 +1,34 @@
 import { Link } from 'react-router-dom';
 import { Card, Funnel, InsightPanel } from '@/components/dashboards/DashboardKit';
 import { PageHeader, KpiCard, Badge } from '@/components/ui/primitives';
-import { mockWorkOrders, mockPmSchedules, mockInsights, mockAnomalies } from '@/lib/mock-data';
-import { cn, relTime, DEMO_NOW } from '@/lib/utils';
-
-const openWos = mockWorkOrders.filter((w) => w.status !== 'Completed');
-const overdue = openWos.filter((w) => Date.parse(w.dueDate) <= DEMO_NOW);
+import { allWorkOrders, allPmSchedules, allInsights, allAnomalies } from '@/lib/dataset';
+import { cn, relTime, nowMs } from '@/lib/utils';
 
 // PM compliance (mean across schedules)
-const pmCompliance = Math.round(mockPmSchedules.reduce((s, p) => s + p.compliancePct, 0) / mockPmSchedules.length);
-const overduePms = mockPmSchedules.filter((p) => Date.parse(p.nextDue) < DEMO_NOW).length;
-
-const predictiveAlerts = mockAnomalies.filter((a) => DEMO_NOW - Date.parse(a.detectedAt) < 24 * 3600_000).length;
 
 // WO pipeline funnel
-const pipeline = [
-  { label: 'New', value: mockWorkOrders.filter((w) => w.status === 'New').length, color: '#ef4444' },
-  { label: 'Assigned', value: mockWorkOrders.filter((w) => w.status === 'Assigned').length, color: '#f59e0b' },
-  { label: 'In Progress', value: mockWorkOrders.filter((w) => w.status === 'In Progress').length, color: '#6366f1' },
-  { label: 'Completed', value: mockWorkOrders.filter((w) => w.status === 'Completed').length, color: '#10b981' },
-];
 
 // Overdue / urgent table (soonest due first)
-const urgent = [...openWos].sort((a, b) => Date.parse(a.dueDate) - Date.parse(b.dueDate)).slice(0, 6);
-
-const predictiveInsights = mockInsights.filter((i) => ['Predictive Failure', 'Anomaly'].includes(i.type)).slice(0, 3);
 
 const prioTone = (p: string): 'red' | 'amber' | 'slate' => (p === 'Critical' ? 'red' : p === 'High' ? 'amber' : 'slate');
 
 export default function MaintenanceDashboard() {
+  // Derived per render: the dataset is fetched, so a value computed once at
+  // module scope would never see a refetch.
+  const openWos = allWorkOrders.filter((w) => w.status !== 'Completed');
+    const overdue = openWos.filter((w) => Date.parse(w.dueDate) <= nowMs());
+    const pmCompliance = Math.round(allPmSchedules.reduce((s, p) => s + p.compliancePct, 0) / allPmSchedules.length);
+    const overduePms = allPmSchedules.filter((p) => Date.parse(p.nextDue) < nowMs()).length;
+    const predictiveAlerts = allAnomalies.filter((a) => nowMs() - Date.parse(a.detectedAt) < 24 * 3600_000).length;
+    const pipeline = [
+    { label: 'New', value: allWorkOrders.filter((w) => w.status === 'New').length, color: '#ef4444' },
+    { label: 'Assigned', value: allWorkOrders.filter((w) => w.status === 'Assigned').length, color: '#f59e0b' },
+    { label: 'In Progress', value: allWorkOrders.filter((w) => w.status === 'In Progress').length, color: '#6366f1' },
+    { label: 'Completed', value: allWorkOrders.filter((w) => w.status === 'Completed').length, color: '#10b981' },
+  ];
+    const urgent = [...openWos].sort((a, b) => Date.parse(a.dueDate) - Date.parse(b.dueDate)).slice(0, 6);
+    const predictiveInsights = allInsights.filter((i) => ['Predictive Failure', 'Anomaly'].includes(i.type)).slice(0, 3);
+
   const th = 'px-4 py-3 text-left font-semibold uppercase tracking-wider text-[11px] text-slate-500';
   const td = 'px-4 py-3';
   return (
@@ -79,7 +79,7 @@ export default function MaintenanceDashboard() {
             </thead>
             <tbody className="divide-y divide-slate-100">
               {urgent.map((w) => {
-                const isOverdue = Date.parse(w.dueDate) <= DEMO_NOW;
+                const isOverdue = Date.parse(w.dueDate) <= nowMs();
                 return (
                   <tr key={w.id} className="hover:bg-slate-50 transition-colors">
                     <td className={td}>

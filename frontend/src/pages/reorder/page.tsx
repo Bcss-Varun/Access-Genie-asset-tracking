@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { reorderParts, getSupplier } from '@/lib/mock-data';
-import type { Part } from '@/types/asset';
+import { reorderParts, getSupplier } from '@/lib/dataset';
+import type { Part } from '@access-genie/shared';
 import { PageHeader, KpiCard, EmptyState } from '@/components/ui/primitives';
 import { Button } from '@/components/ui/Button';
 import { useToast } from '@/components/providers/ToastProvider';

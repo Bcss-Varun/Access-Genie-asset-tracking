@@ -1,0 +1,32 @@
+[
+  {
+    "slug": "hyderabad-warehouse",
+    "name": "Hyderabad Central Warehouse",
+    "short": "Hyderabad WH",
+    "building": "Building A · Dock, Staging & Secure Cage",
+    "emoji": "🏭",
+    "assetsTracked": 26,
+    "coverage": 91,
+    "twinReady": true
+  },
+  {
+    "slug": "bengaluru-hq",
+    "name": "Bengaluru HQ",
+    "short": "Bengaluru HQ",
+    "building": "Floors 1–4 · Offices, Studio & IT Storeroom",
+    "emoji": "🏢",
+    "assetsTracked": 53,
+    "coverage": 87,
+    "twinReady": true
+  },
+  {
+    "slug": "chennai-dc",
+    "name": "Chennai Data Center",
+    "short": "Chennai DC",
+    "building": "Server Rooms Alpha & Beta · Restricted",
+    "emoji": "🖥️",
+    "assetsTracked": 31,
+    "coverage": 96,
+    "twinReady": true
+  }
+]

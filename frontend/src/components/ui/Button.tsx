@@ -1,4 +1,3 @@
-import { Link } from 'react-router-dom';
 import { cn } from '@/lib/utils';
 
 type Variant = 'primary' | 'secondary' | 'outline' | 'ghost' | 'danger';
@@ -35,34 +34,5 @@ export function Button({
     >
       {children}
     </button>
-  );
-}
-
-/** Same visual language as Button, but renders a router link. */
-export function LinkButton({
-  to,
-  variant = 'primary',
-  size = 'md',
-  className,
-  children,
-}: {
-  to: string;
-  variant?: Variant;
-  size?: Size;
-  className?: string;
-  children: React.ReactNode;
-}) {
-  return (
-    <Link
-      to={to}
-      className={cn(
-        'inline-flex items-center justify-center font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:ring-offset-1',
-        variants[variant],
-        sizes[size],
-        className,
-      )}
-    >
-      {children}
-    </Link>
   );
 }

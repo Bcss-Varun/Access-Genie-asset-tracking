@@ -1,5 +1,5 @@
 import { roles, resolveModules } from '@/lib/rbac';
-import type { ModuleKey, RoleId } from '@/types/platform';
+import type { ModuleKey, RoleId } from '@access-genie/shared';
 import { PageHeader, Badge } from '@/components/ui/primitives';
 import { Button } from '@/components/ui/Button';
 import { useToast } from '@/components/providers/ToastProvider';

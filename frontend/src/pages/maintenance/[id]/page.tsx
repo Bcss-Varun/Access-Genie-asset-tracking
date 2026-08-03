@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
-import { mockWorkOrders, getWorkOrderDetail, getAssetById } from '@/lib/mock-data';
+import { allWorkOrders, getWorkOrderDetail, getAssetById } from '@/lib/dataset';
 import type {
   WorkOrder,
   WorkOrderStatus,
@@ -8,12 +8,12 @@ import type {
   WorkOrderType,
   WoChecklistItem,
   WoComment,
-} from '@/types/asset';
+} from '@access-genie/shared';
 import { PageHeader, Badge, EmptyState, Avatar } from '@/components/ui/primitives';
 import { Button } from '@/components/ui/Button';
 import { Dropdown, MenuItem } from '@/components/ui/Dropdown';
 import { useToast } from '@/components/providers/ToastProvider';
-import { cn, formatMoney, relTime, DEMO_NOW } from '@/lib/utils';
+import { cn, formatMoney, relTime, nowMs } from '@/lib/utils';
 
 // ── token helpers ─────────────────────────────────────────────────────────────
 type Tone = 'slate' | 'primary' | 'emerald' | 'amber' | 'red';
@@ -77,7 +77,7 @@ export default function WorkOrderDetailPage() {
   const { id = '' } = useParams();
   const { toast } = useToast();
 
-  const base = useMemo(() => mockWorkOrders.find((w) => w.id === id), [id]);
+  const base = useMemo(() => allWorkOrders.find((w) => w.id === id), [id]);
   const detail = useMemo(() => (base ? getWorkOrderDetail(id) : null), [base, id]);
 
   // ── local (in-session) state — seeded once from the mock record ──────────────
@@ -138,7 +138,7 @@ export default function WorkOrderDetailPage() {
   const addComment = () => {
     const text = draft.trim();
     if (!text) return;
-    setComments((prev) => [...prev, { author: 'You', text, at: new Date(DEMO_NOW).toISOString() }]);
+    setComments((prev) => [...prev, { author: 'You', text, at: new Date(nowMs()).toISOString() }]);
     setDraft('');
     toast({ title: 'Comment added', tone: 'success' });
   };

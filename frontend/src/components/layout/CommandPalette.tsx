@@ -1,10 +1,10 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
-import { useSession } from '@/features/auth/AuthProvider';
-import { assetsApi } from '@/features/assets/assets-api';
+import { useSession } from '@/api/auth';
+import { assetsApi } from '@/api/assets';
 import { navForModules } from '@/lib/nav-config';
-import { cn } from '@/lib/format';
+import { cn } from '@/lib/utils';
 
 interface Result {
   kind: 'nav' | 'asset';

@@ -1,0 +1,58 @@
+[
+  {
+    "id": "network",
+    "name": "Network Ops",
+    "emoji": "\ud83c\udf10",
+    "department": "IT",
+    "description": "Maintains core network switches, routers, and firewalls.",
+    "extra": 11,
+    "memberIds": [
+      "U-001",
+      "U-006"
+    ]
+  },
+  {
+    "id": "helpdesk",
+    "name": "IT Helpdesk",
+    "emoji": "\ud83d\udcbb",
+    "department": "IT Support",
+    "description": "Maintains and calibrates endpoint devices across all offices.",
+    "extra": 8,
+    "memberIds": [
+      "U-002"
+    ]
+  },
+  {
+    "id": "itops",
+    "name": "IT Ops",
+    "emoji": "\ud83d\udcbb",
+    "department": "Technology",
+    "description": "Runs data-center infrastructure, gateways, and connectivity.",
+    "extra": 6,
+    "memberIds": [
+      "U-003"
+    ]
+  },
+  {
+    "id": "facilities",
+    "name": "Facilities",
+    "emoji": "\ud83c\udfed",
+    "department": "Operations",
+    "description": "Manages buildings, zones, and site-level asset logistics.",
+    "extra": 9,
+    "memberIds": [
+      "U-004"
+    ]
+  },
+  {
+    "id": "security",
+    "name": "Security",
+    "emoji": "\ud83d\udee1\ufe0f",
+    "department": "Risk & Compliance",
+    "description": "Monitors geofences, theft alerts, and physical access.",
+    "extra": 4,
+    "memberIds": [
+      "U-005"
+    ]
+  }
+]

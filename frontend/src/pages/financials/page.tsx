@@ -5,17 +5,17 @@
 
 import { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { mockAssets } from '@/lib/mock-data';
+import { allAssets } from '@/lib/dataset';
 import { PageHeader, Badge, KpiCard } from '@/components/ui/primitives';
-import { cn, formatMoney, DEMO_NOW } from '@/lib/utils';
-import type { AssetCategory } from '@/types/asset';
+import { cn, formatMoney, nowMs } from '@/lib/utils';
+import type { AssetCategory } from '@access-genie/shared';
 
 // Indigo-anchored, harmonious cool palette (index-based so segments stay stable).
 const CAT_PALETTE = ['#4f46e5', '#6366f1', '#8b5cf6', '#a78bfa', '#60a5fa', '#38bdf8'];
 const colorFor = (_c: string, i: number) => CAT_PALETTE[i % CAT_PALETTE.length];
 
 const YEAR_MS = 365.25 * 86_400_000;
-const ageYears = (iso: string) => Math.max(0, (DEMO_NOW - Date.parse(iso)) / YEAR_MS);
+const ageYears = (iso: string) => Math.max(0, (nowMs() - Date.parse(iso)) / YEAR_MS);
 
 // ── Donut geometry helpers ────────────────────────────────────────────────────
 function polar(cx: number, cy: number, r: number, deg: number) {
@@ -46,14 +46,14 @@ interface CatAgg {
 export default function FinancialsPage() {
   const [hovered, setHovered] = useState<number | null>(null);
 
-  const purchaseTotal = mockAssets.reduce((s, a) => s + a.purchasePrice, 0);
-  const bookTotal = mockAssets.reduce((s, a) => s + (a.bookValue ?? 0), 0);
+  const purchaseTotal = allAssets.reduce((s, a) => s + a.purchasePrice, 0);
+  const bookTotal = allAssets.reduce((s, a) => s + (a.bookValue ?? 0), 0);
   const accumDep = purchaseTotal - bookTotal;
-  const avgAge = mockAssets.reduce((s, a) => s + ageYears(a.purchaseDate), 0) / mockAssets.length;
+  const avgAge = allAssets.reduce((s, a) => s + ageYears(a.purchaseDate), 0) / allAssets.length;
 
   const byCat = useMemo<CatAgg[]>(() => {
     const map = new Map<AssetCategory, CatAgg>();
-    for (const a of mockAssets) {
+    for (const a of allAssets) {
       const cur = map.get(a.category) ?? { category: a.category, book: 0, purchase: 0 };
       cur.book += a.bookValue ?? 0;
       cur.purchase += a.purchasePrice;
@@ -88,7 +88,7 @@ export default function FinancialsPage() {
         <KpiCard label="Portfolio Book Value" value={formatMoney(bookTotal)} sub="Current depreciated value" tone="primary" accent />
         <KpiCard label="Purchase Value" value={formatMoney(purchaseTotal)} sub="Original acquisition cost" tone="slate" />
         <KpiCard label="Accumulated Depreciation" value={formatMoney(accumDep)} sub={`${Math.round((accumDep / (purchaseTotal || 1)) * 100)}% of cost basis`} tone="slate" />
-        <KpiCard label="Avg Asset Age" value={`${avgAge.toFixed(1)}y`} sub={`${mockAssets.length} tracked assets`} tone="slate" />
+        <KpiCard label="Avg Asset Age" value={`${avgAge.toFixed(1)}y`} sub={`${allAssets.length} tracked assets`} tone="slate" />
       </div>
 
       <div>
@@ -171,7 +171,7 @@ export default function FinancialsPage() {
               </tr>
             </thead>
             <tbody>
-              {mockAssets.map((a) => {
+              {allAssets.map((a) => {
                 const book = a.bookValue ?? 0;
                 const depPct = Math.round(((a.purchasePrice - book) / (a.purchasePrice || 1)) * 100);
                 const tone = depPct >= 70 ? 'bg-red-500' : depPct >= 40 ? 'bg-amber-500' : 'bg-emerald-500';

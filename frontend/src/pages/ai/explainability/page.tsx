@@ -1,9 +1,9 @@
 import { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { mockInsights, mockModels, getModel } from '@/lib/mock-data';
-import { PageHeader, Badge } from '@/components/ui/primitives';
+import { allInsights, allModels, getModel } from '@/lib/dataset';
+import { PageHeader, Badge, EmptyState } from '@/components/ui/primitives';
 import { cn, relTime, formatMoney } from '@/lib/utils';
-import type { AIInsight, InsightType, InsightSeverity } from '@/types/asset';
+import type { AIInsight, InsightType, InsightSeverity } from '@access-genie/shared';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Which registered model governs each insight type (data → features → model → score)
@@ -44,7 +44,12 @@ const LOW_RISK_THRESHOLD = 40;
 // ─────────────────────────────────────────────────────────────────────────────
 type Contribution = { driver: string; value: number; pct: number };
 
-function computeContributions(insight: AIInsight): Contribution[] {
+function computeContributions(insight: AIInsight | undefined): Contribution[] {
+  // No insight selected, or one raised without drivers listed — either way there
+  // is nothing to attribute the score to. Bail before the drift absorption
+  // below, which writes to `rounded[0]`.
+  if (!insight || insight.drivers.length === 0) return [];
+
   const ds = insight.drivers;
   const n = ds.length;
   const mags = ds.map((_, i) => n - i); // decreasing: n, n-1, … 1
@@ -147,26 +152,51 @@ function FeatureImportanceList({ features }: { features: { feature: string; impo
 // Page
 // ─────────────────────────────────────────────────────────────────────────────
 export default function ExplainabilityPage() {
-  const [selectedId, setSelectedId] = useState<string>(mockInsights[0].id);
-  const insight = mockInsights.find((i) => i.id === selectedId) ?? mockInsights[0];
+  const [selectedId, setSelectedId] = useState<string>(allInsights[0]?.id ?? '');
+  // Undefined until the models have raised something. The hooks below tolerate
+  // that — they cannot be skipped conditionally — and the render bails after.
+  const insight = allInsights.find((i) => i.id === selectedId) ?? allInsights[0];
 
   const contributions = useMemo(() => computeContributions(insight), [insight]);
-  const model = getModel(MODEL_FOR[insight.type]) ?? mockModels[0];
+  const model = insight ? getModel(MODEL_FOR[insight.type]) ?? allModels[0] : undefined;
 
-  const positiveColor = insight.severity === 'Opportunity' ? '#f59e0b' : '#ef4444';
+  const positiveColor = insight?.severity === 'Opportunity' ? '#f59e0b' : '#ef4444';
 
   // Counterfactual: which top positive drivers, if resolved, drop this below LOW risk
   const counterfactual = useMemo(() => {
     const positives = contributions.filter((c) => c.value > 0).sort((a, b) => b.value - a.value);
     const removed: Contribution[] = [];
-    let score = insight.confidence;
+    let score = insight?.confidence ?? 0;
     for (const c of positives) {
       if (score < LOW_RISK_THRESHOLD) break;
       removed.push(c);
       score -= c.value;
     }
     return { removed, score: Math.max(score, 0) };
-  }, [contributions, insight.confidence]);
+  }, [contributions, insight?.confidence]);
+
+  // `model` is folded into the same guard rather than handled separately: half
+  // this screen — the governing-model panel, the provenance chain, the plain-
+  // language summary — is about the model that produced the score. A prediction
+  // with no model in the registry has nothing to explain *with*.
+  if (!insight || !model) {
+    return (
+      <div className="h-full flex flex-col space-y-6">
+        <PageHeader
+          title="Explainability"
+          subtitle="Open the model up — see exactly why each asset was scored the way it was."
+          breadcrumb={[{ label: 'AI Intelligence', href: '/ai-insights' }, { label: 'Explainability' }]}
+        />
+        <div className="glass-panel rounded-xl">
+          <EmptyState
+            icon="🧠"
+            title="No predictions to explain yet"
+            description="This screen opens up a scored prediction and shows which signals drove it. The models score assets once there is telemetry and maintenance history to read, and the predictions they raise appear here."
+          />
+        </div>
+      </div>
+    );
+  }
 
   const sevTone = SEV_TONE[insight.severity];
   const scoreLabel = insight.severity === 'Opportunity' ? 'Opportunity score' : 'Risk / confidence score';
@@ -193,7 +223,7 @@ export default function ExplainabilityPage() {
           onChange={(e) => setSelectedId(e.target.value)}
           className="flex-1 rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-800 focus:outline-none focus:ring-2 focus:ring-primary-500"
         >
-          {mockInsights.map((i) => (
+          {allInsights.map((i) => (
             <option key={i.id} value={i.id}>
               {TYPE_EMOJI[i.type]} {i.title}
             </option>

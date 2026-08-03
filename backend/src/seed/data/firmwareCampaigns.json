@@ -1,0 +1,54 @@
+[
+  {
+    "id": "FW-01",
+    "name": "Anchor firmware v2.4.1 rollout",
+    "targetRole": "Anchor",
+    "fromVersion": "v2.3.7",
+    "toVersion": "v2.4.1",
+    "total": 20,
+    "done": 12,
+    "failed": 1,
+    "state": "Running",
+    "window": "Nightly 01:00–04:00 IST",
+    "owner": "Deepak Nair"
+  },
+  {
+    "id": "FW-02",
+    "name": "Reader security patch v4.8.2",
+    "targetRole": "Reader",
+    "fromVersion": "v4.6.0",
+    "toVersion": "v4.8.2",
+    "total": 9,
+    "done": 8,
+    "failed": 0,
+    "state": "Paused",
+    "window": "Blocked on DEV-RD-09 being offline",
+    "owner": "Deepak Nair"
+  },
+  {
+    "id": "FW-03",
+    "name": "Sensor gateway v1.9.4",
+    "targetRole": "Gateway",
+    "fromVersion": "v1.9.1",
+    "toVersion": "v1.9.4",
+    "total": 4,
+    "done": 4,
+    "failed": 0,
+    "state": "Complete",
+    "window": "Completed 12 Jul",
+    "owner": "IoT Platform"
+  },
+  {
+    "id": "FW-04",
+    "name": "Tag firmware v2.4.1 — Chennai batch",
+    "targetRole": "Tag",
+    "fromVersion": "v2.3.7",
+    "toVersion": "v2.4.1",
+    "total": 46,
+    "done": 0,
+    "failed": 0,
+    "state": "Scheduled",
+    "window": "Starts 26 Jul, 01:00 IST",
+    "owner": "IoT Platform"
+  }
+]

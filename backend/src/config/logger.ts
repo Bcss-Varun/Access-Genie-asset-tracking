@@ -7,7 +7,7 @@ import { env } from './env.js';
 type Level = 'debug' | 'info' | 'warn' | 'error';
 
 const LEVEL_RANK: Record<Level, number> = { debug: 10, info: 20, warn: 30, error: 40 };
-const MIN_RANK = env.isProd ? LEVEL_RANK.info : LEVEL_RANK.debug;
+const MIN_RANK = LEVEL_RANK[env.logLevel];
 
 const PREFIX: Record<Level, string> = {
   debug: '\x1b[90mdebug\x1b[0m',

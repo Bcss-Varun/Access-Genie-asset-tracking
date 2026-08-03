@@ -2,28 +2,29 @@ import { Link } from 'react-router-dom';
 import { UtilizationDowntimeChart } from '@/components/charts/DashboardCharts';
 import { Card, InsightPanel } from '@/components/dashboards/DashboardKit';
 import { PageHeader, KpiCard, Badge } from '@/components/ui/primitives';
-import { mockAssets, mockWorkOrders, mockAlerts, mockInsights } from '@/lib/mock-data';
+import { allAssets, allWorkOrders, allAlerts, allInsights } from '@/lib/dataset';
 import { cn, relTime } from '@/lib/utils';
-
-const total = mockAssets.length;
-const active = mockAssets.filter((a) => a.status === 'Active').length;
-const down = mockAssets.filter((a) => a.status === 'Maintenance').length;
-const missing = mockAssets.filter((a) => a.status === 'Missing').length;
-const availability = Math.round((active / total) * 100);
-const openWos = mockWorkOrders.filter((w) => w.status !== 'Completed');
-const unassigned = mockWorkOrders.filter((w) => w.status === 'New').length;
 
 // Alerts to triage (unresolved), most severe / recent first
 const sevRank: Record<string, number> = { Critical: 0, Warning: 1, Info: 2 };
-const triage = [...mockAlerts]
-  .filter((a) => a.status !== 'Resolved')
-  .sort((a, b) => sevRank[a.severity] - sevRank[b.severity] || Date.parse(b.createdAt) - Date.parse(a.createdAt));
-
-const opsInsights = mockInsights.filter((i) => ['Utilization', 'Anomaly', 'Predictive Failure'].includes(i.type)).slice(0, 3);
 
 const alertTone = (s: string): 'red' | 'amber' | 'slate' => (s === 'Critical' ? 'red' : s === 'Warning' ? 'amber' : 'slate');
 
 export default function OperationsDashboard() {
+  // Derived per render: the dataset is fetched, so a value computed once at
+  // module scope would never see a refetch.
+  const total = allAssets.length;
+    const active = allAssets.filter((a) => a.status === 'Active').length;
+    const down = allAssets.filter((a) => a.status === 'Maintenance').length;
+    const missing = allAssets.filter((a) => a.status === 'Missing').length;
+    const availability = Math.round((active / total) * 100);
+    const openWos = allWorkOrders.filter((w) => w.status !== 'Completed');
+    const unassigned = allWorkOrders.filter((w) => w.status === 'New').length;
+    const triage = [...allAlerts]
+    .filter((a) => a.status !== 'Resolved')
+    .sort((a, b) => sevRank[a.severity] - sevRank[b.severity] || Date.parse(b.createdAt) - Date.parse(a.createdAt));
+    const opsInsights = allInsights.filter((i) => ['Utilization', 'Anomaly', 'Predictive Failure'].includes(i.type)).slice(0, 3);
+
   const th = 'px-4 py-3 text-left font-semibold uppercase tracking-wider text-[11px] text-slate-500';
   const td = 'px-4 py-3';
   return (

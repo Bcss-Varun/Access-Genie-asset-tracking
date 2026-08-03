@@ -20,3 +20,14 @@ export const csvString = z.string().trim().min(1).optional();
 
 /** ISO-8601 date string in, `Date` out. */
 export const isoDateString = z.iso.datetime({ offset: true }).or(z.iso.date());
+
+/**
+ * Treat `""` as "not provided".
+ *
+ * A form that has not been filled in sends an empty string, not `undefined` —
+ * JSON has no way to express the latter from an untouched `<input>`. Without
+ * this, every optional-but-blank field fails validation with a message about
+ * length or format, which reads as a bug rather than as "you left it empty".
+ */
+export const blankToUndefined = <T extends z.ZodType>(schema: T) =>
+  z.preprocess((value) => (value === '' ? undefined : value), schema);

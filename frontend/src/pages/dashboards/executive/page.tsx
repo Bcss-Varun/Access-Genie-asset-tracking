@@ -2,16 +2,17 @@ import { Link } from 'react-router-dom';
 import { UtilizationDowntimeChart } from '@/components/charts/DashboardCharts';
 import { Card, InsightPanel, categoryEmoji, riskBar, riskTone } from '@/components/dashboards/DashboardKit';
 import { PageHeader, KpiCard } from '@/components/ui/primitives';
-import { mockAssets, mockInsights } from '@/lib/mock-data';
+import { allAssets, allInsights } from '@/lib/dataset';
 import { cn } from '@/lib/utils';
 
-const topRiskAssets = [...mockAssets]
-  .sort((a, b) => (b.riskScore ?? 0) - (a.riskScore ?? 0))
-  .slice(0, 5);
-
-const topInsights = mockInsights.slice(0, 3);
-
 export default function Dashboard() {
+  // Derived per render: the dataset is fetched, so a value computed once at
+  // module scope would never see a refetch.
+  const topRiskAssets = [...allAssets]
+    .sort((a, b) => (b.riskScore ?? 0) - (a.riskScore ?? 0))
+    .slice(0, 5);
+    const topInsights = allInsights.slice(0, 3);
+
   return (
     <div className="h-full flex flex-col space-y-6">
       <PageHeader

@@ -1,6 +1,6 @@
 import { Link, useParams } from 'react-router-dom';
-import { mockUsers, roles, resolveModules, findScope } from '@/lib/rbac';
-import type { ModuleKey } from '@/types/platform';
+import { allUsers, roles, resolveModules, findScope } from '@/lib/rbac';
+import type { ModuleKey } from '@access-genie/shared';
 import { PageHeader, Badge, EmptyState, Avatar } from '@/components/ui/primitives';
 import { Button } from '@/components/ui/Button';
 import { useToast } from '@/components/providers/ToastProvider';
@@ -31,7 +31,7 @@ const moduleLabel: Record<ModuleKey, string> = {
 export default function UserDetailPage() {
   const { id = '' } = useParams();
   const { toast } = useToast();
-  const user = mockUsers.find((u) => u.id === id);
+  const user = allUsers.find((u) => u.id === id);
 
   if (!user) {
     return (

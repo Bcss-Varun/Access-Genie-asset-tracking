@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
-import { getInspection } from '@/lib/mock-data';
-import type { Inspection, InspectionStatus, InspectionResult } from '@/types/asset';
+import { getInspection } from '@/lib/dataset';
+import type { Inspection, InspectionStatus, InspectionResult } from '@access-genie/shared';
 import { PageHeader, Badge, KpiCard, EmptyState } from '@/components/ui/primitives';
 import { Button } from '@/components/ui/Button';
 import { useToast } from '@/components/providers/ToastProvider';

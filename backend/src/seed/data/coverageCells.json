@@ -1,0 +1,191 @@
+[
+  {
+    "zoneId": "Z-WH-DOCK",
+    "zone": "Loading Dock 4",
+    "facility": "Hyderabad Central Warehouse",
+    "coverage": 94,
+    "devices": 1,
+    "blindSpots": 1,
+    "assetsAtRisk": 20
+  },
+  {
+    "zoneId": "Z-WH-STAGE",
+    "zone": "Staging Bay",
+    "facility": "Hyderabad Central Warehouse",
+    "coverage": 92,
+    "devices": 1,
+    "blindSpots": 1,
+    "assetsAtRisk": 30
+  },
+  {
+    "zoneId": "Z-WH-PICK",
+    "zone": "Picking Zone",
+    "facility": "Hyderabad Central Warehouse",
+    "coverage": 89,
+    "devices": 1,
+    "blindSpots": 1,
+    "assetsAtRisk": 67
+  },
+  {
+    "zoneId": "Z-WH-MAIN",
+    "zone": "Main Warehouse",
+    "facility": "Hyderabad Central Warehouse",
+    "coverage": 90,
+    "devices": 2,
+    "blindSpots": 1,
+    "assetsAtRisk": 118
+  },
+  {
+    "zoneId": "Z-WH-CAGE",
+    "zone": "Secure Cage",
+    "facility": "Hyderabad Central Warehouse",
+    "coverage": 78,
+    "devices": 1,
+    "blindSpots": 3,
+    "assetsAtRisk": 46
+  },
+  {
+    "zoneId": "Z-WH-YARD",
+    "zone": "Outbound Yard",
+    "facility": "Hyderabad Central Warehouse",
+    "coverage": 71,
+    "devices": 2,
+    "blindSpots": 3,
+    "assetsAtRisk": 28
+  },
+  {
+    "zoneId": "Z-HQ-LOBBY",
+    "zone": "Lobby",
+    "facility": "Bengaluru HQ",
+    "coverage": 88,
+    "devices": 2,
+    "blindSpots": 1,
+    "assetsAtRisk": 5
+  },
+  {
+    "zoneId": "Z-HQ-STORE",
+    "zone": "IT Storeroom",
+    "facility": "Bengaluru HQ",
+    "coverage": 95,
+    "devices": 3,
+    "blindSpots": 0,
+    "assetsAtRisk": 24
+  },
+  {
+    "zoneId": "Z-HQ-TOOL",
+    "zone": "IT Tool Room",
+    "facility": "Bengaluru HQ",
+    "coverage": 90,
+    "devices": 1,
+    "blindSpots": 1,
+    "assetsAtRisk": 13
+  },
+  {
+    "zoneId": "Z-HQ-F3",
+    "zone": "Floor 3 Desks",
+    "facility": "Bengaluru HQ",
+    "coverage": 84,
+    "devices": 2,
+    "blindSpots": 2,
+    "assetsAtRisk": 210
+  },
+  {
+    "zoneId": "Z-HQ-CONF",
+    "zone": "Conference Room A",
+    "facility": "Bengaluru HQ",
+    "coverage": 86,
+    "devices": 1,
+    "blindSpots": 2,
+    "assetsAtRisk": 3
+  },
+  {
+    "zoneId": "Z-HQ-STUDIO",
+    "zone": "Design Studio",
+    "facility": "Bengaluru HQ",
+    "coverage": 82,
+    "devices": 0,
+    "blindSpots": 2,
+    "assetsAtRisk": 30
+  },
+  {
+    "zoneId": "Z-HQ-PRINT",
+    "zone": "Print Station",
+    "facility": "Bengaluru HQ",
+    "coverage": 80,
+    "devices": 0,
+    "blindSpots": 2,
+    "assetsAtRisk": 4
+  },
+  {
+    "zoneId": "Z-HQ-MEET",
+    "zone": "Meeting Rooms 4–9",
+    "facility": "Bengaluru HQ",
+    "coverage": 76,
+    "devices": 0,
+    "blindSpots": 3,
+    "assetsAtRisk": 18
+  },
+  {
+    "zoneId": "Z-HQ-EXIT",
+    "zone": "Main Exit & Reception",
+    "facility": "Bengaluru HQ",
+    "coverage": 93,
+    "devices": 0,
+    "blindSpots": 1,
+    "assetsAtRisk": 1
+  },
+  {
+    "zoneId": "Z-DC-ALPHA",
+    "zone": "Server Room Alpha",
+    "facility": "Chennai Data Center",
+    "coverage": 98,
+    "devices": 1,
+    "blindSpots": 0,
+    "assetsAtRisk": 13
+  },
+  {
+    "zoneId": "Z-DC-BETA",
+    "zone": "Server Room Beta",
+    "facility": "Chennai Data Center",
+    "coverage": 97,
+    "devices": 1,
+    "blindSpots": 0,
+    "assetsAtRisk": 12
+  },
+  {
+    "zoneId": "Z-DC-UTIL",
+    "zone": "Utility Room",
+    "facility": "Chennai Data Center",
+    "coverage": 95,
+    "devices": 1,
+    "blindSpots": 0,
+    "assetsAtRisk": 4
+  },
+  {
+    "zoneId": "Z-DC-STORE",
+    "zone": "DC Storeroom",
+    "facility": "Chennai Data Center",
+    "coverage": 93,
+    "devices": 1,
+    "blindSpots": 1,
+    "assetsAtRisk": 17
+  },
+  {
+    "zoneId": "Z-DC-MDF",
+    "zone": "MDF / Carrier Room",
+    "facility": "Chennai Data Center",
+    "coverage": 96,
+    "devices": 0,
+    "blindSpots": 0,
+    "assetsAtRisk": 5
+  },
+  {
+    "zoneId": "Z-DC-INWARD",
+    "zone": "Goods Inward",
+    "facility": "Chennai Data Center",
+    "coverage": 89,
+    "devices": 1,
+    "blindSpots": 1,
+    "assetsAtRisk": 7
+  }
+]

@@ -1,0 +1,23 @@
+[
+  {
+    "id": "PK-1",
+    "name": "MacBook Pro \u2014 Touch ID",
+    "added": "2026-05-02T10:00:00.000Z",
+    "kind": "Platform authenticator",
+    "userId": "U-001"
+  },
+  {
+    "id": "PK-2",
+    "name": "iPhone 15 \u2014 Face ID",
+    "added": "2026-06-18T14:30:00.000Z",
+    "kind": "Platform authenticator",
+    "userId": "U-001"
+  },
+  {
+    "id": "PK-3",
+    "name": "YubiKey 5C",
+    "added": "2026-01-11T09:15:00.000Z",
+    "kind": "Security key",
+    "userId": "U-001"
+  }
+]

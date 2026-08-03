@@ -1,17 +1,17 @@
 import { useState, useMemo } from 'react';
-import { mockAuditLog } from '@/lib/mock-data';
+import { allAuditLog } from '@/lib/dataset';
 import { PageHeader, Badge, EmptyState } from '@/components/ui/primitives';
 import { cn, relTime } from '@/lib/utils';
 
 export default function AuditLogPage() {
   const categories = useMemo(
-    () => Array.from(new Set(mockAuditLog.map((r) => r.category))).sort(),
+    () => Array.from(new Set(allAuditLog.map((r) => r.category))).sort(),
     [],
   );
   const [category, setCategory] = useState<'All' | string>('All');
   const [query, setQuery] = useState('');
 
-  const filtered = mockAuditLog
+  const filtered = allAuditLog
     .filter((r) => (category === 'All' ? true : r.category === category))
     .filter((r) => {
       const q = query.trim().toLowerCase();

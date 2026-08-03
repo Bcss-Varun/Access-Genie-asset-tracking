@@ -1,27 +1,10 @@
+import { allBackups } from '@/lib/dataset';
 import { PageHeader, Badge } from '@/components/ui/primitives';
 import { Button } from '@/components/ui/Button';
 import { useToast } from '@/components/providers/ToastProvider';
 import { relTime } from '@/lib/utils';
 
-const anchor = Date.parse('2026-07-23T09:00:00.000Z');
-const hoursAgoIso = (h: number) => new Date(anchor - h * 3_600_000).toISOString();
-const daysAgoIso = (d: number) => hoursAgoIso(d * 24);
-
-interface Backup {
-  id: string;
-  when: string;
-  size: string;
-  status: 'Complete' | 'Complete (verified)';
-}
-
-const backups: Backup[] = [
-  { id: 'BK-2401', when: hoursAgoIso(3), size: '4.2 GB', status: 'Complete (verified)' },
-  { id: 'BK-2400', when: daysAgoIso(1), size: '4.1 GB', status: 'Complete (verified)' },
-  { id: 'BK-2399', when: daysAgoIso(2), size: '4.1 GB', status: 'Complete' },
-  { id: 'BK-2398', when: daysAgoIso(3), size: '4.0 GB', status: 'Complete (verified)' },
-  { id: 'BK-2397', when: daysAgoIso(4), size: '3.9 GB', status: 'Complete' },
-];
-
+const backups = allBackups;
 export default function DataPage() {
   const { toast } = useToast();
 

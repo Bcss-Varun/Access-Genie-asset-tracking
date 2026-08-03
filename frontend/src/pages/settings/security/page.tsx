@@ -1,3 +1,7 @@
+import { useQuery } from '@tanstack/react-query';
+import { authApi } from '@/api/auth-endpoints';
+import { useMutate } from '@/api/mutate';
+import { allPasskeys } from '@/lib/dataset';
 import { useState } from 'react';
 import { PageHeader, Badge } from '@/components/ui/primitives';
 import { Button } from '@/components/ui/Button';
@@ -9,23 +13,19 @@ const inputCls =
   'w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-800 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-primary-500';
 const labelCls = 'block text-sm font-medium text-slate-700 mb-1.5';
 
-const passkeys = [
-  { id: 'PK-1', name: 'MacBook Pro — Touch ID', added: '2026-05-02T10:00:00.000Z', kind: 'Platform authenticator' },
-  { id: 'PK-2', name: 'iPhone 15 — Face ID', added: '2026-06-18T14:30:00.000Z', kind: 'Platform authenticator' },
-  { id: 'PK-3', name: 'YubiKey 5C', added: '2026-01-11T09:15:00.000Z', kind: 'Security key' },
-];
-
-const sessions = [
-  { id: 'S-1', device: 'Chrome · macOS', location: 'Hyderabad, IN', lastActive: '2026-07-23T08:52:00.000Z', current: true },
-  { id: 'S-2', device: 'Safari · iOS', location: 'Hyderabad, IN', lastActive: '2026-07-23T06:20:00.000Z', current: false },
-  { id: 'S-3', device: 'Edge · Windows', location: 'Bengaluru, IN', lastActive: '2026-07-22T21:05:00.000Z', current: false },
-  { id: 'S-4', device: 'Firefox · Linux', location: 'Mumbai, IN', lastActive: '2026-07-20T13:40:00.000Z', current: false },
-];
-
+const passkeys = allPasskeys;
 const th = 'px-4 py-3 text-left font-semibold uppercase tracking-wider text-[11px] text-slate-500';
 const td = 'px-4 py-3.5';
 
 export default function SecuritySettingsPage() {
+  const { run } = useMutate();
+  // The live refresh tokens issued to this account — revoking one really ends it.
+  const { data: sessions = [], refetch } = useQuery({
+    queryKey: ['auth', 'sessions'],
+    queryFn: authApi.sessions,
+    staleTime: 30_000,
+  });
+
   const { toast } = useToast();
   const [current, setCurrent] = useState('');
   const [next, setNext] = useState('');
@@ -150,7 +150,19 @@ export default function SecuritySettingsPage() {
                     {s.current ? (
                       <span className="text-xs text-slate-400">Current</span>
                     ) : (
-                      <Button variant="ghost" size="sm" onClick={() => toast({ title: 'Session revoked', description: `Signed out ${s.device} (${s.location}).`, tone: 'success' })}>Revoke</Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() =>
+                          void run(authApi.revokeSession(s.id), {
+                            success: 'Session revoked',
+                            successDetail: `Signed out ${s.device} (${s.location}).`,
+                            describe: 'revoke that session',
+                          }).then(() => refetch())
+                        }
+                      >
+                        Revoke
+                      </Button>
                     )}
                   </td>
                 </tr>

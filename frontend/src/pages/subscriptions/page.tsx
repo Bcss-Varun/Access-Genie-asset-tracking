@@ -3,13 +3,13 @@
 // ─────────────────────────────────────────────────────────────────────────────
 
 import { useState } from 'react';
-import { mockReports } from '@/lib/mock-data';
+import { allReports } from '@/lib/dataset';
 import { PageHeader, Badge, KpiCard, EmptyState } from '@/components/ui/primitives';
 import { Button } from '@/components/ui/Button';
 import { useToast } from '@/components/providers/ToastProvider';
-import { cn, relTime, DEMO_NOW } from '@/lib/utils';
+import { cn, relTime, nowMs } from '@/lib/utils';
 
-const ahead = (hours: number) => new Date(DEMO_NOW + hours * 3_600_000).toISOString();
+const ahead = (hours: number) => new Date(nowMs() + hours * 3_600_000).toISOString();
 
 type Cadence = 'Daily' | 'Weekly' | 'Monthly';
 interface Subscription {
@@ -30,23 +30,25 @@ const scheduleConfig: Record<string, { cadence: Cadence; recipients: string; rec
   'RPT-05': { cadence: 'Weekly', recipients: 'compliance@accessgenie.in', recipientCount: 3, channel: 'Slack #compliance', nextRunH: 44, enabled: false },
 };
 
-const initialSubs: Subscription[] = mockReports
-  .filter((r) => r.scheduled)
-  .map((r) => {
-    const c = scheduleConfig[r.id] ?? { cadence: 'Weekly' as Cadence, recipients: 'team@accessgenie.in', recipientCount: 2, channel: 'Email', nextRunH: 24, enabled: true };
-    return {
-      id: `SUB-${r.id.replace('RPT-', '')}`,
-      reportName: r.name,
-      cadence: c.cadence,
-      recipients: c.recipients,
-      recipientCount: c.recipientCount,
-      channel: c.channel,
-      nextRun: ahead(c.nextRunH),
-      enabled: c.enabled,
-    };
-  });
-
 export default function SubscriptionsPage() {
+  // Derived per render: the dataset is fetched, so a value computed once at
+  // module scope would never see a refetch.
+  const initialSubs: Subscription[] = allReports
+    .filter((r) => r.scheduled)
+    .map((r) => {
+      const c = scheduleConfig[r.id] ?? { cadence: 'Weekly' as Cadence, recipients: 'team@accessgenie.in', recipientCount: 2, channel: 'Email', nextRunH: 24, enabled: true };
+      return {
+        id: `SUB-${r.id.replace('RPT-', '')}`,
+        reportName: r.name,
+        cadence: c.cadence,
+        recipients: c.recipients,
+        recipientCount: c.recipientCount,
+        channel: c.channel,
+        nextRun: ahead(c.nextRunH),
+        enabled: c.enabled,
+      };
+    });
+
   const { toast } = useToast();
   const [subs, setSubs] = useState<Subscription[]>(initialSubs);
 

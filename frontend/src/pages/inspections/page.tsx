@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { mockInspections } from '@/lib/mock-data';
-import type { Inspection, InspectionStatus } from '@/types/asset';
+import { allInspections } from '@/lib/dataset';
+import type { Inspection, InspectionStatus } from '@access-genie/shared';
 import { PageHeader, KpiCard, Badge, EmptyState } from '@/components/ui/primitives';
 import { Button } from '@/components/ui/Button';
 import { useToast } from '@/components/providers/ToastProvider';
@@ -14,7 +14,7 @@ const statusTone = (s: InspectionStatus): 'emerald' | 'red' | 'amber' | 'slate' 
 
 export default function InspectionsPage() {
   const { toast } = useToast();
-  const [inspections] = useState<Inspection[]>(() => mockInspections.map((i) => ({ ...i })));
+  const [inspections] = useState<Inspection[]>(() => allInspections.map((i) => ({ ...i })));
   const [filter, setFilter] = useState<'All' | InspectionStatus>('All');
 
   const count = (s: InspectionStatus) => inspections.filter((i) => i.status === s).length;

@@ -6,9 +6,9 @@
 
 import { useMemo, useState } from 'react';
 import { Button } from '@/components/ui/Button';
-import { mockAssets, mockGateways, nextSensorId, TAG_ID_PREFIX } from '@/lib/mock-data';
-import type { Sensor, SensorKind } from '@/types/asset';
-import { cn, DEMO_NOW } from '@/lib/utils';
+import { allAssets, allGateways, nextSensorId, TAG_ID_PREFIX } from '@/lib/dataset';
+import type { Sensor, SensorKind } from '@access-genie/shared';
+import { cn, nowMs } from '@/lib/utils';
 
 /** Passive tags carry no cell, so the battery field is hidden for these kinds. */
 const PASSIVE_KINDS: SensorKind[] = ['RFID Tag', 'QR Label'];
@@ -74,7 +74,7 @@ export function RegisterDeviceDialog({
     );
   };
 
-  const gateway = mockGateways.find((g) => g.id === gatewayId);
+  const gateway = allGateways.find((g) => g.id === gatewayId);
   const facility = gateway?.location.split(' · ')[0] ?? 'Unassigned';
 
   const duplicateTag = useMemo(
@@ -90,7 +90,7 @@ export function RegisterDeviceDialog({
     setTouched(true);
     if (!valid) return;
 
-    const asset = mockAssets.find((a) => a.id === assetId);
+    const asset = allAssets.find((a) => a.id === assetId);
     const batteryNum = Number(battery);
     const device: Sensor = {
       id: nextSensorId(devices),
@@ -107,10 +107,11 @@ export function RegisterDeviceDialog({
       tagId: tagId.trim(),
       facility,
       // Stamp on the demo clock, not the wall clock — every other timestamp in
-      // the app is anchored to DEMO_NOW, so a real `new Date()` would render the
+      // the app is anchored to nowMs(), so a real `new Date()` would render the
       // brand-new device as reporting from the future.
-      lastReading: new Date(DEMO_NOW).toISOString(),
-      registeredInSession: true,
+      lastReading: new Date(nowMs()).toISOString(),
+      createdAt: new Date(nowMs()).toISOString(),
+      updatedAt: new Date(nowMs()).toISOString(),
     };
     onRegister(device);
   };
@@ -202,7 +203,7 @@ export function RegisterDeviceDialog({
               <label className={labelCls} htmlFor="rd-asset">Bond to asset</label>
               <select id="rd-asset" className={inputCls} value={assetId} onChange={(e) => setAssetId(e.target.value)}>
                 <option value="">Leave unassigned (spare stock)</option>
-                {mockAssets.map((a) => (
+                {allAssets.map((a) => (
                   <option key={a.id} value={a.id}>{a.name} · {a.id}</option>
                 ))}
               </select>
@@ -211,7 +212,7 @@ export function RegisterDeviceDialog({
             <div>
               <label className={labelCls} htmlFor="rd-gw">Reporting gateway</label>
               <select id="rd-gw" className={inputCls} value={gatewayId} onChange={(e) => setGatewayId(e.target.value)}>
-                {mockGateways.map((g) => (
+                {allGateways.map((g) => (
                   <option key={g.id} value={g.id}>{g.id} — {g.name}</option>
                 ))}
               </select>

@@ -1,0 +1,274 @@
+[
+  {
+    "id": "MDL-FAIL",
+    "name": "Asset Failure Predictor",
+    "task": "Predictive failure (survival + gradient boosting)",
+    "status": "Production",
+    "version": "v4.2.1",
+    "accuracy": 93,
+    "driftPct": 6,
+    "lastTrained": "2026-07-14T09:00:00.000Z",
+    "owner": "ML Platform",
+    "framework": "XGBoost 2.0",
+    "predictionsPerDay": 4820,
+    "features": [
+      {
+        "feature": "Thermal trend (7d)",
+        "importance": 0.28
+      },
+      {
+        "feature": "Battery cycle count",
+        "importance": 0.22
+      },
+      {
+        "feature": "Vibration variance",
+        "importance": 0.18
+      },
+      {
+        "feature": "Age vs. MTBF",
+        "importance": 0.16
+      },
+      {
+        "feature": "Prior fault history",
+        "importance": 0.16
+      }
+    ],
+    "versions": [
+      {
+        "version": "v4.2.1",
+        "trainedAt": "2026-07-14T09:00:00.000Z",
+        "accuracy": 93,
+        "status": "Production",
+        "notes": "Added thermal-trend feature; +2.1% recall on servers."
+      },
+      {
+        "version": "v4.1.0",
+        "trainedAt": "2026-06-05T09:00:00.000Z",
+        "accuracy": 91,
+        "status": "Retired",
+        "notes": "Baseline gradient-boosted model."
+      }
+    ]
+  },
+  {
+    "id": "MDL-UTIL",
+    "name": "Utilization Optimizer",
+    "task": "Utilization & rebalancing (regression)",
+    "status": "Production",
+    "version": "v2.7.0",
+    "accuracy": 89,
+    "driftPct": 5,
+    "lastTrained": "2026-07-09T09:00:00.000Z",
+    "owner": "ML Platform",
+    "framework": "LightGBM 4.3",
+    "predictionsPerDay": 2110,
+    "features": [
+      {
+        "feature": "Idle-time ratio (30d)",
+        "importance": 0.34
+      },
+      {
+        "feature": "Location demand index",
+        "importance": 0.26
+      },
+      {
+        "feature": "Check-out frequency",
+        "importance": 0.22
+      },
+      {
+        "feature": "Peer-group utilization",
+        "importance": 0.18
+      }
+    ],
+    "versions": [
+      {
+        "version": "v2.7.0",
+        "trainedAt": "2026-07-09T09:00:00.000Z",
+        "accuracy": 89,
+        "status": "Production",
+        "notes": "Recalibrated demand index for HQ endpoints."
+      }
+    ]
+  },
+  {
+    "id": "MDL-THEFT",
+    "name": "Theft & Custody Anomaly",
+    "task": "Security / custody anomaly (isolation forest)",
+    "status": "Production",
+    "version": "v3.1.2",
+    "accuracy": 90,
+    "driftPct": 8,
+    "lastTrained": "2026-07-17T09:00:00.000Z",
+    "owner": "Security Data Science",
+    "framework": "scikit-learn 1.5",
+    "predictionsPerDay": 9600,
+    "features": [
+      {
+        "feature": "Time since last scan",
+        "importance": 0.31
+      },
+      {
+        "feature": "Geofence exit w/o checkout",
+        "importance": 0.29
+      },
+      {
+        "feature": "After-hours movement",
+        "importance": 0.22
+      },
+      {
+        "feature": "Custody chain gaps",
+        "importance": 0.18
+      }
+    ],
+    "versions": [
+      {
+        "version": "v3.1.2",
+        "trainedAt": "2026-07-17T09:00:00.000Z",
+        "accuracy": 90,
+        "status": "Production",
+        "notes": "Tuned sensitivity for BLE dropout false positives."
+      },
+      {
+        "version": "v3.0.0",
+        "trainedAt": "2026-05-14T09:00:00.000Z",
+        "accuracy": 87,
+        "status": "Retired",
+        "notes": "Initial isolation-forest rollout."
+      }
+    ]
+  },
+  {
+    "id": "MDL-FORECAST",
+    "name": "CapEx & Demand Forecaster",
+    "task": "Time-series forecasting (temporal fusion)",
+    "status": "Staging",
+    "version": "v1.9.0-rc2",
+    "accuracy": 86,
+    "driftPct": 11,
+    "lastTrained": "2026-07-20T09:00:00.000Z",
+    "owner": "FinOps Analytics",
+    "framework": "PyTorch Forecasting",
+    "predictionsPerDay": 340,
+    "features": [
+      {
+        "feature": "Refresh-cycle schedule",
+        "importance": 0.3
+      },
+      {
+        "feature": "Warranty-expiry curve",
+        "importance": 0.27
+      },
+      {
+        "feature": "Headcount growth",
+        "importance": 0.24
+      },
+      {
+        "feature": "Vendor price index",
+        "importance": 0.19
+      }
+    ],
+    "versions": [
+      {
+        "version": "v1.9.0-rc2",
+        "trainedAt": "2026-07-20T09:00:00.000Z",
+        "accuracy": 86,
+        "status": "Staging",
+        "notes": "Release candidate — validating drift before promotion."
+      },
+      {
+        "version": "v1.8.0",
+        "trainedAt": "2026-06-19T09:00:00.000Z",
+        "accuracy": 84,
+        "status": "Production",
+        "notes": "Current production CapEx forecaster."
+      }
+    ]
+  },
+  {
+    "id": "MDL-ANOM",
+    "name": "Telemetry Anomaly Detector",
+    "task": "Streaming anomaly detection (autoencoder)",
+    "status": "Production",
+    "version": "v5.0.3",
+    "accuracy": 94,
+    "driftPct": 4,
+    "lastTrained": "2026-07-12T09:00:00.000Z",
+    "owner": "ML Platform",
+    "framework": "TensorFlow 2.16",
+    "predictionsPerDay": 128000,
+    "features": [
+      {
+        "feature": "Reconstruction error",
+        "importance": 0.4
+      },
+      {
+        "feature": "Temperature z-score",
+        "importance": 0.24
+      },
+      {
+        "feature": "Power-draw deviation",
+        "importance": 0.2
+      },
+      {
+        "feature": "Signal-strength drop",
+        "importance": 0.16
+      }
+    ],
+    "versions": [
+      {
+        "version": "v5.0.3",
+        "trainedAt": "2026-07-12T09:00:00.000Z",
+        "accuracy": 94,
+        "status": "Production",
+        "notes": "Quantized encoder — 3x faster edge inference."
+      }
+    ]
+  },
+  {
+    "id": "MDL-HEALTH",
+    "name": "Asset Health Scorer",
+    "task": "Lifecycle health scoring (ensemble)",
+    "status": "Production",
+    "version": "v3.4.0",
+    "accuracy": 91,
+    "driftPct": 7,
+    "lastTrained": "2026-07-03T09:00:00.000Z",
+    "owner": "ML Platform",
+    "framework": "XGBoost 2.0",
+    "predictionsPerDay": 14205,
+    "features": [
+      {
+        "feature": "Composite health trend",
+        "importance": 0.33
+      },
+      {
+        "feature": "Warranty / EOL distance",
+        "importance": 0.25
+      },
+      {
+        "feature": "Open work-order load",
+        "importance": 0.22
+      },
+      {
+        "feature": "Book-value ratio",
+        "importance": 0.2
+      }
+    ],
+    "versions": [
+      {
+        "version": "v3.4.0",
+        "trainedAt": "2026-07-03T09:00:00.000Z",
+        "accuracy": 91,
+        "status": "Production",
+        "notes": "Blended lifecycle + telemetry signals."
+      },
+      {
+        "version": "v3.3.1",
+        "trainedAt": "2026-05-24T09:00:00.000Z",
+        "accuracy": 90,
+        "status": "Shadow",
+        "notes": "Shadow-scored against production for two weeks."
+      }
+    ]
+  }
+]

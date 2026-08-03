@@ -1,0 +1,89 @@
+[
+  {
+    "id": "ESC-01",
+    "name": "Critical Infrastructure",
+    "scope": "Servers, HVAC, Power",
+    "tone": "red",
+    "severity": "Critical",
+    "tiers": [
+      {
+        "tier": 1,
+        "notify": "Facilities On-call",
+        "afterMin": 0,
+        "channels": [
+          "Push",
+          "SMS"
+        ]
+      },
+      {
+        "tier": 2,
+        "notify": "IT Ops Lead (Arjun Menon)",
+        "afterMin": 10,
+        "channels": [
+          "Call",
+          "Email"
+        ]
+      },
+      {
+        "tier": 3,
+        "notify": "Site Director (Sneha Iyer)",
+        "afterMin": 30,
+        "channels": [
+          "Call"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "ESC-02",
+    "name": "Data Center Core",
+    "scope": "Servers, storage & network core",
+    "tone": "amber",
+    "severity": "Critical",
+    "tiers": [
+      {
+        "tier": 1,
+        "notify": "Data Center Technician",
+        "afterMin": 0,
+        "channels": [
+          "Push",
+          "In-app"
+        ]
+      },
+      {
+        "tier": 2,
+        "notify": "Infrastructure Engineering",
+        "afterMin": 15,
+        "channels": [
+          "SMS",
+          "Email"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "ESC-03",
+    "name": "Tracking & Geofence",
+    "scope": "RTLS, custody exceptions",
+    "tone": "primary",
+    "severity": "Warning",
+    "tiers": [
+      {
+        "tier": 1,
+        "notify": "Security Officer",
+        "afterMin": 0,
+        "channels": [
+          "In-app"
+        ]
+      },
+      {
+        "tier": 2,
+        "notify": "Operations Manager",
+        "afterMin": 20,
+        "channels": [
+          "Email"
+        ]
+      }
+    ]
+  }
+]

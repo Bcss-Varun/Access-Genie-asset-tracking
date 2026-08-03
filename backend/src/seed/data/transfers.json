@@ -1,0 +1,74 @@
+[
+  {
+    "id": "TR-4001",
+    "assetId": "AST-1002",
+    "assetName": "Cisco Catalyst 9500 Switch",
+    "from": "Chennai Data Center · Server Room Alpha",
+    "to": "Chennai Data Center · Server Room Beta",
+    "requester": "Arjun Menon",
+    "approver": "Sneha Iyer",
+    "status": "Pending",
+    "requestedAt": "2026-07-23T07:00:00.000Z",
+    "reason": "Rebalance switching capacity to the growing Beta row."
+  },
+  {
+    "id": "TR-4002",
+    "assetId": "AST-1009",
+    "assetName": "Synology RS2418+ NAS",
+    "from": "Chennai Data Center · Server Room Beta",
+    "to": "Chennai Data Center · Server Room Alpha",
+    "requester": "Storage Team",
+    "approver": "Manoj Reddy",
+    "status": "Approved",
+    "requestedAt": "2026-07-23T03:00:00.000Z",
+    "reason": "Return to Alpha rack after RAID array rebuild."
+  },
+  {
+    "id": "TR-4003",
+    "assetId": "AST-1005",
+    "assetName": "APC Smart-UPS 3000",
+    "from": "Hyderabad Central Warehouse · IT Storeroom",
+    "to": "Chennai Data Center · Utility Room",
+    "requester": "Facilities Team",
+    "approver": "Sneha Iyer",
+    "status": "In Transit",
+    "requestedAt": "2026-07-23T00:00:00.000Z",
+    "reason": "Deploy spare UPS to Power Row A."
+  },
+  {
+    "id": "TR-4004",
+    "assetId": "AST-1014",
+    "assetName": "Fluke Networks DSX-8000",
+    "from": "Bengaluru HQ · IT Tool Room",
+    "to": "Hyderabad Central Warehouse · Building A",
+    "requester": "Network Team",
+    "approver": "Sneha Iyer",
+    "status": "Pending",
+    "requestedAt": "2026-07-23T06:00:00.000Z",
+    "reason": "Cable-certification sweep of the new pick-zone drops."
+  },
+  {
+    "id": "TR-4005",
+    "assetId": "AST-1011",
+    "assetName": "Zebra TC52 Mobile Computer",
+    "from": "Hyderabad Central Warehouse · Picking Zone",
+    "to": "Bengaluru HQ · IT Storeroom",
+    "requester": "Warehouse Team",
+    "approver": "Manoj Reddy",
+    "status": "Received",
+    "requestedAt": "2026-07-22T05:00:00.000Z",
+    "reason": "Return rugged scanner for battery service."
+  },
+  {
+    "id": "TR-4006",
+    "assetId": "AST-1012",
+    "assetName": "Zebra RFID Gateway G-4",
+    "from": "Hyderabad Central Warehouse · Loading Dock 4",
+    "to": "Hyderabad Central Warehouse · Picking Zone",
+    "requester": "IoT Platform",
+    "approver": "Sneha Iyer",
+    "status": "In Transit",
+    "requestedAt": "2026-07-23T04:00:00.000Z",
+    "reason": "Improve RFID read coverage over the pick aisle."
+  }
+]

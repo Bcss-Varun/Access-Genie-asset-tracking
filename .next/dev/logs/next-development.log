@@ -1,0 +1,2 @@
+{"timestamp":"02:07:35.184","source":"Browser","level":"ERROR","message":"Failed to fetch RSC payload for http://localhost:3000/. Falling back to browser navigation. {}"}
+{"timestamp":"02:07:35.193","source":"Browser","level":"ERROR","message":"Failed to fetch RSC payload for http://localhost:3000/admin/webhooks. Falling back to browser navigation. {}"}

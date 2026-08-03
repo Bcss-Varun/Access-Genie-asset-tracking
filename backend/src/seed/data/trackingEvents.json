@@ -1,0 +1,153 @@
+[
+  {
+    "id": "TEV-01",
+    "at": "2026-07-23T08:58:00.000Z",
+    "kind": "Detection",
+    "title": "Unregistered tag read in the Secure Cage",
+    "detail": "RFID-E28011606991 · 412th read in 14h",
+    "zone": "Secure Cage",
+    "actor": "Detection Matcher",
+    "tone": "warn"
+  },
+  {
+    "id": "TEV-02",
+    "at": "2026-07-23T08:56:00.000Z",
+    "kind": "Movement",
+    "title": "Zebra TC52 returned to the Picking Zone",
+    "detail": "Completed a 1.84 km round through Dock 4",
+    "assetId": "AST-1011",
+    "assetName": "Zebra TC52 Mobile Computer",
+    "zone": "Picking Zone",
+    "actor": "Presence Monitor",
+    "tone": "good"
+  },
+  {
+    "id": "TEV-03",
+    "at": "2026-07-23T08:54:00.000Z",
+    "kind": "Custody",
+    "title": "Transfer submitted for approval",
+    "detail": "Fluke DSX-8000 · Bengaluru HQ ▸ Hyderabad WH",
+    "assetId": "AST-1014",
+    "assetName": "Fluke Networks DSX-8000",
+    "actor": "Manoj Reddy",
+    "tone": "info"
+  },
+  {
+    "id": "TEV-04",
+    "at": "2026-07-23T08:42:00.000Z",
+    "kind": "Audit",
+    "title": "IT Storeroom verified — 486 of 486",
+    "detail": "Automatic verification pass, 100% accuracy",
+    "zone": "IT Storeroom",
+    "actor": "Audit Engine",
+    "tone": "good"
+  },
+  {
+    "id": "TEV-05",
+    "at": "2026-07-23T08:22:00.000Z",
+    "kind": "Audit",
+    "title": "Dock 4 reconciliation started",
+    "detail": "340 expected · 268 detected so far",
+    "zone": "Loading Dock 4",
+    "actor": "Deepak Nair",
+    "tone": "info"
+  },
+  {
+    "id": "TEV-06",
+    "at": "2026-07-23T07:00:00.000Z",
+    "kind": "Custody",
+    "title": "ThinkPad T14 checked out",
+    "detail": "Sneha Iyer · due back in 4 days",
+    "assetId": "AST-1003",
+    "assetName": "Lenovo ThinkPad T14",
+    "zone": "IT Storeroom",
+    "actor": "Scan Station DEV-SS-08",
+    "tone": "good"
+  },
+  {
+    "id": "TEV-07",
+    "at": "2026-07-23T07:00:00.000Z",
+    "kind": "Alert",
+    "title": "Dwell limit exceeded in the Staging Bay",
+    "detail": "3 pallets over the 8-hour limit",
+    "zone": "Staging Bay",
+    "actor": "Zone Policy",
+    "tone": "warn"
+  },
+  {
+    "id": "TEV-08",
+    "at": "2026-07-23T06:00:00.000Z",
+    "kind": "Alert",
+    "title": "Duplicate identity detected",
+    "detail": "One tag identity read in two zones at once",
+    "assetId": "AST-1012",
+    "assetName": "Zebra RFID Gateway G-4",
+    "zone": "Loading Dock 4",
+    "actor": "Detection Matcher",
+    "tone": "bad"
+  },
+  {
+    "id": "TEV-09",
+    "at": "2026-07-23T05:00:00.000Z",
+    "kind": "Device",
+    "title": "Coverage gap confirmed on the Tool Room corridor",
+    "detail": "6 journeys blind for 40–50 minutes",
+    "zone": "IT Tool Room",
+    "actor": "Coverage Analyser",
+    "tone": "warn"
+  },
+  {
+    "id": "TEV-10",
+    "at": "2026-07-23T03:00:00.000Z",
+    "kind": "Alert",
+    "title": "Rack B08 slot 22 went empty",
+    "detail": "No work order open for this removal",
+    "assetId": "AST-1009",
+    "assetName": "Synology RS2418+ NAS",
+    "zone": "Server Room Beta",
+    "actor": "Rack Monitor",
+    "tone": "bad"
+  },
+  {
+    "id": "TEV-11",
+    "at": "2026-07-23T00:00:00.000Z",
+    "kind": "Device",
+    "title": "Floor 3 anchor cluster degraded",
+    "detail": "5 of 8 anchors reporting — precision downgraded",
+    "zone": "Floor 3 Desks",
+    "actor": "Device Health",
+    "tone": "warn"
+  },
+  {
+    "id": "TEV-12",
+    "at": "2026-07-22T19:00:00.000Z",
+    "kind": "Device",
+    "title": "Secure Cage reader went offline",
+    "detail": "210 assets are now unverifiable",
+    "zone": "Secure Cage",
+    "actor": "Device Health",
+    "tone": "bad"
+  },
+  {
+    "id": "TEV-13",
+    "at": "2026-07-22T13:00:00.000Z",
+    "kind": "Alert",
+    "title": "After-hours cage movement resolved",
+    "detail": "Matched to approved move order MO-771",
+    "zone": "Secure Cage",
+    "actor": "Tarun Fernandes",
+    "tone": "good"
+  },
+  {
+    "id": "TEV-14",
+    "at": "2026-07-21T05:00:00.000Z",
+    "kind": "Alert",
+    "title": "Asset left the building without a check-out",
+    "detail": "iPad Pro 12.9\" · escalated to Security",
+    "assetId": "AST-1006",
+    "assetName": "iPad Pro 12.9\" (Field Ops)",
+    "zone": "Main Exit & Reception",
+    "actor": "Zone Policy",
+    "tone": "bad"
+  }
+]

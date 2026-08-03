@@ -4,6 +4,8 @@ import { useNavigate } from 'react-router-dom';
 import { PageHeader, Badge } from '@/components/ui/primitives';
 import { Button } from '@/components/ui/Button';
 import { useToast } from '@/components/providers/ToastProvider';
+import { alertRulesApi } from '@/api/catalog';
+import { useMutate } from '@/api/mutate';
 import { cn } from '@/lib/utils';
 
 type Severity = 'Critical' | 'Warning' | 'Info';
@@ -30,6 +32,7 @@ const CHANNELS = ['Email', 'SMS', 'Slack', 'Push', 'In-app'];
 export default function NewAlertRulePage() {
   const navigate = useNavigate();
   const { toast } = useToast();
+  const { run, isPending } = useMutate();
 
   const [name, setName] = useState('');
   const [metric, setMetric] = useState(METRICS[0].value);
@@ -46,13 +49,32 @@ export default function NewAlertRulePage() {
 
   const canCreate = name.trim().length > 0 && value.trim().length > 0 && selectedChannels.length > 0;
 
-  function handleCreate() {
+  async function handleCreate() {
     if (!canCreate) {
       toast({ title: 'Incomplete rule', description: 'Add a name, a threshold value, and at least one channel.', tone: 'error' });
       return;
     }
-    toast({ title: 'Rule created', description: `${name.trim()} — ${severity} · ${selectedChannels.join(', ')}`, tone: 'success' });
-    navigate('/alert-rules');
+
+    // The condition is stored as the expression the preview shows, so what the
+    // rule list displays is exactly what was agreed to at creation time.
+    const created = await run(
+      alertRulesApi.create({
+        name: name.trim(),
+        condition: `${metric} ${operator} ${value.trim()}`,
+        severity,
+        channels: selectedChannels,
+        enabled: true,
+      }),
+      {
+        success: 'Rule created',
+        successDetail: `${name.trim()} — ${severity} · ${selectedChannels.join(', ')}`,
+        describe: 'create that rule',
+      },
+    );
+
+    // Navigating on failure would leave the operator on a list without the rule
+    // they just wrote, and no obvious way back to the form they filled in.
+    if (created) navigate('/alert-rules');
   }
 
   const inputClass =
@@ -73,7 +95,7 @@ export default function NewAlertRulePage() {
             <Link to="/alert-rules">
               <Button variant="outline">Cancel</Button>
             </Link>
-            <Button onClick={handleCreate} disabled={!canCreate}>Create rule</Button>
+            <Button onClick={() => void handleCreate()} disabled={!canCreate || isPending}>Create rule</Button>
           </div>
         }
       />
@@ -190,7 +212,7 @@ export default function NewAlertRulePage() {
               <span className="font-medium text-emerald-600">Enabled</span>
             </div>
           </div>
-          <Button onClick={handleCreate} disabled={!canCreate} className="w-full">Create rule</Button>
+          <Button onClick={() => void handleCreate()} disabled={!canCreate || isPending} className="w-full">Create rule</Button>
         </div>
       </div>
     </div>

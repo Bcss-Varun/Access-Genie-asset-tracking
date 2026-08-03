@@ -1,5 +1,5 @@
 import { flattenScope } from '@/lib/rbac';
-import type { ScopeLevel } from '@/types/platform';
+import type { ScopeLevel } from '@access-genie/shared';
 import { PageHeader, Badge, KpiCard } from '@/components/ui/primitives';
 import { Button } from '@/components/ui/Button';
 import { useToast } from '@/components/providers/ToastProvider';

@@ -1,11 +1,11 @@
 import { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { mockInsights, mockWorkOrders } from '@/lib/mock-data';
+import { allInsights, allWorkOrders } from '@/lib/dataset';
 import { useToast } from '@/components/providers/ToastProvider';
 import { PageHeader, KpiCard, EmptyState, Badge } from '@/components/ui/primitives';
 import { Button } from '@/components/ui/Button';
 import { cn, formatMoney, relTime } from '@/lib/utils';
-import type { AIInsight, InsightSeverity } from '@/types/asset';
+import type { AIInsight, InsightSeverity } from '@access-genie/shared';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Static config (module scope → stable identity, no re-creation per render)
@@ -26,20 +26,23 @@ const SEVERITY: Record<
 };
 
 /** Baseline of AI-generated work orders already in the pipeline. */
-const BASE_AUTO_WOS = mockWorkOrders.filter((w) => w.aiGenerated).length;
 
 // ─────────────────────────────────────────────────────────────────────────────
 
 export default function PredictivePage() {
+  // Derived per render: the dataset is fetched, so a value computed once at
+  // module scope would never see a refetch.
+  const BASE_AUTO_WOS = allWorkOrders.filter((w) => w.aiGenerated).length;
+
   const { toast } = useToast();
 
   // Source alerts: predictive-failure + anomaly insights, newest first.
   // Fallback to *any* insight so the board is never empty in the demo.
   const alerts = useMemo<AIInsight[]>(() => {
-    const matched = mockInsights.filter((i) =>
+    const matched = allInsights.filter((i) =>
       (PREDICTIVE_TYPES as readonly string[]).includes(i.type),
     );
-    const source = matched.length > 0 ? matched : mockInsights;
+    const source = matched.length > 0 ? matched : allInsights;
     return [...source].sort((a, b) => Date.parse(b.createdAt) - Date.parse(a.createdAt));
   }, []);
 

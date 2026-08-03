@@ -2,34 +2,36 @@ import { Link } from 'react-router-dom';
 import { ValueByCategoryDonut } from '@/components/charts/DashboardCharts';
 import { Card, InsightPanel, categoryEmoji } from '@/components/dashboards/DashboardKit';
 import { PageHeader, KpiCard, Badge } from '@/components/ui/primitives';
-import { mockAssets, mockInsights } from '@/lib/mock-data';
-import { cn, relTime, DEMO_NOW, formatMoney } from '@/lib/utils';
+import { allAssets, allInsights } from '@/lib/dataset';
+import { cn, relTime, nowMs, formatMoney } from '@/lib/utils';
 
-const total = mockAssets.length;
-const active = mockAssets.filter((a) => a.status === 'Active').length;
-
-// Data-quality: % of a defined field checklist populated across the fleet
-const FIELDS: ((a: (typeof mockAssets)[number]) => unknown)[] = [
+  const FIELDS: ((a: (typeof allAssets)[number]) => unknown)[] = [
   (a) => a.manufacturer, (a) => a.model, (a) => a.warrantyExpiry,
   (a) => a.bookValue, (a) => a.telemetry?.batteryLevel, (a) => a.trackingTech,
 ];
-let filled = 0;
-mockAssets.forEach((a) => FIELDS.forEach((f) => { if (f(a) != null) filled += 1; }));
-const dataQuality = Math.round((filled / (mockAssets.length * FIELDS.length)) * 100);
-const incomplete = mockAssets.filter((a) => a.telemetry?.batteryLevel == null);
 
-const avgUtil = Math.round(mockAssets.reduce((s, a) => s + (a.utilization ?? 0), 0) / total);
+// Data-quality: % of a defined field checklist populated across the fleet
+
+let filled = 0;
+allAssets.forEach((a) => FIELDS.forEach((f) => { if (f(a) != null) filled += 1; }));
 
 // Days to warranty expiry
-const daysTo = (iso?: string) => (iso ? Math.round((Date.parse(iso) - DEMO_NOW) / 86_400_000) : Infinity);
-const eol = mockAssets
-  .map((a) => ({ a, days: daysTo(a.warrantyExpiry) }))
-  .filter(({ a, days }) => days <= 90 || a.lifecycleStage === 'EOL Planning')
-  .sort((x, y) => x.days - y.days);
-
-const assetInsights = mockInsights.filter((i) => ['Lifecycle', 'Cost Optimization', 'Utilization'].includes(i.type)).slice(0, 3);
+const daysTo = (iso?: string) => (iso ? Math.round((Date.parse(iso) - nowMs()) / 86_400_000) : Infinity);
 
 export default function AssetDashboard() {
+  // Derived per render: the dataset is fetched, so a value computed once at
+  // module scope would never see a refetch.
+  const total = allAssets.length;
+    const active = allAssets.filter((a) => a.status === 'Active').length;
+    const dataQuality = Math.round((filled / (allAssets.length * FIELDS.length)) * 100);
+    const incomplete = allAssets.filter((a) => a.telemetry?.batteryLevel == null);
+    const avgUtil = Math.round(allAssets.reduce((s, a) => s + (a.utilization ?? 0), 0) / total);
+    const eol = allAssets
+    .map((a) => ({ a, days: daysTo(a.warrantyExpiry) }))
+    .filter(({ a, days }) => days <= 90 || a.lifecycleStage === 'EOL Planning')
+    .sort((x, y) => x.days - y.days);
+    const assetInsights = allInsights.filter((i) => ['Lifecycle', 'Cost Optimization', 'Utilization'].includes(i.type)).slice(0, 3);
+
   const th = 'px-4 py-3 text-left font-semibold uppercase tracking-wider text-[11px] text-slate-500';
   const td = 'px-4 py-3';
   return (

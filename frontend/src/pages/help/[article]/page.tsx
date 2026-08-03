@@ -44,7 +44,7 @@ export default function HelpArticlePage() {
 
           <div className="rounded-lg border border-slate-200 bg-slate-50 p-4">
             <h4 className="font-heading font-semibold text-slate-800 mb-1">In this demo</h4>
-            <p className="text-sm text-slate-500">All data is mocked in-session — actions surface a toast rather than persisting to a backend.</p>
+            <p className="text-sm text-slate-500">Every action on these screens is saved to your organisation's database.</p>
           </div>
 
           {/* Was this helpful */}

@@ -1,11 +1,13 @@
 import { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { PageHeader, Badge } from '@/components/ui/primitives';
+import { PageHeader, Badge, EmptyState } from '@/components/ui/primitives';
 import { Button } from '@/components/ui/Button';
 import { useToast } from '@/components/providers/ToastProvider';
-import { mockAssets, mockCustody } from '@/lib/mock-data';
+import { allAssets, allCustody } from '@/lib/dataset';
 import { relTime } from '@/lib/utils';
-import type { CustodyAction, CustodyRecord } from '@/types/asset';
+import { custodyApi } from '@/api/catalog';
+import { useMutate } from '@/api/mutate';
+import type { CustodyAction, CustodyRecord } from '@access-genie/shared';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Check-in / Check-out — kiosk-style custody console + recent activity log.
@@ -20,36 +22,41 @@ const ACTION_TONE: Record<CustodyAction, 'primary' | 'emerald' | 'slate' | 'ambe
 
 export default function CheckInOutPage() {
   const { toast } = useToast();
-  const [assetId, setAssetId] = useState<string>(mockAssets[0].id);
+  const { run, isPending } = useMutate();
+  const [assetId, setAssetId] = useState<string>(allAssets[0]?.id ?? '');
   const [custodian, setCustodian] = useState('');
   const [action, setAction] = useState<'out' | 'in'>('out');
+
+  // Seeded from the dataset and prepended to optimistically; `run` re-reads the
+  // dataset after the write, so the list converges on what the server stored —
+  // including the ID it minted, which the client has no business inventing.
   const [log, setLog] = useState<CustodyRecord[]>(() =>
-    [...mockCustody].sort((a, b) => Date.parse(b.at) - Date.parse(a.at)),
+    [...allCustody].sort((a, b) => Date.parse(b.at) - Date.parse(a.at)),
   );
 
-  const asset = useMemo(() => mockAssets.find((a) => a.id === assetId)!, [assetId]);
+  // No `!` here: the registry is empty until someone registers an asset, and
+  // the kiosk below renders an empty state rather than a form in that case.
+  const asset = useMemo(() => allAssets.find((a) => a.id === assetId), [assetId]);
 
-  function confirm() {
+  async function confirm() {
+    if (!asset) return;
+
     const holder = custodian.trim();
     if (!holder) {
       toast({ title: 'Custodian required', description: 'Enter who is taking custody before confirming.', tone: 'error' });
       return;
     }
-    const record: CustodyRecord = {
-      id: `CU-${Math.floor(Math.random() * 9000) + 1000}`,
-      assetId: asset.id,
-      assetName: asset.name,
-      holder,
-      action: action === 'out' ? 'Checked Out' : 'Checked In',
-      at: new Date().toISOString(),
-      by: 'Kiosk WH-1',
-    };
-    setLog((prev) => [record, ...prev]);
-    toast({
-      title: action === 'out' ? 'Checked out' : 'Checked in',
-      description: `${asset.name} · ${holder}`,
-      tone: 'success',
+
+    const custodyAction: CustodyAction = action === 'out' ? 'Checked Out' : 'Checked In';
+
+    const record = await run(custodyApi.record({ assetId: asset.id, holder, action: custodyAction }), {
+      success: action === 'out' ? 'Checked out' : 'Checked in',
+      successDetail: `${asset.name} · ${holder}`,
+      describe: `check that asset ${action === 'out' ? 'out' : 'in'}`,
     });
+
+    if (!record) return;
+    setLog((prev) => [record, ...prev]);
     setCustodian('');
   }
 
@@ -66,6 +73,15 @@ export default function CheckInOutPage() {
         <div className="lg:col-span-2 glass-panel rounded-xl p-6 flex flex-col gap-5">
           <h2 className="text-lg font-heading font-semibold text-slate-900">Custody Kiosk</h2>
 
+          {!asset ? (
+            <EmptyState
+              icon="📦"
+              title="No assets to hand out yet"
+              description="The kiosk hands registered assets to a custodian and takes them back. Register one and it becomes selectable here."
+              action={<Link to="/assets/new"><Button variant="primary">Register an asset</Button></Link>}
+            />
+          ) : (
+          <>
           {/* Action toggle */}
           <div className="inline-flex items-center rounded-lg border border-slate-200 bg-slate-100/60 p-0.5 text-sm font-medium">
             {(['out', 'in'] as const).map((a) => (
@@ -89,7 +105,7 @@ export default function CheckInOutPage() {
               onChange={(e) => setAssetId(e.target.value)}
               className="mt-1.5 w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-800 focus:outline-none focus:ring-2 focus:ring-primary-500"
             >
-              {mockAssets.map((a) => (
+              {allAssets.map((a) => (
                 <option key={a.id} value={a.id}>
                   {a.name} ({a.id})
                 </option>
@@ -122,9 +138,11 @@ export default function CheckInOutPage() {
             />
           </label>
 
-          <Button onClick={confirm} className="w-full">
+          <Button onClick={() => void confirm()} disabled={isPending} className="w-full">
             Confirm {action === 'out' ? 'Check-out' : 'Check-in'}
           </Button>
+          </>
+          )}
         </div>
 
         {/* Recent activity */}

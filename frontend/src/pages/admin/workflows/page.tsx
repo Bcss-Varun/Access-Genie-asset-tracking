@@ -1,10 +1,10 @@
 import { useState } from 'react';
-import { mockWorkflows } from '@/lib/mock-data';
+import { allWorkflows } from '@/lib/dataset';
 import { PageHeader, Badge, KpiCard } from '@/components/ui/primitives';
 import { Button } from '@/components/ui/Button';
 import { useToast } from '@/components/providers/ToastProvider';
 import { cn } from '@/lib/utils';
-import type { ApprovalWorkflow } from '@/types/asset';
+import type { ApprovalWorkflow } from '@access-genie/shared';
 
 function Toggle({ on, onChange, label }: { on: boolean; onChange: () => void; label: string }) {
   return (
@@ -90,8 +90,8 @@ function WorkflowCard({ wf }: { wf: ApprovalWorkflow }) {
 
 export default function WorkflowsPage() {
   const { toast } = useToast();
-  const active = mockWorkflows.filter((w) => w.status === 'Active').length;
-  const draft = mockWorkflows.filter((w) => w.status === 'Draft').length;
+  const active = allWorkflows.filter((w) => w.status === 'Active').length;
+  const draft = allWorkflows.filter((w) => w.status === 'Draft').length;
 
   return (
     <div className="h-full flex flex-col space-y-6">
@@ -116,7 +116,7 @@ export default function WorkflowsPage() {
       </div>
 
       <div className="grid gap-4 lg:grid-cols-2">
-        {mockWorkflows.map((wf) => (
+        {allWorkflows.map((wf) => (
           <WorkflowCard key={wf.id} wf={wf} />
         ))}
       </div>

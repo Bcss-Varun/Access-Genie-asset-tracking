@@ -1,0 +1,45 @@
+[
+  {
+    "id": "WH-01",
+    "url": "https://ops.acme.com/hooks/assets",
+    "events": [
+      "asset.created",
+      "asset.updated"
+    ],
+    "enabled": true,
+    "lastDelivery": "2026-07-23T08:56:00.000Z",
+    "ok": true
+  },
+  {
+    "id": "WH-02",
+    "url": "https://sn.acme.com/api/workorders",
+    "events": [
+      "workorder.created",
+      "workorder.closed"
+    ],
+    "enabled": true,
+    "lastDelivery": "2026-07-23T08:38:00.000Z",
+    "ok": true
+  },
+  {
+    "id": "WH-03",
+    "url": "https://slack.acme.com/genie/alerts",
+    "events": [
+      "alert.raised",
+      "asset.missing"
+    ],
+    "enabled": true,
+    "lastDelivery": "2026-07-23T08:59:00.000Z",
+    "ok": true
+  },
+  {
+    "id": "WH-04",
+    "url": "https://legacy.acme.com/inbound",
+    "events": [
+      "asset.retired"
+    ],
+    "enabled": false,
+    "lastDelivery": "2026-07-22T03:00:00.000Z",
+    "ok": false
+  }
+]

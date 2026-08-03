@@ -4,7 +4,7 @@ import { connectDb, disconnectDb } from './config/db.js';
 import { env } from './config/env.js';
 import { logger } from './config/logger.js';
 
-//
+
 
 /**
  * Process entry point: connect the database, start listening, and shut both
@@ -14,9 +14,10 @@ async function start(): Promise<void> {
   await connectDb();
 
   const app = createApp();
-  const server: Server = app.listen(env.PORT, () => {
-    logger.info(`Access Genie API listening on http://localhost:${env.PORT}`, {
+  const server: Server = app.listen(env.PORT, env.HOST, () => {
+    logger.info(`Access Genie API listening on http://${env.HOST}:${env.PORT}${env.API_PREFIX}`, {
       environment: env.NODE_ENV,
+      database: env.MONGODB_DB_NAME,
       cors: env.corsOrigins.join(', '),
     });
   });

@@ -1,10 +1,11 @@
 import { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { mockAlerts } from '@/lib/mock-data';
-import type { Alert, AlertStatus } from '@/types/asset';
+import { allAlerts } from '@/lib/dataset';
+import type { Alert, AlertStatus } from '@access-genie/shared';
 import { PageHeader, Badge, KpiCard, EmptyState } from '@/components/ui/primitives';
 import { Button } from '@/components/ui/Button';
-import { useToast } from '@/components/providers/ToastProvider';
+import { alertsApi } from '@/api/alerts';
+import { useMutate } from '@/api/mutate';
 import { cn, relTime } from '@/lib/utils';
 
 type Severity = Alert['severity'];
@@ -27,8 +28,10 @@ const SEVERITIES: Severity[] = ['Critical', 'Warning', 'Info'];
 const STATUSES: AlertStatus[] = ['Open', 'Acknowledged', 'Escalated', 'Resolved'];
 
 export default function AlertCenterPage() {
-  const { toast } = useToast();
-  const [alerts, setAlerts] = useState<Alert[]>(mockAlerts);
+  const { run } = useMutate();
+  // Seeded from the dataset, then updated optimistically. `run` re-reads the
+  // dataset on success, so the sidebar badge and the dashboards follow.
+  const [alerts, setAlerts] = useState<Alert[]>(allAlerts);
   const [sevFilter, setSevFilter] = useState<Severity | 'All'>('All');
   const [statusFilter, setStatusFilter] = useState<AlertStatus | 'All'>('All');
   const [selected, setSelected] = useState<Set<string>>(new Set());
@@ -50,8 +53,22 @@ export default function AlertCenterPage() {
 
   function setStatus(id: string, status: AlertStatus, verb: string) {
     const alert = alerts.find((a) => a.id === id);
+    const previous = alert?.status;
+
     setAlerts((prev) => prev.map((a) => (a.id === id ? { ...a, status } : a)));
-    toast({ title: `Alert ${verb}`, description: `${alert?.id} — ${alert?.title}`, tone: 'success' });
+
+    const call =
+      status === 'Acknowledged' ? alertsApi.acknowledge(id)
+        : status === 'Escalated' ? alertsApi.escalate(id)
+          : alertsApi.resolve(id);
+
+    void run(call, {
+      success: `Alert ${verb}`,
+      successDetail: `${alert?.id} — ${alert?.title}`,
+      describe: `${verb.replace(/d$/, '')} that alert`,
+      rollback: () =>
+        setAlerts((prev) => prev.map((a) => (a.id === id && previous ? { ...a, status: previous } : a))),
+    });
   }
 
   function toggleSelect(id: string) {
@@ -68,10 +85,19 @@ export default function AlertCenterPage() {
   }
 
   function bulkAcknowledge() {
-    const ids = Array.from(selected);
-    setAlerts((prev) => prev.map((a) => (selected.has(a.id) && a.status === 'Open' ? { ...a, status: 'Acknowledged' } : a)));
-    toast({ title: `${ids.length} alert${ids.length === 1 ? '' : 's'} acknowledged`, tone: 'success' });
+    // Only the open ones actually change, so only those are sent.
+    const ids = alerts.filter((a) => selected.has(a.id) && a.status === 'Open').map((a) => a.id);
+    if (!ids.length) return;
+
+    const before = alerts;
+    setAlerts((prev) => prev.map((a) => (ids.includes(a.id) ? { ...a, status: 'Acknowledged' } : a)));
     setSelected(new Set());
+
+    void run(alertsApi.acknowledgeMany(ids), {
+      success: `${ids.length} alert${ids.length === 1 ? '' : 's'} acknowledged`,
+      describe: 'acknowledge those alerts',
+      rollback: () => setAlerts(before),
+    });
   }
 
   const allChecked = visible.length > 0 && selected.size === visible.length;

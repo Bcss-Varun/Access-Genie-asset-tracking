@@ -1,13 +1,16 @@
+import { maintenanceApi } from '@/api/work-orders';
+import { useMutate } from '@/api/mutate';
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { PageHeader, KpiCard } from "@/components/ui/primitives";
-import { mockWorkOrders, mockAssets, getAssetById } from "@/lib/mock-data";
+import { allWorkOrders, allAssets, getAssetById } from "@/lib/dataset";
+import { nowMs } from '@/lib/utils';
 import type {
   WorkOrder,
   WorkOrderStatus,
   WorkOrderPriority,
   WorkOrderType,
-} from "@/types/asset";
+} from "@access-genie/shared";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Constants & helpers (module scope → stable identity, no re-creation on render)
@@ -15,7 +18,7 @@ import type {
 
 /** Fixed demo "now" so overdue math + relative times are deterministic (no
  *  Date.now() at render → no SSR/client hydration drift). Anchored to today. */
-const REF_NOW = Date.parse("2026-07-23T14:30:00.000Z");
+const REF_NOW = nowMs();
 
 const STATUS_ORDER: WorkOrderStatus[] = [
   "New",
@@ -149,7 +152,7 @@ const HEADERS: { key: SortKey; label: string }[] = [
 export default function MaintenancePage() {
   // Copy mock data into state so in-session mock CRUD works.
   const [workOrders, setWorkOrders] = useState<WorkOrder[]>(() =>
-    mockWorkOrders.map((wo) => ({ ...wo }))
+    allWorkOrders.map((wo) => ({ ...wo }))
   );
   const [view, setView] = useState<"board" | "list">("board");
   const [priorityFilter, setPriorityFilter] = useState<"All" | WorkOrderPriority>("All");
@@ -157,21 +160,31 @@ export default function MaintenancePage() {
   const [sortKey, setSortKey] = useState<SortKey>("due");
   const [sortDir, setSortDir] = useState<"asc" | "desc">("asc");
   const [woCounter, setWoCounter] = useState(5013);
+  const { run } = useMutate();
 
-  // ── Mutations (mock CRUD) ──────────────────────────────────────────────────
+  // ── Mutations ──────────────────────────────────────────────────────────────
   function moveStatus(id: string, dir: 1 | -1) {
-    setWorkOrders((prev) =>
-      prev.map((wo) => {
-        if (wo.id !== id) return wo;
-        const idx = STATUS_ORDER.indexOf(wo.status);
-        const next = Math.min(STATUS_ORDER.length - 1, Math.max(0, idx + dir));
-        return { ...wo, status: STATUS_ORDER[next] };
-      })
-    );
+    const wo = workOrders.find((w) => w.id === id);
+    if (!wo) return;
+
+    const idx = STATUS_ORDER.indexOf(wo.status);
+    const next = STATUS_ORDER[Math.min(STATUS_ORDER.length - 1, Math.max(0, idx + dir))];
+    if (next === wo.status) return;
+
+    setWorkOrders((prev) => prev.map((w) => (w.id === id ? { ...w, status: next } : w)));
+
+    // The API validates the transition against its own state machine, so an
+    // illegal move is refused there and rolled back here.
+    void run(maintenanceApi.changeStatus(id, next), {
+      success: `Work order ${next.toLowerCase()}`,
+      successDetail: `${wo.id} — ${wo.title}`,
+      describe: 'change that status',
+      rollback: () => setWorkOrders((prev) => prev.map((w) => (w.id === id ? { ...w, status: wo.status } : w))),
+    });
   }
 
   function handleCreate() {
-    const asset = mockAssets[woCounter % mockAssets.length];
+    const asset = allAssets[woCounter % allAssets.length];
     const newWo: WorkOrder = {
       id: `WO-${woCounter}`,
       title: "New maintenance request",
@@ -186,9 +199,25 @@ export default function MaintenancePage() {
       description: "Manually created work order — assign a technician and set the priority.",
       estimatedHours: 2,
       aiGenerated: false,
+      updatedAt: new Date(nowMs()).toISOString(),
+      // A work order starts with an empty execution record, not without one.
+      checklist: [],
+      parts: [],
+      laborLog: [],
+      comments: [],
     };
     setWorkOrders((prev) => [newWo, ...prev]);
     setWoCounter((c) => c + 1);
+
+    // The server mints the real id; drop the provisional row in favour of it.
+    const { id: _provisional, ...body } = newWo;
+    void run(maintenanceApi.create(body as unknown as Record<string, unknown>), {
+      success: 'Work order raised',
+      describe: 'raise that work order',
+      rollback: () => setWorkOrders((prev) => prev.filter((w) => w.id !== newWo.id)),
+    }).then((saved) => {
+      if (saved) setWorkOrders((prev) => prev.map((w) => (w.id === newWo.id ? saved : w)));
+    });
     // Clear filters so the freshly created card is visible immediately.
     setPriorityFilter("All");
     setTypeFilter("All");

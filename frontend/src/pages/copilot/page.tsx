@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom';
 import { PageHeader } from '@/components/ui/primitives';
 import { Button } from '@/components/ui/Button';
 import { categoryEmoji, riskBar, riskTone } from '@/components/dashboards/DashboardKit';
-import { mockAssets, categoryBreakdown, mockInsights } from '@/lib/mock-data';
+import { allAssets, categoryBreakdown, allInsights } from '@/lib/dataset';
 import { cn, formatMoney } from '@/lib/utils';
 
 type AnswerKey = 'risk' | 'value' | 'idle';
@@ -32,12 +32,25 @@ function route(text: string): AnswerKey {
 
 // ── Rich answer cards ─────────────────────────────────────────────────────────
 function RiskAnswer() {
-  const top = [...mockAssets].sort((a, b) => (b.riskScore ?? 0) - (a.riskScore ?? 0)).slice(0, 4);
-  const insight = mockInsights.find((i) => i.type === 'Predictive Failure');
+  const top = [...allAssets].sort((a, b) => (b.riskScore ?? 0) - (a.riskScore ?? 0)).slice(0, 4);
+  const insight = allInsights.find((i) => i.type === 'Predictive Failure');
+
+  // `risk` is the fallback intent for anything the router does not recognise, so
+  // this renders on the very first unmatched question — including on an estate
+  // with nothing registered yet, where there is no riskiest asset to name.
+  if (top.length === 0) {
+    return (
+      <p className="text-sm text-slate-700 leading-relaxed">
+        There are no assets registered yet, so there is nothing to score for risk. Once assets are
+        registered and reporting, this answers with the ones above the risk-60 action threshold.
+      </p>
+    );
+  }
+
   return (
     <div className="space-y-4">
       <p className="text-sm text-slate-700 leading-relaxed">
-        <span className="font-semibold text-slate-900">{mockAssets.filter((a) => (a.riskScore ?? 0) > 60).length} assets</span> are
+        <span className="font-semibold text-slate-900">{allAssets.filter((a) => (a.riskScore ?? 0) > 60).length} assets</span> are
         above the risk-60 action threshold. The most urgent is{' '}
         <span className="font-semibold text-slate-900">{top[0].name}</span> at a risk score of {top[0].riskScore}.
       </p>
@@ -71,8 +84,8 @@ function RiskAnswer() {
 
 function ValueAnswer() {
   const total = categoryBreakdown.reduce((s, c) => s + c.value, 0);
-  const book = mockAssets.reduce((s, a) => s + (a.bookValue ?? 0), 0);
-  const purchase = mockAssets.reduce((s, a) => s + a.purchasePrice, 0);
+  const book = allAssets.reduce((s, a) => s + (a.bookValue ?? 0), 0);
+  const purchase = allAssets.reduce((s, a) => s + a.purchasePrice, 0);
   const max = Math.max(...categoryBreakdown.map((c) => c.value));
   return (
     <div className="space-y-4">
@@ -110,9 +123,9 @@ function ValueAnswer() {
 }
 
 function IdleAnswer() {
-  const idle = mockAssets.filter((a) => (a.utilization ?? 0) < 40 && a.status !== 'Missing')
+  const idle = allAssets.filter((a) => (a.utilization ?? 0) < 40 && a.status !== 'Missing')
     .sort((a, b) => (a.utilization ?? 0) - (b.utilization ?? 0));
-  const insight = mockInsights.find((i) => i.type === 'Utilization');
+  const insight = allInsights.find((i) => i.type === 'Utilization');
   return (
     <div className="space-y-4">
       <p className="text-sm text-slate-700 leading-relaxed">

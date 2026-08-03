@@ -2,6 +2,7 @@ import axios, { AxiosError, type AxiosInstance, type InternalAxiosRequestConfig 
 import type { ApiFailure, ApiMeta, ApiResponse } from '@access-genie/shared';
 
 const BASE_URL = import.meta.env.VITE_API_URL ?? '/api/v1';
+const TIMEOUT_MS = Number(import.meta.env.VITE_API_TIMEOUT ?? 20_000);
 
 /**
  * The access token lives in a module variable, not in localStorage.
@@ -30,7 +31,7 @@ export const http: AxiosInstance = axios.create({
   baseURL: BASE_URL,
   withCredentials: true, // send the refresh cookie
   headers: { 'Content-Type': 'application/json' },
-  timeout: 20_000,
+  timeout: TIMEOUT_MS,
 });
 
 http.interceptors.request.use((config) => {
@@ -173,6 +174,15 @@ export async function apiPatch<T>(url: string, body?: unknown): Promise<T> {
   return data.data;
 }
 
-export async function apiDelete(url: string): Promise<void> {
-  await http.delete(url);
+/**
+ * Most deletes answer `204 No Content` and the call site ignores the result,
+ * which is why the default type parameter is `void`. A few return the record
+ * they just changed — removing a saved view answers with the caller's whole
+ * preferences document — so the envelope is unwrapped when there is one.
+ */
+export async function apiDelete<T = void>(url: string): Promise<T> {
+  const { data } = await http.delete<ApiResponse<T> | ''>(url);
+  if (!data) return undefined as T;
+  if (!data.success) throw new ApiRequestError(data.error.message, data.error.code, 200);
+  return data.data;
 }

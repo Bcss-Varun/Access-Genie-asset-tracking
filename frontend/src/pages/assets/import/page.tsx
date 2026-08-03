@@ -2,7 +2,12 @@ import { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { PageHeader, Badge, EmptyState } from '@/components/ui/primitives';
 import { Button } from '@/components/ui/Button';
+import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 import { useToast } from '@/components/providers/ToastProvider';
+import { assetsApi } from '@/api/assets';
+import { useAuth } from '@/api/auth';
+import { useRefreshDataset } from '@/api/dataset';
+import { ApiRequestError } from '@/api/client';
 import { cn } from '@/lib/utils';
 
 // ── Target fields ──────────────────────────────────────────────────────────────
@@ -61,12 +66,27 @@ function autoMap(header: string): TargetField {
 
 export default function AssetImportPage() {
   const { toast } = useToast();
+  const refreshDataset = useRefreshDataset();
+  // Deleting is admin-only on the API; the undo is hidden rather than refused.
+  const canDelete = useAuth().can('admin');
   const [step, setStep] = useState(0);
   const [headers, setHeaders] = useState<string[] | null>(null);
   const [rows, setRows] = useState<string[][]>([]);
   const [mapping, setMapping] = useState<TargetField[]>([]);
   const [dragOver, setDragOver] = useState(false);
   const [imported, setImported] = useState<number | null>(null);
+  const [importing, setImporting] = useState(false);
+  /**
+   * IDs the API minted for this run, kept so the whole import can be undone.
+   *
+   * A bad mapping produces a hundred plausible-looking wrong assets, and
+   * "delete them one at a time from the registry" is not a recovery path. The
+   * server mints the IDs, so they are collected from the create responses
+   * rather than guessed.
+   */
+  const [importedIds, setImportedIds] = useState<string[]>([]);
+  const [confirmUndo, setConfirmUndo] = useState(false);
+  const [undoing, setUndoing] = useState(false);
 
   const loadSample = () => {
     setHeaders(SAMPLE_HEADERS);
@@ -81,6 +101,68 @@ export default function AssetImportPage() {
     setRows([]);
     setMapping([]);
     setImported(null);
+    setImporting(false);
+    setImportedIds([]);
+  };
+
+  /**
+   * Drop a row before it is committed.
+   *
+   * Splicing the raw row is what makes this work: `validated` is derived from
+   * `rows`, so removing one re-runs the whole validation pass — and a row whose
+   * only problem was being a duplicate of the one just deleted goes back to
+   * valid on its own.
+   */
+  const removeRow = (index: number) => setRows((list) => list.filter((_, i) => i !== index));
+
+  /** Drop every row that cannot import, in one go. */
+  const removeErrorRows = () => {
+    const doomed = new Set(validated.filter((r) => r.status === 'error').map((r) => r.index));
+    if (doomed.size === 0) return;
+    setRows((list) => list.filter((_, i) => !doomed.has(i)));
+    toast({ title: `Removed ${doomed.size} row${doomed.size === 1 ? '' : 's'}`, description: 'Rows with errors were dropped from this import.', tone: 'success' });
+  };
+
+  /**
+   * Undo the run — delete every asset it created.
+   *
+   * Sequential, like the import itself, and it keeps going past a failure: an
+   * asset that has already picked up an open work order is refused by the API,
+   * and stopping there would strand the rest.
+   */
+  const undoImport = async () => {
+    setUndoing(true);
+    let removed = 0;
+    const failures: string[] = [];
+
+    for (const id of importedIds) {
+      try {
+        await assetsApi.remove(id);
+        removed += 1;
+      } catch (err) {
+        failures.push(`${id}: ${err instanceof ApiRequestError ? err.message : 'refused'}`);
+      }
+    }
+
+    await refreshDataset();
+    setUndoing(false);
+    setConfirmUndo(false);
+
+    if (failures.length === 0) {
+      toast({ title: 'Import undone', description: `${removed} asset${removed === 1 ? '' : 's'} deleted.`, tone: 'success' });
+      resetAll();
+      return;
+    }
+
+    // Partial undo: what is left is what could not be deleted, so the button
+    // stays and retries only those.
+    setImportedIds((ids) => ids.filter((id) => failures.some((f) => f.startsWith(`${id}:`))));
+    setImported(failures.length);
+    toast({
+      title: `Deleted ${removed} of ${removed + failures.length}`,
+      description: failures.slice(0, 3).join(' · '),
+      tone: 'error',
+    });
   };
 
   // Which target field each source column maps to → column index lookup.
@@ -149,9 +231,58 @@ export default function AssetImportPage() {
     return false;
   })();
 
-  const doImport = () => {
-    setImported(importableCount);
-    toast({ title: 'Import complete', description: `${importableCount} assets imported`, tone: 'success' });
+  /**
+   * Commit the mapped rows.
+   *
+   * Rows are posted one at a time rather than as a batch: the API mints an
+   * `AST-…` per asset from a counter, and a partial failure has to leave the
+   * rows that did import in the registry rather than rolling the file back.
+   * The count reported at the end is what actually landed — a wizard that says
+   * "142 imported" when 12 were rejected is worse than no wizard.
+   */
+  const doImport = async () => {
+    setImporting(true);
+    const importable = validated.filter((r) => r.status !== 'error');
+    const createdIds: string[] = [];
+    let ok = 0;
+    const failures: string[] = [];
+
+    for (const row of importable) {
+      const source = rows[row.index];
+      const custodian = val(source, 'custodian') || 'Unassigned';
+      const price = Number(val(source, 'purchasePrice').replace(/[^0-9.]/g, '')) || 0;
+      // An unrecognised category is a warning, not a rejection — the row still
+      // describes a real asset, so it lands under the closest known category
+      // and can be re-classified afterwards.
+      const category = KNOWN_CATEGORIES.includes(row.category) ? row.category : 'Compute';
+
+      try {
+        const created = await assetsApi.create({
+          name: row.name,
+          serialNumber: row.serialNumber,
+          category,
+          custodian,
+          purchasePrice: price,
+          purchaseDate: new Date().toISOString().slice(0, 10),
+          location: { id: 'LOC-RECEIVING', name: 'Receiving' },
+        });
+        createdIds.push(created.id);
+        ok += 1;
+      } catch (err) {
+        failures.push(`${row.name || `Row ${row.index + 1}`}: ${err instanceof ApiRequestError ? err.message : 'rejected'}`);
+      }
+    }
+
+    await refreshDataset();
+    setImportedIds(createdIds);
+    setImported(ok);
+    setImporting(false);
+
+    toast({
+      title: failures.length ? `Imported ${ok} of ${importable.length}` : 'Import complete',
+      description: failures.length ? failures.slice(0, 3).join(' · ') : `${ok} assets are in the registry`,
+      tone: failures.length ? 'error' : 'success',
+    });
   };
 
   const th = 'px-4 py-2.5 text-left font-semibold uppercase tracking-wider text-[11px] text-slate-500';
@@ -244,7 +375,7 @@ export default function AssetImportPage() {
               <EmptyState
                 icon="🗂️"
                 title="No file loaded yet"
-                description="Load the sample CSV to preview how the wizard maps and validates your data. No files are uploaded — this is an in-session demo."
+                description="Load the sample CSV to preview how the wizard maps and validates your data before committing it to the registry."
                 action={<Button onClick={loadSample}>Load sample CSV</Button>}
               />
             ) : (
@@ -329,6 +460,11 @@ export default function AssetImportPage() {
               <span className="text-sm text-slate-500 ml-auto">
                 {importableCount} of {validated.length} rows will import · {counts.error} excluded
               </span>
+              {counts.error > 0 && (
+                <Button size="sm" variant="outline" onClick={removeErrorRows}>
+                  Remove {counts.error} error row{counts.error === 1 ? '' : 's'}
+                </Button>
+              )}
             </div>
             <div className="overflow-auto rounded-lg border border-slate-200">
               <table className="w-full text-left text-sm whitespace-nowrap">
@@ -340,6 +476,7 @@ export default function AssetImportPage() {
                     <th className={th}>Serial</th>
                     <th className={th}>Category</th>
                     <th className={th}>Messages</th>
+                    <th className={cn(th, 'w-10')}><span className="sr-only">Remove row</span></th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100">
@@ -353,8 +490,28 @@ export default function AssetImportPage() {
                       <td className={td}>{r.serialNumber || '—'}</td>
                       <td className={td}>{r.category || '—'}</td>
                       <td className={cn(td, 'text-slate-500')}>{r.messages.join(' · ')}</td>
+                      <td className={cn(td, 'text-right')}>
+                        {/* Nothing has been written yet at this step, so dropping
+                            a row needs no confirmation — it only edits the file. */}
+                        <button
+                          type="button"
+                          onClick={() => removeRow(r.index)}
+                          aria-label={`Remove row ${r.index + 1}${r.name ? ` — ${r.name}` : ''}`}
+                          title="Remove this row from the import"
+                          className="rounded p-1 text-slate-400 transition-colors hover:bg-red-100 hover:text-health-critical"
+                        >
+                          ✕
+                        </button>
+                      </td>
                     </tr>
                   ))}
+                  {validated.length === 0 && (
+                    <tr>
+                      <td colSpan={7} className={cn(td, 'py-8 text-center text-slate-400')}>
+                        Every row was removed. Go back to re-upload the file, or start over.
+                      </td>
+                    </tr>
+                  )}
                 </tbody>
               </table>
             </div>
@@ -393,8 +550,8 @@ export default function AssetImportPage() {
                   </p>
                 )}
                 <div className="flex justify-center">
-                  <Button onClick={doImport} disabled={importableCount === 0}>
-                    Import {importableCount} asset{importableCount === 1 ? '' : 's'}
+                  <Button onClick={() => void doImport()} disabled={importableCount === 0 || importing}>
+                    {importing ? 'Importing…' : `Import ${importableCount} asset${importableCount === 1 ? '' : 's'}`}
                   </Button>
                 </div>
               </div>
@@ -405,14 +562,29 @@ export default function AssetImportPage() {
                 description={
                   counts.error > 0
                     ? `${counts.error} row${counts.error === 1 ? '' : 's'} with errors were excluded from this import.`
-                    : 'All valid rows were added to the registry for this session.'
+                    : 'All valid rows were added to the registry.'
                 }
                 action={
-                  <div className="flex items-center gap-2">
-                    <Link to="/assets">
-                      <Button>View asset registry</Button>
-                    </Link>
-                    <Button variant="outline" onClick={resetAll}>Import another file</Button>
+                  <div className="flex flex-col items-center gap-3">
+                    <div className="flex items-center gap-2">
+                      <Link to="/assets">
+                        <Button>View asset registry</Button>
+                      </Link>
+                      <Button variant="outline" onClick={resetAll}>Import another file</Button>
+                    </div>
+                    {/* The escape hatch for a wrong mapping — offered here, while
+                        the run is still in front of you, rather than leaving a
+                        hundred wrong rows to be picked off the registry later. */}
+                    {canDelete && importedIds.length > 0 && (
+                      <button
+                        type="button"
+                        onClick={() => setConfirmUndo(true)}
+                        className="rounded-md px-2 py-1 text-xs font-medium text-slate-500 transition-colors hover:bg-red-50 hover:text-health-critical"
+                      >
+                        Imported the wrong file? Delete {importedIds.length} imported asset
+                        {importedIds.length === 1 ? '' : 's'}
+                      </button>
+                    )}
                   </div>
                 }
               />
@@ -437,6 +609,22 @@ export default function AssetImportPage() {
           </div>
         )}
       </div>
+
+      {confirmUndo && (
+        <ConfirmDialog
+          title={`Delete ${importedIds.length} imported asset${importedIds.length === 1 ? '' : 's'}?`}
+          description={
+            <>
+              Every asset created by this import is removed from the registry. Assets that already have an open work
+              order are refused and will be reported. This cannot be undone.
+            </>
+          }
+          confirmLabel={`Delete ${importedIds.length}`}
+          busy={undoing}
+          onConfirm={() => void undoImport()}
+          onCancel={() => setConfirmUndo(false)}
+        />
+      )}
     </div>
   );
 }

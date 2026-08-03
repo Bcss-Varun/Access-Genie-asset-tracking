@@ -1,11 +1,13 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { mockAssets } from '@/lib/mock-data';
-import type { Asset } from '@/types/asset';
+import type { Asset } from '@access-genie/shared';
 import { PageHeader, Badge, EmptyState } from '@/components/ui/primitives';
 import { Button } from '@/components/ui/Button';
 import { Dropdown, MenuItem } from '@/components/ui/Dropdown';
 import { useToast } from '@/components/providers/ToastProvider';
+import { useRegistry } from '@/components/providers/RegistryProvider';
+import { useSavedViews } from '@/components/providers/SavedViewsProvider';
+import { LENS_FILTERS, describeView, viewToQuery, type Lens, type SavedView } from '@/lib/asset-views';
 import { relTime, cn } from '@/lib/utils';
 
 const categoryEmoji = (c: Asset['category']) =>
@@ -24,18 +26,12 @@ const colLabels: Record<OptCol, string> = {
   category: 'Category', location: 'Location', custodian: 'Custodian', utilization: 'Utilization', riskScore: 'Risk', lastPing: 'Last Ping',
 };
 
-interface SavedView { name: string; status: string; category: string; search: string; }
-const BUILT_IN_VIEWS: SavedView[] = [
-  { name: 'All Assets', status: 'All', category: 'All', search: '' },
-  { name: 'In Maintenance', status: 'Maintenance', category: 'All', search: '' },
-  { name: 'Missing', status: 'Missing', category: 'All', search: '' },
-  { name: 'Endpoints', status: 'All', category: 'Endpoints', search: '' },
-];
-
 const PAGE_SIZE = 10;
 
 export default function AssetRegistryPage() {
   const { toast } = useToast();
+  const { assets, sessionIds } = useRegistry();
+  const [lens, setLens] = useState<Lens>('all');
   const [search, setSearch] = useState('');
   const [status, setStatus] = useState<string>('All');
   const [category, setCategory] = useState<string>('All');
@@ -45,28 +41,40 @@ export default function AssetRegistryPage() {
   const [dense, setDense] = useState(false);
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [page, setPage] = useState(0);
-  const [views, setViews] = useState<SavedView[]>(BUILT_IN_VIEWS);
+  const { views, saveView, removeView } = useSavedViews();
   const [activeView, setActiveView] = useState('All Assets');
+  const [naming, setNaming] = useState(false);
+  const [viewName, setViewName] = useState('');
 
-  // Shareable state: reflect primary filters into the URL (no re-render loop).
+  // Shareable state: the whole view — including the lens — lives in the URL, so
+  // sending the link sends the view. This is what a "group" becomes.
   useEffect(() => {
     const p = new URLSearchParams(window.location.search);
     if (p.get('q')) setSearch(p.get('q')!);
     if (p.get('status')) setStatus(p.get('status')!);
     if (p.get('category')) setCategory(p.get('category')!);
+    const v = p.get('view');
+    if (v && v in LENS_FILTERS) setLens(v as Lens);
   }, []);
   useEffect(() => {
-    const p = new URLSearchParams();
-    if (search) p.set('q', search);
-    if (status !== 'All') p.set('status', status);
-    if (category !== 'All') p.set('category', category);
-    const qs = p.toString();
+    const qs = viewToQuery({ search, status, category, lens });
     window.history.replaceState(null, '', qs ? `?${qs}` : window.location.pathname);
-  }, [search, status, category]);
+  }, [search, status, category, lens]);
+
+  const visible = useMemo(() => assets.filter((a) => !a.onboarding.voidedAt), [assets]);
+
+  /** Live counts for the lens chips — the queue sizes are the point. */
+  const lensCounts = useMemo(() => {
+    const out = {} as Record<Lens, number>;
+    for (const key of Object.keys(LENS_FILTERS) as Lens[]) {
+      out[key] = visible.filter(LENS_FILTERS[key]).length;
+    }
+    return out;
+  }, [visible]);
 
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
-    const rows = mockAssets.filter((a) => {
+    const rows = visible.filter(LENS_FILTERS[lens]).filter((a) => {
       if (status !== 'All' && a.status !== status) return false;
       if (category !== 'All' && a.category !== category) return false;
       if (q && !`${a.name} ${a.id} ${a.serialNumber} ${a.trackingId ?? ''} ${a.tags.join(' ')} ${a.custodian}`.toLowerCase().includes(q)) return false;
@@ -85,18 +93,24 @@ export default function AssetRegistryPage() {
       return typeof av === 'number' ? (av - (bv as number)) * dir : String(av).localeCompare(String(bv)) * dir;
     });
     return rows;
-  }, [search, status, category, sortKey, sortDir]);
+  }, [visible, lens, search, status, category, sortKey, sortDir]);
 
   const pageCount = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
   const pageRows = filtered.slice(page * PAGE_SIZE, page * PAGE_SIZE + PAGE_SIZE);
-  useEffect(() => { setPage(0); }, [search, status, category]);
+  useEffect(() => { setPage(0); }, [search, status, category, lens]);
 
   const toggleSort = (k: SortKey) => {
     if (sortKey === k) setSortDir((d) => (d === 'asc' ? 'desc' : 'asc'));
     else { setSortKey(k); setSortDir('asc'); }
   };
   const show = (c: OptCol) => !hidden.has(c);
-  const toggleCol = (c: OptCol) => setHidden((prev) => { const n = new Set(prev); n.has(c) ? n.delete(c) : n.add(c); return n; });
+  const toggleCol = (c: OptCol) =>
+    setHidden((prev) => {
+      const n = new Set(prev);
+      if (n.has(c)) n.delete(c);
+      else n.add(c);
+      return n;
+    });
 
   const allOnPageSelected = pageRows.length > 0 && pageRows.every((r) => selected.has(r.id));
   const toggleSelectAll = () => setSelected((prev) => {
@@ -105,15 +119,38 @@ export default function AssetRegistryPage() {
     else pageRows.forEach((r) => n.add(r.id));
     return n;
   });
-  const toggleRow = (id: string) => setSelected((prev) => { const n = new Set(prev); n.has(id) ? n.delete(id) : n.add(id); return n; });
+  const toggleRow = (id: string) =>
+    setSelected((prev) => {
+      const n = new Set(prev);
+      if (n.has(id)) n.delete(id);
+      else n.add(id);
+      return n;
+    });
 
-  const applyView = (v: SavedView) => { setStatus(v.status); setCategory(v.category); setSearch(v.search); setActiveView(v.name); };
+  /** Select every asset the current view matches — not just this page. This is
+   *  what lets a view stand in for a group as a bulk-action target. */
+  const selectAllMatching = () => setSelected(new Set(filtered.map((a) => a.id)));
+
+  const applyView = (v: SavedView) => {
+    setStatus(v.status); setCategory(v.category); setSearch(v.search);
+    setLens(v.lens); setActiveView(v.name);
+  };
+
   const saveCurrentView = () => {
-    const name = `View ${views.length + 1}`;
-    const v = { name, status, category, search };
-    setViews((prev) => [...prev, v]);
+    const name = viewName.trim();
+    if (!name) return;
+    saveView({ name, status, category, search, lens });
     setActiveView(name);
-    toast({ title: 'Saved view', description: `“${name}” saved for this session`, tone: 'success' });
+    setNaming(false);
+    setViewName('');
+    toast({ title: `“${name}” saved`, description: describeView({ id: '', name, status, category, search, lens }), tone: 'success' });
+  };
+
+  const shareView = () => {
+    const qs = viewToQuery({ search, status, category, lens });
+    const url = `${window.location.origin}/assets${qs ? `?${qs}` : ''}`;
+    navigator.clipboard?.writeText(url);
+    toast({ title: 'Link copied', description: `${filtered.length} assets — resolved live, not a frozen list`, tone: 'success' });
   };
 
   const th = 'px-4 py-3 text-left font-semibold uppercase tracking-wider text-[11px] text-slate-500 select-none';
@@ -133,25 +170,76 @@ export default function AssetRegistryPage() {
         actions={
           <>
             <Button variant="outline" onClick={() => toast({ title: 'Export started', description: `${filtered.length} assets → CSV`, tone: 'success' })}>Export CSV</Button>
-            <Button onClick={() => toast({ title: 'Register asset', description: 'Create form is on the roadmap.', tone: 'info' })}>+ Register Asset</Button>
+            {/* Straight to the Add Asset page. The source picker there IS this
+                menu — better presented, and asked once instead of twice. */}
+            <Link to="/assets/new">
+              <Button>+ Add Asset</Button>
+            </Link>
           </>
         }
       />
 
-      {/* Saved views */}
+      {/* Saved views — the onboarding exception queues sit alongside the
+          ordinary status views, because they are the same kind of thing. */}
       <div className="flex items-center gap-2 flex-wrap">
-        {views.map((v) => (
-          <button
-            key={v.name}
-            onClick={() => applyView(v)}
-            className={cn('rounded-full border px-3 py-1 text-xs font-medium transition-colors',
-              activeView === v.name ? 'bg-primary-50 border-primary-200 text-primary-700' : 'border-slate-200 text-slate-500 hover:bg-slate-50')}
-          >
-            {v.name}
+        {views.map((v) => {
+          const count = v.lens !== 'all' ? lensCounts[v.lens] : undefined;
+          const active = activeView === v.name;
+          return (
+            <span
+              key={v.id}
+              title={describeView(v)}
+              className={cn('inline-flex items-center rounded-full border transition-colors',
+                active ? 'bg-primary-50 border-primary-200 text-primary-700' : 'border-slate-200 text-slate-500 hover:bg-slate-50',
+                count === 0 && !active && 'opacity-45')}
+            >
+              <button onClick={() => applyView(v)} className="px-3 py-1 text-xs font-medium">
+                {v.name}
+                {count !== undefined && <span className="ml-1.5 tabular-nums text-slate-400">{count}</span>}
+              </button>
+              {/* Only views someone saved can be removed. */}
+              {!v.builtIn && (
+                <button
+                  onClick={() => { removeView(v.id); if (active) applyView(views[0]); }}
+                  aria-label={`Delete view ${v.name}`}
+                  className="pr-2.5 pl-0.5 text-xs text-slate-300 hover:text-health-critical"
+                >
+                  ✕
+                </button>
+              )}
+            </span>
+          );
+        })}
+
+        {naming ? (
+          <span className="inline-flex items-center gap-1.5 rounded-full border border-primary-200 bg-white px-2 py-0.5">
+            <input
+              autoFocus
+              value={viewName}
+              onChange={(e) => setViewName(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') saveCurrentView();
+                if (e.key === 'Escape') { setNaming(false); setViewName(''); }
+              }}
+              placeholder="Name this view…"
+              aria-label="Name this view"
+              className="w-40 bg-transparent px-1 py-0.5 text-xs outline-none placeholder:text-slate-400"
+            />
+            <button onClick={saveCurrentView} disabled={!viewName.trim()} className="text-xs font-semibold text-primary-600 disabled:opacity-40">Save</button>
+            <button onClick={() => { setNaming(false); setViewName(''); }} aria-label="Cancel" className="text-xs text-slate-300 hover:text-slate-600">✕</button>
+          </span>
+        ) : (
+          <button onClick={() => setNaming(true)} className="rounded-full border border-dashed border-slate-300 px-3 py-1 text-xs font-medium text-slate-400 hover:border-slate-400 hover:text-slate-700">
+            + Save current view
           </button>
-        ))}
-        <button onClick={saveCurrentView} className="rounded-full border border-dashed border-slate-300 px-3 py-1 text-xs font-medium text-slate-400 hover:text-slate-700 hover:border-slate-400">
-          + Save current view
+        )}
+
+        <button
+          onClick={shareView}
+          title="Copy a link to this exact view"
+          className="rounded-full border border-dashed border-slate-300 px-3 py-1 text-xs font-medium text-slate-400 hover:border-slate-400 hover:text-slate-700"
+        >
+          🔗 Share view
         </button>
       </div>
 
@@ -172,7 +260,7 @@ export default function AssetRegistryPage() {
           </select>
 
           <div className="ml-auto flex items-center gap-2">
-            <span className="text-xs text-slate-400">{filtered.length} of {mockAssets.length}</span>
+            <span className="text-xs text-slate-400">{filtered.length} of {visible.length}</span>
             <button onClick={() => setDense((d) => !d)} title="Toggle density" className="rounded-md border border-slate-200 px-2 py-1.5 text-xs text-slate-500 hover:bg-slate-50">
               {dense ? '≣ Comfortable' : '≡ Compact'}
             </button>
@@ -198,8 +286,24 @@ export default function AssetRegistryPage() {
         {selected.size > 0 && (
           <div className="flex items-center gap-3 bg-primary-50 border-b border-primary-100 px-4 py-2 text-sm">
             <span className="font-medium text-primary-700">{selected.size} selected</span>
+            {/* A view is only a real replacement for a group if you can act on
+                the whole set, not just the ten rows you can see. */}
+            {selected.size < filtered.length && (
+              <button onClick={selectAllMatching} className="rounded-md border border-primary-200 bg-white px-2.5 py-1 text-xs font-semibold text-primary-700 hover:bg-primary-50">
+                Select all {filtered.length} matching
+              </button>
+            )}
             <div className="flex items-center gap-1.5">
-              {['Export', 'Assign Custodian', 'Start Transfer', 'Add to Group', 'Retire'].map((a) => (
+              {/* Labelling is a real destination, not a toast: the selection is
+                  handed to the label module through the URL so the designer
+                  opens on exactly these assets. */}
+              <Link
+                to={`/assets/labels?ids=${[...selected].join(',')}`}
+                className="rounded-md px-2.5 py-1 text-xs font-medium text-primary-700 hover:bg-primary-100"
+              >
+                Print Labels
+              </Link>
+              {['Export', 'Assign Custodian', 'Start Transfer', 'Apply Class Policy', 'Retire'].map((a) => (
                 <button key={a} onClick={() => toast({ title: a, description: `${selected.size} assets`, tone: 'info' })} className="rounded-md px-2.5 py-1 text-xs font-medium text-primary-700 hover:bg-primary-100">{a}</button>
               ))}
             </div>
@@ -235,7 +339,12 @@ export default function AssetRegistryPage() {
                     <div className="flex items-center">
                       <div className="w-8 h-8 rounded bg-slate-100 flex items-center justify-center text-base mr-3 shrink-0">{categoryEmoji(a.category)}</div>
                       <div className="min-w-0">
-                        <Link to={`/assets/${a.id}`} className="font-medium text-slate-900 hover:text-primary-600">{a.name}</Link>
+                        <span className="flex flex-wrap items-center gap-1.5">
+                          <Link to={`/assets/${a.id}`} className="font-medium text-slate-900 hover:text-primary-600">{a.name}</Link>
+                          {a.onboarding.state === 'Draft' && <Badge tone="primary">Setup incomplete</Badge>}
+                          {a.onboarding.state === 'Pending Approval' && <Badge tone="amber">Awaiting approval</Badge>}
+                          {sessionIds.includes(a.id) && <Badge tone="emerald">New</Badge>}
+                        </span>
                         <div className="text-xs text-slate-400">{a.id} · SN {a.serialNumber}{a.trackingId ? ` · ${a.trackingId}` : ''}</div>
                       </div>
                     </div>
@@ -260,7 +369,11 @@ export default function AssetRegistryPage() {
                   )}
                   {show('lastPing') && <td className={cn(td, 'text-slate-400 text-xs')}>{a.telemetry?.lastPing ? relTime(a.telemetry.lastPing) : 'Unknown'}</td>}
                   <td className={cn(td, 'text-right')}>
-                    <Link to={`/assets/${a.id}`} className="text-slate-400 hover:text-primary-600 font-medium text-sm">Open →</Link>
+                    {a.onboarding.state === 'Draft' ? (
+                      <Link to={`/assets/new?resume=${a.id}`} className="text-primary-600 hover:text-primary-700 font-medium text-sm">Finish setup →</Link>
+                    ) : (
+                      <Link to={`/assets/${a.id}`} className="text-slate-400 hover:text-primary-600 font-medium text-sm">Open →</Link>
+                    )}
                   </td>
                 </tr>
               ))}
@@ -268,7 +381,7 @@ export default function AssetRegistryPage() {
           </table>
 
           {pageRows.length === 0 && (
-            <EmptyState variant="no-results" title="No assets match your filters" description="Try a different search, status, or category." action={<Button variant="outline" onClick={() => { setSearch(''); setStatus('All'); setCategory('All'); }}>Clear filters</Button>} />
+            <EmptyState variant="no-results" title="No assets match your filters" description="Try a different search, status, or view." action={<Button variant="outline" onClick={() => { setSearch(''); setStatus('All'); setCategory('All'); setLens('all'); setActiveView('All Assets'); }}>Clear filters</Button>} />
           )}
         </div>
 

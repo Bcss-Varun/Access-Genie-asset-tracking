@@ -1,6 +1,6 @@
 import { Link, useParams } from 'react-router-dom';
-import { getModel } from '@/lib/mock-data';
-import type { Model, ModelStatus, FeatureImportance } from '@/types/asset';
+import { getModel } from '@/lib/dataset';
+import type { AiModel, ModelStatus, FeatureImportance } from '@access-genie/shared';
 import { PageHeader, Badge, EmptyState } from '@/components/ui/primitives';
 import { Button } from '@/components/ui/Button';
 import { useToast } from '@/components/providers/ToastProvider';
@@ -131,7 +131,7 @@ function DriftChart({ driftPct }: { driftPct: number }) {
 export default function ModelDetailPage() {
   const { id = '' } = useParams();
   const { toast } = useToast();
-  const model: Model | undefined = getModel(id);
+  const model: AiModel | undefined = getModel(id);
 
   if (!model) {
     return (

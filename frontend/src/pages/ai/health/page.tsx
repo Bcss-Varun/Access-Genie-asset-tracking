@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { getHealthMatrix } from '@/lib/mock-data';
+import { getHealthMatrix } from '@/lib/dataset';
 import { PageHeader, KpiCard, Badge } from '@/components/ui/primitives';
 import { cn } from '@/lib/utils';
 

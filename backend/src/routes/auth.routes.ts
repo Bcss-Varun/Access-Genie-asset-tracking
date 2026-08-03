@@ -16,4 +16,8 @@ router.get('/me', requireAuth, controller.me);
 router.post('/logout-all', requireAuth, controller.logoutEverywhere);
 router.post('/change-password', requireAuth, validate({ body: changePasswordSchema }), controller.changePassword);
 
+// The devices signed in as this user, from the refresh tokens actually issued.
+router.get('/sessions', requireAuth, controller.sessions);
+router.post('/sessions/:id/revoke', requireAuth, controller.revokeOneSession);
+
 export default router;

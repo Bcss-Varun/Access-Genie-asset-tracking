@@ -1,0 +1,190 @@
+[
+  {
+    "assetId": "AST-1006",
+    "assetName": "iPad Pro 12.9\" (Field Ops)",
+    "distanceM": 320,
+    "dwellZones": [
+      {
+        "zone": "Design Studio",
+        "minutes": 210
+      },
+      {
+        "zone": "Corridor",
+        "minutes": 12
+      }
+    ],
+    "points": [
+      {
+        "x": 82,
+        "y": 18,
+        "timestamp": "2026-07-21T03:00:00.000Z",
+        "label": "Design Studio"
+      },
+      {
+        "x": 78,
+        "y": 26,
+        "timestamp": "2026-07-21T04:00:00.000Z"
+      },
+      {
+        "x": 76,
+        "y": 30,
+        "timestamp": "2026-07-21T05:00:00.000Z",
+        "label": "Last seen (geofence exit)"
+      }
+    ]
+  },
+  {
+    "assetId": "AST-1011",
+    "assetName": "Zebra TC52 Mobile Computer",
+    "distanceM": 1840,
+    "dwellZones": [
+      {
+        "zone": "Picking Zone",
+        "minutes": 264
+      },
+      {
+        "zone": "Loading Dock 4",
+        "minutes": 96
+      },
+      {
+        "zone": "Staging Bay",
+        "minutes": 41
+      }
+    ],
+    "points": [
+      {
+        "x": 4,
+        "y": 60,
+        "timestamp": "2026-07-23T00:00:00.000Z",
+        "label": "Picking Zone"
+      },
+      {
+        "x": 10,
+        "y": 48,
+        "timestamp": "2026-07-23T02:00:00.000Z"
+      },
+      {
+        "x": 16,
+        "y": 30,
+        "timestamp": "2026-07-23T04:00:00.000Z",
+        "label": "Staging Bay"
+      },
+      {
+        "x": 16,
+        "y": 12,
+        "timestamp": "2026-07-23T06:00:00.000Z",
+        "label": "Loading Dock 4"
+      },
+      {
+        "x": 8,
+        "y": 40,
+        "timestamp": "2026-07-23T08:20:00.000Z"
+      },
+      {
+        "x": 4,
+        "y": 60,
+        "timestamp": "2026-07-23T08:56:00.000Z",
+        "label": "Picking Zone"
+      }
+    ]
+  },
+  {
+    "assetId": "AST-1003",
+    "assetName": "Lenovo ThinkPad T14",
+    "distanceM": 410,
+    "dwellZones": [
+      {
+        "zone": "IT Storeroom",
+        "minutes": 1380
+      },
+      {
+        "zone": "Floor 3 Desks",
+        "minutes": 118
+      }
+    ],
+    "points": [
+      {
+        "x": 12,
+        "y": 20,
+        "timestamp": "2026-07-22T07:00:00.000Z",
+        "label": "IT Storeroom"
+      },
+      {
+        "x": 22,
+        "y": 24,
+        "timestamp": "2026-07-23T06:00:00.000Z"
+      },
+      {
+        "x": 34,
+        "y": 28,
+        "timestamp": "2026-07-23T07:00:00.000Z",
+        "label": "Floor 3 Desks (checked out)"
+      }
+    ]
+  },
+  {
+    "assetId": "AST-1004",
+    "assetName": "MacBook Pro 16\"",
+    "distanceM": 260,
+    "dwellZones": [
+      {
+        "zone": "Design Studio",
+        "minutes": 1290
+      },
+      {
+        "zone": "Conference Room A",
+        "minutes": 74
+      }
+    ],
+    "points": [
+      {
+        "x": 45,
+        "y": 8,
+        "timestamp": "2026-07-22T13:00:00.000Z",
+        "label": "Design Studio"
+      },
+      {
+        "x": 42,
+        "y": 30,
+        "timestamp": "2026-07-23T03:00:00.000Z",
+        "label": "Conference Room A"
+      },
+      {
+        "x": 45,
+        "y": 8,
+        "timestamp": "2026-07-23T08:59:00.000Z",
+        "label": "Design Studio"
+      }
+    ]
+  },
+  {
+    "assetId": "AST-1014",
+    "assetName": "Fluke Networks DSX-8000",
+    "distanceM": 96,
+    "dwellZones": [
+      {
+        "zone": "IT Tool Room",
+        "minutes": 2160
+      }
+    ],
+    "points": [
+      {
+        "x": 58,
+        "y": 40,
+        "timestamp": "2026-07-21T09:00:00.000Z",
+        "label": "Goods Inward"
+      },
+      {
+        "x": 55,
+        "y": 35,
+        "timestamp": "2026-07-22T09:00:00.000Z",
+        "label": "IT Tool Room (commissioning)"
+      },
+      {
+        "x": 55,
+        "y": 35,
+        "timestamp": "2026-07-23T08:59:00.000Z"
+      }
+    ]
+  }
+]

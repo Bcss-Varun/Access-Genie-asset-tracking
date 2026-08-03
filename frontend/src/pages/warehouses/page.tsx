@@ -1,13 +1,13 @@
 import { Link } from 'react-router-dom';
-import { mockWarehouses } from '@/lib/mock-data';
+import { allWarehouses } from '@/lib/dataset';
 import { PageHeader, KpiCard } from '@/components/ui/primitives';
 import { formatMoney } from '@/lib/utils';
 
 export default function WarehousesPage() {
-  const totalWarehouses = mockWarehouses.length;
-  const totalSkus = mockWarehouses.reduce((sum, w) => sum + w.skuCount, 0);
-  const totalBins = mockWarehouses.reduce((sum, w) => sum + w.binCount, 0);
-  const totalValue = mockWarehouses.reduce((sum, w) => sum + w.valueInr, 0);
+  const totalWarehouses = allWarehouses.length;
+  const totalSkus = allWarehouses.reduce((sum, w) => sum + w.skuCount, 0);
+  const totalBins = allWarehouses.reduce((sum, w) => sum + w.binCount, 0);
+  const totalValue = allWarehouses.reduce((sum, w) => sum + w.valueInr, 0);
 
   return (
     <div className="h-full flex flex-col space-y-6">
@@ -28,7 +28,7 @@ export default function WarehousesPage() {
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-        {mockWarehouses.map((w) => (
+        {allWarehouses.map((w) => (
           <Link
             key={w.id}
             to={`/warehouses/${w.id}`}

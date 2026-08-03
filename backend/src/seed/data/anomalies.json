@@ -1,0 +1,79 @@
+[
+  {
+    "id": "AN-01",
+    "assetId": "AST-1004",
+    "assetName": "MacBook Pro 16\"",
+    "metric": "Battery capacity",
+    "severity": "Critical",
+    "detectedAt": "2026-07-23T06:00:00.000Z",
+    "description": "Charge capacity fell 40% in 90 days while thermal load rose — matches the pre-swelling signature.",
+    "zScore": 3.6,
+    "confidence": 91
+  },
+  {
+    "id": "AN-02",
+    "assetId": "AST-1001",
+    "assetName": "Dell PowerEdge R740 Server",
+    "metric": "Temperature",
+    "severity": "Critical",
+    "detectedAt": "2026-07-23T03:00:00.000Z",
+    "description": "Inlet temperature 85°C sustained — 4σ over normal operating envelope.",
+    "zScore": 4,
+    "confidence": 96
+  },
+  {
+    "id": "AN-03",
+    "assetId": "AST-1006",
+    "assetName": "iPad Pro 12.9\" (Field Ops)",
+    "metric": "Scan cadence",
+    "severity": "Critical",
+    "detectedAt": "2026-07-23T05:00:00.000Z",
+    "description": "Expected 14 BLE pings/hour, observed 0 for 52 hours after a Lobby geofence exit.",
+    "zScore": 5.2,
+    "confidence": 94
+  },
+  {
+    "id": "AN-04",
+    "assetId": "AST-1009",
+    "assetName": "Synology RS2418+ NAS",
+    "metric": "Vibration",
+    "severity": "Warning",
+    "detectedAt": "2026-07-21T09:00:00.000Z",
+    "description": "Vibration variance doubled on the drive-4 bay ahead of the SMART failure.",
+    "zScore": 2.8,
+    "confidence": 87
+  },
+  {
+    "id": "AN-05",
+    "assetId": "AST-1007",
+    "assetName": "Aruba AP-515 Access Point",
+    "metric": "Client density",
+    "severity": "Warning",
+    "detectedAt": "2026-07-22T09:00:00.000Z",
+    "description": "Associated clients 2.3× the peer-group median for Conference Room A.",
+    "zScore": 2.4,
+    "confidence": 83
+  },
+  {
+    "id": "AN-06",
+    "assetId": "AST-1013",
+    "assetName": "HP LaserJet Enterprise M507",
+    "metric": "Page volume",
+    "severity": "Info",
+    "detectedAt": "2026-07-20T09:00:00.000Z",
+    "description": "Print volume spiked 4× above the Floor 3 monthly baseline.",
+    "zScore": 2.1,
+    "confidence": 78
+  },
+  {
+    "id": "AN-07",
+    "assetId": "AST-1002",
+    "assetName": "Cisco Catalyst 9500 Switch",
+    "metric": "Power draw",
+    "severity": "Info",
+    "detectedAt": "2026-07-18T09:00:00.000Z",
+    "description": "PoE draw stepped up 60 W after new AP provisioning — expected, flagged for confirmation.",
+    "zScore": 1.9,
+    "confidence": 72
+  }
+]

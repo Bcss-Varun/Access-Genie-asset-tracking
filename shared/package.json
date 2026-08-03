@@ -1,8 +1,8 @@
 {
   "name": "@access-genie/shared",
-  "version": "0.1.0",
+  "version": "1.0.0",
   "private": true,
-  "description": "Domain types, role matrix and API contracts shared by the Access Genie server and client",
+  "description": "Domain types, role matrix and API contracts shared by the Access Genie backend and frontend",
   "type": "module",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",

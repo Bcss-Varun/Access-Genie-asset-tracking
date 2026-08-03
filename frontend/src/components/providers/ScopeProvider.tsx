@@ -1,5 +1,5 @@
 import { createContext, useContext, useState, useCallback } from 'react';
-import { ScopeNode } from '@/types/platform';
+import { ScopeNode } from '@access-genie/shared';
 import { scopeTree, findScope } from '@/lib/rbac';
 
 interface ScopeContextValue {

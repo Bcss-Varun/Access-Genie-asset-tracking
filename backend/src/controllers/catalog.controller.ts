@@ -14,7 +14,11 @@ import {
   Supplier,
   Warehouse,
 } from '../models/index.js';
+import { nextId } from '../models/Counter.js';
 import type { ListQueryInput } from '../validators/common.js';
+import { recordCustody } from '../services/custody.service.js';
+import { recordAudit } from '../services/audit.service.js';
+import type { CustodyAction } from '@access-genie/shared';
 
 /**
  * Read endpoints for the supporting collections — inventory, notifications,
@@ -110,9 +114,58 @@ export const listCustody = asyncHandler(async (_req: Request, res: Response) => 
   sendList(res, items, meta);
 });
 
+/**
+ * Check an asset in or out.
+ *
+ * The screen kept its log in component state, so the chain of custody it showed
+ * was gone on reload and the asset's profile still named the previous holder.
+ * The move is a domain action rather than an insert — see custody.service.ts.
+ */
+export const createCustody = asyncHandler(async (req: Request, res: Response) => {
+  const body = req.body as { assetId: string; holder: string; action: CustodyAction; note?: string };
+  const actor = req.auth?.user.name ?? req.auth?.user.email ?? 'system';
+
+  const record = await recordCustody(body, actor);
+
+  recordAudit(req, {
+    action: 'custody.record',
+    target: body.assetId,
+    category: 'Operations',
+    metadata: { action: body.action, holder: body.holder },
+  });
+
+  sendData(res, record, 201);
+});
+
 // ── Alert rules ──────────────────────────────────────────────────────────────
 export const listAlertRules = asyncHandler(async (_req: Request, res: Response) => {
   sendData(res, await AlertRule.find().sort({ name: 1 }).lean());
+});
+
+export const createAlertRule = asyncHandler(async (req: Request, res: Response) => {
+  const _id = await nextId('alertRule', 'RUL');
+  const rule = await AlertRule.create({ ...(req.body as object), _id });
+
+  recordAudit(req, { action: 'alert_rule.create', target: _id, category: 'Configuration' });
+  sendData(res, rule.toJSON(), 201);
+});
+
+export const updateAlertRule = asyncHandler(async (req: Request, res: Response) => {
+  const id = req.params.id as string;
+  const rule = await AlertRule.findByIdAndUpdate(id, { $set: req.body as object }, { new: true, runValidators: true }).lean();
+
+  if (!rule) throw ApiError.notFound('Alert rule');
+  recordAudit(req, { action: 'alert_rule.update', target: id, category: 'Configuration' });
+  sendData(res, rule);
+});
+
+export const deleteAlertRule = asyncHandler(async (req: Request, res: Response) => {
+  const id = req.params.id as string;
+  const rule = await AlertRule.findByIdAndDelete(id).lean();
+
+  if (!rule) throw ApiError.notFound('Alert rule');
+  recordAudit(req, { action: 'alert_rule.delete', target: id, category: 'Configuration' });
+  res.status(204).end();
 });
 
 export const toggleAlertRule = asyncHandler(async (req: Request, res: Response) => {

@@ -1,0 +1,609 @@
+[
+  {
+    "id": "TRK-ALT-001",
+    "category": "Missing Asset",
+    "priority": "P1",
+    "state": "Escalated",
+    "title": "iPad Pro 12.9\" has not been detected for 52 hours",
+    "summary": "Last detection was an unauthorised exit at Bengaluru HQ reception. No signal since.",
+    "assetId": "AST-1006",
+    "assetName": "iPad Pro 12.9\" (Field Ops)",
+    "facility": "Bengaluru HQ",
+    "location": "Main Exit & Reception",
+    "raisedAt": "2026-07-21T05:00:00.000Z",
+    "ackAt": "2026-07-21T06:00:00.000Z",
+    "slaDueAt": "2026-07-21T09:00:00.000Z",
+    "slaBreached": true,
+    "assignee": "Tarun Fernandes",
+    "team": "Security",
+    "incidentId": "INC-4401",
+    "source": "Presence Monitor",
+    "recommendation": "Open a recovery search and notify the last known custodian",
+    "recommendationAction": "Start recovery search",
+    "valueAtRiskInr": 115000,
+    "timeline": [
+      {
+        "at": "2026-07-21T05:00:00.000Z",
+        "actor": "Presence Monitor",
+        "action": "Alert raised",
+        "note": "Exit detected with no check-out on file"
+      },
+      {
+        "at": "2026-07-21T06:00:00.000Z",
+        "actor": "Tarun Fernandes",
+        "action": "Acknowledged"
+      },
+      {
+        "at": "2026-07-21T09:00:00.000Z",
+        "actor": "Automation",
+        "action": "Escalated",
+        "note": "SLA breached — no resolution in 4h"
+      },
+      {
+        "at": "2026-07-22T13:00:00.000Z",
+        "actor": "Tarun Fernandes",
+        "action": "Comment",
+        "note": "Custodian unreachable; reception CCTV pulled for review"
+      }
+    ]
+  },
+  {
+    "id": "TRK-ALT-002",
+    "category": "Tracking Failure",
+    "priority": "P2",
+    "state": "In Progress",
+    "title": "Rack A42 tag stopped reporting inlet position",
+    "summary": "Dell PowerEdge R740 resolves to the room but not to the rack — precision downgraded.",
+    "assetId": "AST-1001",
+    "assetName": "Dell PowerEdge R740 Server",
+    "facility": "Chennai Data Center",
+    "location": "Server Room Alpha · Rack A42",
+    "raisedAt": "2026-07-23T03:00:00.000Z",
+    "ackAt": "2026-07-23T04:00:00.000Z",
+    "slaDueAt": "2026-07-23T11:00:00.000Z",
+    "slaBreached": false,
+    "assignee": "Deepak Nair",
+    "team": "IT Operations",
+    "source": "Precision Monitor",
+    "recommendation": "Replace the tag on the next data hall visit",
+    "recommendationAction": "Raise tag replacement",
+    "timeline": [
+      {
+        "at": "2026-07-23T03:00:00.000Z",
+        "actor": "Precision Monitor",
+        "action": "Alert raised"
+      },
+      {
+        "at": "2026-07-23T04:00:00.000Z",
+        "actor": "Deepak Nair",
+        "action": "Acknowledged"
+      },
+      {
+        "at": "2026-07-23T05:00:00.000Z",
+        "actor": "Deepak Nair",
+        "action": "Assigned",
+        "note": "Scheduled with the Thursday DC visit"
+      }
+    ]
+  },
+  {
+    "id": "TRK-ALT-003",
+    "category": "Reader Offline",
+    "priority": "P1",
+    "state": "Assigned",
+    "title": "Secure Cage reader offline for 14 hours",
+    "summary": "The cage cannot verify its own contents. 210 assets are currently unverifiable.",
+    "deviceId": "DEV-RD-09",
+    "facility": "Hyderabad Central Warehouse",
+    "location": "Secure Cage",
+    "raisedAt": "2026-07-22T19:00:00.000Z",
+    "ackAt": "2026-07-22T20:00:00.000Z",
+    "slaDueAt": "2026-07-22T21:00:00.000Z",
+    "slaBreached": true,
+    "assignee": "Deepak Nair",
+    "team": "IoT Platform",
+    "incidentId": "INC-4402",
+    "source": "Device Health",
+    "recommendation": "Dispatch a technician — power and uplink both unreachable",
+    "recommendationAction": "Dispatch technician",
+    "valueAtRiskInr": 8400000,
+    "timeline": [
+      {
+        "at": "2026-07-22T19:00:00.000Z",
+        "actor": "Device Health",
+        "action": "Alert raised",
+        "note": "No heartbeat for 30 min"
+      },
+      {
+        "at": "2026-07-22T20:00:00.000Z",
+        "actor": "Deepak Nair",
+        "action": "Acknowledged"
+      },
+      {
+        "at": "2026-07-22T21:00:00.000Z",
+        "actor": "Automation",
+        "action": "Escalated",
+        "note": "SLA breached"
+      },
+      {
+        "at": "2026-07-22T22:00:00.000Z",
+        "actor": "Deepak Nair",
+        "action": "Assigned",
+        "note": "Site visit booked for 14:00 IST"
+      }
+    ]
+  },
+  {
+    "id": "TRK-ALT-004",
+    "category": "Unauthorized Movement",
+    "priority": "P1",
+    "state": "Escalated",
+    "title": "Asset left Bengaluru HQ without a check-out",
+    "summary": "Exit policy on Main Exit & Reception was violated at 05:00 IST.",
+    "assetId": "AST-1006",
+    "assetName": "iPad Pro 12.9\" (Field Ops)",
+    "facility": "Bengaluru HQ",
+    "location": "Main Exit & Reception",
+    "raisedAt": "2026-07-21T05:00:00.000Z",
+    "ackAt": "2026-07-21T05:00:00.000Z",
+    "slaDueAt": "2026-07-21T06:00:00.000Z",
+    "slaBreached": true,
+    "assignee": "Tarun Fernandes",
+    "team": "Security",
+    "incidentId": "INC-4401",
+    "source": "Zone Policy",
+    "recommendation": "Link to the missing-asset investigation and pull door access logs",
+    "recommendationAction": "Attach to incident",
+    "timeline": [
+      {
+        "at": "2026-07-21T05:00:00.000Z",
+        "actor": "Zone Policy",
+        "action": "Alert raised"
+      },
+      {
+        "at": "2026-07-21T05:00:00.000Z",
+        "actor": "Tarun Fernandes",
+        "action": "Acknowledged"
+      },
+      {
+        "at": "2026-07-21T05:00:00.000Z",
+        "actor": "Automation",
+        "action": "Linked to INC-4401"
+      }
+    ]
+  },
+  {
+    "id": "TRK-ALT-005",
+    "category": "Inventory Mismatch",
+    "priority": "P2",
+    "state": "New",
+    "title": "Secure Cage count is 4 short of expected",
+    "summary": "Audit AUD-2041 detected 206 of 210 expected assets, plus 1 unregistered tag.",
+    "facility": "Hyderabad Central Warehouse",
+    "location": "Secure Cage",
+    "raisedAt": "2026-07-22T20:00:00.000Z",
+    "slaDueAt": "2026-07-23T20:00:00.000Z",
+    "slaBreached": false,
+    "team": "Inventory",
+    "source": "Audit Engine",
+    "recommendation": "Re-count after the cage reader is restored",
+    "recommendationAction": "Schedule re-count",
+    "valueAtRiskInr": 272000,
+    "timeline": [
+      {
+        "at": "2026-07-22T20:00:00.000Z",
+        "actor": "Audit Engine",
+        "action": "Alert raised"
+      }
+    ]
+  },
+  {
+    "id": "TRK-ALT-006",
+    "category": "Unknown Tag",
+    "priority": "P3",
+    "state": "Acknowledged",
+    "title": "Unregistered tag reading inside the Secure Cage",
+    "summary": "RFID-E28011606991 has been read 412 times in 14h with no registry binding.",
+    "facility": "Hyderabad Central Warehouse",
+    "location": "Secure Cage",
+    "raisedAt": "2026-07-22T19:00:00.000Z",
+    "ackAt": "2026-07-23T00:00:00.000Z",
+    "slaDueAt": "2026-07-24T09:00:00.000Z",
+    "slaBreached": false,
+    "assignee": "Tarun Fernandes",
+    "team": "Inventory",
+    "source": "Detection Matcher",
+    "recommendation": "Best match is a unit retired in March — confirm and re-register or remove",
+    "recommendationAction": "Open match review",
+    "timeline": [
+      {
+        "at": "2026-07-22T19:00:00.000Z",
+        "actor": "Detection Matcher",
+        "action": "Alert raised"
+      },
+      {
+        "at": "2026-07-23T00:00:00.000Z",
+        "actor": "Tarun Fernandes",
+        "action": "Acknowledged"
+      }
+    ]
+  },
+  {
+    "id": "TRK-ALT-007",
+    "category": "Gateway Offline",
+    "priority": "P2",
+    "state": "Acknowledged",
+    "title": "Bengaluru Floor 3 anchor cluster degraded",
+    "summary": "Uptime dropped to 94.2%. Precision on Floor 3 has fallen back to room-level.",
+    "deviceId": "DEV-AN-05",
+    "facility": "Bengaluru HQ",
+    "location": "Floor 3 Desks",
+    "raisedAt": "2026-07-23T00:00:00.000Z",
+    "ackAt": "2026-07-23T01:00:00.000Z",
+    "slaDueAt": "2026-07-23T12:00:00.000Z",
+    "slaBreached": false,
+    "assignee": "Deepak Nair",
+    "team": "IoT Platform",
+    "source": "Device Health",
+    "recommendation": "Firmware v2.3.7 is two releases behind — schedule the upgrade",
+    "recommendationAction": "Add to firmware campaign",
+    "timeline": [
+      {
+        "at": "2026-07-23T00:00:00.000Z",
+        "actor": "Device Health",
+        "action": "Alert raised"
+      },
+      {
+        "at": "2026-07-23T01:00:00.000Z",
+        "actor": "Deepak Nair",
+        "action": "Acknowledged"
+      }
+    ]
+  },
+  {
+    "id": "TRK-ALT-008",
+    "category": "Battery Low",
+    "priority": "P3",
+    "state": "Assigned",
+    "title": "Tag battery at 17% on Synology RS2418+ NAS",
+    "summary": "Estimated 6 days of life left. The asset will go dark without a swap.",
+    "assetId": "AST-1009",
+    "assetName": "Synology RS2418+ NAS",
+    "deviceId": "DEV-TG-09",
+    "facility": "Chennai Data Center",
+    "location": "Server Room Beta · Rack B08",
+    "raisedAt": "2026-07-22T22:00:00.000Z",
+    "ackAt": "2026-07-22T23:00:00.000Z",
+    "slaDueAt": "2026-07-26T09:00:00.000Z",
+    "slaBreached": false,
+    "assignee": "Storage Team",
+    "team": "IoT Platform",
+    "source": "Device Health",
+    "recommendation": "Batch with the 6 other low-battery tags in Chennai DC",
+    "recommendationAction": "Batch battery swap",
+    "timeline": [
+      {
+        "at": "2026-07-22T22:00:00.000Z",
+        "actor": "Device Health",
+        "action": "Alert raised"
+      },
+      {
+        "at": "2026-07-22T23:00:00.000Z",
+        "actor": "Deepak Nair",
+        "action": "Acknowledged"
+      },
+      {
+        "at": "2026-07-22T23:00:00.000Z",
+        "actor": "Deepak Nair",
+        "action": "Assigned",
+        "note": "Storage Team to handle on next rack visit"
+      }
+    ]
+  },
+  {
+    "id": "TRK-ALT-009",
+    "category": "Geofence Violation",
+    "priority": "P2",
+    "state": "Resolved",
+    "title": "After-hours movement detected in the Secure Cage",
+    "summary": "Movement at 02:14 IST outside the authorised 08:00–20:00 window.",
+    "facility": "Hyderabad Central Warehouse",
+    "location": "Secure Cage",
+    "raisedAt": "2026-07-22T09:00:00.000Z",
+    "ackAt": "2026-07-22T09:00:00.000Z",
+    "resolvedAt": "2026-07-22T13:00:00.000Z",
+    "slaDueAt": "2026-07-22T09:00:00.000Z",
+    "slaBreached": false,
+    "assignee": "Tarun Fernandes",
+    "team": "Security",
+    "source": "Zone Policy",
+    "recommendation": "Confirmed as the approved overnight stock move — no action",
+    "recommendationAction": "View resolution",
+    "timeline": [
+      {
+        "at": "2026-07-22T09:00:00.000Z",
+        "actor": "Zone Policy",
+        "action": "Alert raised"
+      },
+      {
+        "at": "2026-07-22T09:00:00.000Z",
+        "actor": "Tarun Fernandes",
+        "action": "Acknowledged"
+      },
+      {
+        "at": "2026-07-22T13:00:00.000Z",
+        "actor": "Tarun Fernandes",
+        "action": "Resolved",
+        "note": "Matched to approved move order MO-771"
+      }
+    ]
+  },
+  {
+    "id": "TRK-ALT-010",
+    "category": "Duplicate Tag",
+    "priority": "P2",
+    "state": "New",
+    "title": "Two tags reporting the same identity",
+    "summary": "RFID-E28011606012 is being read at Loading Dock 4 and Staging Bay simultaneously.",
+    "assetId": "AST-1012",
+    "assetName": "Zebra RFID Gateway G-4",
+    "facility": "Hyderabad Central Warehouse",
+    "location": "Loading Dock 4",
+    "raisedAt": "2026-07-23T06:00:00.000Z",
+    "slaDueAt": "2026-07-24T06:00:00.000Z",
+    "slaBreached": false,
+    "team": "IoT Platform",
+    "source": "Detection Matcher",
+    "recommendation": "Retire the cloned tag and re-bind the asset to a fresh identity",
+    "recommendationAction": "Start tag replacement",
+    "timeline": [
+      {
+        "at": "2026-07-23T06:00:00.000Z",
+        "actor": "Detection Matcher",
+        "action": "Alert raised"
+      }
+    ]
+  },
+  {
+    "id": "TRK-ALT-011",
+    "category": "Asset Removed",
+    "priority": "P2",
+    "state": "In Progress",
+    "title": "Switch removed from Rack B08 without a work order",
+    "summary": "Rack monitoring saw slot 22 empty with no maintenance activity on file.",
+    "assetId": "AST-1009",
+    "assetName": "Synology RS2418+ NAS",
+    "facility": "Chennai Data Center",
+    "location": "Server Room Beta · Rack B08",
+    "raisedAt": "2026-07-23T02:00:00.000Z",
+    "ackAt": "2026-07-23T03:00:00.000Z",
+    "slaDueAt": "2026-07-23T10:00:00.000Z",
+    "slaBreached": false,
+    "assignee": "Storage Team",
+    "team": "IT Operations",
+    "source": "Rack Monitor",
+    "recommendation": "Confirm against WO-5004 — the unit may be on the bench",
+    "recommendationAction": "Check work orders",
+    "timeline": [
+      {
+        "at": "2026-07-23T02:00:00.000Z",
+        "actor": "Rack Monitor",
+        "action": "Alert raised"
+      },
+      {
+        "at": "2026-07-23T03:00:00.000Z",
+        "actor": "Manoj Reddy",
+        "action": "Acknowledged"
+      },
+      {
+        "at": "2026-07-23T03:00:00.000Z",
+        "actor": "Manoj Reddy",
+        "action": "Assigned"
+      }
+    ]
+  },
+  {
+    "id": "TRK-ALT-012",
+    "category": "Battery Low",
+    "priority": "P3",
+    "state": "New",
+    "title": "Spare tag battery at 14%",
+    "summary": "Unassigned UWB tag in the Staging Bay is close to end of life.",
+    "deviceId": "DEV-TG-20",
+    "facility": "Hyderabad Central Warehouse",
+    "location": "Staging Bay",
+    "raisedAt": "2026-07-23T06:00:00.000Z",
+    "slaDueAt": "2026-07-27T09:00:00.000Z",
+    "slaBreached": false,
+    "team": "IoT Platform",
+    "source": "Device Health",
+    "recommendation": "Retire from the spare pool rather than swapping the cell",
+    "recommendationAction": "Retire device",
+    "timeline": [
+      {
+        "at": "2026-07-23T06:00:00.000Z",
+        "actor": "Device Health",
+        "action": "Alert raised"
+      }
+    ]
+  },
+  {
+    "id": "TRK-ALT-013",
+    "category": "Tracking Failure",
+    "priority": "P3",
+    "state": "New",
+    "title": "Coverage gap on the Tool Room ▸ Exit corridor",
+    "summary": "6 journeys in the last 24h show a blind spot of 40–50 minutes on this route.",
+    "facility": "Bengaluru HQ",
+    "location": "Corridor — Tool Room to Main Exit",
+    "raisedAt": "2026-07-23T05:00:00.000Z",
+    "slaDueAt": "2026-07-25T09:00:00.000Z",
+    "slaBreached": false,
+    "team": "IoT Platform",
+    "source": "Coverage Analyser",
+    "recommendation": "One additional reader would close the gap for ₹42,000",
+    "recommendationAction": "Plan coverage fix",
+    "timeline": [
+      {
+        "at": "2026-07-23T05:00:00.000Z",
+        "actor": "Coverage Analyser",
+        "action": "Alert raised"
+      }
+    ]
+  },
+  {
+    "id": "TRK-ALT-014",
+    "category": "Inventory Mismatch",
+    "priority": "P3",
+    "state": "Acknowledged",
+    "title": "Dock 4 short by 4 units against the manifest",
+    "summary": "Inbound reconciliation is 79% complete and already 4 units behind.",
+    "facility": "Hyderabad Central Warehouse",
+    "location": "Loading Dock 4",
+    "raisedAt": "2026-07-23T08:22:00.000Z",
+    "ackAt": "2026-07-23T08:40:00.000Z",
+    "slaDueAt": "2026-07-23T13:00:00.000Z",
+    "slaBreached": false,
+    "assignee": "Deepak Nair",
+    "team": "Inventory",
+    "source": "Audit Engine",
+    "recommendation": "Hold the manifest until the sweep completes",
+    "recommendationAction": "Open audit",
+    "timeline": [
+      {
+        "at": "2026-07-23T08:22:00.000Z",
+        "actor": "Audit Engine",
+        "action": "Alert raised"
+      },
+      {
+        "at": "2026-07-23T08:40:00.000Z",
+        "actor": "Deepak Nair",
+        "action": "Acknowledged"
+      }
+    ]
+  },
+  {
+    "id": "TRK-ALT-015",
+    "category": "Unknown Tag",
+    "priority": "P4",
+    "state": "Closed",
+    "title": "Unregistered beacon in the Design Studio",
+    "summary": "Matched to AST-2131 during onboarding and bound successfully.",
+    "facility": "Bengaluru HQ",
+    "location": "Design Studio",
+    "raisedAt": "2026-07-18T09:00:00.000Z",
+    "ackAt": "2026-07-18T09:00:00.000Z",
+    "resolvedAt": "2026-07-19T09:00:00.000Z",
+    "slaDueAt": "2026-07-19T09:00:00.000Z",
+    "slaBreached": false,
+    "assignee": "Sneha Iyer",
+    "team": "Inventory",
+    "source": "Detection Matcher",
+    "recommendation": "No further action",
+    "recommendationAction": "View resolution",
+    "timeline": [
+      {
+        "at": "2026-07-18T09:00:00.000Z",
+        "actor": "Detection Matcher",
+        "action": "Alert raised"
+      },
+      {
+        "at": "2026-07-19T09:00:00.000Z",
+        "actor": "Sneha Iyer",
+        "action": "Resolved",
+        "note": "Bound to AST-2131"
+      }
+    ]
+  },
+  {
+    "id": "TRK-ALT-016",
+    "category": "Missing Asset",
+    "priority": "P2",
+    "state": "Assigned",
+    "title": "OptiPlex 7010 not detected in the Secure Cage",
+    "summary": "Expected on shelf 3 but absent from the last two verification passes.",
+    "assetId": "AST-2119",
+    "assetName": "Dell OptiPlex 7010",
+    "facility": "Hyderabad Central Warehouse",
+    "location": "Secure Cage",
+    "raisedAt": "2026-07-22T19:00:00.000Z",
+    "ackAt": "2026-07-22T21:00:00.000Z",
+    "slaDueAt": "2026-07-23T19:00:00.000Z",
+    "slaBreached": false,
+    "assignee": "Tarun Fernandes",
+    "team": "Inventory",
+    "incidentId": "INC-4402",
+    "source": "Presence Monitor",
+    "recommendation": "Blocked on the cage reader — re-verify once DEV-RD-09 is back",
+    "recommendationAction": "Re-verify room",
+    "valueAtRiskInr": 68000,
+    "timeline": [
+      {
+        "at": "2026-07-22T19:00:00.000Z",
+        "actor": "Presence Monitor",
+        "action": "Alert raised"
+      },
+      {
+        "at": "2026-07-22T21:00:00.000Z",
+        "actor": "Tarun Fernandes",
+        "action": "Assigned"
+      }
+    ]
+  },
+  {
+    "id": "TRK-ALT-017",
+    "category": "Geofence Violation",
+    "priority": "P3",
+    "state": "New",
+    "title": "Dwell limit exceeded in the Staging Bay",
+    "summary": "3 pallets have been staged for over 8 hours against a 480-minute limit.",
+    "facility": "Hyderabad Central Warehouse",
+    "location": "Staging Bay",
+    "raisedAt": "2026-07-23T07:00:00.000Z",
+    "slaDueAt": "2026-07-24T07:00:00.000Z",
+    "slaBreached": false,
+    "team": "Inventory",
+    "source": "Zone Policy",
+    "recommendation": "Route to outbound or move back to the Main Warehouse",
+    "recommendationAction": "Open zone",
+    "timeline": [
+      {
+        "at": "2026-07-23T07:00:00.000Z",
+        "actor": "Zone Policy",
+        "action": "Alert raised"
+      }
+    ]
+  },
+  {
+    "id": "TRK-ALT-018",
+    "category": "Gateway Offline",
+    "priority": "P4",
+    "state": "Resolved",
+    "title": "Print Station scan point briefly unreachable",
+    "summary": "Recovered on its own after a 6-minute network blip.",
+    "deviceId": "DEV-SS-08",
+    "facility": "Bengaluru HQ",
+    "location": "Print Station",
+    "raisedAt": "2026-07-22T07:00:00.000Z",
+    "resolvedAt": "2026-07-22T07:00:00.000Z",
+    "slaDueAt": "2026-07-22T09:00:00.000Z",
+    "slaBreached": false,
+    "team": "IoT Platform",
+    "source": "Device Health",
+    "recommendation": "Self-healed — no action",
+    "recommendationAction": "View resolution",
+    "timeline": [
+      {
+        "at": "2026-07-22T07:00:00.000Z",
+        "actor": "Device Health",
+        "action": "Alert raised"
+      },
+      {
+        "at": "2026-07-22T07:00:00.000Z",
+        "actor": "Automation",
+        "action": "Auto-resolved",
+        "note": "Heartbeat restored within the grace window"
+      }
+    ]
+  }
+]

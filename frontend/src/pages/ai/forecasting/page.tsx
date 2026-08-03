@@ -1,9 +1,9 @@
 import { useMemo, useState } from 'react';
-import { mockForecasts } from '@/lib/mock-data';
+import { allForecasts } from '@/lib/dataset';
 import { useToast } from '@/components/providers/ToastProvider';
-import { PageHeader, KpiCard, Badge } from '@/components/ui/primitives';
+import { PageHeader, KpiCard, Badge, EmptyState } from '@/components/ui/primitives';
 import { cn } from '@/lib/utils';
-import type { ForecastSeries } from '@/types/asset';
+import type { ForecastSeries } from '@access-genie/shared';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Static config (module scope → stable identity across renders, deterministic)
@@ -41,18 +41,24 @@ const C = {
 export default function ForecastingPage() {
   const { toast } = useToast();
 
-  const [seriesId, setSeriesId] = useState<string>(mockForecasts[0].id);
+  const [seriesId, setSeriesId] = useState<string>(allForecasts[0]?.id ?? '');
   const [scenario, setScenario] = useState<ScenarioId>('base');
   const [hover, setHover] = useState<number | null>(null);
 
-  const series: ForecastSeries =
-    mockForecasts.find((s) => s.id === seriesId) ?? mockForecasts[0];
+  // Undefined until a model has produced a forecast. The hooks below all tolerate
+  // that and the render returns an empty state — they cannot simply be skipped,
+  // because hooks may not be called conditionally.
+  const series: ForecastSeries | undefined =
+    allForecasts.find((s) => s.id === seriesId) ?? allForecasts[0];
   const factor = SCENARIOS.find((s) => s.id === scenario)?.factor ?? 1;
 
   // ── Derive plottable geometry for the selected series + scenario ─────────────
   const chart = useMemo(() => {
-    const pts = series.points;
+    const pts = series?.points ?? [];
     const n = pts.length;
+    // Nothing to plot: the geometry below divides by the point count and indexes
+    // relative to the last actual, neither of which means anything with no points.
+    if (n === 0) return null;
 
     // Index where recorded history ends (last point carrying an `actual`).
     const lastActualIdx = pts.reduce(
@@ -115,6 +121,7 @@ export default function ForecastingPage() {
 
   // ── KPI tiles ────────────────────────────────────────────────────────────────
   const kpis = useMemo(() => {
+    if (!chart) return null;
     const { pts, fc, lastActualIdx } = chart;
     const nextIdx = Math.min(lastActualIdx + 1, pts.length - 1);
     const nextForecast = fc[nextIdx];
@@ -155,12 +162,31 @@ export default function ForecastingPage() {
   }
   function pickScenario(id: ScenarioId, label: string, hint: string) {
     setScenario(id);
-    toast({ title: `${label} scenario applied`, description: `${series.name} — ${hint}.`, tone: 'info' });
+    toast({ title: `${label} scenario applied`, description: `${series?.name ?? 'Forecast'} — ${hint}.`, tone: 'info' });
   }
 
-  const active = chart.pts[hover ?? -1];
+  const active = chart?.pts[hover ?? -1];
 
   // ── Render ───────────────────────────────────────────────────────────────────
+  if (!series || !chart || !kpis) {
+    return (
+      <div className="h-full flex flex-col space-y-6">
+        <PageHeader
+          title="Forecasting & Capacity Planning"
+          subtitle="Model-driven projections with confidence bands to plan spares, capex and end-of-life capacity."
+          breadcrumb={[{ label: 'AI Intelligence', href: '/ai-insights' }, { label: 'Forecasting' }]}
+        />
+        <div className="glass-panel rounded-xl">
+          <EmptyState
+            icon="📈"
+            title="No forecasts have been produced yet"
+            description="Forecasts are generated from recorded history — consumption, runtime and failures. Once assets have been tracked for a while, the models project forward from that record and the series appear here."
+          />
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="h-full flex flex-col space-y-6">
       <PageHeader
@@ -171,7 +197,7 @@ export default function ForecastingPage() {
 
       {/* Series picker */}
       <div className="flex flex-wrap items-center gap-2">
-        {mockForecasts.map((s) => {
+        {allForecasts.map((s) => {
           const on = s.id === series.id;
           return (
             <button

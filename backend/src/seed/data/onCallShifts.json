@@ -1,0 +1,26 @@
+[
+  {
+    "day": "Mon\u2013Tue",
+    "primary": "Arjun Menon",
+    "secondary": "Deepak Nair",
+    "window": "08:00 \u2013 20:00",
+    "id": "OC-01",
+    "order": 0
+  },
+  {
+    "day": "Wed\u2013Thu",
+    "primary": "Sneha Iyer",
+    "secondary": "Arjun Menon",
+    "window": "08:00 \u2013 20:00",
+    "id": "OC-02",
+    "order": 1
+  },
+  {
+    "day": "Fri\u2013Sun",
+    "primary": "Deepak Nair",
+    "secondary": "Sneha Iyer",
+    "window": "20:00 \u2013 08:00",
+    "id": "OC-03",
+    "order": 2
+  }
+]

@@ -1,5 +1,5 @@
 import { Link, useParams } from 'react-router-dom';
-import { getAssetById } from '@/lib/mock-data';
+import { getAssetById } from '@/lib/dataset';
 import { PageHeader, EmptyState } from '@/components/ui/primitives';
 import { Button } from '@/components/ui/Button';
 import { AssetForm } from '@/components/assets/AssetForm';
@@ -36,7 +36,7 @@ export default function EditAssetPage() {
     <div className="h-full flex flex-col space-y-6">
       <PageHeader
         title={`Edit ${asset.name}`}
-        subtitle="Update this asset's details. Changes are held in-session for the demo."
+        subtitle="Update this asset's details. Changes are saved to the asset record."
         breadcrumb={[
           { label: 'Asset Registry', href: '/assets' },
           { label: asset.name, href: `/assets/${asset.id}` },

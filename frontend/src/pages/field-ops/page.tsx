@@ -1,9 +1,9 @@
 import { useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import { PageHeader, KpiCard, Badge, Avatar } from '@/components/ui/primitives';
-import { mockWorkOrders, getAssetById } from '@/lib/mock-data';
+import { allWorkOrders, getAssetById } from '@/lib/dataset';
 import { relTime } from '@/lib/utils';
-import type { WorkOrder } from '@/types/asset';
+import type { WorkOrder } from '@access-genie/shared';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Field operations live view — technicians/operators, their current job, and
@@ -41,7 +41,7 @@ export default function FieldOpsPage() {
   const techs = useMemo<FieldTech[]>(() => {
     // Group active work by assignee (skip Unassigned + system/team accounts).
     const byTech = new Map<string, WorkOrder[]>();
-    for (const wo of mockWorkOrders) {
+    for (const wo of allWorkOrders) {
       if (wo.assignedTo === 'Unassigned' || /team|platform/i.test(wo.assignedTo)) continue;
       const list = byTech.get(wo.assignedTo) ?? [];
       list.push(wo);
@@ -62,9 +62,9 @@ export default function FieldOpsPage() {
   }, []);
 
   const inField = techs.filter((t) => t.status !== 'Idle').length;
-  const activeJobs = mockWorkOrders.filter((w) => w.status === 'In Progress').length;
+  const activeJobs = allWorkOrders.filter((w) => w.status === 'In Progress').length;
   const assetsInMotion = new Set(
-    mockWorkOrders.filter((w) => w.status === 'In Progress' || w.status === 'Assigned').map((w) => w.assetId),
+    allWorkOrders.filter((w) => w.status === 'In Progress' || w.status === 'Assigned').map((w) => w.assetId),
   ).size;
 
   const board: { status: FieldStatus; count: number }[] = (['On Job', 'En Route', 'Idle'] as FieldStatus[]).map(

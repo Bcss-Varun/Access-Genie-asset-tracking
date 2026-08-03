@@ -2,7 +2,7 @@ import { Link } from 'react-router-dom';
 import { useSession } from '@/components/providers/SessionProvider';
 import { useScope } from '@/components/providers/ScopeProvider';
 import { KpiCard, Badge } from '@/components/ui/primitives';
-import { mockAssets, mockWorkOrders, mockInsights } from '@/lib/mock-data';
+import { allAssets, allWorkOrders, allInsights } from '@/lib/dataset';
 import { relTime } from '@/lib/utils';
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -63,7 +63,7 @@ const flagshipFeatures: Feature[] = [
   {
     title: 'Security, Geo-fencing & Compliance',
     blurb: 'Geofenced zones, custody exceptions and audit-ready compliance monitoring.',
-    href: '/geofences',
+    href: '/compliance-reports',
     icon: '🛡️',
     accent: '#ef4444',
     tint: 'rgba(239,68,68,0.12)',
@@ -79,7 +79,7 @@ const flagshipFeatures: Feature[] = [
 ];
 
 const quickActions = [
-  { label: 'Real-Time Tracking', href: '/tracking', icon: '🗺️' },
+  { label: 'Asset Tracking', href: '/tracking', icon: '🗺️' },
   { label: 'AI Asset Intelligence', href: '/ai-insights', icon: '✨' },
   { label: 'Digital Passports & Lifecycle', href: '/lifecycle', icon: '♻️' },
   { label: 'Predictive Maintenance', href: '/maintenance', icon: '🔧' },
@@ -94,9 +94,9 @@ export default function WorkspacePage() {
   const { scope } = useScope();
   const firstName = session.user.name.split(' ')[0];
 
-  const openWOs = mockWorkOrders.filter((w) => w.status !== 'Completed');
-  const criticalAlerts = mockInsights.filter((i) => i.severity === 'Critical').length;
-  const topInsights = mockInsights.slice(0, 3);
+  const openWOs = allWorkOrders.filter((w) => w.status !== 'Completed');
+  const criticalAlerts = allInsights.filter((i) => i.severity === 'Critical').length;
+  const topInsights = allInsights.slice(0, 3);
   const topWork = openWOs.slice(0, 5);
 
   return (
@@ -230,7 +230,7 @@ export default function WorkspacePage() {
           <section className="glass-panel rounded-xl p-6">
             <h2 className="text-base font-semibold font-heading text-slate-800 mb-4">Needs Attention</h2>
             <div className="space-y-2">
-              {[...mockAssets].sort((a, b) => (b.riskScore ?? 0) - (a.riskScore ?? 0)).slice(0, 4).map((a) => (
+              {[...allAssets].sort((a, b) => (b.riskScore ?? 0) - (a.riskScore ?? 0)).slice(0, 4).map((a) => (
                 <Link key={a.id} to={`/assets/${a.id}`} className="flex items-center justify-between gap-2 rounded-lg p-2 hover:bg-slate-50 transition-colors">
                   <div className="min-w-0">
                     <div className="text-sm font-medium text-slate-800 truncate">{a.name}</div>

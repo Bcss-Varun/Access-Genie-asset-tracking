@@ -3,6 +3,7 @@ import type { ApiMeta } from '@access-genie/shared';
 import { Activity, Asset, CustodyRecord, Insight, WorkOrder, healthStatusFor, nextId, type AssetDoc } from '../models/index.js';
 import { ApiError } from '../utils/ApiError.js';
 import { csvFilter, escapeRegex, paginate, parsePagination } from '../utils/query.js';
+import { projectAssetUpdate, projectNewAsset, retireAssetFromGraph } from './assetGraph.service.js';
 import type { AssetListQuery, CreateAssetInput, UpdateAssetInput } from '../validators/asset.validator.js';
 
 const SORTABLE = ['name', 'healthScore', 'riskScore', 'utilization', 'purchasePrice', 'purchaseDate', 'createdAt', 'updatedAt'];
@@ -79,7 +80,13 @@ export async function createAsset(input: CreateAssetInput, actor: string): Promi
     ...input,
     _id: id,
     healthStatus: healthStatusFor(input.healthScore),
-    purchaseDate: new Date(input.purchaseDate),
+    // An asset can be registered before anyone has decided who holds it or
+    // found the invoice — that is what makes "commit early" possible. The
+    // record still gets a definite value for both, so no reader downstream has
+    // to cope with a blank: unclaimed is `Unassigned`, and undated is dated
+    // from the registration itself.
+    custodian: input.custodian ?? 'Unassigned',
+    purchaseDate: input.purchaseDate ? new Date(input.purchaseDate) : new Date(),
     warrantyExpiry: input.warrantyExpiry ? new Date(input.warrantyExpiry) : undefined,
     telemetry: input.telemetry ? { ...input.telemetry, lastPing: new Date(input.telemetry.lastPing) } : undefined,
   });
@@ -92,6 +99,14 @@ export async function createAsset(input: CreateAssetInput, actor: string): Promi
     timestamp: new Date(),
   });
 
+  // The asset is committed; now make it visible everywhere it belongs — the
+  // live map, the device estate, the chain of custody. See assetGraph.service.
+  const { mapPosition } = await projectNewAsset(asset.toObject(), actor);
+  if (mapPosition && !asset.mapPosition) {
+    asset.mapPosition = mapPosition;
+    await asset.save();
+  }
+
   return asset.toObject();
 }
 
@@ -101,9 +116,19 @@ export async function updateAsset(id: string, input: UpdateAssetInput, actor: st
 
   const previousStatus = asset.status;
   const previousLocation = asset.location?.name;
+  const previous = {
+    custodian: asset.custodian,
+    trackingId: asset.trackingId,
+    location: asset.location ? { ...asset.location } : asset.location,
+  };
+
+  // A blank optional field arrives as `undefined`, and assigning that would
+  // clear a value the edit never meant to touch — blanking the custodian of an
+  // asset because the form's date input was left empty. Absent means "leave it".
+  const defined = Object.fromEntries(Object.entries(input).filter(([, v]) => v !== undefined));
 
   Object.assign(asset, {
-    ...input,
+    ...defined,
     ...(input.purchaseDate ? { purchaseDate: new Date(input.purchaseDate) } : {}),
     ...(input.warrantyExpiry ? { warrantyExpiry: new Date(input.warrantyExpiry) } : {}),
     ...(input.telemetry ? { telemetry: { ...input.telemetry, lastPing: new Date(input.telemetry.lastPing) } } : {}),
@@ -131,6 +156,13 @@ export async function updateAsset(id: string, input: UpdateAssetInput, actor: st
     });
   }
 
+  // Move the dot, open a custody entry, register a newly bound tag.
+  const { mapPosition } = await projectAssetUpdate(asset.toObject(), previous, actor);
+  if (mapPosition) {
+    asset.mapPosition = mapPosition;
+    await asset.save();
+  }
+
   return asset.toObject();
 }
 
@@ -144,6 +176,10 @@ export async function deleteAsset(id: string): Promise<void> {
   }
 
   await asset.deleteOne();
+
+  // Stop it occupying a dot on the map and being counted as live hardware.
+  // Custody and activity stay — they are history.
+  await retireAssetFromGraph(id);
 }
 
 /** Registry-wide counters for the assets page header. */

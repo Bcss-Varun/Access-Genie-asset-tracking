@@ -1,9 +1,10 @@
 import { useMemo, useState } from 'react';
-import { mockAssets } from '@/lib/mock-data';
-import type { Asset } from '@/types/asset';
+import { allAssets } from '@/lib/dataset';
+import type { Asset } from '@access-genie/shared';
 import { PageHeader, Badge } from '@/components/ui/primitives';
 import { Button } from '@/components/ui/Button';
-import { useToast } from '@/components/providers/ToastProvider';
+import { reportsApi } from '@/api/platform';
+import { useMutate } from '@/api/mutate';
 import { cn, formatMoney } from '@/lib/utils';
 
 // ── Field definitions ─────────────────────────────────────────────────────────
@@ -87,14 +88,14 @@ function DropZone({ label, items, onRemove, hint }: { label: string; items: stri
 }
 
 export default function ReportBuilderPage() {
-  const { toast } = useToast();
+  const { run, isPending } = useMutate();
   const [rows, setRows] = useState<DimName[]>(['Category']);
   const [cols, setCols] = useState<DimName[]>([]);
   const [measures, setMeasures] = useState<MeaName[]>(['Count']);
   const [chart, setChart] = useState<'Bar' | 'Table'>('Table');
   const [facilityFilter, setFacilityFilter] = useState<Set<string>>(new Set());
 
-  const facilities = useMemo(() => Array.from(new Set(mockAssets.map((a) => a.location.name))), []);
+  const facilities = useMemo(() => Array.from(new Set(allAssets.map((a) => a.location.name))), []);
 
   const addDim = (d: DimName, zone: 'rows' | 'cols') => {
     const set = zone === 'rows' ? setRows : setCols;
@@ -106,7 +107,7 @@ export default function ReportBuilderPage() {
   const addMeasure = (m: MeaName) => setMeasures((prev) => (prev.includes(m) ? prev : [...prev, m]));
 
   const data = useMemo(
-    () => (facilityFilter.size ? mockAssets.filter((a) => facilityFilter.has(a.location.name)) : mockAssets),
+    () => (facilityFilter.size ? allAssets.filter((a) => facilityFilter.has(a.location.name)) : allAssets),
     [facilityFilter],
   );
 
@@ -133,6 +134,30 @@ export default function ReportBuilderPage() {
     return pivot.rowKeys.map((rk) => ({ label: rk, value: primary.agg(data.filter((a) => rowFn(a) === rk)) }));
   }, [pivot, data, rowDim, activeMeasures]);
 
+  /**
+   * Save the composition as a report.
+   *
+   * What is stored is the *definition* — the dimensions, the measures and the
+   * chart type — not the numbers currently on screen. That is the difference
+   * between a saved report and a screenshot: reopening it re-runs against
+   * today's assets rather than replaying the figures from the day it was built.
+   */
+  const saveReport = async () => {
+    const name = `${rowDim ?? 'All assets'} by ${activeMeasures[0]}${colDim ? ` × ${colDim}` : ''}`;
+
+    await run(
+      reportsApi.create({
+        name,
+        category: 'Custom',
+        persona: 'Analyst',
+        format: chart === 'Bar' ? 'Dashboard' : 'Excel',
+        description: `Built in the report builder — rows: ${rows.join(', ') || 'none'}; columns: ${cols.join(', ') || 'none'}.`,
+        metrics: activeMeasures,
+      }),
+      { success: 'Report saved', successDetail: `Saved as “${name}”.`, describe: 'save that report' },
+    );
+  };
+
   return (
     <div className="h-full flex flex-col space-y-6">
       <PageHeader
@@ -140,7 +165,7 @@ export default function ReportBuilderPage() {
         subtitle="Drag fields into Rows, Columns and Measures to compose a report."
         breadcrumb={[{ label: 'Analytics', href: '/reports' }, { label: 'Report Builder' }]}
         actions={
-          <Button onClick={() => toast({ title: 'Report saved', description: `Saved as “Untitled — ${rowDim ?? 'blank'} by ${activeMeasures[0]}”.`, tone: 'success' })}>
+          <Button onClick={() => void saveReport()} disabled={isPending}>
             Save report
           </Button>
         }
@@ -273,7 +298,7 @@ export default function ReportBuilderPage() {
             )}
           </div>
           <div className="pt-3 border-t border-slate-100">
-            <Badge tone="slate">{data.length} of {mockAssets.length} assets</Badge>
+            <Badge tone="slate">{data.length} of {allAssets.length} assets</Badge>
           </div>
         </div>
       </div>

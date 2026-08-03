@@ -1,4 +1,4 @@
-import { useAuth } from '@/features/auth/AuthProvider';
+import { useAuth } from '@/api/auth';
 import type { Session } from '@access-genie/shared';
 
 /**

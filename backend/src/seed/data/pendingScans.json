@@ -1,0 +1,44 @@
+[
+  {
+    "serial": "CN-0R740-77291-4B",
+    "manufacturer": "Dell",
+    "model": "PowerEdge R760",
+    "classId": "CLS-COMP",
+    "category": "Compute",
+    "facility": "Hyderabad Central Warehouse",
+    "building": "Building A",
+    "zone": "Loading Dock",
+    "confidence": 96,
+    "id": "SCN-01",
+    "scannedAt": "2026-07-23T08:30:00.000Z",
+    "consumed": false
+  },
+  {
+    "serial": "FDO2731V0KL",
+    "manufacturer": "Cisco",
+    "model": "Catalyst 9300",
+    "classId": "CLS-NET",
+    "category": "Network",
+    "facility": "Hyderabad Central Warehouse",
+    "building": "Building A",
+    "zone": "Staging Bay",
+    "confidence": 91,
+    "id": "SCN-02",
+    "scannedAt": "2026-07-23T08:30:00.000Z",
+    "consumed": false
+  },
+  {
+    "serial": "PF4X2K9Q",
+    "manufacturer": "Lenovo",
+    "model": "ThinkPad T14 Gen 5",
+    "classId": "CLS-END",
+    "category": "Endpoints",
+    "facility": "Hyderabad Central Warehouse",
+    "building": "Building A",
+    "zone": "Loading Dock",
+    "confidence": 88,
+    "id": "SCN-03",
+    "scannedAt": "2026-07-23T08:30:00.000Z",
+    "consumed": false
+  }
+]

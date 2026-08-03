@@ -1,3 +1,4 @@
+import { allRetentionPolicies } from '@/lib/dataset';
 import { useState } from 'react';
 import { PageHeader, Badge } from '@/components/ui/primitives';
 import { Button } from '@/components/ui/Button';
@@ -12,15 +13,7 @@ interface RetentionPolicy {
   legalHold: boolean;
 }
 
-const INITIAL: RetentionPolicy[] = [
-  { id: 'RP-01', dataClass: 'Asset Records', retention: '7 years', disposal: 'Anonymize', legalHold: false },
-  { id: 'RP-02', dataClass: 'Audit Logs', retention: '10 years', disposal: 'Archive to cold storage', legalHold: true },
-  { id: 'RP-03', dataClass: 'Chain of Custody', retention: '7 years', disposal: 'Secure delete', legalHold: true },
-  { id: 'RP-04', dataClass: 'Telemetry / Sensor Data', retention: '18 months', disposal: 'Aggregate & purge', legalHold: false },
-  { id: 'RP-05', dataClass: 'Maintenance Work Orders', retention: '5 years', disposal: 'Secure delete', legalHold: false },
-  { id: 'RP-06', dataClass: 'Decommissioned Media (Sanitization)', retention: '6 years', disposal: 'Crypto-shred', legalHold: false },
-];
-
+const INITIAL = allRetentionPolicies;
 export default function RetentionPage() {
   const { toast } = useToast();
   const [policies, setPolicies] = useState<RetentionPolicy[]>(INITIAL);

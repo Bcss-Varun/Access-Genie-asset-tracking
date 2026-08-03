@@ -1,6 +1,6 @@
 import { Link, useParams } from 'react-router-dom';
 import { flattenScope } from '@/lib/rbac';
-import type { ScopeLevel } from '@/types/platform';
+import type { ScopeLevel } from '@access-genie/shared';
 import { PageHeader, Badge, KpiCard, EmptyState } from '@/components/ui/primitives';
 import { Button } from '@/components/ui/Button';
 

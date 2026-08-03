@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
-import { getPurchaseOrder } from '@/lib/mock-data';
-import type { PoStatus } from '@/types/asset';
+import { getPurchaseOrder } from '@/lib/dataset';
+import type { PoStatus } from '@access-genie/shared';
 import { PageHeader, Badge, EmptyState } from '@/components/ui/primitives';
 import { Button } from '@/components/ui/Button';
 import { useToast } from '@/components/providers/ToastProvider';

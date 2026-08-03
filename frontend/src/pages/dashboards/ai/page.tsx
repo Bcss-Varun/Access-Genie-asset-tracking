@@ -1,13 +1,8 @@
 import { Link } from 'react-router-dom';
 import { Card, HBars, categoryEmoji } from '@/components/dashboards/DashboardKit';
 import { PageHeader, KpiCard, Badge } from '@/components/ui/primitives';
-import { mockAssets, mockInsights, mockAnomalies } from '@/lib/mock-data';
-import { cn, relTime, DEMO_NOW, formatMoney } from '@/lib/utils';
-
-const atRisk = mockAssets.filter((a) => (a.riskScore ?? 0) > 60).length;
-const predictedFailures = mockAssets.filter((a) => (a.riskScore ?? 0) >= 70).length;
-const anomalies24h = mockAnomalies.filter((a) => DEMO_NOW - Date.parse(a.detectedAt) < 24 * 3600_000).length;
-const savings = mockInsights.reduce((s, i) => s + (i.impactInr ?? 0), 0);
+import { allAssets, allInsights, allAnomalies } from '@/lib/dataset';
+import { cn, relTime, nowMs, formatMoney } from '@/lib/utils';
 
 // Risk score distribution
 const buckets = [
@@ -16,21 +11,27 @@ const buckets = [
   { label: 'High (51–75)', color: '#f97316' },
   { label: 'Critical (76–100)', color: '#ef4444' },
 ];
-const riskDist = buckets.map((b, i) => ({
-  label: b.label,
-  color: b.color,
-  value: mockAssets.filter((a) => {
-    const r = a.riskScore ?? 0;
-    return i === 0 ? r <= 25 : i === 1 ? r > 25 && r <= 50 : i === 2 ? r > 50 && r <= 75 : r > 75;
-  }).length,
-}));
-
-const rankedInsights = [...mockInsights].sort((a, b) => (b.impactInr ?? 0) - (a.impactInr ?? 0));
-const topAnomalies = [...mockAnomalies].sort((a, b) => b.confidence - a.confidence);
 
 const anomTone = (s: string): 'red' | 'amber' | 'slate' => (s === 'Critical' ? 'red' : s === 'Warning' ? 'amber' : 'slate');
 
 export default function AiIntelligenceDashboard() {
+  // Derived per render: the dataset is fetched, so a value computed once at
+  // module scope would never see a refetch.
+  const atRisk = allAssets.filter((a) => (a.riskScore ?? 0) > 60).length;
+    const predictedFailures = allAssets.filter((a) => (a.riskScore ?? 0) >= 70).length;
+    const anomalies24h = allAnomalies.filter((a) => nowMs() - Date.parse(a.detectedAt) < 24 * 3600_000).length;
+    const savings = allInsights.reduce((s, i) => s + (i.impactInr ?? 0), 0);
+    const riskDist = buckets.map((b, i) => ({
+    label: b.label,
+    color: b.color,
+    value: allAssets.filter((a) => {
+      const r = a.riskScore ?? 0;
+      return i === 0 ? r <= 25 : i === 1 ? r > 25 && r <= 50 : i === 2 ? r > 50 && r <= 75 : r > 75;
+    }).length,
+  }));
+    const rankedInsights = [...allInsights].sort((a, b) => (b.impactInr ?? 0) - (a.impactInr ?? 0));
+    const topAnomalies = [...allAnomalies].sort((a, b) => b.confidence - a.confidence);
+
   return (
     <div className="h-full flex flex-col space-y-6">
       <PageHeader
@@ -101,7 +102,7 @@ export default function AiIntelligenceDashboard() {
                 <div className="mt-1.5 flex items-center gap-2 text-[11px] text-slate-400">
                   <span className={cn('font-medium', ins.severity === 'Critical' ? 'text-health-critical' : ins.severity === 'Opportunity' ? 'text-emerald-600' : 'text-amber-600')}>{ins.severity}</span>
                   <span>·</span><span>{ins.confidence}% confidence</span>
-                  {ins.assetName && (<><span>·</span><span className="truncate">{categoryEmoji((mockAssets.find((a) => a.id === ins.assetId)?.category) ?? '')} {ins.assetName}</span></>)}
+                  {ins.assetName && (<><span>·</span><span className="truncate">{categoryEmoji((allAssets.find((a) => a.id === ins.assetId)?.category) ?? '')} {ins.assetName}</span></>)}
                 </div>
               </div>
             </Link>

@@ -5,7 +5,7 @@
 // ─────────────────────────────────────────────────────────────────────────────
 
 import { Link } from 'react-router-dom';
-import type { AIInsight, InsightType } from '@/types/asset';
+import type { AIInsight, InsightType } from '@access-genie/shared';
 import { cn } from '@/lib/utils';
 
 export const insightEmoji: Record<InsightType, string> = {

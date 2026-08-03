@@ -1,6 +1,6 @@
 import { useMemo } from 'react';
 import { Link, useParams } from 'react-router-dom';
-import { getReport, mockAssets } from '@/lib/mock-data';
+import { getReport, allAssets } from '@/lib/dataset';
 import { UtilizationDowntimeChart, ValueByCategoryDonut } from '@/components/charts/DashboardCharts';
 import { PageHeader, Badge, EmptyState } from '@/components/ui/primitives';
 import { Button } from '@/components/ui/Button';
@@ -31,7 +31,7 @@ export default function ReportViewerPage() {
 
   const rows = useMemo(() => {
     const map = new Map<string, { count: number; value: number; util: number; health: number }>();
-    for (const a of mockAssets) {
+    for (const a of allAssets) {
       const cur = map.get(a.category) ?? { count: 0, value: 0, util: 0, health: 0 };
       cur.count += 1;
       cur.value += a.bookValue ?? 0;
@@ -123,7 +123,7 @@ export default function ReportViewerPage() {
       <div className="glass-panel rounded-xl overflow-hidden">
         <div className="px-4 py-3 border-b border-slate-200 flex items-center justify-between">
           <h2 className="text-base font-semibold text-slate-800">Breakdown by Category</h2>
-          <span className="text-xs text-slate-400">{rows.length} categories · {mockAssets.length} assets</span>
+          <span className="text-xs text-slate-400">{rows.length} categories · {allAssets.length} assets</span>
         </div>
         <div className="overflow-x-auto">
           <table className="w-full text-left text-sm whitespace-nowrap">

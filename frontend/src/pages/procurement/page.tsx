@@ -1,11 +1,11 @@
 import { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { mockPurchaseOrders } from '@/lib/mock-data';
-import type { PoStatus, PurchaseOrder } from '@/types/asset';
+import { allPurchaseOrders } from '@/lib/dataset';
+import type { PoStatus, PurchaseOrder } from '@access-genie/shared';
 import { PageHeader, KpiCard, Badge, EmptyState } from '@/components/ui/primitives';
 import { Button } from '@/components/ui/Button';
 import { useToast } from '@/components/providers/ToastProvider';
-import { DEMO_NOW, formatMoney, relTime } from '@/lib/utils';
+import { nowMs, formatMoney, relTime } from '@/lib/utils';
 
 const STATUSES: PoStatus[] = ['Draft', 'Approved', 'Sent', 'Received', 'Cancelled'];
 
@@ -21,13 +21,13 @@ const OPEN_STATUSES: PoStatus[] = ['Draft', 'Approved', 'Sent'];
 
 function isThisMonth(iso: string): boolean {
   const d = new Date(iso);
-  const now = new Date(DEMO_NOW);
+  const now = new Date(nowMs());
   return d.getUTCFullYear() === now.getUTCFullYear() && d.getUTCMonth() === now.getUTCMonth();
 }
 
 export default function ProcurementPage() {
   const { toast } = useToast();
-  const orders = useMemo(() => mockPurchaseOrders, []);
+  const orders = useMemo(() => allPurchaseOrders, []);
   const [filter, setFilter] = useState<'All' | PoStatus>('All');
 
   const openCount = orders.filter((o) => OPEN_STATUSES.includes(o.status)).length;

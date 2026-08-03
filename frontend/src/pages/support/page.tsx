@@ -1,25 +1,22 @@
+import { allSupportTickets } from '@/lib/dataset';
 import { useState } from 'react';
 import { PageHeader, Badge } from '@/components/ui/primitives';
 import { Button } from '@/components/ui/Button';
+import { supportApi } from '@/api/platform';
+import { useMutate } from '@/api/mutate';
 import { useToast } from '@/components/providers/ToastProvider';
 import { relTime } from '@/lib/utils';
 
-type TicketStatus = 'Open' | 'In Progress' | 'Waiting' | 'Resolved';
-
-const statusTone = (s: TicketStatus): 'primary' | 'amber' | 'slate' | 'emerald' =>
+const statusTone = (s: string): 'primary' | 'amber' | 'slate' | 'emerald' =>
   s === 'Open' ? 'primary' : s === 'In Progress' ? 'amber' : s === 'Waiting' ? 'slate' : 'emerald';
 
 const CATEGORIES = ['Assets & Tracking', 'Maintenance', 'AI & Insights', 'Account & Security', 'Integrations & API', 'Billing'];
 const PRIORITIES = ['Low', 'Normal', 'High', 'Urgent'];
 
-const TICKETS: { id: string; subject: string; category: string; status: TicketStatus; updated: string }[] = [
-  { id: 'SUP-4821', subject: 'Gateway GW-14 shows offline after firmware update', category: 'Integrations & API', status: 'In Progress', updated: '2026-07-23T07:30:00.000Z' },
-  { id: 'SUP-4798', subject: 'Bulk asset import rejects rows with valid SKUs', category: 'Assets & Tracking', status: 'Waiting', updated: '2026-07-22T15:10:00.000Z' },
-  { id: 'SUP-4776', subject: 'Anomaly scores missing on the AI dashboard', category: 'AI & Insights', status: 'Open', updated: '2026-07-22T09:05:00.000Z' },
-  { id: 'SUP-4712', subject: 'Add SSO via Okta for the org', category: 'Account & Security', status: 'Resolved', updated: '2026-07-19T18:40:00.000Z' },
-  { id: 'SUP-4690', subject: 'PM schedule emails arriving twice', category: 'Maintenance', status: 'Resolved', updated: '2026-07-17T11:22:00.000Z' },
-];
-
+// Tickets arrive with the dataset and are created through `POST /support-tickets`
+// — the form below used to raise a toast and nothing else, so a ticket someone
+// filled in and submitted had never been recorded anywhere.
+const TICKETS = allSupportTickets;
 const inputCls =
   'w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-800 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-primary-500';
 const labelCls = 'block text-sm font-medium text-slate-700 mb-1.5';
@@ -28,18 +25,31 @@ const td = 'px-4 py-3.5';
 
 export default function SupportPage() {
   const { toast } = useToast();
+  const { run, isPending } = useMutate();
   const [subject, setSubject] = useState('');
   const [category, setCategory] = useState(CATEGORIES[0]);
   const [priority, setPriority] = useState('Normal');
   const [description, setDescription] = useState('');
 
-  const onSubmit = (e: React.FormEvent) => {
+  const onSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!subject.trim()) {
       toast({ title: 'Subject required', description: 'Please add a short subject for your ticket.', tone: 'error' });
       return;
     }
-    toast({ title: 'Ticket submitted', description: `“${subject}” was created at ${priority} priority.`, tone: 'success' });
+
+    const created = await run(
+      supportApi.create({ subject: subject.trim(), category, priority, body: description.trim() || undefined }),
+      {
+        success: 'Ticket submitted',
+        successDetail: `“${subject.trim()}” was created at ${priority} priority.`,
+        describe: 'submit that ticket',
+      },
+    );
+
+    // Only clear the form once the ticket exists. Clearing on failure would
+    // throw away what someone just typed and leave nothing to retry with.
+    if (!created) return;
     setSubject(''); setDescription(''); setPriority('Normal'); setCategory(CATEGORIES[0]);
   };
 
@@ -53,7 +63,7 @@ export default function SupportPage() {
 
       <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
         {/* New ticket form */}
-        <form onSubmit={onSubmit} className="glass-panel rounded-xl p-5 space-y-4 lg:col-span-2">
+        <form onSubmit={(e) => void onSubmit(e)} className="glass-panel rounded-xl p-5 space-y-4 lg:col-span-2">
           <h3 className="font-heading font-semibold text-slate-800">New ticket</h3>
           <div>
             <label className={labelCls} htmlFor="sup-subject">Subject</label>
@@ -78,7 +88,7 @@ export default function SupportPage() {
             <textarea id="sup-desc" rows={5} className={inputCls} value={description} onChange={(e) => setDescription(e.target.value)} placeholder="Steps to reproduce, expected vs. actual, and any relevant IDs…" />
           </div>
           <div className="flex justify-end pt-2 border-t border-slate-100">
-            <Button type="submit" variant="primary">Submit ticket</Button>
+            <Button type="submit" variant="primary" disabled={isPending}>Submit ticket</Button>
           </div>
         </form>
 

@@ -1,10 +1,10 @@
 import { Link, useParams } from 'react-router-dom';
-import { getPmSchedule, getAssetById } from '@/lib/mock-data';
-import type { PmSchedule, PmFrequency } from '@/types/asset';
+import { getPmSchedule, getAssetById } from '@/lib/dataset';
+import type { PmSchedule, PmFrequency } from '@access-genie/shared';
 import { PageHeader, Badge, EmptyState } from '@/components/ui/primitives';
 import { Button } from '@/components/ui/Button';
 import { useToast } from '@/components/providers/ToastProvider';
-import { cn, relTime, formatDate, DEMO_NOW } from '@/lib/utils';
+import { cn, relTime, formatDate, nowMs } from '@/lib/utils';
 
 // ── token helpers ─────────────────────────────────────────────────────────────
 type Tone = 'slate' | 'primary' | 'emerald' | 'amber' | 'red';
@@ -33,7 +33,7 @@ const complianceHex = (pct: number): string =>
 const fmtDate = formatDate;
 
 function dueLabel(iso: string): { text: string; overdue: boolean } {
-  const diffDays = Math.round((Date.parse(iso) - DEMO_NOW) / DAY);
+  const diffDays = Math.round((Date.parse(iso) - nowMs()) / DAY);
   if (diffDays < 0) return { text: `${Math.abs(diffDays)}d overdue`, overdue: true };
   if (diffDays === 0) return { text: 'Due today', overdue: false };
   if (diffDays === 1) return { text: 'Due tomorrow', overdue: false };

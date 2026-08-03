@@ -1,11 +1,13 @@
 import { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useNavigate } from 'react-router-dom';
-import { mockAssets, mockWorkOrders } from '@/lib/mock-data';
-import type { WorkOrderPriority, WorkOrderType } from '@/types/asset';
+import { allAssets, allWorkOrders } from '@/lib/dataset';
+import type { WorkOrderPriority, WorkOrderType } from '@access-genie/shared';
 import { PageHeader, Badge } from '@/components/ui/primitives';
 import { Button } from '@/components/ui/Button';
 import { useToast } from '@/components/providers/ToastProvider';
+import { maintenanceApi } from '@/api/work-orders';
+import { useMutate } from '@/api/mutate';
 import { cn } from '@/lib/utils';
 
 const TYPES: WorkOrderType[] = ['Preventive', 'Corrective', 'Predictive', 'Inspection'];
@@ -27,10 +29,6 @@ const categoryEmoji = (c: string): string =>
               : '🖥️';
 
 /** Unique, sorted list of technicians seen across the mock work orders. */
-const ASSIGNEES = [
-  'Unassigned',
-  ...Array.from(new Set(mockWorkOrders.map((w) => w.assignedTo).filter((a) => a !== 'Unassigned'))).sort(),
-];
 
 const inputCls =
   'w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 placeholder:text-slate-400 focus:border-primary-500 focus:outline-none focus:ring-2 focus:ring-primary-500/30';
@@ -67,8 +65,16 @@ function Field({
 }
 
 export default function NewWorkOrderPage() {
+  // Derived per render: the dataset is fetched, so a value computed once at
+  // module scope would never see a refetch.
+  const ASSIGNEES = [
+    'Unassigned',
+    ...Array.from(new Set(allWorkOrders.map((w) => w.assignedTo).filter((a) => a !== 'Unassigned'))).sort(),
+  ];
+
   const navigate = useNavigate();
   const { toast } = useToast();
+  const { run, isPending } = useMutate();
 
   const [assetId, setAssetId] = useState('');
   const [title, setTitle] = useState('');
@@ -79,13 +85,13 @@ export default function NewWorkOrderPage() {
   const [description, setDescription] = useState('');
   const [submitted, setSubmitted] = useState(false);
 
-  const asset = useMemo(() => mockAssets.find((a) => a.id === assetId), [assetId]);
+  const asset = useMemo(() => allAssets.find((a) => a.id === assetId), [assetId]);
 
   const titleError = submitted && title.trim().length === 0 ? 'A work order title is required.' : undefined;
   const assetError = submitted && !asset ? 'Select the asset this work order is for.' : undefined;
   const canCreate = title.trim().length > 0 && !!asset;
 
-  function handleCreate() {
+  async function handleCreate() {
     setSubmitted(true);
     if (!canCreate) {
       toast({
@@ -95,10 +101,29 @@ export default function NewWorkOrderPage() {
       });
       return;
     }
-    const newId = `WO-${5013 + mockWorkOrders.length}`;
+
+    // The ID is the server's to mint — the counter behind it is what stops two
+    // technicians filing WO-5027 at the same time. The screen used to guess it
+    // from the array length and show a number that belonged to nothing.
+    const created = await run(
+      maintenanceApi.create({
+        title: title.trim(),
+        assetId: asset!.id,
+        type,
+        priority,
+        assignedTo: assignee,
+        // Unscheduled work is still due: default to a week out rather than
+        // writing a work order with no due date the overdue queue can use.
+        dueDate: dueDate || new Date(Date.now() + 7 * 86_400_000).toISOString().slice(0, 10),
+        description: description.trim(),
+      }),
+      { describe: 'create that work order' },
+    );
+
+    if (!created) return;
     toast({
-      title: `Work order ${newId} created`,
-      description: `${title.trim()} · ${priority} · ${type}`,
+      title: `Work order ${created.id} created`,
+      description: `${created.title} · ${created.priority} · ${created.type}`,
       tone: 'success',
     });
     navigate('/maintenance');
@@ -115,7 +140,7 @@ export default function NewWorkOrderPage() {
             <Link to="/maintenance">
               <Button variant="outline">Cancel</Button>
             </Link>
-            <Button onClick={handleCreate} disabled={submitted && !canCreate}>
+            <Button onClick={() => void handleCreate()} disabled={isPending || (submitted && !canCreate)}>
               Create work order
             </Button>
           </div>
@@ -141,7 +166,7 @@ export default function NewWorkOrderPage() {
                 className={cn(inputCls, !assetId && 'text-slate-400')}
               >
                 <option value="">Select an asset…</option>
-                {mockAssets.map((a) => (
+                {allAssets.map((a) => (
                   <option key={a.id} value={a.id}>
                     {categoryEmoji(a.category)} {a.name} — {a.id}
                   </option>
@@ -239,7 +264,7 @@ export default function NewWorkOrderPage() {
             <Link to="/maintenance">
               <Button variant="outline">Cancel</Button>
             </Link>
-            <Button onClick={handleCreate} disabled={submitted && !canCreate}>
+            <Button onClick={() => void handleCreate()} disabled={isPending || (submitted && !canCreate)}>
               Create work order
             </Button>
           </div>

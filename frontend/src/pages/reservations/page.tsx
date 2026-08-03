@@ -1,3 +1,5 @@
+import { allReservations } from '@/lib/dataset';
+import type { Reservation, ReservationStatus } from '@access-genie/shared';
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { PageHeader, Badge } from '@/components/ui/primitives';
@@ -9,36 +11,15 @@ import { useToast } from '@/components/providers/ToastProvider';
 // Day indices are 0=Mon … 6=Sun for the current demo week (deterministic).
 // ─────────────────────────────────────────────────────────────────────────────
 
-type ResStatus = 'Confirmed' | 'Pending' | 'In Use' | 'Completed';
-
-interface Reservation {
-  id: string;
-  assetId: string;
-  assetName: string;
-  reservedBy: string;
-  startDay: number; // 0-6
-  endDay: number;   // 0-6 (inclusive)
-  startLabel: string;
-  endLabel: string;
-  status: ResStatus;
-}
 
 const WEEK = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
 
-const RESERVATIONS: Reservation[] = [
-  { id: 'RES-7001', assetId: 'AST-1014', assetName: 'Fluke Networks DSX-8000', reservedBy: 'Network Team', startDay: 0, endDay: 1, startLabel: 'Mon 08:00', endLabel: 'Tue 17:00', status: 'In Use' },
-  { id: 'RES-7002', assetId: 'AST-1003', assetName: 'Lenovo ThinkPad T14 (Loaner)', reservedBy: 'Deepak Nair', startDay: 1, endDay: 2, startLabel: 'Tue 09:00', endLabel: 'Wed 12:00', status: 'Confirmed' },
-  { id: 'RES-7003', assetId: 'AST-1010', assetName: 'Dell UltraSharp 32" Monitor (Loaner)', reservedBy: 'Aditya Rao', startDay: 2, endDay: 2, startLabel: 'Wed 07:00', endLabel: 'Wed 15:00', status: 'Confirmed' },
-  { id: 'RES-7004', assetId: 'AST-1014', assetName: 'Fluke Networks DSX-8000', reservedBy: 'Facilities Team', startDay: 1, endDay: 2, startLabel: 'Tue 13:00', endLabel: 'Wed 10:00', status: 'Pending' },
-  { id: 'RES-7005', assetId: 'AST-1011', assetName: 'Zebra TC52 Mobile Computer', reservedBy: 'Ishita Chawla', startDay: 3, endDay: 4, startLabel: 'Thu 06:00', endLabel: 'Fri 18:00', status: 'Confirmed' },
-  { id: 'RES-7006', assetId: 'AST-1003', assetName: 'Lenovo ThinkPad T14 (Loaner)', reservedBy: 'IT Helpdesk', startDay: 5, endDay: 6, startLabel: 'Sat 08:00', endLabel: 'Sun 20:00', status: 'Pending' },
-];
-
-const STATUS_TONE: Record<ResStatus, 'emerald' | 'amber' | 'primary' | 'slate'> = {
+const STATUS_TONE: Record<ReservationStatus, 'emerald' | 'amber' | 'primary' | 'slate'> = {
   Confirmed: 'emerald',
   Pending: 'amber',
   'In Use': 'primary',
-  Completed: 'slate',
+  Returned: 'slate',
+  Cancelled: 'slate',
 };
 
 // Two reservations conflict when they share the same asset and their day windows overlap.
@@ -46,16 +27,17 @@ function overlaps(a: Reservation, b: Reservation) {
   return a.assetId === b.assetId && a.startDay <= b.endDay && b.startDay <= a.endDay;
 }
 
-const BAR_TONE: Record<ResStatus, string> = {
+const BAR_TONE: Record<ReservationStatus, string> = {
   Confirmed: 'bg-emerald-500',
   Pending: 'bg-amber-500',
   'In Use': 'bg-primary-600',
-  Completed: 'bg-slate-400',
+  Returned: 'bg-slate-400',
+  Cancelled: 'bg-slate-300',
 };
 
 export default function ReservationsPage() {
   const { toast } = useToast();
-  const [reservations] = useState<Reservation[]>(() => RESERVATIONS.map((r) => ({ ...r })));
+  const [reservations] = useState<Reservation[]>(allReservations);
 
   const conflictIds = new Set<string>();
   for (let i = 0; i < reservations.length; i++) {

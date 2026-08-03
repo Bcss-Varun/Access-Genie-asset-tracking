@@ -1,0 +1,115 @@
+[
+  {
+    "id": "TPL-STD-QR",
+    "name": "IT Standard — QR",
+    "description": "The default for laptops, monitors and desk kit. Scan resolves to Asset 360.",
+    "medium": "QR",
+    "size": "md",
+    "fields": [
+      "name",
+      "custodian",
+      "location"
+    ],
+    "showLogo": true,
+    "showBorder": true,
+    "stock": "Polyester matte 50 × 25 mm",
+    "builtIn": true,
+    "updatedAt": "2026-06-12T09:00:00.000Z",
+    "updatedBy": "Priya Menon",
+    "usageCount": 612
+  },
+  {
+    "id": "TPL-CAGE-RFID",
+    "name": "Secure Cage — RFID",
+    "description": "Encoded EPC for anything that crosses a dock or cage portal.",
+    "medium": "RFID",
+    "size": "lg",
+    "fields": [
+      "name",
+      "serial",
+      "tagId",
+      "owner"
+    ],
+    "showLogo": true,
+    "showBorder": true,
+    "stock": "RFID inlay polyester 62 × 29 mm",
+    "builtIn": true,
+    "updatedAt": "2026-06-30T09:00:00.000Z",
+    "updatedBy": "Arun Kalyan",
+    "usageCount": 288
+  },
+  {
+    "id": "TPL-COMPACT",
+    "name": "Small Kit — Compact QR",
+    "description": "Cables, adapters, hand tools. Code plus ID, nothing else fits and nothing else matters.",
+    "medium": "QR",
+    "size": "xs",
+    "fields": [
+      "name"
+    ],
+    "showLogo": false,
+    "showBorder": true,
+    "stock": "Vinyl 25 × 15 mm",
+    "builtIn": true,
+    "updatedAt": "2026-05-18T09:00:00.000Z",
+    "updatedBy": "Priya Menon",
+    "usageCount": 431
+  },
+  {
+    "id": "TPL-RACK",
+    "name": "Rack & Server — Equipment",
+    "description": "Large-format faceplate label. Readable from the cold aisle without a torch.",
+    "medium": "DataMatrix",
+    "size": "xl",
+    "fields": [
+      "name",
+      "serial",
+      "location",
+      "criticality",
+      "custodian"
+    ],
+    "showLogo": true,
+    "showBorder": true,
+    "stock": "Polyester 76 × 38 mm",
+    "builtIn": true,
+    "updatedAt": "2026-07-11T09:00:00.000Z",
+    "updatedBy": "Rahul Desai",
+    "usageCount": 154
+  },
+  {
+    "id": "TPL-LEGACY-BC",
+    "name": "Legacy Scanner — Barcode",
+    "description": "Code-128 for the Chennai stores counter, whose handhelds predate cameras.",
+    "medium": "Barcode",
+    "size": "sm",
+    "fields": [
+      "serial"
+    ],
+    "showLogo": false,
+    "showBorder": false,
+    "stock": "Paper 38 × 19 mm",
+    "builtIn": true,
+    "updatedAt": "2026-04-26T09:00:00.000Z",
+    "updatedBy": "Data migration",
+    "usageCount": 97
+  },
+  {
+    "id": "TPL-NFC-VISITOR",
+    "name": "Loaner Pool — NFC",
+    "description": "Tap-to-check-out for the loaner laptop pool. Encodes on the Bengaluru encoder.",
+    "medium": "NFC",
+    "size": "md",
+    "fields": [
+      "name",
+      "custodian",
+      "scanUrl"
+    ],
+    "showLogo": true,
+    "showBorder": true,
+    "stock": "NFC sticker 50 × 25 mm",
+    "builtIn": true,
+    "updatedAt": "2026-07-16T09:00:00.000Z",
+    "updatedBy": "Arun Kalyan",
+    "usageCount": 63
+  }
+]

@@ -1,4 +1,4 @@
-import { mockSuppliers } from '@/lib/mock-data';
+import { allSuppliers } from '@/lib/dataset';
 import { PageHeader, Badge, KpiCard } from '@/components/ui/primitives';
 import { Button } from '@/components/ui/Button';
 import { useToast } from '@/components/providers/ToastProvider';
@@ -24,10 +24,10 @@ const onTimeColor = (pct: number): string =>
 export default function SuppliersPage() {
   const { toast } = useToast();
 
-  const count = mockSuppliers.length;
-  const avgLead = Math.round(mockSuppliers.reduce((s, x) => s + x.leadTimeDays, 0) / count);
-  const avgOnTime = Math.round(mockSuppliers.reduce((s, x) => s + x.onTimePct, 0) / count);
-  const avgRating = mockSuppliers.reduce((s, x) => s + x.rating, 0) / count;
+  const count = allSuppliers.length;
+  const avgLead = Math.round(allSuppliers.reduce((s, x) => s + x.leadTimeDays, 0) / count);
+  const avgOnTime = Math.round(allSuppliers.reduce((s, x) => s + x.onTimePct, 0) / count);
+  const avgRating = allSuppliers.reduce((s, x) => s + x.rating, 0) / count;
 
   return (
     <div className="h-full flex flex-col space-y-6">
@@ -70,7 +70,7 @@ export default function SuppliersPage() {
               </tr>
             </thead>
             <tbody>
-              {mockSuppliers.map((s) => (
+              {allSuppliers.map((s) => (
                 <tr key={s.id} className="border-b border-slate-100 last:border-0 hover:bg-slate-50/60 transition-colors">
                   <td className="px-5 py-3">
                     <div className="font-medium text-slate-900">{s.name}</div>

@@ -1,34 +1,14 @@
+import { allComplianceFrameworks } from '@/lib/dataset';
 import { PageHeader, Badge } from '@/components/ui/primitives';
 import { Button } from '@/components/ui/Button';
 import { useToast } from '@/components/providers/ToastProvider';
 import { relTime } from '@/lib/utils';
 
-type FrameworkStatus = 'Certified' | 'In Progress' | 'Gap';
-
-interface Framework {
-  id: string;
-  name: string;
-  scope: string;
-  status: FrameworkStatus;
-  coverage: number;
-  lastAssessment: string;
-  evidence: number;
-}
-
-const daysAgo = (d: number) => new Date(Date.parse('2026-07-23T09:00:00.000Z') - d * 86_400_000).toISOString();
-
-const FRAMEWORKS: Framework[] = [
-  { id: 'soc2', name: 'SOC 2 Type II', scope: 'Trust Services Criteria — security, availability, confidentiality', status: 'Certified', coverage: 98, lastAssessment: daysAgo(52), evidence: 214 },
-  { id: 'iso27001', name: 'ISO 27001', scope: 'Information Security Management System (ISMS)', status: 'Certified', coverage: 95, lastAssessment: daysAgo(120), evidence: 176 },
-  { id: 'dpdp', name: 'DPDP Act 2023', scope: 'India digital personal data protection — consent, retention & breach duties', status: 'In Progress', coverage: 82, lastAssessment: daysAgo(30), evidence: 88 },
-  { id: 'certin', name: 'CERT-In Directions', scope: 'Six-hour incident reporting, 180-day log retention & NTP sync (MeitY)', status: 'In Progress', coverage: 76, lastAssessment: daysAgo(18), evidence: 141 },
-  { id: 'bis', name: 'BIS / MeitY CRS', scope: 'Compulsory Registration Scheme — IT hardware conformity & e-waste rules', status: 'Gap', coverage: 61, lastAssessment: daysAgo(9), evidence: 63 },
-];
-
-const statusTone = (s: FrameworkStatus): 'emerald' | 'amber' | 'red' =>
+const FRAMEWORKS = allComplianceFrameworks;
+const statusTone = (s: string): 'emerald' | 'amber' | 'red' =>
   s === 'Certified' ? 'emerald' : s === 'In Progress' ? 'amber' : 'red';
 
-const barColor = (s: FrameworkStatus) =>
+const barColor = (s: string) =>
   s === 'Certified' ? 'bg-emerald-500' : s === 'In Progress' ? 'bg-amber-500' : 'bg-red-500';
 
 export default function RegulatoryPage() {

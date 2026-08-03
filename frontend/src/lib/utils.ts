@@ -16,6 +16,11 @@ export function groupINR(n: number): string {
   return `${rest.replace(/\B(?=(\d{2})+(?!\d))/g, ',')},${last3}`;
 }
 
+/** Plain INR with digit grouping: ₹17,800. `—` when there is no figure. */
+export function formatRupees(n: number | undefined | null): string {
+  return n === undefined || n === null ? '—' : `₹${groupINR(n)}`;
+}
+
 /** Compact INR formatter (lakh/crore): ₹2,084 Cr / ₹7.2 L / ₹17,800. */
 export function formatMoney(n: number): string {
   const abs = Math.abs(n);
@@ -43,12 +48,42 @@ export function formatDate(iso: string): string {
   return `${String(d.getUTCDate()).padStart(2, '0')} ${MONTHS[d.getUTCMonth()]} ${d.getUTCFullYear()}`;
 }
 
-//
-/** Demo clock — mock data anchors timestamps here (deterministic, no hydration drift). */
-export const DEMO_NOW = Date.parse('2026-07-23T09:00:00.000Z');
+/** Clock time, "14:02". UTC-fixed for the same reason as `formatDate`. */
+export function formatTime(iso: string): string {
+  const t = Date.parse(iso);
+  if (Number.isNaN(t)) return '';
+  const d = new Date(t);
+  return `${String(d.getUTCHours()).padStart(2, '0')}:${String(d.getUTCMinutes()).padStart(2, '0')}`;
+}
 
-export function relTime(iso: string): string {
-  const diff = DEMO_NOW - Date.parse(iso);
+/** "23 Jul 2026 · 14:02" — a whole timestamp on one line. */
+export function formatDateTime(iso: string): string {
+  const date = formatDate(iso);
+  return date ? `${date} · ${formatTime(iso)}` : '';
+}
+
+/** Calendar day key, for grouping a list of timestamps under date headings. */
+export function dayKey(iso: string): string {
+  const t = Date.parse(iso);
+  if (Number.isNaN(t)) return '';
+  return new Date(t).toISOString().slice(0, 10);
+}
+
+/**
+ * The clock everything relative is measured against.
+ *
+ * A function rather than a constant: a constant would be captured when the
+ * module first loads and would then quietly stop advancing, so a screen left
+ * open would keep reporting the same "3m ago" all afternoon.
+ *
+ * The seeded dataset is shifted to the moment it was loaded (see the backend's
+ * seed/fixtures.ts), so relative labels read naturally against a real clock.
+ */
+export const nowMs = (): number => Date.now();
+
+export function relTime(iso: string | undefined | null): string {
+  if (!iso) return '';
+  const diff = nowMs() - Date.parse(iso);
   if (Number.isNaN(diff)) return '';
   const future = diff < 0;
   const s = Math.floor(Math.abs(diff) / 1000);
@@ -59,4 +94,14 @@ export function relTime(iso: string): string {
   const h = Math.floor(m / 60);
   if (h < 24) return fmt(h, 'h');
   return fmt(Math.floor(h / 24), 'd');
+}
+
+/** Past its due date. Used to badge work orders, PMs and certifications. */
+export function isOverdue(iso: string | undefined | null): boolean {
+  return !!iso && Date.parse(iso) < nowMs();
+}
+
+/** "1 asset" / "4 assets" — count and noun agreeing, in one call. */
+export function pluralize(count: number, singular: string, plural = `${singular}s`): string {
+  return `${count} ${count === 1 ? singular : plural}`;
 }

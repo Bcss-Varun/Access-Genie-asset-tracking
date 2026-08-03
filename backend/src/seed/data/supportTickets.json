@@ -1,0 +1,37 @@
+[
+  {
+    "id": "SUP-4821",
+    "subject": "Gateway GW-14 shows offline after firmware update",
+    "category": "Integrations & API",
+    "status": "In Progress",
+    "updated": "2026-07-23T07:30:00.000Z"
+  },
+  {
+    "id": "SUP-4798",
+    "subject": "Bulk asset import rejects rows with valid SKUs",
+    "category": "Assets & Tracking",
+    "status": "Waiting",
+    "updated": "2026-07-22T15:10:00.000Z"
+  },
+  {
+    "id": "SUP-4776",
+    "subject": "Anomaly scores missing on the AI dashboard",
+    "category": "AI & Insights",
+    "status": "Open",
+    "updated": "2026-07-22T09:05:00.000Z"
+  },
+  {
+    "id": "SUP-4712",
+    "subject": "Add SSO via Okta for the org",
+    "category": "Account & Security",
+    "status": "Resolved",
+    "updated": "2026-07-19T18:40:00.000Z"
+  },
+  {
+    "id": "SUP-4690",
+    "subject": "PM schedule emails arriving twice",
+    "category": "Maintenance",
+    "status": "Resolved",
+    "updated": "2026-07-17T11:22:00.000Z"
+  }
+]

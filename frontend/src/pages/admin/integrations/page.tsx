@@ -1,10 +1,10 @@
 import { useState } from 'react';
-import { mockIntegrations } from '@/lib/mock-data';
+import { allIntegrations } from '@/lib/dataset';
 import { PageHeader, Badge, KpiCard, EmptyState } from '@/components/ui/primitives';
 import { Button } from '@/components/ui/Button';
 import { useToast } from '@/components/providers/ToastProvider';
 import { cn, relTime } from '@/lib/utils';
-import type { IntegrationStatus } from '@/types/asset';
+import type { IntegrationStatus } from '@access-genie/shared';
 
 const statusPill: Record<IntegrationStatus, { dot: string; text: string; label: string }> = {
   Connected: { dot: 'bg-emerald-500', text: 'text-emerald-700', label: 'Connected' },
@@ -19,9 +19,9 @@ export default function IntegrationsPage() {
   const { toast } = useToast();
   const [filter, setFilter] = useState<Filter>('All');
 
-  const connected = mockIntegrations.filter((i) => i.status === 'Connected').length;
-  const errors = mockIntegrations.filter((i) => i.status === 'Error').length;
-  const visible = mockIntegrations.filter((i) => filter === 'All' || i.status === filter);
+  const connected = allIntegrations.filter((i) => i.status === 'Connected').length;
+  const errors = allIntegrations.filter((i) => i.status === 'Error').length;
+  const visible = allIntegrations.filter((i) => filter === 'All' || i.status === filter);
 
   return (
     <div className="h-full flex flex-col space-y-6">

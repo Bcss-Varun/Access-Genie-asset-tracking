@@ -4,7 +4,7 @@ import cors from 'cors';
 import express, { type Express } from 'express';
 import helmet from 'helmet';
 import morgan from 'morgan';
-import mongoose from 'mongoose';
+import { dbStatus } from './config/db.js';
 import { env } from './config/env.js';
 import { apiLimiter, errorHandler, notFoundHandler, requestId } from './middleware/index.js';
 import routes from './routes/index.js';
@@ -50,19 +50,20 @@ export function createApp(): Express {
 
   /** Liveness + readiness in one probe: up, and able to reach Mongo. */
   app.get('/health', (_req, res) => {
-    const dbState = mongoose.connection.readyState; // 1 = connected
-    res.status(dbState === 1 ? 200 : 503).json({
-      success: dbState === 1,
+    const { ready, state } = dbStatus();
+    res.status(ready ? 200 : 503).json({
+      success: ready,
       data: {
-        status: dbState === 1 ? 'ok' : 'degraded',
-        database: ['disconnected', 'connected', 'connecting', 'disconnecting'][dbState] ?? 'unknown',
+        status: ready ? 'ok' : 'degraded',
+        database: state,
         uptime: Math.round(process.uptime()),
         environment: env.NODE_ENV,
+        version: env.API_PREFIX,
       },
     });
   });
 
-  app.use('/api/v1', apiLimiter, routes);
+  app.use(env.API_PREFIX, apiLimiter, routes);
 
   // Order matters: unmatched route → 404, then the single error funnel.
   app.use(notFoundHandler);

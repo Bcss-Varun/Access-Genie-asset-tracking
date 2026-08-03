@@ -1,0 +1,106 @@
+[
+  {
+    "id": "PJ-2041",
+    "createdAt": "2026-07-23T08:54:00.000Z",
+    "createdBy": "Priya Menon",
+    "templateId": "TPL-CAGE-RFID",
+    "deviceId": "ENC-HYD-02",
+    "assetIds": [
+      "AST-1012",
+      "AST-1011"
+    ],
+    "copies": 1,
+    "state": "Failed",
+    "printed": 0,
+    "encoded": 0,
+    "bound": 0,
+    "failureReason": "Encoder unreachable — Secure Cage device has not answered since 03:00."
+  },
+  {
+    "id": "PJ-2040",
+    "createdAt": "2026-07-23T08:49:00.000Z",
+    "createdBy": "Arun Kalyan",
+    "templateId": "TPL-STD-QR",
+    "deviceId": "PRN-HYD-01",
+    "assetIds": [
+      "AST-1011",
+      "AST-1006",
+      "AST-1004"
+    ],
+    "copies": 1,
+    "state": "Printing",
+    "printed": 1,
+    "encoded": 0,
+    "bound": 1
+  },
+  {
+    "id": "PJ-2039",
+    "createdAt": "2026-07-23T08:26:00.000Z",
+    "createdBy": "Arun Kalyan",
+    "templateId": "TPL-COMPACT",
+    "deviceId": "PRN-BLR-01",
+    "assetIds": [
+      "AST-1014"
+    ],
+    "copies": 4,
+    "state": "Completed",
+    "printed": 4,
+    "encoded": 0,
+    "bound": 1,
+    "completedAt": "2026-07-23T08:27:00.000Z"
+  },
+  {
+    "id": "PJ-2038",
+    "createdAt": "2026-07-23T06:00:00.000Z",
+    "createdBy": "Priya Menon",
+    "templateId": "TPL-RACK",
+    "deviceId": "PRN-MAA-01",
+    "assetIds": [
+      "AST-1001",
+      "AST-1002",
+      "AST-1008",
+      "AST-1009"
+    ],
+    "copies": 1,
+    "state": "Completed",
+    "printed": 4,
+    "encoded": 0,
+    "bound": 0,
+    "completedAt": "2026-07-23T06:00:00.000Z"
+  },
+  {
+    "id": "PJ-2037",
+    "createdAt": "2026-07-23T00:00:00.000Z",
+    "createdBy": "Rahul Desai",
+    "templateId": "TPL-CAGE-RFID",
+    "deviceId": "ENC-BLR-02",
+    "assetIds": [
+      "AST-1003",
+      "AST-1010",
+      "AST-1013"
+    ],
+    "copies": 1,
+    "state": "Held",
+    "printed": 0,
+    "encoded": 0,
+    "bound": 0,
+    "failureReason": "Held by Rahul Desai — waiting on the inlay roll swap."
+  },
+  {
+    "id": "PJ-2036",
+    "createdAt": "2026-07-22T09:00:00.000Z",
+    "createdBy": "Priya Menon",
+    "templateId": "TPL-LEGACY-BC",
+    "deviceId": "PRN-MAA-01",
+    "assetIds": [
+      "AST-1005",
+      "AST-1007"
+    ],
+    "copies": 2,
+    "state": "Completed",
+    "printed": 4,
+    "encoded": 0,
+    "bound": 0,
+    "completedAt": "2026-07-22T09:00:00.000Z"
+  }
+]

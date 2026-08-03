@@ -1,0 +1,101 @@
+[
+  {
+    "id": "KEY-01",
+    "name": "Production Backend",
+    "last4": "9f21",
+    "scopes": [
+      "assets:read",
+      "assets:write",
+      "workorders:write"
+    ],
+    "lastUsed": "2026-07-23T08:00:00.000Z",
+    "scope": "organization",
+    "createdAt": "2025-12-23T09:00:00.000Z"
+  },
+  {
+    "id": "KEY-02",
+    "name": "BI / Snowflake Export",
+    "last4": "4c7a",
+    "scopes": [
+      "assets:read",
+      "telemetry:read"
+    ],
+    "lastUsed": "2026-07-23T03:00:00.000Z",
+    "scope": "organization",
+    "createdAt": "2026-04-18T09:00:00.000Z"
+  },
+  {
+    "id": "KEY-03",
+    "name": "Mobile Scanner App",
+    "last4": "0d38",
+    "scopes": [
+      "assets:read",
+      "movement:write"
+    ],
+    "lastUsed": "2026-07-23T06:00:00.000Z",
+    "scope": "organization",
+    "createdAt": "2026-06-05T09:00:00.000Z"
+  },
+  {
+    "id": "KEY-04",
+    "name": "Zapier Automation",
+    "last4": "b512",
+    "scopes": [
+      "webhooks:read"
+    ],
+    "lastUsed": "2026-07-21T09:00:00.000Z",
+    "scope": "organization",
+    "createdAt": "2026-07-08T09:00:00.000Z"
+  },
+  {
+    "id": "T-1",
+    "name": "CI/CD Pipeline",
+    "scopes": [
+      "assets:read",
+      "assets:write"
+    ],
+    "scope": "personal",
+    "ownerId": "U-001",
+    "last4": "7f3a",
+    "createdAt": "2026-06-01T09:00:00.000Z",
+    "lastUsed": "2026-07-23T07:10:00.000Z"
+  },
+  {
+    "id": "T-2",
+    "name": "Grafana Exporter",
+    "scopes": [
+      "telemetry:read",
+      "analytics:read"
+    ],
+    "scope": "personal",
+    "ownerId": "U-001",
+    "last4": "1c9d",
+    "createdAt": "2026-04-14T12:30:00.000Z",
+    "lastUsed": "2026-07-22T23:45:00.000Z"
+  },
+  {
+    "id": "T-3",
+    "name": "Mobile Scanner App",
+    "scopes": [
+      "assets:read",
+      "movement:write"
+    ],
+    "scope": "personal",
+    "ownerId": "U-001",
+    "last4": "b204",
+    "createdAt": "2026-02-20T08:15:00.000Z",
+    "lastUsed": "2026-07-21T16:02:00.000Z"
+  },
+  {
+    "id": "T-4",
+    "name": "Legacy Import Script",
+    "scopes": [
+      "inventory:write"
+    ],
+    "scope": "personal",
+    "ownerId": "U-001",
+    "last4": "9e51",
+    "createdAt": "2025-11-03T10:45:00.000Z",
+    "lastUsed": null
+  }
+]

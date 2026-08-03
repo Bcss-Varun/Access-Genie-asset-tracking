@@ -1,6 +1,6 @@
 import { createHash, randomBytes } from 'node:crypto';
 import jwt, { type JwtPayload, type SignOptions } from 'jsonwebtoken';
-import type { RoleId } from '@access-genie/shared';
+import type { RoleId, UserSession } from '@access-genie/shared';
 import { env } from '../config/env.js';
 import { RefreshToken } from '../models/index.js';
 import { ApiError } from '../utils/ApiError.js';
@@ -118,4 +118,64 @@ export async function revokeAllForUser(userId: string): Promise<number> {
     { $set: { revokedAt: new Date() } },
   );
   return result.modifiedCount;
+}
+
+/**
+ * The user's live sessions, derived from their un-revoked refresh tokens.
+ *
+ * The device string is parsed from the stored user agent rather than kept as a
+ * separate field: the user agent is what was actually presented, and a friendly
+ * label derived from it cannot drift away from the truth.
+ */
+export async function listSessions(userId: string, currentToken?: string): Promise<UserSession[]> {
+  const rows = await RefreshToken.find({
+    userId,
+    revokedAt: { $exists: false },
+    expiresAt: { $gt: new Date() },
+  })
+    .sort({ updatedAt: -1 })
+    .lean();
+
+  const currentHash = currentToken ? hashToken(currentToken) : null;
+
+  return rows.map((r) => ({
+    id: String(r._id),
+    device: describeAgent(r.userAgent),
+    // Geo-IP is not wired up; showing the address is honest, inventing a city is not.
+    location: r.ip ?? 'Unknown',
+    lastActive: (r.updatedAt ?? r.createdAt).toISOString(),
+    current: currentHash !== null && r.tokenHash === currentHash,
+  }));
+}
+
+/** "Chrome · macOS" from a user-agent string. */
+function describeAgent(ua?: string): string {
+  if (!ua) return 'Unknown device';
+
+  const browser =
+    /Edg\//.test(ua) ? 'Edge'
+      : /OPR\//.test(ua) ? 'Opera'
+        : /Chrome\//.test(ua) ? 'Chrome'
+          : /Safari\//.test(ua) ? 'Safari'
+            : /Firefox\//.test(ua) ? 'Firefox'
+              : 'Browser';
+
+  const os =
+    /Windows/.test(ua) ? 'Windows'
+      : /Macintosh|Mac OS/.test(ua) ? 'macOS'
+        : /iPhone|iPad/.test(ua) ? 'iOS'
+          : /Android/.test(ua) ? 'Android'
+            : /Linux/.test(ua) ? 'Linux'
+              : 'Unknown OS';
+
+  return `${browser} · ${os}`;
+}
+
+/** Sign one other device out. The caller's own session is refused by the route. */
+export async function revokeSession(userId: string, sessionId: string): Promise<boolean> {
+  const result = await RefreshToken.updateOne(
+    { _id: sessionId, userId, revokedAt: { $exists: false } },
+    { $set: { revokedAt: new Date() } },
+  );
+  return result.modifiedCount > 0;
 }

@@ -1,11 +1,11 @@
 import { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { mockPmSchedules } from '@/lib/mock-data';
-import type { PmSchedule, PmFrequency } from '@/types/asset';
+import { allPmSchedules } from '@/lib/dataset';
+import type { PmSchedule, PmFrequency } from '@access-genie/shared';
 import { PageHeader, Badge, KpiCard, EmptyState } from '@/components/ui/primitives';
 import { Button } from '@/components/ui/Button';
 import { useToast } from '@/components/providers/ToastProvider';
-import { cn, DEMO_NOW } from '@/lib/utils';
+import { cn, nowMs } from '@/lib/utils';
 
 // ── token helpers ─────────────────────────────────────────────────────────────
 type Tone = 'slate' | 'primary' | 'emerald' | 'amber' | 'red';
@@ -24,7 +24,7 @@ const complianceHex = (pct: number): string =>
 
 // Due-date label — relTime clamps the future to "0s ago", so we compute both directions here.
 function dueLabel(iso: string): { text: string; overdue: boolean } {
-  const diffDays = Math.round((Date.parse(iso) - DEMO_NOW) / DAY);
+  const diffDays = Math.round((Date.parse(iso) - nowMs()) / DAY);
   if (diffDays < 0) return { text: `${Math.abs(diffDays)}d overdue`, overdue: true };
   if (diffDays === 0) return { text: 'Due today', overdue: false };
   if (diffDays === 1) return { text: 'Due tomorrow', overdue: false };
@@ -53,19 +53,19 @@ export default function PmSchedulesPage() {
   const [freqs, setFreqs] = useState<Set<PmFrequency>>(new Set());
 
   // ── KPIs ─────────────────────────────────────────────────────────────────────
-  const total = mockPmSchedules.length;
-  const dueSoon = mockPmSchedules.filter((p) => {
-    const d = Date.parse(p.nextDue) - DEMO_NOW;
+  const total = allPmSchedules.length;
+  const dueSoon = allPmSchedules.filter((p) => {
+    const d = Date.parse(p.nextDue) - nowMs();
     return d >= 0 && d <= 7 * DAY;
   }).length;
-  const overdue = mockPmSchedules.filter((p) => Date.parse(p.nextDue) < DEMO_NOW).length;
+  const overdue = allPmSchedules.filter((p) => Date.parse(p.nextDue) < nowMs()).length;
   const avgCompliance = Math.round(
-    mockPmSchedules.reduce((sum, p) => sum + p.compliancePct, 0) / (total || 1),
+    allPmSchedules.reduce((sum, p) => sum + p.compliancePct, 0) / (total || 1),
   );
 
   // ── filtered rows ─────────────────────────────────────────────────────────────
   const rows = useMemo(
-    () => mockPmSchedules.filter((p) => freqs.size === 0 || freqs.has(p.frequency)),
+    () => allPmSchedules.filter((p) => freqs.size === 0 || freqs.has(p.frequency)),
     [freqs],
   );
 

@@ -1,6 +1,6 @@
 import { isRouteErrorResponse, useRouteError } from 'react-router-dom';
 import { ErrorState } from '@/components/ui/primitives';
-import { ApiRequestError } from '@/lib/api-client';
+import { ApiRequestError } from '@/api/client';
 
 /**
  * Last-resort boundary for a route that threw during render. Query errors are

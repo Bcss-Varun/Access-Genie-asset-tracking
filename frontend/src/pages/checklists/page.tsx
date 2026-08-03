@@ -1,5 +1,5 @@
 import { useMemo } from 'react';
-import { mockInspections } from '@/lib/mock-data';
+import { allInspections } from '@/lib/dataset';
 import { PageHeader, Badge } from '@/components/ui/primitives';
 import { Button } from '@/components/ui/Button';
 import { useToast } from '@/components/providers/ToastProvider';
@@ -27,7 +27,7 @@ export default function ChecklistsPage() {
   const templates = useMemo<Template[]>(() => {
     const usage = new Map<string, number>();
     const derivedItems = new Map<string, number>();
-    for (const insp of mockInspections) {
+    for (const insp of allInspections) {
       usage.set(insp.template, (usage.get(insp.template) ?? 0) + 1);
       derivedItems.set(insp.template, insp.items.length);
     }

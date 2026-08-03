@@ -1,0 +1,281 @@
+[
+  {
+    "id": "FCST-1",
+    "name": "Server Utilization",
+    "unit": "%",
+    "points": [
+      {
+        "label": "Jan",
+        "actual": 65,
+        "forecast": 68,
+        "lower": 60,
+        "upper": 75
+      },
+      {
+        "label": "Feb",
+        "actual": 70,
+        "forecast": 72,
+        "lower": 65,
+        "upper": 80
+      }
+    ]
+  },
+  {
+    "id": "FC-CAPEX",
+    "name": "Capital Expenditure",
+    "unit": "₹ Lakh",
+    "points": [
+      {
+        "label": "Jan",
+        "actual": 95,
+        "forecast": 92,
+        "lower": 86,
+        "upper": 99
+      },
+      {
+        "label": "Feb",
+        "actual": 108,
+        "forecast": 104,
+        "lower": 97,
+        "upper": 113
+      },
+      {
+        "label": "Mar",
+        "actual": 89,
+        "forecast": 99,
+        "lower": 90,
+        "upper": 108
+      },
+      {
+        "label": "Apr",
+        "actual": 137,
+        "forecast": 131,
+        "lower": 119,
+        "upper": 142
+      },
+      {
+        "label": "May",
+        "actual": 117,
+        "forecast": 121,
+        "lower": 110,
+        "upper": 131
+      },
+      {
+        "label": "Jun",
+        "actual": 130,
+        "forecast": 126,
+        "lower": 115,
+        "upper": 137
+      },
+      {
+        "label": "Jul",
+        "actual": 140,
+        "forecast": 135,
+        "lower": 123,
+        "upper": 149
+      },
+      {
+        "label": "Aug",
+        "forecast": 149,
+        "lower": 134,
+        "upper": 164
+      },
+      {
+        "label": "Sep",
+        "forecast": 158,
+        "lower": 141,
+        "upper": 176
+      },
+      {
+        "label": "Oct",
+        "forecast": 169,
+        "lower": 149,
+        "upper": 189
+      },
+      {
+        "label": "Nov",
+        "forecast": 162,
+        "lower": 141,
+        "upper": 184
+      },
+      {
+        "label": "Dec",
+        "forecast": 179,
+        "lower": 155,
+        "upper": 203
+      }
+    ]
+  },
+  {
+    "id": "FC-UTIL",
+    "name": "Fleet Utilization",
+    "unit": "%",
+    "points": [
+      {
+        "label": "Jan",
+        "actual": 68,
+        "forecast": 67,
+        "lower": 63,
+        "upper": 71
+      },
+      {
+        "label": "Feb",
+        "actual": 71,
+        "forecast": 70,
+        "lower": 66,
+        "upper": 74
+      },
+      {
+        "label": "Mar",
+        "actual": 74,
+        "forecast": 73,
+        "lower": 69,
+        "upper": 77
+      },
+      {
+        "label": "Apr",
+        "actual": 72,
+        "forecast": 74,
+        "lower": 70,
+        "upper": 78
+      },
+      {
+        "label": "May",
+        "actual": 79,
+        "forecast": 77,
+        "lower": 72,
+        "upper": 82
+      },
+      {
+        "label": "Jun",
+        "actual": 83,
+        "forecast": 80,
+        "lower": 75,
+        "upper": 85
+      },
+      {
+        "label": "Jul",
+        "actual": 84,
+        "forecast": 83,
+        "lower": 78,
+        "upper": 88
+      },
+      {
+        "label": "Aug",
+        "forecast": 85,
+        "lower": 79,
+        "upper": 90
+      },
+      {
+        "label": "Sep",
+        "forecast": 86,
+        "lower": 80,
+        "upper": 92
+      },
+      {
+        "label": "Oct",
+        "forecast": 87,
+        "lower": 80,
+        "upper": 93
+      },
+      {
+        "label": "Nov",
+        "forecast": 88,
+        "lower": 81,
+        "upper": 94
+      },
+      {
+        "label": "Dec",
+        "forecast": 89,
+        "lower": 82,
+        "upper": 95
+      }
+    ]
+  },
+  {
+    "id": "FC-FAILURE",
+    "name": "Predicted Failures",
+    "unit": "/mo",
+    "points": [
+      {
+        "label": "Jan",
+        "actual": 12,
+        "forecast": 11,
+        "lower": 8,
+        "upper": 15
+      },
+      {
+        "label": "Feb",
+        "actual": 10,
+        "forecast": 11,
+        "lower": 8,
+        "upper": 14
+      },
+      {
+        "label": "Mar",
+        "actual": 14,
+        "forecast": 12,
+        "lower": 9,
+        "upper": 16
+      },
+      {
+        "label": "Apr",
+        "actual": 9,
+        "forecast": 11,
+        "lower": 8,
+        "upper": 14
+      },
+      {
+        "label": "May",
+        "actual": 11,
+        "forecast": 10,
+        "lower": 7,
+        "upper": 13
+      },
+      {
+        "label": "Jun",
+        "actual": 8,
+        "forecast": 9,
+        "lower": 6,
+        "upper": 12
+      },
+      {
+        "label": "Jul",
+        "actual": 9,
+        "forecast": 9,
+        "lower": 6,
+        "upper": 12
+      },
+      {
+        "label": "Aug",
+        "forecast": 8,
+        "lower": 5,
+        "upper": 12
+      },
+      {
+        "label": "Sep",
+        "forecast": 8,
+        "lower": 5,
+        "upper": 11
+      },
+      {
+        "label": "Oct",
+        "forecast": 7,
+        "lower": 4,
+        "upper": 11
+      },
+      {
+        "label": "Nov",
+        "forecast": 7,
+        "lower": 4,
+        "upper": 10
+      },
+      {
+        "label": "Dec",
+        "forecast": 6,
+        "lower": 3,
+        "upper": 10
+      }
+    ]
+  }
+]

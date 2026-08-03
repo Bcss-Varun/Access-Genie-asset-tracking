@@ -1,0 +1,102 @@
+[
+  {
+    "id": "CRT-01",
+    "assetId": "AST-1001",
+    "assetName": "Dell PowerEdge R740 Server",
+    "name": "ProSupport Plus Warranty",
+    "authority": "Dell India Pvt Ltd",
+    "issuedAt": "2020-01-20",
+    "expiresAt": "2025-01-20",
+    "status": "Expired"
+  },
+  {
+    "id": "CRT-02",
+    "assetId": "AST-1002",
+    "assetName": "Cisco Catalyst 9500 Switch",
+    "name": "SmartNet Total Care",
+    "authority": "Cisco Systems India",
+    "issuedAt": "2024-05-22",
+    "expiresAt": "2029-05-22",
+    "status": "Valid"
+  },
+  {
+    "id": "CRT-03",
+    "assetId": "AST-1005",
+    "assetName": "APC Smart-UPS 3000",
+    "name": "BIS CRS Registration",
+    "authority": "Bureau of Indian Standards",
+    "issuedAt": "2023-02-18",
+    "expiresAt": "2028-02-18",
+    "status": "Valid"
+  },
+  {
+    "id": "CRT-04",
+    "assetId": "AST-1003",
+    "assetName": "Lenovo ThinkPad T14",
+    "name": "Premier Support",
+    "authority": "Lenovo India",
+    "issuedAt": "2023-11-15",
+    "expiresAt": "2026-11-15",
+    "status": "Expiring"
+  },
+  {
+    "id": "CRT-05",
+    "assetId": "AST-1007",
+    "assetName": "Aruba AP-515 Access Point",
+    "name": "WPC ETA Approval",
+    "authority": "WPC Wing, DoT",
+    "issuedAt": "2021-03-12",
+    "expiresAt": "2026-03-12",
+    "status": "Expired"
+  },
+  {
+    "id": "CRT-06",
+    "assetId": "AST-1008",
+    "assetName": "Fortinet FortiGate 100F Firewall",
+    "name": "FortiCare 24x7",
+    "authority": "Fortinet India",
+    "issuedAt": "2024-05-22",
+    "expiresAt": "2029-05-22",
+    "status": "Valid"
+  },
+  {
+    "id": "CRT-07",
+    "assetId": "AST-1012",
+    "assetName": "Zebra RFID Gateway G-4",
+    "name": "WPC ETA Approval",
+    "authority": "WPC Wing, DoT",
+    "issuedAt": "2024-01-30",
+    "expiresAt": "2029-01-30",
+    "status": "Valid"
+  },
+  {
+    "id": "CRT-08",
+    "assetId": "AST-1010",
+    "assetName": "Dell UltraSharp 32\" Monitor",
+    "name": "BIS CRS Registration",
+    "authority": "Bureau of Indian Standards",
+    "issuedAt": "2023-07-19",
+    "expiresAt": "2026-07-19",
+    "status": "Expiring"
+  },
+  {
+    "id": "CRT-09",
+    "assetId": "AST-1014",
+    "assetName": "Fluke Networks DSX-8000",
+    "name": "Calibration Certificate (NABL)",
+    "authority": "NABL-accredited lab",
+    "issuedAt": "2026-06-15",
+    "expiresAt": "2027-06-15",
+    "status": "Valid"
+  },
+  {
+    "id": "CRT-10",
+    "assetId": "AST-1006",
+    "assetName": "iPad Pro 12.9\" (Field Ops)",
+    "name": "AppleCare for Enterprise",
+    "authority": "Apple India",
+    "issuedAt": "2021-09-30",
+    "expiresAt": "2024-09-30",
+    "status": "Expired"
+  }
+]

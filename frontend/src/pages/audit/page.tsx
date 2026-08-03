@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom';
-import { mockAuditLog, mockCycleCounts, mockCustody, mockCertifications, mockAssets } from '@/lib/mock-data';
+import { allAuditLog, allCycleCounts, allCustody, allCertifications, allAssets } from '@/lib/dataset';
 import { PageHeader, KpiCard, Badge } from '@/components/ui/primitives';
 import { Button } from '@/components/ui/Button';
 import { useToast } from '@/components/providers/ToastProvider';
@@ -15,12 +15,12 @@ const HUBS: { href: string; title: string; desc: string }[] = [
 export default function AuditCenterPage() {
   const { toast } = useToast();
 
-  const coveredAssets = new Set(mockCustody.map((c) => c.assetId)).size;
-  const coverage = Math.round((coveredAssets / mockAssets.length) * 100);
-  const openFindings = mockCertifications.filter((c) => c.status !== 'Valid').length
-    + mockCycleCounts.filter((c) => c.status === 'Variance').length;
+  const coveredAssets = new Set(allCustody.map((c) => c.assetId)).size;
+  const coverage = Math.round((coveredAssets / allAssets.length) * 100);
+  const openFindings = allCertifications.filter((c) => c.status !== 'Valid').length
+    + allCycleCounts.filter((c) => c.status === 'Variance').length;
 
-  const recent = [...mockAuditLog].sort((a, b) => Date.parse(b.timestamp) - Date.parse(a.timestamp)).slice(0, 6);
+  const recent = [...allAuditLog].sort((a, b) => Date.parse(b.timestamp) - Date.parse(a.timestamp)).slice(0, 6);
 
   return (
     <div className="h-full flex flex-col space-y-6">
@@ -36,10 +36,10 @@ export default function AuditCenterPage() {
       />
 
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        <KpiCard label="Audits YTD" value={mockAuditLog.length} tone="primary" accent sub="Recorded audit events" />
+        <KpiCard label="Audits YTD" value={allAuditLog.length} tone="primary" accent sub="Recorded audit events" />
         <KpiCard label="Open Findings" value={openFindings} tone="amber" sub="Awaiting remediation" />
-        <KpiCard label="Cycle Counts" value={mockCycleCounts.length} tone="slate" sub="Across all locations" />
-        <KpiCard label="Custody Coverage" value={`${coverage}%`} tone="emerald" sub={`${coveredAssets} of ${mockAssets.length} assets tracked`} />
+        <KpiCard label="Cycle Counts" value={allCycleCounts.length} tone="slate" sub="Across all locations" />
+        <KpiCard label="Custody Coverage" value={`${coverage}%`} tone="emerald" sub={`${coveredAssets} of ${allAssets.length} assets tracked`} />
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 flex-1 min-h-0">

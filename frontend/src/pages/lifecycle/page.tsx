@@ -1,11 +1,12 @@
 import { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { mockAssets } from '@/lib/mock-data';
-import type { Asset } from '@/types/asset';
+import { allAssets } from '@/lib/dataset';
+import type { Asset } from '@access-genie/shared';
 import { PageHeader, Badge, KpiCard, EmptyState } from '@/components/ui/primitives';
 import { Button } from '@/components/ui/Button';
 import { Dropdown, MenuItem } from '@/components/ui/Dropdown';
-import { useToast } from '@/components/providers/ToastProvider';
+import { assetsApi } from '@/api/assets';
+import { useMutate } from '@/api/mutate';
 import { cn, formatMoney } from '@/lib/utils';
 
 // ── Lifecycle stages (ordered left→right on the board) ───────────────────────
@@ -53,32 +54,40 @@ function deriveStage(a: Asset): Stage {
 }
 
 export default function LifecyclePage() {
-  const { toast } = useToast();
+  const { run } = useMutate();
   const [view, setView] = useState<'board' | 'list'>('board');
 
-  // Seed a stage map keyed by asset id so cards can move (in-session mock CRUD).
+  // The board reads its columns from this map and the map is seeded from the
+  // dataset, so a stage set here is the same stage the asset's profile shows.
   const [stageMap, setStageMap] = useState<Record<string, Stage>>(() =>
-    Object.fromEntries(mockAssets.map((a) => [a.id, deriveStage(a)])),
+    Object.fromEntries(allAssets.map((a) => [a.id, deriveStage(a)])),
   );
 
-  const assetsById = useMemo(() => new Map(mockAssets.map((a) => [a.id, a])), []);
-
-  const move = (asset: Asset, to: Stage) => {
+  // Optimistic: dragging a card across a board should not wait on a round trip.
+  // A rejected write puts the card back where it came from and says why.
+  const move = async (asset: Asset, to: Stage) => {
+    const from = stageMap[asset.id] ?? deriveStage(asset);
     setStageMap((prev) => ({ ...prev, [asset.id]: to }));
-    toast({ title: 'Stage updated', description: `${asset.name} → ${to}`, tone: 'success' });
+
+    await run(assetsApi.update(asset.id, { lifecycleStage: to }), {
+      success: 'Stage updated',
+      successDetail: `${asset.name} → ${to}`,
+      describe: 'move that asset',
+      rollback: () => setStageMap((prev) => ({ ...prev, [asset.id]: from })),
+    });
   };
 
-  // Group asset ids per stage (order preserved from mockAssets).
+  // Group asset ids per stage (order preserved from allAssets).
   const columns = useMemo(() => {
     const map: Record<Stage, Asset[]> = {
       Procurement: [], Commissioning: [], 'In Service': [], Maintenance: [], 'EOL Planning': [], 'Retired/Disposed': [],
     };
-    for (const a of mockAssets) map[stageMap[a.id] ?? deriveStage(a)].push(a);
+    for (const a of allAssets) map[stageMap[a.id] ?? deriveStage(a)].push(a);
     return map;
   }, [stageMap]);
 
   const totalBookValue = useMemo(
-    () => mockAssets.reduce((sum, a) => sum + (a.bookValue ?? 0), 0),
+    () => allAssets.reduce((sum, a) => sum + (a.bookValue ?? 0), 0),
     [],
   );
 
@@ -111,13 +120,13 @@ export default function LifecyclePage() {
         <KpiCard label="In Service" value={columns['In Service'].length} tone="emerald" sub="Operational" accent />
         <KpiCard label="Maintenance" value={columns.Maintenance.length} tone="amber" sub="Servicing" />
         <KpiCard label="EOL Planning" value={columns['EOL Planning'].length} tone="amber" sub="End of life" />
-        <KpiCard label="Portfolio Book Value" value={formatMoney(totalBookValue)} tone="slate" sub={`${mockAssets.length} assets tracked`} />
+        <KpiCard label="Portfolio Book Value" value={formatMoney(totalBookValue)} tone="slate" sub={`${allAssets.length} assets tracked`} />
       </div>
 
       {view === 'board' ? (
         <BoardView columns={columns} onMove={move} />
       ) : (
-        <ListView stageMap={stageMap} assetsById={assetsById} onMove={move} />
+        <ListView stageMap={stageMap} onMove={move} />
       )}
     </div>
   );
@@ -217,7 +226,7 @@ function AssetCard({
                   key={s}
                   icon={stageTheme[s].emoji}
                   onClick={() => {
-                    onMove(asset, s);
+                    void onMove(asset, s);
                     close();
                   }}
                 >
@@ -234,13 +243,12 @@ function AssetCard({
 
 // ── List view ────────────────────────────────────────────────────────────────
 function ListView({
-  stageMap, assetsById, onMove,
+  stageMap, onMove,
 }: {
   stageMap: Record<string, Stage>;
-  assetsById: Map<string, Asset>;
   onMove: (asset: Asset, to: Stage) => void;
 }) {
-  const rows = mockAssets;
+  const rows = allAssets;
   if (rows.length === 0) {
     return (
       <div className="glass-panel rounded-xl">

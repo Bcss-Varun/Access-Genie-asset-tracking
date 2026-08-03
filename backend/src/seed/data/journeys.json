@@ -1,0 +1,242 @@
+[
+  {
+    "assetId": "AST-1006",
+    "assetName": "iPad Pro 12.9\" (Field Ops)",
+    "windowFrom": "2026-07-21T01:00:00.000Z",
+    "windowTo": "2026-07-21T05:00:00.000Z",
+    "distanceM": 340,
+    "zonesVisited": 4,
+    "gaps": 1,
+    "stops": [
+      {
+        "at": "2026-07-21T01:00:00.000Z",
+        "zone": "Design Studio",
+        "x": 48,
+        "y": 84,
+        "kind": "Seen",
+        "dwellMin": 96,
+        "actor": "Field Tech 2B"
+      },
+      {
+        "at": "2026-07-21T03:00:00.000Z",
+        "zone": "Floor 3 Desks",
+        "x": 50,
+        "y": 24,
+        "kind": "Entered",
+        "dwellMin": 42
+      },
+      {
+        "at": "2026-07-21T04:00:00.000Z",
+        "zone": "Lobby",
+        "x": 16,
+        "y": 14,
+        "kind": "Entered",
+        "dwellMin": 8
+      },
+      {
+        "at": "2026-07-21T05:00:00.000Z",
+        "zone": "Main Exit & Reception",
+        "x": 84,
+        "y": 80,
+        "kind": "Exited",
+        "note": "Left the building with no check-out on file",
+        "actor": "Policy: No exit without check-out"
+      },
+      {
+        "at": "2026-07-21T05:00:00.000Z",
+        "zone": "Main Exit & Reception",
+        "x": 84,
+        "y": 80,
+        "kind": "Alert",
+        "note": "Unauthorized movement raised — TRK-ALT-004"
+      },
+      {
+        "at": "2026-07-21T06:00:00.000Z",
+        "zone": "—",
+        "x": 92,
+        "y": 92,
+        "kind": "Gap",
+        "dwellMin": 3060,
+        "note": "No detection since. Recovery search open."
+      }
+    ]
+  },
+  {
+    "assetId": "AST-1011",
+    "assetName": "Zebra TC52 Mobile Computer",
+    "windowFrom": "2026-07-23T00:00:00.000Z",
+    "windowTo": "2026-07-23T08:56:00.000Z",
+    "distanceM": 1840,
+    "zonesVisited": 4,
+    "gaps": 0,
+    "stops": [
+      {
+        "at": "2026-07-23T00:00:00.000Z",
+        "zone": "Picking Zone",
+        "x": 10,
+        "y": 70,
+        "kind": "Checked Out",
+        "actor": "Kiosk WH-1",
+        "note": "Shift handover to Warehouse Team"
+      },
+      {
+        "at": "2026-07-23T02:00:00.000Z",
+        "zone": "Main Warehouse",
+        "x": 52,
+        "y": 30,
+        "kind": "Entered",
+        "dwellMin": 118
+      },
+      {
+        "at": "2026-07-23T04:00:00.000Z",
+        "zone": "Staging Bay",
+        "x": 16,
+        "y": 36,
+        "kind": "Entered",
+        "dwellMin": 41
+      },
+      {
+        "at": "2026-07-23T06:00:00.000Z",
+        "zone": "Loading Dock 4",
+        "x": 16,
+        "y": 11,
+        "kind": "Entered",
+        "dwellMin": 96
+      },
+      {
+        "at": "2026-07-23T08:20:00.000Z",
+        "zone": "Main Warehouse",
+        "x": 46,
+        "y": 44,
+        "kind": "Seen",
+        "dwellMin": 22
+      },
+      {
+        "at": "2026-07-23T08:56:00.000Z",
+        "zone": "Picking Zone",
+        "x": 12,
+        "y": 74,
+        "kind": "Seen",
+        "dwellMin": 4
+      }
+    ]
+  },
+  {
+    "assetId": "AST-1003",
+    "assetName": "Lenovo ThinkPad T14",
+    "windowFrom": "2026-07-21T09:00:00.000Z",
+    "windowTo": "2026-07-23T07:00:00.000Z",
+    "distanceM": 410,
+    "zonesVisited": 3,
+    "gaps": 0,
+    "stops": [
+      {
+        "at": "2026-07-21T09:00:00.000Z",
+        "zone": "IT Storeroom",
+        "x": 14,
+        "y": 44,
+        "kind": "Seen",
+        "dwellMin": 1380
+      },
+      {
+        "at": "2026-07-23T06:00:00.000Z",
+        "zone": "IT Storeroom",
+        "x": 14,
+        "y": 44,
+        "kind": "Checked Out",
+        "actor": "Sneha Iyer",
+        "note": "QR scan at the storeroom desk"
+      },
+      {
+        "at": "2026-07-23T07:00:00.000Z",
+        "zone": "Floor 3 Desks",
+        "x": 48,
+        "y": 20,
+        "kind": "Entered",
+        "dwellMin": 118
+      }
+    ]
+  },
+  {
+    "assetId": "AST-1014",
+    "assetName": "Fluke Networks DSX-8000",
+    "windowFrom": "2026-07-21T09:00:00.000Z",
+    "windowTo": "2026-07-23T08:54:00.000Z",
+    "distanceM": 96,
+    "zonesVisited": 3,
+    "gaps": 1,
+    "stops": [
+      {
+        "at": "2026-07-21T09:00:00.000Z",
+        "zone": "Goods Inward",
+        "x": 84,
+        "y": 70,
+        "kind": "Seen",
+        "dwellMin": 240,
+        "note": "Received at Chennai DC"
+      },
+      {
+        "at": "2026-07-22T09:00:00.000Z",
+        "zone": "IT Tool Room",
+        "x": 14,
+        "y": 80,
+        "kind": "Entered",
+        "dwellMin": 1180,
+        "note": "Commissioning + calibration check"
+      },
+      {
+        "at": "2026-07-23T05:00:00.000Z",
+        "zone": "—",
+        "x": 60,
+        "y": 60,
+        "kind": "Gap",
+        "dwellMin": 45,
+        "note": "Coverage hole in the corridor between Tool Room and Exit"
+      },
+      {
+        "at": "2026-07-23T08:54:00.000Z",
+        "zone": "In transit — Bengaluru ▸ Hyderabad",
+        "x": 88,
+        "y": 84,
+        "kind": "Checked Out",
+        "actor": "Manoj Reddy",
+        "note": "Approved transfer AGT-3391"
+      }
+    ]
+  },
+  {
+    "assetId": "AST-1004",
+    "assetName": "MacBook Pro 16\"",
+    "windowFrom": "2026-07-22T13:00:00.000Z",
+    "windowTo": "2026-07-23T08:56:00.000Z",
+    "distanceM": 260,
+    "zonesVisited": 2,
+    "gaps": 0,
+    "stops": [
+      {
+        "at": "2026-07-22T13:00:00.000Z",
+        "zone": "Design Studio",
+        "x": 46,
+        "y": 86,
+        "kind": "Seen",
+        "dwellMin": 840
+      },
+      {
+        "at": "2026-07-23T03:00:00.000Z",
+        "zone": "Conference Room A",
+        "x": 50,
+        "y": 58,
+        "kind": "Entered",
+        "dwellMin": 74
+      },
+      {
+        "at": "2026-07-23T08:56:00.000Z",
+        "zone": "Design Studio",
+        "x": 46,
+        "y": 86,
+        "kind": "Seen",
+        "dwellMin": 296
+      }
+    ]
+  }
+]

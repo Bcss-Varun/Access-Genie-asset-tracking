@@ -1,0 +1,204 @@
+[
+  {
+    "id": "TRK-RULE-01",
+    "name": "Asset leaves a site without a check-out",
+    "category": "Unauthorized Movement",
+    "when": "Exit detected on a zone with \"No exit without check-out\" and no open check-out",
+    "then": [
+      "Raise P1",
+      "Notify Security on SMS + in-app",
+      "Open an incident",
+      "Lock the custodian record"
+    ],
+    "priority": "P1",
+    "assignTeam": "Security",
+    "escalateAfterMin": 60,
+    "enabled": true,
+    "firedToday": 1,
+    "suppressedToday": 0
+  },
+  {
+    "id": "TRK-RULE-02",
+    "name": "Critical asset not detected for 24 hours",
+    "category": "Missing Asset",
+    "when": "lastSeen older than 24h and criticality is High or Critical",
+    "then": [
+      "Raise P1",
+      "Assign to Security",
+      "Start a recovery search"
+    ],
+    "priority": "P1",
+    "assignTeam": "Security",
+    "escalateAfterMin": 240,
+    "enabled": true,
+    "firedToday": 2,
+    "suppressedToday": 4
+  },
+  {
+    "id": "TRK-RULE-03",
+    "name": "Room count differs from expected",
+    "category": "Inventory Mismatch",
+    "when": "A verification pass detects fewer assets than expected",
+    "then": [
+      "Raise P2",
+      "Assign to Inventory",
+      "Schedule a re-count"
+    ],
+    "priority": "P2",
+    "assignTeam": "Inventory",
+    "escalateAfterMin": 720,
+    "enabled": true,
+    "firedToday": 2,
+    "suppressedToday": 1
+  },
+  {
+    "id": "TRK-RULE-04",
+    "name": "Unregistered tag seen more than 50 times",
+    "category": "Unknown Tag",
+    "when": "An unmatched identity is read 50+ times in a 12h window",
+    "then": [
+      "Raise P3",
+      "Run the registry matcher",
+      "Queue for match review"
+    ],
+    "priority": "P3",
+    "assignTeam": "Inventory",
+    "escalateAfterMin": 1440,
+    "enabled": true,
+    "firedToday": 1,
+    "suppressedToday": 11
+  },
+  {
+    "id": "TRK-RULE-05",
+    "name": "Reader or gateway stops reporting",
+    "category": "Reader Offline",
+    "when": "No heartbeat for 30 minutes",
+    "then": [
+      "Raise P1 if the zone is armed, else P2",
+      "Assign to IoT Platform",
+      "Mark dependent zones unverifiable"
+    ],
+    "priority": "P1",
+    "assignTeam": "IoT Platform",
+    "escalateAfterMin": 120,
+    "enabled": true,
+    "firedToday": 1,
+    "suppressedToday": 2
+  },
+  {
+    "id": "TRK-RULE-06",
+    "name": "Tag battery below 20%",
+    "category": "Battery Low",
+    "when": "batteryPct < 20 on a bound tag",
+    "then": [
+      "Raise P3",
+      "Batch into the next swap round"
+    ],
+    "priority": "P3",
+    "assignTeam": "IoT Platform",
+    "escalateAfterMin": 4320,
+    "enabled": true,
+    "firedToday": 2,
+    "suppressedToday": 6
+  },
+  {
+    "id": "TRK-RULE-07",
+    "name": "Two tags claim one identity",
+    "category": "Duplicate Tag",
+    "when": "The same identity is read in two zones within 60 seconds",
+    "then": [
+      "Raise P2",
+      "Suspend the identity",
+      "Queue a tag replacement"
+    ],
+    "priority": "P2",
+    "assignTeam": "IoT Platform",
+    "escalateAfterMin": 720,
+    "enabled": true,
+    "firedToday": 1,
+    "suppressedToday": 0
+  },
+  {
+    "id": "TRK-RULE-08",
+    "name": "Rack slot empties with no work order",
+    "category": "Asset Removed",
+    "when": "A monitored rack slot changes to empty and no work order is open",
+    "then": [
+      "Raise P2",
+      "Assign to IT Operations",
+      "Attach the rack snapshot"
+    ],
+    "priority": "P2",
+    "assignTeam": "IT Operations",
+    "escalateAfterMin": 240,
+    "enabled": true,
+    "firedToday": 1,
+    "suppressedToday": 0
+  },
+  {
+    "id": "TRK-RULE-09",
+    "name": "Dwell limit exceeded",
+    "category": "Geofence Violation",
+    "when": "An asset stays in a dwell-limited zone past its limit",
+    "then": [
+      "Raise P3",
+      "Notify the zone custodian"
+    ],
+    "priority": "P3",
+    "assignTeam": "Inventory",
+    "escalateAfterMin": 1440,
+    "enabled": true,
+    "firedToday": 1,
+    "suppressedToday": 3
+  },
+  {
+    "id": "TRK-RULE-10",
+    "name": "Movement outside working hours",
+    "category": "Geofence Violation",
+    "when": "Movement detected in an armed zone outside 08:00–20:00 IST",
+    "then": [
+      "Raise P2",
+      "Notify Security",
+      "Capture a 5-minute detection window"
+    ],
+    "priority": "P2",
+    "assignTeam": "Security",
+    "escalateAfterMin": 60,
+    "enabled": true,
+    "firedToday": 0,
+    "suppressedToday": 0
+  },
+  {
+    "id": "TRK-RULE-11",
+    "name": "Journey shows a coverage gap",
+    "category": "Tracking Failure",
+    "when": "3+ journeys share a blind spot longer than 20 minutes",
+    "then": [
+      "Raise P3",
+      "Assign to IoT Platform",
+      "Add to the coverage plan"
+    ],
+    "priority": "P3",
+    "assignTeam": "IoT Platform",
+    "escalateAfterMin": 2880,
+    "enabled": true,
+    "firedToday": 1,
+    "suppressedToday": 0
+  },
+  {
+    "id": "TRK-RULE-12",
+    "name": "Check-out overdue by 48 hours",
+    "category": "Missing Asset",
+    "when": "An open check-out passes its due-back date by 48h",
+    "then": [
+      "Raise P3",
+      "Email the holder and their manager"
+    ],
+    "priority": "P3",
+    "assignTeam": "Inventory",
+    "escalateAfterMin": 2880,
+    "enabled": false,
+    "firedToday": 0,
+    "suppressedToday": 0
+  }
+]

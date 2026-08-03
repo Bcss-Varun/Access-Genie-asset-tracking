@@ -1,33 +1,33 @@
 import { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { mockReports } from '@/lib/mock-data';
-import type { Report } from '@/types/asset';
+import { allReports } from '@/lib/dataset';
+import type { Report } from '@access-genie/shared';
 import { PageHeader, Badge, KpiCard, EmptyState } from '@/components/ui/primitives';
 import { Button } from '@/components/ui/Button';
 import { useToast } from '@/components/providers/ToastProvider';
-import { cn, relTime, DEMO_NOW } from '@/lib/utils';
+import { cn, relTime, nowMs } from '@/lib/utils';
 
 const isToday = (iso: string) =>
   new Date(Date.parse(iso)).toISOString().slice(0, 10) ===
-  new Date(DEMO_NOW).toISOString().slice(0, 10);
+  new Date(nowMs()).toISOString().slice(0, 10);
 
 export default function ReportLibraryPage() {
   const { toast } = useToast();
   const [active, setActive] = useState<string>('All');
 
   const categories = useMemo(
-    () => ['All', ...Array.from(new Set(mockReports.map((r) => r.category)))],
+    () => ['All', ...Array.from(new Set(allReports.map((r) => r.category)))],
     [],
   );
 
   const kpis = useMemo(() => {
-    const scheduled = mockReports.filter((r) => r.scheduled).length;
-    const cats = new Set(mockReports.map((r) => r.category)).size;
-    const runToday = mockReports.filter((r) => isToday(r.lastRun)).length;
-    return { total: mockReports.length, scheduled, cats, runToday };
+    const scheduled = allReports.filter((r) => r.scheduled).length;
+    const cats = new Set(allReports.map((r) => r.category)).size;
+    const runToday = allReports.filter((r) => isToday(r.lastRun)).length;
+    return { total: allReports.length, scheduled, cats, runToday };
   }, []);
 
-  const filtered = active === 'All' ? mockReports : mockReports.filter((r) => r.category === active);
+  const filtered = active === 'All' ? allReports : allReports.filter((r) => r.category === active);
 
   const run = (r: Report) =>
     toast({ title: 'Report queued', description: `“${r.name}” is running — you’ll be notified when it’s ready.`, tone: 'info' });
@@ -69,7 +69,7 @@ export default function ReportLibraryPage() {
             {c}
             {c !== 'All' && (
               <span className="ml-1.5 opacity-70">
-                {mockReports.filter((r) => r.category === c).length}
+                {allReports.filter((r) => r.category === c).length}
               </span>
             )}
           </button>

@@ -1,14 +1,17 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { mockInsights, mockAssets, getAssetById } from "@/lib/mock-data";
+import { allInsights, allAssets, getAssetById } from "@/lib/dataset";
 import { PageHeader, KpiCard } from "@/components/ui/primitives";
-import type { AIInsight, InsightSeverity, InsightType } from "@/types/asset";
+import type { AIInsight, InsightSeverity, InsightType } from "@access-genie/shared";
 import { formatMoney } from "@/lib/utils";
+import { nowMs } from '@/lib/utils';
+import { insightsApi } from '@/api/insights';
+import { useMutate } from '@/api/mutate';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Helpers (module scope → deterministic, no hydration drift)
 // ─────────────────────────────────────────────────────────────────────────────
-const NOW = Date.parse("2026-07-23T09:00:00.000Z");
+const NOW = nowMs();
 
 function relTime(iso: string): string {
   const diff = NOW - Date.parse(iso);
@@ -126,7 +129,8 @@ function ConfidenceRing({ value }: { value: number }) {
 // Page
 // ─────────────────────────────────────────────────────────────────────────────
 export default function AIInsightsPage() {
-  const [insights, setInsights] = useState<AIInsight[]>(mockInsights);
+  const { run } = useMutate();
+  const [insights, setInsights] = useState<AIInsight[]>(allInsights);
   const [selectedType, setSelectedType] = useState<InsightType | "all">("all");
   const [selectedSeverity, setSelectedSeverity] = useState<InsightSeverity | "all">("all");
   const [confidenceMin, setConfidenceMin] = useState(0);
@@ -139,7 +143,7 @@ export default function AIInsightsPage() {
     insights.filter((i) => (i.severity === "Critical" || i.severity === "Warning") && i.assetId).map((i) => i.assetId),
   ).size;
   const predictedFailures = insights.filter((i) => i.type === "Predictive Failure" || i.type === "Lifecycle").length;
-  const idleAssets = mockAssets.filter((a) => (a.utilization ?? 100) < 20).length;
+  const idleAssets = allAssets.filter((a) => (a.utilization ?? 100) < 20).length;
   const savings = insights.reduce((s, i) => s + (i.impactInr ?? 0), 0);
 
   const kpis: { label: string; value: string | number; sub: string; tone: "slate" | "emerald" | "amber" | "red" | "primary" }[] = [
@@ -363,7 +367,15 @@ export default function AIInsightsPage() {
                   {/* Action row */}
                   <div className="mt-4 flex items-center justify-between gap-3 pt-4 border-t border-slate-200 dark:border-slate-800">
                     <button
-                      onClick={() => setActioned((a) => ({ ...a, [ins.id]: true }))}
+                      onClick={() => {
+                        setActioned((a) => ({ ...a, [ins.id]: true }));
+                        void run(insightsApi.action(ins.id), {
+                          success: 'Recommendation actioned',
+                          successDetail: ins.title,
+                          describe: 'action that recommendation',
+                          rollback: () => setActioned((a) => ({ ...a, [ins.id]: false })),
+                        });
+                      }}
                       disabled={isActioned}
                       className={
                         isActioned

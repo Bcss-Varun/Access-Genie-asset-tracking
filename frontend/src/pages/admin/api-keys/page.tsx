@@ -1,45 +1,56 @@
+import { allApiKeys } from '@/lib/dataset';
+import type { ApiKey } from '@access-genie/shared';
 import { useState } from 'react';
 import { PageHeader, Badge, KpiCard } from '@/components/ui/primitives';
 import { Button } from '@/components/ui/Button';
 import { useToast } from '@/components/providers/ToastProvider';
 import { relTime } from '@/lib/utils';
+import { apiKeysApi } from '@/api/platform';
+import { useMutate } from '@/api/mutate';
 
-interface ApiKey {
-  id: string;
-  name: string;
-  last4: string;
-  scopes: string[];
-  created: string;
-  lastUsed: string;
-}
-
-const daysAgoIso = (d: number) => new Date(Date.parse('2026-07-23T09:00:00.000Z') - d * 86_400_000).toISOString();
-const hoursAgoIso = (h: number) => new Date(Date.parse('2026-07-23T09:00:00.000Z') - h * 3_600_000).toISOString();
-
-const initialKeys: ApiKey[] = [
-  { id: 'KEY-01', name: 'Production Backend', last4: '9f21', scopes: ['assets:read', 'assets:write', 'workorders:write'], created: daysAgoIso(212), lastUsed: hoursAgoIso(1) },
-  { id: 'KEY-02', name: 'BI / Snowflake Export', last4: '4c7a', scopes: ['assets:read', 'telemetry:read'], created: daysAgoIso(96), lastUsed: hoursAgoIso(6) },
-  { id: 'KEY-03', name: 'Mobile Scanner App', last4: '0d38', scopes: ['assets:read', 'movement:write'], created: daysAgoIso(48), lastUsed: hoursAgoIso(3) },
-  { id: 'KEY-04', name: 'Zapier Automation', last4: 'b512', scopes: ['webhooks:read'], created: daysAgoIso(15), lastUsed: daysAgoIso(2) },
-];
+/**
+ * Keys are issued and revoked by the server.
+ *
+ * This screen used to invent a key-shaped string in the browser and show it in
+ * a toast — a credential that could not have authenticated anything, next to a
+ * "Revoke" button that only removed a table row. The real secret is minted
+ * server-side, returned exactly once on create, and stored only as its last
+ * four characters.
+ */
+const orgKeys = () => allApiKeys.filter((k) => k.scope === 'organization' && !k.revokedAt);
 
 export default function ApiKeysPage() {
   const { toast } = useToast();
-  const [keys, setKeys] = useState<ApiKey[]>(initialKeys);
+  const { run, isPending } = useMutate();
+  const [keys, setKeys] = useState<ApiKey[]>(orgKeys);
 
-  const generate = () => {
-    const fake = 'ag_live_7Kd9Q2xR4mZ8pWvA1nL6bce';
-    const id = `KEY-0${keys.length + 1}`;
-    setKeys((prev) => [
-      { id, name: 'New API Key', last4: 'bcde', scopes: ['assets:read'], created: daysAgoIso(0), lastUsed: 'Never' },
-      ...prev,
-    ]);
-    toast({ title: 'API key generated', description: `Copy it now — shown once: ${fake}`, tone: 'success' });
+  const generate = async () => {
+    const issued = await run(
+      apiKeysApi.create({ name: 'New API Key', scope: 'organization', scopes: ['assets:read'] }),
+      { describe: 'generate that key' },
+    );
+    if (!issued) return;
+
+    setKeys((prev) => [issued, ...prev]);
+    // Deliberately not a `success` toast from `run`: this one has to stay long
+    // enough to copy, and it is the only time the secret is ever readable.
+    toast({
+      title: 'API key generated',
+      description: `Copy it now — it is shown once: ${issued.secret}`,
+      tone: 'success',
+    });
   };
 
-  const revoke = (k: ApiKey) => {
+  const revoke = async (k: ApiKey) => {
+    const previous = keys;
     setKeys((prev) => prev.filter((x) => x.id !== k.id));
-    toast({ title: 'Key revoked', description: `${k.name} (ag_live_••••${k.last4}) is now invalid.`, tone: 'error' });
+
+    await run(apiKeysApi.revoke(k.id), {
+      success: 'Key revoked',
+      successDetail: `${k.name} (ag_live_••••${k.last4}) is now invalid.`,
+      describe: 'revoke that key',
+      rollback: () => setKeys(previous),
+    });
   };
 
   return (
@@ -48,7 +59,7 @@ export default function ApiKeysPage() {
         title="API Keys"
         subtitle="Programmatic access tokens for the Access Genie REST & GraphQL APIs."
         breadcrumb={[{ label: 'Administration' }, { label: 'API Keys' }]}
-        actions={<Button onClick={generate}>+ Generate Key</Button>}
+        actions={<Button onClick={generate} disabled={isPending}>+ Generate Key</Button>}
       />
 
       <div className="grid grid-cols-2 gap-4 lg:max-w-md">
@@ -86,7 +97,7 @@ export default function ApiKeysPage() {
                       ))}
                     </div>
                   </td>
-                  <td className="px-5 py-3 text-slate-600">{relTime(k.created)}</td>
+                  <td className="px-5 py-3 text-slate-600">{relTime(k.createdAt)}</td>
                   <td className="px-5 py-3 text-slate-600">{k.lastUsed === 'Never' ? 'Never' : relTime(k.lastUsed)}</td>
                   <td className="px-5 py-3 text-right">
                     <Button size="sm" variant="ghost" className="text-red-600 hover:bg-red-50" onClick={() => revoke(k)}>

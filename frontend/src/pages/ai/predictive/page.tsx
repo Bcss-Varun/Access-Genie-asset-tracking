@@ -1,11 +1,11 @@
 import { useMemo } from 'react';
 import { Link } from 'react-router-dom';
-import { mockAssets, mockInsights } from '@/lib/mock-data';
+import { allAssets, allInsights } from '@/lib/dataset';
 import { useToast } from '@/components/providers/ToastProvider';
 import { PageHeader, KpiCard, Badge, EmptyState } from '@/components/ui/primitives';
 import { Button } from '@/components/ui/Button';
-import { cn, formatMoney, DEMO_NOW } from '@/lib/utils';
-import type { Asset, AIInsight, InsightSeverity } from '@/types/asset';
+import { cn, formatMoney, nowMs } from '@/lib/utils';
+import type { Asset, AIInsight, InsightSeverity } from '@access-genie/shared';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Deterministic helpers (module scope → stable, no Date.now / hydration drift)
@@ -28,7 +28,7 @@ const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', '
 
 /** Format a date `d` days after the demo clock as e.g. "Jul 31". Deterministic (UTC). */
 function futureDateLabel(days: number): string {
-  const dt = new Date(DEMO_NOW + days * 86_400_000);
+  const dt = new Date(nowMs() + days * 86_400_000);
   return `${MONTHS[dt.getUTCMonth()]} ${dt.getUTCDate()}`;
 }
 
@@ -105,7 +105,7 @@ export default function AiPredictivePage() {
   // Most at-risk assets, highest risk first — the RUL watchlist.
   const atRisk = useMemo(
     () =>
-      [...mockAssets]
+      [...allAssets]
         .filter((a) => a.riskScore != null)
         .sort((a, b) => (b.riskScore ?? 0) - (a.riskScore ?? 0))
         .slice(0, 6),
@@ -115,7 +115,7 @@ export default function AiPredictivePage() {
   // Explainable predictive-failure signals.
   const failures = useMemo<AIInsight[]>(
     () =>
-      mockInsights
+      allInsights
         .filter((i) => i.type === 'Predictive Failure')
         .sort((a, b) => b.confidence - a.confidence),
     [],

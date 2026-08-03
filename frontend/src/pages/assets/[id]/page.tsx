@@ -2,20 +2,21 @@ import { useState, useEffect } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { useNavigate } from 'react-router-dom';
 import {
-  getAssetById,
   getWorkOrdersForAsset,
   getActivityForAsset,
   getInsightsForAsset,
   getDocsForAsset,
   getGroupsForAsset,
-  mockTaxonomy,
-} from '@/lib/mock-data';
-import type { Asset, WorkOrder, ActivityEvent, AIInsight, AssetDoc } from '@/types/asset';
+  allAssetClasses,
+} from '@/lib/dataset';
+import type { Asset, WorkOrder, ActivityEvent, AIInsight, AssetDoc } from '@access-genie/shared';
 import { PageHeader, Badge, EmptyState, Avatar } from '@/components/ui/primitives';
 import { Button } from '@/components/ui/Button';
 import { Dropdown, MenuItem } from '@/components/ui/Dropdown';
 import { useToast } from '@/components/providers/ToastProvider';
-import { cn, formatMoney, formatDate, relTime, DEMO_NOW } from '@/lib/utils';
+import { useRegistry } from '@/components/providers/RegistryProvider';
+import { SetupChecklist } from '@/components/onboarding/SetupChecklist';
+import { cn, formatMoney, formatDate, relTime, nowMs } from '@/lib/utils';
 
 // ── token helpers ─────────────────────────────────────────────────────────────
 const healthHex = (score: number): string =>
@@ -78,7 +79,7 @@ const locationPath = (a: Asset): string =>
     .filter(Boolean)
     .join(' ▸ ');
 
-const daysUntil = (iso: string): number => Math.round((Date.parse(iso) - DEMO_NOW) / 86_400_000);
+const daysUntil = (iso: string): number => Math.round((Date.parse(iso) - nowMs()) / 86_400_000);
 
 const linkCls = (variant: 'primary' | 'secondary' | 'outline'): string =>
   cn(
@@ -357,7 +358,10 @@ function TimelineList({ events }: { events: ActivityEvent[] }) {
 // ═══════════════════════════════════════════════════════════════════════════════
 export default function AssetProfilePage() {
   const { id = '' } = useParams();
-  const asset = getAssetById(id);
+  // Read through the in-session registry, so an asset registered a minute ago
+  // resolves here exactly like one that shipped with the demo data.
+  const { getAsset } = useRegistry();
+  const asset = getAsset(id);
   const { toast } = useToast();
   const navigate = useNavigate();
 
@@ -369,7 +373,6 @@ export default function AssetProfilePage() {
   useEffect(() => {
     const q = new URLSearchParams(window.location.search).get('tab');
     if (q && TABS.some((t) => t.k === q)) setActiveTab(q as TabKey);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const goTab = (k: TabKey) => {
@@ -408,7 +411,7 @@ export default function AssetProfilePage() {
   const docs = getDocsForAsset(id);
   const groups = getGroupsForAsset(id);
   const trend = asset.healthTrend ?? [];
-  const taxonomyClass = mockTaxonomy.find((c) => c.name === asset.category);
+  const taxonomyClass = allAssetClasses.find((c) => c.name === asset.category);
 
   const custodyEvents = activity.filter((e) => e.type === 'Custody' || e.type === 'Movement');
   const auditEvents = activity.filter((e) => e.type === 'Audit');
@@ -429,7 +432,7 @@ export default function AssetProfilePage() {
       : 0;
   const warrantyDays = asset.warrantyExpiry ? daysUntil(asset.warrantyExpiry) : null;
   const warrantyExpired = warrantyDays !== null && warrantyDays < 0;
-  const ageYears = ((DEMO_NOW - Date.parse(asset.purchaseDate)) / (365.25 * 86_400_000)).toFixed(1);
+  const ageYears = ((nowMs() - Date.parse(asset.purchaseDate)) / (365.25 * 86_400_000)).toFixed(1);
   const risk = asset.riskScore ?? 0;
 
   const critWeight = { Low: 25, Medium: 50, High: 75, Critical: 95 }[asset.criticality ?? 'Low'] ?? 25;
@@ -459,11 +462,17 @@ export default function AssetProfilePage() {
       priority: asset.healthScore < 50 ? 'Critical' : 'Medium',
       type: 'Predictive',
       assignedTo: 'Unassigned',
-      createdAt: new Date(DEMO_NOW).toISOString(),
-      dueDate: new Date(DEMO_NOW + 3 * 86_400_000).toISOString(),
+      createdAt: new Date(nowMs()).toISOString(),
+      dueDate: new Date(nowMs() + 3 * 86_400_000).toISOString(),
       description: 'AI-drafted work order generated from the Asset 360° profile.',
       estimatedHours: 2,
       aiGenerated: true,
+      updatedAt: new Date(nowMs()).toISOString(),
+      // A work order starts with an empty execution record, not without one.
+      checklist: [],
+      parts: [],
+      laborLog: [],
+      comments: [],
     };
     setWorkOrders((prev) => [wo, ...prev]);
     goTab('maintenance');
@@ -491,7 +500,7 @@ export default function AssetProfilePage() {
             <MenuItem onClick={() => { navigate('/tracking'); close(); }}>Locate on Map</MenuItem>
             <MenuItem onClick={() => { notify('Transfer request drafted'); close(); }}>Transfer</MenuItem>
             <MenuItem onClick={() => { notify('Asset checked out'); close(); }}>Check-out</MenuItem>
-            <MenuItem onClick={() => { navigate('/assets/labels'); close(); }}>Print Label</MenuItem>
+            <MenuItem onClick={() => { navigate(`/assets/labels?ids=${asset.id}`); close(); }}>Print Label</MenuItem>
             <MenuItem onClick={() => { notify('Retirement workflow started', 'info'); close(); }}>Retire</MenuItem>
           </>
         )}
@@ -515,6 +524,11 @@ export default function AssetProfilePage() {
 
       {/* Chip row */}
       <div className="flex flex-wrap items-center gap-2 -mt-2">
+        {asset.onboarding.state !== 'Active' && (
+          <Badge tone={asset.onboarding.state === 'Pending Approval' ? 'amber' : 'primary'}>
+            {asset.onboarding.state === 'Pending Approval' ? '⏳ Pending approval' : '📝 Draft — setup incomplete'}
+          </Badge>
+        )}
         <Badge tone={statusTone(asset.status)}>{asset.status.replace('_', ' ')}</Badge>
         <Badge tone={healthTone(asset.healthStatus)}>
           <span className="h-2 w-2 rounded-full" style={{ backgroundColor: healthHex(asset.healthScore) }} />
@@ -535,6 +549,22 @@ export default function AssetProfilePage() {
           </span>
         )}
       </div>
+
+      {/* ── Setup checklist — the wizard's Configure stage, in place ──────────────
+          Same component the registration flow renders. A user who abandoned the
+          wizard finds the identical list waiting here, which is what makes
+          "leave any time" a real promise rather than a slogan. */}
+      {asset.onboarding.state !== 'Active' && (
+        <SetupChecklist
+          asset={asset}
+          onJump={() => navigate(`/assets/new?resume=${asset.id}`)}
+          footer={
+            <Link to={`/assets/new?resume=${asset.id}`}>
+              <Button>Resume setup →</Button>
+            </Link>
+          }
+        />
+      )}
 
       {/* ── Two-column body ────────────────────────────────────────────────────── */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">

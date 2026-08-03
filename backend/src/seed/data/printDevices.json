@@ -1,0 +1,107 @@
+[
+  {
+    "id": "PRN-BLR-01",
+    "name": "IT Storeroom — Zebra ZT411",
+    "kind": "Label printer",
+    "model": "Zebra ZT411 300dpi",
+    "facility": "Bengaluru HQ",
+    "zone": "IT Storeroom",
+    "state": "Online",
+    "media": 78,
+    "queueDepth": 0,
+    "supports": [
+      "QR",
+      "DataMatrix",
+      "Barcode"
+    ],
+    "lastSeen": "2026-07-23T08:59:00.000Z"
+  },
+  {
+    "id": "ENC-BLR-02",
+    "name": "IT Storeroom — Zebra ZT411 RFID",
+    "kind": "RFID encoder",
+    "model": "Zebra ZT411 RFID (UHF)",
+    "facility": "Bengaluru HQ",
+    "zone": "IT Storeroom",
+    "state": "Low media",
+    "media": 9,
+    "queueDepth": 1,
+    "supports": [
+      "QR",
+      "Barcode",
+      "RFID",
+      "NFC"
+    ],
+    "lastSeen": "2026-07-23T08:57:00.000Z",
+    "note": "RFID inlay roll at 9% — about 40 labels left."
+  },
+  {
+    "id": "PRN-HYD-01",
+    "name": "Dock 4 — Zebra ZD621",
+    "kind": "Label printer",
+    "model": "Zebra ZD621 203dpi",
+    "facility": "Hyderabad Central Warehouse",
+    "zone": "Loading Dock 4",
+    "state": "Online",
+    "media": 54,
+    "queueDepth": 2,
+    "supports": [
+      "QR",
+      "DataMatrix",
+      "Barcode"
+    ],
+    "lastSeen": "2026-07-23T08:58:00.000Z"
+  },
+  {
+    "id": "ENC-HYD-02",
+    "name": "Secure Cage — Zebra R110Xi4",
+    "kind": "RFID encoder",
+    "model": "Zebra R110Xi4 (UHF)",
+    "facility": "Hyderabad Central Warehouse",
+    "zone": "Secure Cage",
+    "state": "Offline",
+    "media": 62,
+    "queueDepth": 3,
+    "supports": [
+      "RFID",
+      "NFC"
+    ],
+    "lastSeen": "2026-07-23T03:00:00.000Z",
+    "note": "No heartbeat since 03:00 — network switch in the cage was power-cycled."
+  },
+  {
+    "id": "PRN-MAA-01",
+    "name": "Server Room Alpha — Brother QL-820",
+    "kind": "Label printer",
+    "model": "Brother QL-820NWB",
+    "facility": "Chennai Data Center",
+    "zone": "Server Room Alpha",
+    "state": "Online",
+    "media": 91,
+    "queueDepth": 0,
+    "supports": [
+      "QR",
+      "DataMatrix",
+      "Barcode"
+    ],
+    "lastSeen": "2026-07-23T08:56:00.000Z"
+  },
+  {
+    "id": "PRN-DESK-01",
+    "name": "My desktop (PDF / A4 sheet)",
+    "kind": "Desktop printer",
+    "model": "Browser print dialog",
+    "facility": "Any",
+    "zone": "—",
+    "state": "Online",
+    "media": 100,
+    "queueDepth": 0,
+    "supports": [
+      "QR",
+      "DataMatrix",
+      "Barcode"
+    ],
+    "lastSeen": "2026-07-23T09:00:00.000Z",
+    "note": "Prints an A4 sheet through the browser. Cannot encode RFID or NFC."
+  }
+]

@@ -3,9 +3,20 @@ import { validatedQuery } from '../middleware/validate.js';
 import { asyncHandler } from '../utils/asyncHandler.js';
 import { sendData, sendList } from '../utils/response.js';
 import * as trackingService from '../services/tracking.service.js';
+import * as workspaceService from '../services/trackingWorkspace.service.js';
 import { recordAudit } from '../services/audit.service.js';
 import { Gateway } from '../models/index.js';
 import type { CreateGeofenceInput, CreateSensorInput, SensorListQuery } from '../validators/tracking.validator.js';
+
+// ── Workspace ────────────────────────────────────────────────────────────────
+export const workspace = asyncHandler(async (_req: Request, res: Response) => {
+  sendData(res, await workspaceService.getTrackingWorkspace());
+});
+
+/** Just the badge number, for the chrome — far cheaper than the whole workspace. */
+export const openAlertCount = asyncHandler(async (_req: Request, res: Response) => {
+  sendData(res, { open: await workspaceService.countOpenTrackingAlerts() });
+});
 
 // ── Live map ─────────────────────────────────────────────────────────────────
 export const live = asyncHandler(async (_req: Request, res: Response) => {

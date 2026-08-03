@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { mockWorkOrders } from '@/lib/mock-data';
-import type { WorkOrder, WorkOrderPriority } from '@/types/asset';
+import { allWorkOrders } from '@/lib/dataset';
+import type { WorkOrder, WorkOrderPriority } from '@access-genie/shared';
 import { PageHeader, Badge } from '@/components/ui/primitives';
 import { Button } from '@/components/ui/Button';
 import { cn } from '@/lib/utils';
@@ -70,7 +70,7 @@ export default function MaintenanceCalendarPage() {
   // ── bucket work orders onto their due-date cells ───────────────────────────
   const byDay = useMemo(() => {
     const map = new Map<number, WorkOrder[]>();
-    for (const wo of mockWorkOrders) {
+    for (const wo of allWorkOrders) {
       const { y, m, d } = ymd(wo.dueDate);
       if (y === year && m === month) {
         const list = map.get(d) ?? [];

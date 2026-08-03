@@ -1,40 +1,41 @@
 import { Link } from 'react-router-dom';
 import { Card, GroupedBars, InsightPanel } from '@/components/dashboards/DashboardKit';
 import { PageHeader, KpiCard, Badge } from '@/components/ui/primitives';
-import { mockAssets, mockInsights, mockForecasts } from '@/lib/mock-data';
-import { cn, relTime, DEMO_NOW, formatMoney } from '@/lib/utils';
+import { allAssets, allInsights, allForecasts } from '@/lib/dataset';
+import { cn, relTime, nowMs, formatMoney } from '@/lib/utils';
 
-const bookValue = mockAssets.reduce((s, a) => s + (a.bookValue ?? 0), 0);
-const tco = mockAssets.reduce((s, a) => s + a.purchasePrice, 0);
-const accumDep = tco - bookValue;
-const writeOffs = mockAssets.filter((a) => a.lifecycleStage === 'EOL Planning').reduce((s, a) => s + (a.bookValue ?? 0), 0);
-
-const capexFc = mockForecasts.find((f) => f.id === 'FC-CAPEX');
 // Capex forecast horizon = forecast-only points (no actuals); FC-CAPEX is in ₹ lakh
-const capexForecast = (capexFc?.points.filter((p) => p.actual == null).reduce((s, p) => s + p.forecast, 0) ?? 0) * 1_00_000;
 
 // Book vs purchase by category
 const cats = ['Compute', 'Network', 'Endpoints', 'Infrastructure', 'Sensors'];
-const byCategory = cats.map((c) => {
-  const items = mockAssets.filter((a) => a.category === c);
-  return {
-    label: c,
-    a: items.reduce((s, x) => s + x.purchasePrice, 0),
-    b: items.reduce((s, x) => s + (x.bookValue ?? 0), 0),
-  };
-}).sort((x, y) => y.a - x.a);
 
 // Warranty-expiry exposure
-const daysTo = (iso?: string) => (iso ? Math.round((Date.parse(iso) - DEMO_NOW) / 86_400_000) : Infinity);
-const exposure = [...mockAssets]
-  .filter((a) => a.warrantyExpiry)
-  .map((a) => ({ a, days: daysTo(a.warrantyExpiry) }))
-  .sort((x, y) => x.days - y.days)
-  .slice(0, 7);
-
-const financialInsights = mockInsights.filter((i) => ['Cost Optimization', 'Lifecycle'].includes(i.type)).slice(0, 3);
+const daysTo = (iso?: string) => (iso ? Math.round((Date.parse(iso) - nowMs()) / 86_400_000) : Infinity);
 
 export default function FinancialDashboard() {
+  // Derived per render: the dataset is fetched, so a value computed once at
+  // module scope would never see a refetch.
+  const bookValue = allAssets.reduce((s, a) => s + (a.bookValue ?? 0), 0);
+    const tco = allAssets.reduce((s, a) => s + a.purchasePrice, 0);
+    const accumDep = tco - bookValue;
+    const writeOffs = allAssets.filter((a) => a.lifecycleStage === 'EOL Planning').reduce((s, a) => s + (a.bookValue ?? 0), 0);
+    const capexFc = allForecasts.find((f) => f.id === 'FC-CAPEX');
+    const capexForecast = (capexFc?.points.filter((p) => p.actual == null).reduce((s, p) => s + p.forecast, 0) ?? 0) * 1_00_000;
+    const byCategory = cats.map((c) => {
+    const items = allAssets.filter((a) => a.category === c);
+    return {
+      label: c,
+      a: items.reduce((s, x) => s + x.purchasePrice, 0),
+      b: items.reduce((s, x) => s + (x.bookValue ?? 0), 0),
+    };
+  }).sort((x, y) => y.a - x.a);
+    const exposure = [...allAssets]
+    .filter((a) => a.warrantyExpiry)
+    .map((a) => ({ a, days: daysTo(a.warrantyExpiry) }))
+    .sort((x, y) => x.days - y.days)
+    .slice(0, 7);
+    const financialInsights = allInsights.filter((i) => ['Cost Optimization', 'Lifecycle'].includes(i.type)).slice(0, 3);
+
   const th = 'px-4 py-3 text-left font-semibold uppercase tracking-wider text-[11px] text-slate-500';
   const td = 'px-4 py-3';
   return (
