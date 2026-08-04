@@ -37,6 +37,16 @@ export interface UserPreferenceDoc {
   savedViews: SavedViewDoc[];
   /** Screens the user has dismissed the "getting started" panel on. */
   dismissed: string[];
+  /**
+   * Which channels each notification category reaches this person on.
+   *
+   * A free-form map rather than a fixed schema: the categories are defined by
+   * the screen that renders them, and adding one there should not need a
+   * migration here. Unknown keys are simply not read.
+   */
+  notifications: Record<string, { email: boolean; push: boolean; inApp: boolean }>;
+  /** How often batched notifications are delivered. */
+  digest: string;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -56,6 +66,8 @@ const savedViewSchema = new Schema<SavedViewDoc>(
 const userPreferenceSchema = new Schema<UserPreferenceDoc>(
   {
     _id: { type: String, required: true, ref: 'User' },
+    notifications: { type: Schema.Types.Mixed, default: {} },
+    digest: { type: String, default: 'Daily digest' },
     // Light is the shipped default — the palette is designed light and dark is
     // an override layered over it. `system` remains a real choice, not the
     // absence of one: it means "keep following the OS", which is different from

@@ -16,6 +16,9 @@ export interface AlertDoc {
   assetName?: string;
   status: AlertStatus;
   source: string;
+  /** Who owns it. An alert nobody is named against is an alert nobody works. */
+  assignedTo?: string;
+  assignedAt?: Date;
   acknowledgedBy?: string;
   acknowledgedAt?: Date;
   resolvedBy?: string;
@@ -34,6 +37,8 @@ const alertSchema = new Schema<AlertDoc>(
     assetName: { type: String },
     status: { type: String, required: true, enum: ALERT_STATUSES, default: 'Open', index: true },
     source: { type: String, required: true },
+    assignedTo: { type: String, index: true },
+    assignedAt: Date,
     acknowledgedBy: { type: String },
     acknowledgedAt: { type: Date },
     resolvedBy: { type: String },

@@ -1,97 +1,191 @@
-// ─────────────────────────────────────────────────────────────────────────────
-// Subscriptions — scheduled report deliveries. Derived from scheduled reports.
-// ─────────────────────────────────────────────────────────────────────────────
-
 import { useState } from 'react';
-import { allReports } from '@/lib/dataset';
+import type { ReportSubscription, SubscriptionCadence } from '@access-genie/shared';
+import { SUBSCRIPTION_CADENCES } from '@access-genie/shared';
+import { allReports, allReportSubscriptions } from '@/lib/dataset';
 import { PageHeader, Badge, KpiCard, EmptyState } from '@/components/ui/primitives';
 import { Button } from '@/components/ui/Button';
-import { useToast } from '@/components/providers/ToastProvider';
-import { cn, relTime, nowMs } from '@/lib/utils';
+import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
+import { FormDialog, Field, FieldRow, Select, TextArea, TextInput } from '@/components/ui/FormDialog';
+import { useMutate } from '@/api/mutate';
+import { subscriptionsApi } from '@/api/configuration';
+import { cn, relTime } from '@/lib/utils';
 
-const ahead = (hours: number) => new Date(nowMs() + hours * 3_600_000).toISOString();
+/**
+ * Standing report deliveries.
+ *
+ * This page used to derive its rows from a hard-coded map keyed by report id —
+ * three fixed subscriptions with invented recipient lists that no button could
+ * create, edit or remove. They are records now, so the schedule on screen is
+ * the schedule that exists.
+ *
+ * Pausing does not re-base `nextRun`; changing the cadence does. Resuming a
+ * paused subscription should carry on where it left off, not restart the
+ * calendar from today.
+ */
 
-type Cadence = 'Daily' | 'Weekly' | 'Monthly';
-interface Subscription {
-  id: string;
-  reportName: string;
-  cadence: Cadence;
-  recipients: string;
-  recipientCount: number;
-  channel: string;
-  nextRun: string;
-  enabled: boolean;
+const FORMATS = ['PDF', 'CSV', 'JSON', 'Excel'];
+
+function SubscriptionDialog({ existing, onClose }: { existing?: ReportSubscription; onClose: () => void }) {
+  const { run, isPending } = useMutate();
+
+  // A report can only be subscribed to once per person, so anything already
+  // subscribed is dropped from the picker rather than offered and refused.
+  const taken = new Set(allReportSubscriptions.map((s) => s.reportId));
+  const available = allReports.filter((r) => existing?.reportId === r.id || !taken.has(r.id));
+
+  const [reportId, setReportId] = useState(existing?.reportId ?? available[0]?.id ?? '');
+  const [cadence, setCadence] = useState<SubscriptionCadence>(existing?.cadence ?? 'Weekly');
+  const [format, setFormat] = useState(existing?.format ?? 'PDF');
+  const [recipientsText, setRecipientsText] = useState((existing?.recipients ?? []).join('\n'));
+
+  const recipients = recipientsText
+    .split(/[\n,;]/)
+    .map((r) => r.trim())
+    .filter(Boolean);
+
+  const invalid = recipients.filter((r) => !/^\S+@\S+\.\S+$/.test(r));
+
+  const submit = async () => {
+    const ok = await run(
+      existing
+        ? subscriptionsApi.update(existing.id, { cadence, format, recipients })
+        : subscriptionsApi.create({ reportId, cadence, format, recipients }),
+      {
+        success: existing ? 'Subscription updated' : 'Subscription created',
+        successDetail: `${cadence} · ${recipients.length} recipient${recipients.length === 1 ? '' : 's'}`,
+        describe: existing ? 'save that subscription' : 'create that subscription',
+      },
+    );
+    if (ok) onClose();
+  };
+
+  if (available.length === 0 && !existing) {
+    return (
+      <FormDialog
+        icon="📬"
+        title="Nothing left to subscribe to"
+        description="Every report already has a subscription."
+        submitLabel="Close"
+        onSubmit={onClose}
+        onCancel={onClose}
+      >
+        <p className="text-sm text-slate-500">
+          {allReports.length === 0
+            ? 'There are no reports yet — define one under Analytics ▸ Report Library first.'
+            : 'Edit an existing subscription instead, or remove one to free up its report.'}
+        </p>
+      </FormDialog>
+    );
+  }
+
+  return (
+    <FormDialog
+      icon="📬"
+      title={existing ? `Edit ${existing.reportName} delivery` : 'New subscription'}
+      description="The report is generated on this schedule and delivered to everyone listed."
+      submitLabel={existing ? 'Save' : 'Subscribe'}
+      busy={isPending}
+      disabled={recipients.length === 0 || invalid.length > 0 || !reportId}
+      onSubmit={() => void submit()}
+      onCancel={onClose}
+    >
+      <Field label="Report" required hint={existing ? 'A subscription stays with its report.' : undefined}>
+        {existing ? (
+          <TextInput value={existing.reportName} disabled />
+        ) : (
+          <Select
+            value={reportId}
+            onChange={(e) => setReportId(e.target.value)}
+            options={available.map((r) => ({ value: r.id, label: `${r.name} · ${r.category}` }))}
+          />
+        )}
+      </Field>
+
+      <FieldRow>
+        <Field label="Cadence" hint={existing ? 'Changing this re-bases the schedule from today.' : undefined}>
+          <Select
+            value={cadence}
+            onChange={(e) => setCadence(e.target.value as SubscriptionCadence)}
+            options={SUBSCRIPTION_CADENCES.map((c) => ({ value: c, label: c }))}
+          />
+        </Field>
+        <Field label="Format">
+          <Select value={format} onChange={(e) => setFormat(e.target.value)} options={FORMATS.map((f) => ({ value: f, label: f }))} />
+        </Field>
+      </FieldRow>
+
+      <Field label={`Recipients — ${recipients.length}`} required hint="One email per line, or comma separated.">
+        <TextArea
+          rows={4}
+          value={recipientsText}
+          onChange={(e) => setRecipientsText(e.target.value)}
+          placeholder={'exec-team@company.com\nfinance@company.com'}
+        />
+      </Field>
+
+      {invalid.length > 0 && (
+        <p className="rounded-lg bg-red-50 px-3 py-2 text-xs text-red-700">
+          Not a valid email address: {invalid.join(', ')}
+        </p>
+      )}
+    </FormDialog>
+  );
 }
 
-// Deterministic delivery config keyed off the scheduled reports.
-const scheduleConfig: Record<string, { cadence: Cadence; recipients: string; recipientCount: number; channel: string; nextRunH: number; enabled: boolean }> = {
-  'RPT-01': { cadence: 'Weekly', recipients: 'exec-team@accessgenie.in', recipientCount: 6, channel: 'Email', nextRunH: 20, enabled: true },
-  'RPT-02': { cadence: 'Monthly', recipients: 'finance@accessgenie.in', recipientCount: 4, channel: 'Email + Drive', nextRunH: 96, enabled: true },
-  'RPT-05': { cadence: 'Weekly', recipients: 'compliance@accessgenie.in', recipientCount: 3, channel: 'Slack #compliance', nextRunH: 44, enabled: false },
-};
-
 export default function SubscriptionsPage() {
-  // Derived per render: the dataset is fetched, so a value computed once at
-  // module scope would never see a refetch.
-  const initialSubs: Subscription[] = allReports
-    .filter((r) => r.scheduled)
-    .map((r) => {
-      const c = scheduleConfig[r.id] ?? { cadence: 'Weekly' as Cadence, recipients: 'team@accessgenie.in', recipientCount: 2, channel: 'Email', nextRunH: 24, enabled: true };
-      return {
-        id: `SUB-${r.id.replace('RPT-', '')}`,
-        reportName: r.name,
-        cadence: c.cadence,
-        recipients: c.recipients,
-        recipientCount: c.recipientCount,
-        channel: c.channel,
-        nextRun: ahead(c.nextRunH),
-        enabled: c.enabled,
-      };
+  const { run, isPending } = useMutate();
+  const [dialog, setDialog] = useState<{ mode: 'new' } | { mode: 'edit'; sub: ReportSubscription } | null>(null);
+  const [deleting, setDeleting] = useState<ReportSubscription | null>(null);
+
+  const subs = allReportSubscriptions;
+  const active = subs.filter((s) => s.enabled).length;
+  const recipients = new Set(subs.flatMap((s) => s.recipients)).size;
+
+  const toggle = (s: ReportSubscription) =>
+    void run(subscriptionsApi.update(s.id, { enabled: !s.enabled }), {
+      success: s.enabled ? 'Subscription paused' : 'Subscription resumed',
+      successDetail: s.enabled
+        ? `${s.reportName} will not be delivered until resumed.`
+        : `${s.reportName} resumes on its existing schedule.`,
+      describe: `${s.enabled ? 'pause' : 'resume'} that subscription`,
     });
 
-  const { toast } = useToast();
-  const [subs, setSubs] = useState<Subscription[]>(initialSubs);
-
-  const toggle = (id: string) =>
-    setSubs((prev) =>
-      prev.map((s) => {
-        if (s.id !== id) return s;
-        const enabled = !s.enabled;
-        toast({ title: enabled ? 'Subscription enabled' : 'Subscription paused', description: s.reportName, tone: enabled ? 'success' : 'info' });
-        return { ...s, enabled };
-      }),
-    );
-
-  const activeCount = subs.filter((s) => s.enabled).length;
-  const totalRecipients = subs.reduce((n, s) => n + s.recipientCount, 0);
+  const remove = async () => {
+    if (!deleting) return;
+    await run(subscriptionsApi.remove(deleting.id), {
+      success: 'Subscription removed',
+      successDetail: deleting.reportName,
+      describe: 'remove that subscription',
+    });
+    setDeleting(null);
+  };
 
   return (
     <div className="h-full flex flex-col space-y-6">
       <PageHeader
         title="Subscriptions"
-        subtitle="Scheduled report deliveries to your teams and channels."
-        breadcrumb={[{ label: 'Analytics', href: '/dashboards' }, { label: 'Subscriptions' }]}
-        actions={
-          <Button onClick={() => toast({ title: 'New subscription', description: 'Schedule builder is on the roadmap.', tone: 'info' })}>
-            + New Subscription
-          </Button>
-        }
+        subtitle="Scheduled report deliveries — who receives what, and how often."
+        breadcrumb={[{ label: 'Analytics', href: '/reports' }, { label: 'Subscriptions' }]}
+        actions={<Button onClick={() => setDialog({ mode: 'new' })}>+ New Subscription</Button>}
       />
 
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        <KpiCard label="Subscriptions" value={subs.length} sub="Scheduled reports" tone="primary" accent />
-        <KpiCard label="Active" value={activeCount} sub="Currently delivering" tone="emerald" />
-        <KpiCard label="Paused" value={subs.length - activeCount} sub="Delivery suspended" tone="amber" />
-        <KpiCard label="Recipients" value={totalRecipients} sub="Across all schedules" tone="slate" />
+      <div className="grid grid-cols-2 lg:grid-cols-3 gap-4">
+        <KpiCard label="Subscriptions" value={subs.length} sub="Standing deliveries" tone="primary" accent />
+        <KpiCard label="Active" value={active} sub={`${subs.length - active} paused`} tone="emerald" />
+        <KpiCard label="Recipients" value={recipients} sub="Distinct addresses" tone="slate" />
       </div>
 
-      <div className="glass-panel rounded-xl overflow-hidden">
-        <div className="px-5 py-3.5 border-b border-slate-100">
-          <h2 className="text-base font-semibold text-slate-800">Report Subscriptions</h2>
+      {subs.length === 0 ? (
+        <div className="glass-panel rounded-xl">
+          <EmptyState
+            icon="📬"
+            title="No subscriptions"
+            description="A subscription delivers a report on a schedule without anyone remembering to run it. Without one, every report is a manual job."
+            action={<Button onClick={() => setDialog({ mode: 'new' })}>+ New Subscription</Button>}
+          />
         </div>
-        {subs.length === 0 ? (
-          <EmptyState title="No subscriptions" description="Schedule a report to have it delivered automatically." />
-        ) : (
+      ) : (
+        <div className="glass-panel rounded-xl overflow-hidden">
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
@@ -99,36 +193,49 @@ export default function SubscriptionsPage() {
                   <th className="px-5 py-2.5">Report</th>
                   <th className="px-5 py-2.5">Cadence</th>
                   <th className="px-5 py-2.5">Recipients</th>
-                  <th className="px-5 py-2.5">Channel</th>
-                  <th className="px-5 py-2.5">Next Run</th>
-                  <th className="px-5 py-2.5 text-right">Enabled</th>
+                  <th className="px-5 py-2.5">Next run</th>
+                  <th className="px-5 py-2.5">Status</th>
+                  <th className="px-5 py-2.5 text-right">Actions</th>
                 </tr>
               </thead>
               <tbody>
                 {subs.map((s) => (
-                  <tr key={s.id} className="border-b border-slate-100 last:border-0 hover:bg-slate-50/60 transition-colors">
+                  <tr key={s.id} className="border-b border-slate-100 last:border-0 transition-colors hover:bg-slate-50/60">
                     <td className="px-5 py-3">
-                      <div className="font-medium text-slate-900">{s.reportName}</div>
-                      <div className="text-xs text-slate-400">{s.id}</div>
+                      <div className="font-medium text-slate-800">{s.reportName}</div>
+                      <div className="text-xs text-slate-400">
+                        {s.id} · {s.format}
+                      </div>
                     </td>
-                    <td className="px-5 py-3"><Badge tone="primary">{s.cadence}</Badge></td>
                     <td className="px-5 py-3">
-                      <div className="text-slate-700">{s.recipients}</div>
-                      <div className="text-xs text-slate-400">{s.recipientCount} recipients</div>
+                      <Badge tone="slate">{s.cadence}</Badge>
                     </td>
-                    <td className="px-5 py-3 text-slate-600">{s.channel}</td>
-                    <td className="px-5 py-3 text-xs text-slate-500">{s.enabled ? relTime(s.nextRun) : <span className="text-slate-400">Paused</span>}</td>
                     <td className="px-5 py-3">
-                      <div className="flex justify-end">
-                        <button
-                          role="switch"
-                          aria-checked={s.enabled}
-                          aria-label={`Toggle ${s.reportName}`}
-                          onClick={() => toggle(s.id)}
-                          className={cn('relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:ring-offset-1', s.enabled ? 'bg-primary-600' : 'bg-slate-300')}
-                        >
-                          <span className={cn('inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform', s.enabled ? 'translate-x-6' : 'translate-x-1')} />
-                        </button>
+                      <div className="text-slate-700">
+                        {s.recipients.length} address{s.recipients.length === 1 ? '' : 'es'}
+                      </div>
+                      <div className="truncate text-xs text-slate-400" title={s.recipients.join(', ')}>
+                        {s.recipients.slice(0, 2).join(', ')}
+                        {s.recipients.length > 2 && ` +${s.recipients.length - 2}`}
+                      </div>
+                    </td>
+                    <td className={cn('px-5 py-3', s.enabled ? 'text-slate-600' : 'text-slate-300')}>
+                      {s.enabled ? relTime(s.nextRun) : 'paused'}
+                    </td>
+                    <td className="px-5 py-3">
+                      <Badge tone={s.enabled ? 'emerald' : 'slate'}>{s.enabled ? 'Active' : 'Paused'}</Badge>
+                    </td>
+                    <td className="px-5 py-3 text-right">
+                      <div className="flex items-center justify-end gap-1">
+                        <Button size="sm" variant="ghost" disabled={isPending} onClick={() => toggle(s)}>
+                          {s.enabled ? 'Pause' : 'Resume'}
+                        </Button>
+                        <Button size="sm" variant="ghost" onClick={() => setDialog({ mode: 'edit', sub: s })}>
+                          Edit
+                        </Button>
+                        <Button size="sm" variant="ghost" onClick={() => setDeleting(s)}>
+                          Remove
+                        </Button>
                       </div>
                     </td>
                   </tr>
@@ -136,8 +243,21 @@ export default function SubscriptionsPage() {
               </tbody>
             </table>
           </div>
-        )}
-      </div>
+        </div>
+      )}
+
+      {dialog?.mode === 'new' && <SubscriptionDialog onClose={() => setDialog(null)} />}
+      {dialog?.mode === 'edit' && <SubscriptionDialog existing={dialog.sub} onClose={() => setDialog(null)} />}
+      {deleting && (
+        <ConfirmDialog
+          title={`Remove the ${deleting.reportName} subscription?`}
+          description="Nobody on the list will receive it again. The report itself is untouched."
+          confirmLabel="Remove"
+          busy={isPending}
+          onConfirm={() => void remove()}
+          onCancel={() => setDeleting(null)}
+        />
+      )}
     </div>
   );
 }

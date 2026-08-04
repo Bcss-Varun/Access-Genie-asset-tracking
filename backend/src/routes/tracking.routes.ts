@@ -1,5 +1,7 @@
 import { Router } from 'express';
 import * as controller from '../controllers/tracking.controller.js';
+import * as observation from '../controllers/observation.controller.js';
+import { observationBatchSchema, observationSchema } from '../validators/observation.validator.js';
 import * as ops from '../controllers/trackingOps.controller.js';
 import { requireModule, validate } from '../middleware/index.js';
 import { idParamSchema } from '../validators/common.js';
@@ -27,6 +29,18 @@ import {
 const router = Router();
 
 router.use(requireModule('tracking'));
+
+// ── Observation intake ───────────────────────────────────────────────────────
+// How reality enters the platform: a reader, gateway, or phone reports that it
+// saw a tag. Everything the tracking screens show is derived from this stream.
+//
+// Gated on `tracking` rather than `admin` — the callers are field hardware and
+// the mobile app, not administrators — and deliberately separate from the
+// device registry, which is about the readers themselves rather than what they
+// have seen.
+router.post('/observations', validate({ body: observationSchema }), observation.record);
+router.post('/observations/batch', validate({ body: observationBatchSchema }), observation.recordBatch);
+router.get('/observable-zones', observation.zones);
 
 // ── Workspace ────────────────────────────────────────────────────────────────
 // The whole tracking estate in one response — see trackingWorkspace.service.ts

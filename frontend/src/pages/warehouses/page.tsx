@@ -1,9 +1,32 @@
+import { useState } from 'react';
 import { Link } from 'react-router-dom';
+import type { Warehouse } from '@access-genie/shared';
 import { allWarehouses } from '@/lib/dataset';
-import { PageHeader, KpiCard } from '@/components/ui/primitives';
+import { PageHeader, KpiCard, EmptyState } from '@/components/ui/primitives';
+import { Button } from '@/components/ui/Button';
+import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
+import { WarehouseDialog } from '@/components/inventory/InventoryDialogs';
+import { useMutate } from '@/api/mutate';
+import { warehousesApi } from '@/api/inventory';
 import { formatMoney } from '@/lib/utils';
 
 export default function WarehousesPage() {
+  const { run, isPending } = useMutate();
+  const [dialog, setDialog] = useState<{ mode: 'new' } | { mode: 'edit'; warehouse: Warehouse } | null>(null);
+  const [deleting, setDeleting] = useState<Warehouse | null>(null);
+
+  // The server refuses to delete a warehouse that still holds parts, and says
+  // how many — so the screen submits and shows the refusal rather than
+  // duplicating the count check here and getting it subtly different.
+  const remove = async () => {
+    if (!deleting) return;
+    const ok = await run(warehousesApi.remove(deleting.id), {
+      success: `${deleting.name} deleted`,
+      describe: 'delete that warehouse',
+    });
+    if (ok !== null) setDeleting(null);
+  };
+
   const totalWarehouses = allWarehouses.length;
   const totalSkus = allWarehouses.reduce((sum, w) => sum + w.skuCount, 0);
   const totalBins = allWarehouses.reduce((sum, w) => sum + w.binCount, 0);
@@ -18,6 +41,7 @@ export default function WarehousesPage() {
           { label: 'Inventory', href: '/warehouses' },
           { label: 'Warehouses' },
         ]}
+        actions={<Button onClick={() => setDialog({ mode: 'new' })}>+ New Warehouse</Button>}
       />
 
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
@@ -63,11 +87,57 @@ export default function WarehousesPage() {
 
             <div className="mt-auto pt-3 border-t border-slate-100 flex items-center justify-between text-xs text-slate-400">
               <span>{w.id}</span>
-              <span className="group-hover:text-primary-600">View details →</span>
+              <span className="flex items-center gap-2">
+                {/* Buttons inside a card-wide <Link>: the click must not also
+                    navigate, so each stops the event before it bubbles. */}
+                <button
+                  className="font-medium text-slate-500 hover:text-primary-600"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    setDialog({ mode: 'edit', warehouse: w });
+                  }}
+                >
+                  Edit
+                </button>
+                <button
+                  className="font-medium text-slate-400 hover:text-red-600"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    setDeleting(w);
+                  }}
+                >
+                  Delete
+                </button>
+              </span>
             </div>
           </Link>
         ))}
       </div>
+
+      {allWarehouses.length === 0 && (
+        <div className="glass-panel rounded-xl">
+          <EmptyState
+            icon="🏬"
+            title="No warehouses yet"
+            description="Stock is counted per warehouse, so a part cannot be added until there is somewhere for it to sit."
+            action={<Button onClick={() => setDialog({ mode: 'new' })}>+ New Warehouse</Button>}
+          />
+        </div>
+      )}
+
+      {dialog?.mode === 'new' && <WarehouseDialog onClose={() => setDialog(null)} />}
+      {dialog?.mode === 'edit' && <WarehouseDialog existing={dialog.warehouse} onClose={() => setDialog(null)} />}
+      {deleting && (
+        <ConfirmDialog
+          title={`Delete ${deleting.name}?`}
+          description="Refused if any parts are still stocked here — move them first."
+          busy={isPending}
+          onConfirm={() => void remove()}
+          onCancel={() => setDeleting(null)}
+        />
+      )}
     </div>
   );
 }

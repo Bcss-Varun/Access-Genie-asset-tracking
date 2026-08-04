@@ -1,9 +1,13 @@
+import { useState } from 'react';
+import type { PublicUser, Team } from '@access-genie/shared';
 import { allTeams } from '@/lib/dataset';
 import { allUsers, roles } from '@/lib/rbac';
-import type { PublicUser } from '@access-genie/shared';
 import { PageHeader, Badge, KpiCard, Avatar, EmptyState } from '@/components/ui/primitives';
 import { Button } from '@/components/ui/Button';
-import { useToast } from '@/components/providers/ToastProvider';
+import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
+import { TeamDialog } from '@/components/admin/TeamDialog';
+import { useMutate } from '@/api/mutate';
+import { teamsApi } from '@/api/platform';
 
 const deptTone: Record<string, 'primary' | 'emerald' | 'amber' | 'slate'> = {
   Operations: 'emerald',
@@ -13,26 +17,33 @@ const deptTone: Record<string, 'primary' | 'emerald' | 'amber' | 'slate'> = {
 };
 
 export default function AdminTeamsPage() {
-  const { toast } = useToast();
+  const { run, isPending } = useMutate();
+  const [dialog, setDialog] = useState<{ mode: 'new' } | { mode: 'edit'; team: Team } | null>(null);
+  const [deleting, setDeleting] = useState<Team | null>(null);
 
   // Read inside the component, not at module scope: `allTeams` is a hydrated
   // binding, and a copy taken at import time never sees a re-hydration.
   const TEAMS = allTeams;
 
-  // Distribute the roster across the teams (round-robin). Guarded on there being
-  // a team to distribute *into*: `i % 0` is NaN, and `TEAMS[NaN]` is undefined.
-  const membersByTeam: Record<string, PublicUser[]> = Object.fromEntries(TEAMS.map((t) => [t.id, []]));
-  if (TEAMS.length > 0) {
-    allUsers.forEach((u, i) => {
-      membersByTeam[TEAMS[i % TEAMS.length].id].push(u);
-    });
-  }
+  // The roster each team was actually given. This used to round-robin every
+  // user across the teams, which made the cards look populated and told you
+  // nothing — a team's membership is now what somebody assigned to it.
+  const byId = new Map(allUsers.map((u) => [u.id, u]));
+  const membersByTeam: Record<string, PublicUser[]> = Object.fromEntries(
+    TEAMS.map((t) => [t.id, (t.memberIds ?? []).map((id) => byId.get(id)).filter((u): u is PublicUser => Boolean(u))]),
+  );
+
+  const remove = async () => {
+    if (!deleting) return;
+    await run(teamsApi.remove(deleting.id), { success: `${deleting.name} deleted`, describe: 'delete that team' });
+    setDeleting(null);
+  };
 
   const rows = TEAMS.map((t) => {
-    const mapped = membersByTeam[t.id];
+    const mapped = membersByTeam[t.id] ?? [];
     // A team with no members assigned has no lead to show — rendered as such
     // below rather than borrowed from the top of the user list.
-    const lead = mapped[0] ?? allUsers[0];
+    const lead = mapped[0];
     return { ...t, mapped, lead, count: mapped.length + t.extra };
   });
 
@@ -44,11 +55,7 @@ export default function AdminTeamsPage() {
         title="Teams & Departments"
         subtitle="Cross-functional teams responsible for the asset lifecycle."
         breadcrumb={[{ label: 'Administration', href: '/admin/org' }, { label: 'Teams' }]}
-        actions={
-          <Button onClick={() => toast({ title: 'New Team', description: 'Team creation is on the roadmap.', tone: 'info' })}>
-            + New Team
-          </Button>
-        }
+        actions={<Button onClick={() => setDialog({ mode: 'new' })}>+ New Team</Button>}
       />
 
       <div className="grid grid-cols-2 lg:grid-cols-3 gap-4">
@@ -63,6 +70,7 @@ export default function AdminTeamsPage() {
             icon="👥"
             title="No teams yet"
             description="Teams group the people responsible for an area of the estate — who maintains it, who audits it, who signs off. Create one to start assigning ownership."
+            action={<Button onClick={() => setDialog({ mode: 'new' })}>+ New Team</Button>}
           />
         </div>
       )}
@@ -93,9 +101,30 @@ export default function AdminTeamsPage() {
                 <div className="text-[11px] text-slate-400">members</div>
               </div>
             </div>
+
+            <div className="flex items-center justify-end gap-1 border-t border-slate-100 pt-3">
+              <Button size="sm" variant="ghost" onClick={() => setDialog({ mode: 'edit', team: t })}>
+                Edit
+              </Button>
+              <Button size="sm" variant="ghost" onClick={() => setDeleting(t)}>
+                Delete
+              </Button>
+            </div>
           </div>
         ))}
       </div>
+
+      {dialog?.mode === 'new' && <TeamDialog onClose={() => setDialog(null)} />}
+      {dialog?.mode === 'edit' && <TeamDialog existing={dialog.team} onClose={() => setDialog(null)} />}
+      {deleting && (
+        <ConfirmDialog
+          title={`Delete ${deleting.name}?`}
+          description="Work already assigned to this team keeps its assignee text, but nothing new can be routed here."
+          busy={isPending}
+          onConfirm={() => void remove()}
+          onCancel={() => setDeleting(null)}
+        />
+      )}
     </div>
   );
 }

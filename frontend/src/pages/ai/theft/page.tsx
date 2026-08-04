@@ -1,10 +1,13 @@
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { allInsights, allAnomalies, allZones, getAssetById } from '@/lib/dataset';
 import { cn, formatMoney, relTime } from '@/lib/utils';
 import { Button } from '@/components/ui/Button';
 import { PageHeader, Badge, KpiCard, EmptyState } from '@/components/ui/primitives';
 import { useToast } from '@/components/providers/ToastProvider';
+import { useMutate } from '@/api/mutate';
+import { alertsApi } from '@/api/alerts';
+import { assetsApi } from '@/api/assets';
 
 interface RiskItem {
   assetId: string;
@@ -71,7 +74,46 @@ function buildRiskItems(): RiskItem[] {
 
 export default function TheftPage() {
   const { toast } = useToast();
+  const { run, isPending } = useMutate();
+  const [acted, setActed] = useState<Set<string>>(new Set());
   const items = useMemo(buildRiskItems, []);
+
+  /** Raise a critical alert, which is what actually puts this in front of somebody. */
+  const startRecovery = async (item: RiskItem) => {
+    const created = await run(
+      alertsApi.create({
+        title: `Recovery — ${item.assetName} at risk of loss`,
+        severity: 'Critical',
+        type: 'Security',
+        assetId: item.assetId,
+        source: `Theft-risk review · ${item.confidence}% confidence`,
+      }),
+      { describe: 'raise that recovery alert' },
+    );
+    if (!created) return;
+
+    setActed((prev) => new Set(prev).add(item.assetId));
+    toast({
+      title: `${created.id} raised`,
+      description: `${item.assetName} — critical, in the alert queue. Last seen ${relTime(item.lastSeenIso)}.`,
+      tone: 'error',
+    });
+  };
+
+  /**
+   * Mark it missing.
+   *
+   * "Quarantine" was the old label and there is no quarantine state; `Missing`
+   * is the real one, and it is what stops the asset being counted as available
+   * everywhere else in the product.
+   */
+  const markMissing = (item: RiskItem) =>
+    void run(assetsApi.update(item.assetId, { status: 'Missing' }), {
+      success: `${item.assetName} marked missing`,
+      successDetail: 'It no longer counts as available, and its risk score reflects it.',
+      describe: 'mark that asset missing',
+      refreshTracking: true,
+    });
 
   const geofenceBreaches = items.filter((i) => i.drivers.some((d) => /geofence/i.test(d)) || /geofence/i.test(i.description)).length;
   const custodyGaps = items.filter((i) => i.drivers.some((d) => /custody/i.test(d)) || /custody/i.test(i.description)).length;
@@ -158,19 +200,18 @@ export default function TheftPage() {
                 </div>
 
                 <div className="mt-4 flex flex-wrap items-center gap-2 pt-4 border-t border-slate-200">
-                  <Button
-                    size="sm"
-                    variant="danger"
-                    onClick={() => toast({ title: 'Recovery started', description: `RTLS search dispatched for ${item.assetName}`, tone: 'error' })}
-                  >
-                    Start Recovery
+                  {/*
+                    Both of these now write. "Start recovery" raises a critical
+                    alert, which is what actually puts it in front of somebody;
+                    "mark missing" changes the asset's status, which is what
+                    stops it being counted as available and what every other
+                    screen reads.
+                  */}
+                  <Button size="sm" variant="danger" disabled={isPending || acted.has(item.assetId)} onClick={() => void startRecovery(item)}>
+                    {acted.has(item.assetId) ? 'Recovery raised' : 'Start recovery'}
                   </Button>
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    onClick={() => toast({ title: 'Asset quarantined', description: `${item.assetName} locked from custody transfers`, tone: 'info' })}
-                  >
-                    Quarantine
+                  <Button size="sm" variant="outline" disabled={isPending} onClick={() => void markMissing(item)}>
+                    Mark missing
                   </Button>
                 </div>
               </article>

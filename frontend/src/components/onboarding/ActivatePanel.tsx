@@ -93,7 +93,8 @@ export function ActivatePanel({
           </div>
           <div className="flex items-center gap-2">
             <Button variant="outline" onClick={onDone}>Open Asset 360</Button>
-            <Button onClick={activate}>Approve (demo)</Button>
+            {/* This really does approve — it writes the state change. */}
+            <Button onClick={activate}>Approve &amp; activate</Button>
           </div>
         </div>
       </section>

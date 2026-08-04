@@ -41,6 +41,8 @@ import type {
   MovementDirection, MovementState, MovementTxn, Rack, RackSlot, RackSlotState, UnknownState,
 } from '@access-genie/shared';
 import { cn, formatDate, formatMoney, relTime } from '@/lib/utils';
+import { downloadCsv } from '@/api/configuration';
+import { alertsApi } from '@/api/alerts';
 
 const TAB_KEYS = ['rooms', 'movements', 'audits', 'exceptions'] as const;
 type TabKey = (typeof TAB_KEYS)[number];
@@ -97,6 +99,7 @@ function VarianceStats({ expected, detected, unexpected, missing, flat }: {
     { l: 'Unexpected', v: unexpected, c: unexpected ? 'text-amber-600' : 'text-slate-400' },
     { l: 'Missing', v: missing, c: missing ? 'text-health-critical' : 'text-slate-400' },
   ];
+
   return (
     <div className="grid grid-cols-4 gap-2">
       {cells.map((s) => (
@@ -227,6 +230,16 @@ function RackColumn({ rack }: { rack: Rack }) {
 // ── Page ─────────────────────────────────────────────────────────────────────
 
 export default function InventoryControlPage() {
+  /** Download what is on screen — only the browser knows the filtered rows. */
+  const exportRows = (name: string, rows: Record<string, unknown>[]) => {
+    const n = downloadCsv(`${name}-${new Date().toISOString().slice(0, 10)}.csv`, rows);
+    toast({
+      title: n > 0 ? `${n} row${n === 1 ? '' : 's'} exported` : 'Nothing to export',
+      description: n > 0 ? 'Downloaded as CSV.' : 'Nothing matches the current filters.',
+      tone: n > 0 ? 'success' : 'info',
+    });
+  };
+
   // Derived per render: the dataset is fetched, so a value computed once at
   // module scope would never see a refetch.
   const NOW_ISO = new Date(TRACKING_NOW()).toISOString();
@@ -623,7 +636,42 @@ export default function InventoryControlPage() {
           <>
             <LiveStamp />
             <ScopePicker value={scope} onChange={setScope} />
-            <Button variant="outline" onClick={() => toast({ title: 'Variance report queued', description: `${rooms.length} rooms · ${openQueue.length} open exceptions → Export Center`, tone: 'success' })}>
+            <Button
+              variant="outline"
+              onClick={() =>
+                // Rooms first, then the open exceptions beneath them: the
+                // variance report is read as "where is it wrong, and what
+                // exactly is wrong there".
+                exportRows('inventory-variance', [
+                  ...rooms.map((r) => ({
+                    Kind: 'Room',
+                    Reference: r.id,
+                    Name: r.name,
+                    Facility: r.facility,
+                    Expected: r.expected,
+                    Detected: r.detected,
+                    Missing: r.missing,
+                    Unexpected: r.unexpected,
+                    'Accuracy %': r.accuracy,
+                    'Last verified': r.lastVerified,
+                    Custodian: r.custodian,
+                  })),
+                  ...openQueue.map((e) => ({
+                    Kind: `Exception — ${e.kind}`,
+                    Reference: e.id,
+                    Name: e.title,
+                    Facility: e.facility,
+                    Expected: e.ident,
+                    Detected: e.room,
+                    Missing: e.state,
+                    Unexpected: e.severity,
+                    'Accuracy %': '',
+                    'Last verified': e.at,
+                    Custodian: e.owner ?? 'Unassigned',
+                  })),
+                ])
+              }
+            >
               Export variance
             </Button>
           </>
@@ -875,7 +923,26 @@ export default function InventoryControlPage() {
                           </span>
                         ) : t.state === 'Overdue' ? (
                           <Button size="sm" variant="outline"
-                            onClick={() => toast({ title: 'Return chased', description: `${t.person} has been reminded about ${t.assetName}`, tone: 'info' })}>
+                            // There is no messaging channel to "remind" anyone through, so this
+                    // raises the thing that does get worked: an alert against the
+                    // overdue asset, naming who has it.
+                    onClick={() =>
+                      void run(
+                        alertsApi.create({
+                          title: `Overdue return — ${t.assetName} held by ${t.person}`,
+                          severity: 'Warning',
+                          type: 'Custody',
+                          assetId: t.assetId,
+                          source: `Overdue return · due ${t.dueBack ?? 'unspecified'}`,
+                        }),
+                        {
+                          success: 'Chase raised',
+                          successDetail: `${t.assetName} — a warning alert now names ${t.person} as holding it.`,
+                          describe: 'raise that chase',
+                        },
+                      )
+                    }
+                  >
                             Chase return
                           </Button>
                         ) : (
@@ -1204,7 +1271,29 @@ export default function InventoryControlPage() {
             </span>
             <Button
               variant="outline" className="ml-auto"
-              onClick={() => toast({ title: 'Audit report queued', description: `${audit.name} → Export Center`, tone: 'success' })}
+              onClick={() =>
+                exportRows(`audit-${audit.id}`, [
+                  {
+                    Audit: audit.id,
+                    Name: audit.name,
+                    Scope: audit.scope,
+                    Facility: audit.facility,
+                    Method: audit.method,
+                    State: audit.state,
+                    Expected: audit.expected,
+                    Detected: audit.detected,
+                    Missing: audit.missing,
+                    Unexpected: audit.unexpected,
+                    'Progress %': audit.progress,
+                    Started: audit.startedAt,
+                    Due: audit.dueAt,
+                    Owner: audit.owner,
+                    Approver: audit.approver ?? '',
+                    'Approved at': audit.approvedAt ?? '',
+                    Note: audit.note ?? '',
+                  },
+                ])
+              }
             >
               Export report
             </Button>

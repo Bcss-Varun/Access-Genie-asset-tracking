@@ -13,6 +13,17 @@ export interface UserDoc {
   roleId: RoleId;
   title: string;
   homeScopeId: string;
+  phone: string;
+  timezone: string;
+  /**
+   * TOTP. `mfaSecret` exists as soon as setup begins; `mfaEnabled` only once a
+   * code has been verified — otherwise a half-finished enrolment would lock the
+   * account behind a secret nobody has scanned.
+   */
+  mfaEnabled: boolean;
+  mfaSecret?: string;
+  /** Hashed, single-use. Consumed by splicing the used one out. */
+  mfaRecoveryCodes: string[];
   status: 'active' | 'suspended';
   lastLoginAt?: Date;
   createdAt: Date;
@@ -48,6 +59,14 @@ const userSchema = new Schema<UserDoc, UserModel, UserMethods>(
     roleId: { type: String, required: true, enum: ROLE_IDS },
     title: { type: String, required: true },
     homeScopeId: { type: String, required: true },
+    // Maintained by the user on their own profile, not by an administrator.
+    phone: { type: String, default: '' },
+    timezone: { type: String, default: 'Asia/Kolkata' },
+    mfaEnabled: { type: Boolean, default: false },
+    // Both are secrets: `select: false` keeps them out of every query that does
+    // not name them, so they cannot leak through a forgotten `.lean()`.
+    mfaSecret: { type: String, select: false },
+    mfaRecoveryCodes: { type: [String], default: [], select: false },
     status: { type: String, enum: ['active', 'suspended'], default: 'active', index: true },
     lastLoginAt: { type: Date },
   },
@@ -78,6 +97,9 @@ userSchema.methods.toPublic = function toPublic(): PublicUser {
     roleId: this.roleId,
     title: this.title,
     homeScopeId: this.homeScopeId,
+    phone: this.phone,
+    timezone: this.timezone,
+    mfaEnabled: this.mfaEnabled,
     status: this.status,
     lastLoginAt: this.lastLoginAt?.toISOString(),
     createdAt: this.createdAt.toISOString(),

@@ -10,8 +10,8 @@ import type { Session } from '@access-genie/shared';
  * *is* an account, so switching means signing in as them. That is the whole
  * difference, and it is why this is a thin adapter instead of a copy.
  */
-export function useSession(): { session: Session } {
-  const { session } = useAuth();
+export function useSession(): { session: Session; refresh: () => Promise<void> } {
+  const { session, refreshSession } = useAuth();
   if (!session) throw new Error('useSession used outside an authenticated route');
-  return { session };
+  return { session, refresh: refreshSession };
 }

@@ -160,6 +160,33 @@ export const createAssetSchema = z.object({
 /** Everything is optional on update, but `id` can never be reassigned. */
 export const updateAssetSchema = createAssetSchema.omit({ id: true }).partial();
 
+/**
+ * A change applied to a selection.
+ *
+ * Deliberately narrower than `updateAssetSchema`: the fields here are the ones
+ * that genuinely make sense across many assets at once. Serial numbers, prices
+ * and tag ids are per-asset facts, and offering them in bulk would only ever
+ * be a way to overwrite a hundred of them with one value by accident.
+ */
+export const bulkUpdateAssetsSchema = z.object({
+  ids: z.array(z.string().trim().min(1).max(64)).min(1).max(500),
+  patch: z
+    .object({
+      status: z.enum(ASSET_STATUSES),
+      custodian: z.string().trim().max(120),
+      criticality: z.enum(CRITICALITIES),
+      location: z.object({
+        id: z.string().trim().min(1),
+        name: z.string().trim().min(1),
+        building: z.string().trim().optional(),
+        floor: z.string().trim().optional(),
+        zone: z.string().trim().optional(),
+      }),
+    })
+    .partial()
+    .refine((p) => Object.keys(p).length > 0, { message: 'Provide at least one field to change' }),
+});
+
 export type AssetListQuery = z.infer<typeof assetListQuerySchema>;
 export type CreateAssetInput = z.infer<typeof createAssetSchema>;
 export type UpdateAssetInput = z.infer<typeof updateAssetSchema>;

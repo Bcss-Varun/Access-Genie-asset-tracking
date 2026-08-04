@@ -21,6 +21,7 @@ import {
   OPEN_TRACKING_ALERT_STATES,
 } from '../models/index.js';
 import { aliasId } from '../utils/response.js';
+import { presenceStateFor } from './observation.service.js';
 
 /**
  * The tracking workspace, as one payload.
@@ -160,7 +161,16 @@ export async function getTrackingWorkspace(): Promise<TrackingWorkspacePayload> 
     // see aliasId() for why a virtual cannot do this.
     facilities,
     zones,
-    presence: aliasId(presence, 'assetId'),
+    // Presence state is derived here, not trusted from the row: `state` is
+    // written "Online" by the last observation and would stay Online forever if
+    // nothing ever saw the asset again. Freshness is a function of the clock,
+    // so it is computed at read time — a screen that says "Online" about an
+    // asset last seen in March is the single most damaging thing a tracker can
+    // do.
+    presence: aliasId(
+      presence.map((p) => ({ ...p, state: presenceStateFor(p.lastSeen) })),
+      'assetId',
+    ),
     journeys: aliasId(journeys, 'assetId'),
     rooms,
     racks,

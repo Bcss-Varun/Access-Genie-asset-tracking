@@ -130,3 +130,57 @@ const purchaseOrderSchema = new Schema<PurchaseOrderDoc>(
 );
 purchaseOrderSchema.plugin(baseSchemaPlugin);
 export const PurchaseOrder = model<PurchaseOrderDoc>('PurchaseOrder', purchaseOrderSchema);
+
+// ── Stock movement ledger ────────────────────────────────────────────────────
+/**
+ * Every change to `onHand`, and why.
+ *
+ * Without this, a part's current quantity is the only fact the system holds
+ * about it: you can see there are four, and nothing about how it got to four.
+ * The part detail screen was filling that gap with a generated sine wave and a
+ * table of invented receipts — plausible, stable across renders, and entirely
+ * fictional.
+ *
+ * Append-only. `after` is stored alongside `delta` so the ledger can be read
+ * without replaying it, and so a discrepancy between the ledger and the part is
+ * visible rather than silently reconciled.
+ */
+export const STOCK_MOVEMENT_KINDS = ['Receipt', 'Issue', 'Adjustment'] as const;
+export type StockMovementKind = (typeof STOCK_MOVEMENT_KINDS)[number];
+
+export interface StockMovementDoc {
+  _id: string; // SM-1
+  sku: string;
+  partId: string;
+  warehouseId: string;
+  kind: StockMovementKind;
+  /** Signed: negative is stock leaving the shelf. */
+  delta: number;
+  after: number;
+  reason: string;
+  /** What caused it — a work order, a purchase order, or a person. */
+  reference: string;
+  actor: string;
+  at: Date;
+}
+
+const stockMovementSchema = new Schema<StockMovementDoc>(
+  {
+    _id: { type: String, required: true },
+    sku: { type: String, required: true, index: true },
+    partId: { type: String, required: true, ref: 'Part', index: true },
+    warehouseId: { type: String, required: true },
+    kind: { type: String, required: true, enum: STOCK_MOVEMENT_KINDS },
+    delta: { type: Number, required: true },
+    after: { type: Number, required: true, min: 0 },
+    reason: { type: String, default: '' },
+    reference: { type: String, default: '' },
+    actor: { type: String, default: '' },
+    at: { type: Date, required: true, index: true },
+  },
+  { versionKey: false },
+);
+
+stockMovementSchema.plugin(baseSchemaPlugin);
+stockMovementSchema.index({ sku: 1, at: -1 });
+export const StockMovement = model<StockMovementDoc>('StockMovement', stockMovementSchema);

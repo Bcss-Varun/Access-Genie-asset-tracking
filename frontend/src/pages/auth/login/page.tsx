@@ -68,7 +68,20 @@ export default function LoginPage() {
 
     setLoading(true);
     try {
-      await login(email, password);
+      const challenge = await login(email, password);
+
+      // A correct password against an MFA-protected account is not a session
+      // yet: the challenge token is carried to the code step, which exchanges
+      // it. It is deliberately not persisted anywhere — it expires in five
+      // minutes and only completes this one sign-in.
+      if (challenge) {
+        navigate(`/auth/mfa?next=${encodeURIComponent(next)}`, {
+          replace: true,
+          state: { challengeToken: challenge.challengeToken, email },
+        });
+        return;
+      }
+
       navigate(next, { replace: true });
     } catch (err) {
       setError(err instanceof ApiRequestError ? err.message : 'Sign-in failed. Please try again.');

@@ -1,51 +1,41 @@
+import { useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
-import { getPart, getWarehouse, getSupplier } from '@/lib/dataset';
+import { useQuery } from '@tanstack/react-query';
 import type { AbcClass } from '@access-genie/shared';
-import { PageHeader, Badge, EmptyState } from '@/components/ui/primitives';
+import { getPart, getWarehouse, getSupplier } from '@/lib/dataset';
+import { PageHeader, Badge, EmptyState, Skeleton } from '@/components/ui/primitives';
 import { Button } from '@/components/ui/Button';
+import { AdjustStockDialog, PartDialog } from '@/components/inventory/InventoryDialogs';
+import { useMutate } from '@/api/mutate';
+import { procurementApi } from '@/api/inventory';
+import { apiGet } from '@/api/client';
 import { useToast } from '@/components/providers/ToastProvider';
-import { cn, formatMoney } from '@/lib/utils';
+import { cn, formatMoney, relTime } from '@/lib/utils';
+
+/**
+ * A part, and how its quantity got to where it is.
+ *
+ * The stock chart and movement table on this page used to be generated from a
+ * hash of the SKU — a sine wave and a list of invented PO and WO references,
+ * stable across renders and completely fictional. They are now the ledger: one
+ * row per actual change to `onHand`, written by the same code paths that move
+ * the stock.
+ */
+
+interface StockMovement {
+  id: string;
+  sku: string;
+  kind: 'Receipt' | 'Issue' | 'Adjustment';
+  delta: number;
+  after: number;
+  reason: string;
+  reference: string;
+  actor: string;
+  at: string;
+}
 
 const abcTone = (c: AbcClass): 'red' | 'amber' | 'slate' =>
   c === 'A' ? 'red' : c === 'B' ? 'amber' : 'slate';
-
-// Deterministic seed from the SKU string → stable across renders (no hydration drift).
-function seedFrom(s: string): number {
-  return [...s].reduce((a, c) => a + c.charCodeAt(0), 0);
-}
-
-// ~8 deterministic historical stock levels leading up to current on-hand.
-function stockHistory(sku: string, onHand: number, reorderPoint: number): number[] {
-  const seed = seedFrom(sku);
-  const amp = Math.max(2, Math.round(reorderPoint * 0.9));
-  const pts = Array.from({ length: 7 }, (_, i) => {
-    const wave = Math.sin((i + seed) / 1.7) * amp;
-    const drift = (3 - i) * (amp * 0.15); // gentle downward drift toward the present
-    return Math.max(0, Math.round(onHand + wave + drift));
-  });
-  return [...pts, onHand]; // last period is the true current level
-}
-
-type Movement = { period: string; type: 'Receipt' | 'Issue' | 'Adjustment'; qty: number; ref: string };
-
-// Deterministic movement ledger derived from consecutive stock deltas.
-function movements(sku: string, levels: number[]): Movement[] {
-  const seed = seedFrom(sku);
-  const rows: Movement[] = [];
-  for (let i = 1; i < levels.length; i++) {
-    const delta = levels[i] - levels[i - 1];
-    const weeksAgo = levels.length - i;
-    const period = weeksAgo === 1 ? 'This week' : `${weeksAgo}w ago`;
-    if (delta > 0) {
-      rows.push({ period, type: 'Receipt', qty: delta, ref: `PO-${1000 + ((seed + i) % 900)}` });
-    } else if (delta < 0) {
-      rows.push({ period, type: 'Issue', qty: delta, ref: `WO-${4000 + ((seed + i * 7) % 900)}` });
-    } else {
-      rows.push({ period, type: 'Adjustment', qty: 0, ref: `ADJ-${100 + ((seed + i) % 90)}` });
-    }
-  }
-  return rows.reverse(); // most recent first
-}
 
 function Sparkline({ values }: { values: number[] }) {
   const w = 260;
@@ -81,7 +71,17 @@ function Sparkline({ values }: { values: number[] }) {
 export default function PartDetailPage() {
   const { sku = '' } = useParams();
   const { toast } = useToast();
+  const { run, isPending } = useMutate();
+  const [dialog, setDialog] = useState<'adjust' | 'edit' | null>(null);
   const part = getPart(sku);
+
+  // The ledger is fetched rather than carried in the dataset: it grows without
+  // bound and only this page reads it.
+  const { data: ledger, isLoading: ledgerLoading } = useQuery({
+    queryKey: ['part-movements', part?.sku],
+    queryFn: () => apiGet<StockMovement[]>(`/inventory/parts/${part?.sku}/movements`),
+    enabled: Boolean(part?.sku),
+  });
 
   if (!part) {
     return (
@@ -100,8 +100,36 @@ export default function PartDetailPage() {
   const supplier = getSupplier(part.supplierId);
   const below = part.onHand <= part.reorderPoint;
   const extValue = part.onHand * part.unitCost;
-  const levels = stockHistory(part.sku, part.onHand, part.reorderPoint);
-  const ledger = movements(part.sku, levels);
+
+  const rows = ledger ?? [];
+  // The chart is the ledger read forwards. With fewer than two movements there
+  // is no trend to draw, so nothing is drawn — a flat line through one point
+  // would imply a history that does not exist.
+  const levels = rows.length > 0 ? [...rows].reverse().map((m) => m.after) : [];
+
+  /** Draft a purchase order for everything below its reorder point, this part included. */
+  const reorder = async () => {
+    if (!part.supplierId) {
+      toast({
+        title: 'No supplier on this part',
+        description: 'Assign one before it can be drafted onto a purchase order.',
+        tone: 'error',
+      });
+      return;
+    }
+    const result = await run(procurementApi.draftReorders(), { describe: 'draft that purchase order' });
+    if (!result) return;
+    toast({
+      title: result.drafted > 0 ? `Drafted ${result.drafted} purchase order${result.drafted === 1 ? '' : 's'}` : 'Nothing new to draft',
+      description:
+        result.drafted > 0
+          ? 'Grouped by supplier, in Procurement as drafts. Nothing is committed until you send them.'
+          : result.skipped > 0
+            ? 'This supplier already has an open draft — it was left alone.'
+            : 'This part is above its reorder point.',
+      tone: result.drafted > 0 ? 'success' : 'info',
+    });
+  };
 
   const scale = Math.max(1, part.reorderPoint * 2);
   const pct = Math.min(100, Math.round((part.onHand / scale) * 100));
@@ -134,7 +162,7 @@ export default function PartDetailPage() {
   const th = 'px-4 py-3 text-left font-semibold uppercase tracking-wider text-[11px] text-slate-500';
   const tdc = 'px-4 py-3';
 
-  const mvTone = (t: Movement['type']): 'emerald' | 'red' | 'slate' =>
+  const mvTone = (t: StockMovement['kind']): 'emerald' | 'red' | 'slate' =>
     t === 'Receipt' ? 'emerald' : t === 'Issue' ? 'red' : 'slate';
 
   return (
@@ -173,23 +201,20 @@ export default function PartDetailPage() {
               </div>
             </div>
             <div className="flex flex-wrap items-center gap-2">
-              <Button
-                variant="primary"
-                onClick={() => toast({ title: 'Reorder placed', description: `Draft PO created for ${part.name} (lead time ${part.leadTimeDays}d).`, tone: 'success' })}
-              >
-                Reorder now
+              {/*
+                "Issue to WO" is gone rather than kept as a stub: parts are
+                consumed by *completing* a work order, which draws them off the
+                shelf against the order's own parts list. A second, unlinked way
+                to issue stock would let the two disagree.
+              */}
+              <Button variant="primary" disabled={isPending} onClick={() => void reorder()}>
+                {isPending ? 'Drafting…' : 'Reorder now'}
               </Button>
-              <Button
-                variant="outline"
-                onClick={() => toast({ title: 'Adjust stock', description: `Opening stock adjustment for ${part.sku}.`, tone: 'info' })}
-              >
-                Adjust
+              <Button variant="outline" onClick={() => setDialog('adjust')}>
+                Adjust stock
               </Button>
-              <Button
-                variant="outline"
-                onClick={() => toast({ title: 'Issued to WO', description: `${part.sku} staged for issue to a work order.`, tone: 'info' })}
-              >
-                Issue to WO
+              <Button variant="outline" onClick={() => setDialog('edit')}>
+                Edit part
               </Button>
             </div>
           </div>
@@ -204,20 +229,37 @@ export default function PartDetailPage() {
           </div>
         </div>
 
-        {/* Sparkline card */}
+        {/* Stock level over the recorded movements */}
         <div className="glass-panel rounded-xl p-5 flex flex-col">
           <div className="flex items-center justify-between">
             <h2 className="text-base font-semibold text-slate-800">Stock level</h2>
-            <span className="text-xs text-slate-400">Last 8 periods</span>
+            <span className="text-xs text-slate-400">
+              {levels.length > 1 ? `Last ${levels.length} movements` : 'Not enough history'}
+            </span>
           </div>
-          <div className="mt-4 flex-1 flex flex-col justify-center">
-            <Sparkline values={levels} />
-          </div>
-          <div className="mt-3 flex items-center justify-between text-xs text-slate-500 tabular-nums">
-            <span>low {Math.min(...levels)}</span>
-            <span>now <span className="font-semibold text-slate-700">{part.onHand}</span></span>
-            <span>high {Math.max(...levels)}</span>
-          </div>
+
+          {/* Two points is the minimum that describes a direction. Below that
+              nothing is drawn: a line through one value would imply a trend the
+              ledger has no evidence for. */}
+          {levels.length > 1 ? (
+            <>
+              <div className="mt-4 flex-1 flex flex-col justify-center">
+                <Sparkline values={levels} />
+              </div>
+              <div className="mt-3 flex items-center justify-between text-xs text-slate-500 tabular-nums">
+                <span>low {Math.min(...levels)}</span>
+                <span>now <span className="font-semibold text-slate-700">{part.onHand}</span></span>
+                <span>high {Math.max(...levels)}</span>
+              </div>
+            </>
+          ) : (
+            <div className="mt-4 flex flex-1 flex-col items-center justify-center text-center">
+              <div className="font-heading text-3xl font-bold tabular-nums text-slate-900">{part.onHand}</div>
+              <p className="mt-1 text-xs text-slate-400">
+                on hand · a trend appears once this part has moved more than once
+              </p>
+            </div>
+          )}
         </div>
       </div>
 
@@ -225,33 +267,59 @@ export default function PartDetailPage() {
       <div className="glass-panel rounded-xl flex-1 overflow-hidden flex flex-col">
         <div className="px-4 py-3 border-b border-slate-200 flex items-center justify-between">
           <h2 className="text-base font-semibold text-slate-800">Stock movement</h2>
-          <span className="text-xs text-slate-400">{ledger.length} entries</span>
+          <span className="text-xs text-slate-400">{rows.length} entries</span>
         </div>
         <div className="flex-1 overflow-auto">
           <table className="w-full text-left text-sm whitespace-nowrap">
             <thead className="bg-slate-50 sticky top-0 z-10 border-b border-slate-200">
               <tr>
-                <th className={th}>Period</th>
+                <th className={th}>When</th>
                 <th className={th}>Type</th>
                 <th className={th}>Qty Δ</th>
+                <th className={th}>After</th>
+                <th className={th}>Reason</th>
                 <th className={th}>Reference</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
-              {ledger.map((m, i) => (
-                <tr key={i} className="hover:bg-slate-50 transition-colors">
-                  <td className={cn(tdc, 'text-slate-600')}>{m.period}</td>
-                  <td className={tdc}><Badge tone={mvTone(m.type)}>{m.type}</Badge></td>
-                  <td className={cn(tdc, 'tabular-nums font-medium', m.qty > 0 ? 'text-emerald-600' : m.qty < 0 ? 'text-red-600' : 'text-slate-500')}>
-                    {m.qty > 0 ? `+${m.qty}` : m.qty}
+              {rows.map((m) => (
+                <tr key={m.id} className="hover:bg-slate-50 transition-colors">
+                  <td className={cn(tdc, 'text-slate-600')}>{relTime(m.at)}</td>
+                  <td className={tdc}><Badge tone={mvTone(m.kind)}>{m.kind}</Badge></td>
+                  <td className={cn(tdc, 'tabular-nums font-medium', m.delta > 0 ? 'text-emerald-600' : m.delta < 0 ? 'text-red-600' : 'text-slate-500')}>
+                    {m.delta > 0 ? `+${m.delta}` : m.delta}
                   </td>
-                  <td className={cn(tdc, 'font-mono text-xs text-slate-500')}>{m.ref}</td>
+                  <td className={cn(tdc, 'tabular-nums text-slate-700')}>{m.after}</td>
+                  <td className={cn(tdc, 'text-slate-600')}>
+                    {m.reason}
+                    {m.actor && <span className="text-slate-400"> · {m.actor}</span>}
+                  </td>
+                  <td className={cn(tdc, 'font-mono text-xs text-slate-500')}>{m.reference || '—'}</td>
                 </tr>
               ))}
             </tbody>
           </table>
+
+          {ledgerLoading && (
+            <div className="space-y-2 p-4">
+              {[0, 1, 2].map((i) => (
+                <Skeleton key={i} className="h-8" />
+              ))}
+            </div>
+          )}
+
+          {!ledgerLoading && rows.length === 0 && (
+            <EmptyState
+              icon="📒"
+              title="No movements recorded"
+              description="Every receipt, issue and adjustment is written here as it happens. Nothing has moved this part since the ledger started."
+            />
+          )}
         </div>
       </div>
+
+      {dialog === 'adjust' && <AdjustStockDialog part={part} onClose={() => setDialog(null)} />}
+      {dialog === 'edit' && <PartDialog existing={part} onClose={() => setDialog(null)} />}
     </div>
   );
 }

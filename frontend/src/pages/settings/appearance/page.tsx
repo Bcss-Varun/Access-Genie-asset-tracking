@@ -1,33 +1,23 @@
-import { useState } from 'react';
+import { Link } from 'react-router-dom';
 import { PageHeader } from '@/components/ui/primitives';
 import { Button } from '@/components/ui/Button';
 import { SettingsNav } from '@/components/settings/SettingsNav';
 import { useTheme } from '@/components/providers/ThemeProvider';
-import { useToast } from '@/components/providers/ToastProvider';
 import { cn } from '@/lib/utils';
 
-type Density = 'comfortable' | 'compact';
-
-const ACCENTS: { id: string; label: string; hex: string }[] = [
-  { id: 'sky', label: 'Sky', hex: '#4f46e5' },
-  { id: 'indigo', label: 'Indigo', hex: '#4f46e5' },
-  { id: 'emerald', label: 'Emerald', hex: '#059669' },
-  { id: 'violet', label: 'Violet', hex: '#7c3aed' },
-  { id: 'rose', label: 'Rose', hex: '#e11d48' },
-  { id: 'amber', label: 'Amber', hex: '#d97706' },
-];
-
+/**
+ * Appearance.
+ *
+ * The theme here is real and always was — it writes through to `/me/preferences`
+ * and follows you to another machine. Nothing else on the page was: there is no
+ * save button now because choosing a theme *is* the save.
+ */
 export default function AppearanceSettingsPage() {
   const { theme, toggle } = useTheme();
-  const { toast } = useToast();
-  const [density, setDensity] = useState<Density>('comfortable');
-  const [accent, setAccent] = useState('sky');
 
   const setTheme = (target: 'light' | 'dark') => {
     if (theme !== target) toggle();
   };
-
-  const activeAccent = ACCENTS.find((a) => a.id === accent) ?? ACCENTS[0];
 
   return (
     <div className="h-full flex flex-col space-y-6">
@@ -72,64 +62,23 @@ export default function AppearanceSettingsPage() {
         </div>
       </div>
 
-      {/* Density */}
-      <div className="glass-panel rounded-xl p-5 space-y-4">
-        <div>
-          <h3 className="font-heading font-semibold text-slate-800">Density</h3>
-          <p className="text-sm text-slate-500 mt-0.5">Control the vertical spacing of tables and lists.</p>
-        </div>
-        <div className="inline-flex rounded-lg border border-slate-200 p-1 bg-slate-50">
-          {(['comfortable', 'compact'] as const).map((d) => (
-            <button
-              key={d}
-              type="button"
-              onClick={() => setDensity(d)}
-              className={cn(
-                'px-4 py-1.5 rounded-md text-sm font-medium capitalize transition-colors',
-                density === d ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500 hover:text-slate-800',
-              )}
-            >
-              {d}
-            </button>
-          ))}
-        </div>
+      {/*
+        Density and accent controls used to live here. Neither did anything —
+        density was never applied to a single table, and the accent swatches
+        were labelled "a preview only". The organisation's colour is a real,
+        stored setting, so this points at where it actually lives rather than
+        offering a second copy that disagrees with it.
+      */}
+      <div className="glass-panel rounded-xl p-5">
+        <h3 className="font-heading font-semibold text-slate-800">Colour</h3>
+        <p className="mt-0.5 text-sm text-slate-500">
+          The accent colour is set for the whole organisation, not per person, so everyone sees the same product.
+        </p>
+        <Link to="/admin/branding" className="mt-3 inline-block">
+          <Button variant="outline" size="sm">Open branding settings</Button>
+        </Link>
       </div>
 
-      {/* Accent */}
-      <div className="glass-panel rounded-xl p-5 space-y-4">
-        <div className="flex items-center justify-between flex-wrap gap-2">
-          <div>
-            <h3 className="font-heading font-semibold text-slate-800">Accent color</h3>
-            <p className="text-sm text-slate-500 mt-0.5">A preview only — the shipped demo uses the Sky palette.</p>
-          </div>
-          <Button variant="primary" onClick={() => toast({ title: 'Appearance saved', description: `Theme: ${theme}, density: ${density}, accent: ${activeAccent.label}.`, tone: 'success' })}>
-            Save
-          </Button>
-        </div>
-        <div className="flex flex-wrap items-center gap-3">
-          {ACCENTS.map((a) => (
-            <button
-              key={a.id}
-              type="button"
-              aria-label={a.label}
-              onClick={() => setAccent(a.id)}
-              className={cn('h-9 w-9 rounded-full transition-transform hover:scale-105', accent === a.id && 'ring-2 ring-offset-2 ring-slate-400')}
-              style={{ backgroundColor: a.hex }}
-            >
-              {accent === a.id && <span className="text-white text-sm">✓</span>}
-            </button>
-          ))}
-        </div>
-        {/* Live preview */}
-        <div className="rounded-xl border border-slate-200 p-4 flex items-center gap-3">
-          <span className="inline-flex items-center justify-center h-10 w-10 rounded-full text-white font-bold" style={{ backgroundColor: activeAccent.hex }}>AG</span>
-          <div className="flex-1">
-            <div className="h-2.5 w-40 rounded-full mb-2" style={{ backgroundColor: activeAccent.hex }} />
-            <div className="h-2 w-24 rounded-full bg-slate-200" />
-          </div>
-          <span className="rounded-lg px-3 py-1.5 text-sm font-medium text-white" style={{ backgroundColor: activeAccent.hex }}>Primary</span>
-        </div>
-      </div>
     </div>
   );
 }

@@ -8,6 +8,8 @@ import { useToast } from '@/components/providers/ToastProvider';
 import { useRegistry } from '@/components/providers/RegistryProvider';
 import { useSavedViews } from '@/components/providers/SavedViewsProvider';
 import { LENS_FILTERS, describeView, viewToQuery, type Lens, type SavedView } from '@/lib/asset-views';
+import { BulkActionDialog, type BulkAction } from '@/components/assets/BulkActionDialog';
+import { downloadCsv } from '@/api/configuration';
 import { relTime, cn } from '@/lib/utils';
 
 const categoryEmoji = (c: Asset['category']) =>
@@ -45,6 +47,7 @@ export default function AssetRegistryPage() {
   const [activeView, setActiveView] = useState('All Assets');
   const [naming, setNaming] = useState(false);
   const [viewName, setViewName] = useState('');
+  const [bulkAction, setBulkAction] = useState<BulkAction | null>(null);
 
   // Shareable state: the whole view — including the lens — lives in the URL, so
   // sending the link sends the view. This is what a "group" becomes.
@@ -146,6 +149,42 @@ export default function AssetRegistryPage() {
     toast({ title: `“${name}” saved`, description: describeView({ id: '', name, status, category, search, lens }), tone: 'success' });
   };
 
+  /**
+   * Download what is on screen.
+   *
+   * Takes the rows it is handed rather than re-querying: "export this" means
+   * the assets the user has filtered to, and only the browser knows what those
+   * are.
+   */
+  const exportCsv = (rows: Asset[]) => {
+    const count = downloadCsv(
+      `assets-${new Date().toISOString().slice(0, 10)}.csv`,
+      rows.map((a) => ({
+        'Asset ID': a.id,
+        Name: a.name,
+        Category: a.category,
+        'Serial number': a.serialNumber,
+        Status: a.status,
+        Criticality: a.criticality ?? '',
+        Custodian: a.custodian,
+        Location: a.location?.name ?? '',
+        Health: a.healthScore,
+        Risk: a.riskScore ?? '',
+        'Utilization %': a.utilization ?? '',
+        'Tracking ID': a.trackingId ?? '',
+        'Purchase date': a.purchaseDate?.slice(0, 10) ?? '',
+        'Purchase price': a.purchasePrice,
+        'Book value': a.bookValue ?? '',
+      })),
+    );
+
+    toast({
+      title: count > 0 ? `${count} asset${count === 1 ? '' : 's'} exported` : 'Nothing to export',
+      description: count > 0 ? 'Downloaded as CSV.' : 'No assets match the current filters.',
+      tone: count > 0 ? 'success' : 'info',
+    });
+  };
+
   const shareView = () => {
     const qs = viewToQuery({ search, status, category, lens });
     const url = `${window.location.origin}/assets${qs ? `?${qs}` : ''}`;
@@ -169,7 +208,7 @@ export default function AssetRegistryPage() {
         breadcrumb={[{ label: 'Assets' }, { label: 'Registry' }]}
         actions={
           <>
-            <Button variant="outline" onClick={() => toast({ title: 'Export started', description: `${filtered.length} assets → CSV`, tone: 'success' })}>Export CSV</Button>
+            <Button variant="outline" onClick={() => exportCsv(filtered)}>Export CSV</Button>
             {/* Straight to the Add Asset page. The source picker there IS this
                 menu — better presented, and asked once instead of twice. */}
             <Link to="/assets/new">
@@ -303,8 +342,34 @@ export default function AssetRegistryPage() {
               >
                 Print Labels
               </Link>
-              {['Export', 'Assign Custodian', 'Start Transfer', 'Apply Class Policy', 'Retire'].map((a) => (
-                <button key={a} onClick={() => toast({ title: a, description: `${selected.size} assets`, tone: 'info' })} className="rounded-md px-2.5 py-1 text-xs font-medium text-primary-700 hover:bg-primary-100">{a}</button>
+              <button
+                onClick={() => exportCsv(assets.filter((a) => selected.has(a.id)))}
+                className="rounded-md px-2.5 py-1 text-xs font-medium text-primary-700 hover:bg-primary-100"
+              >
+                Export
+              </button>
+              {/*
+                Each of these is a real write against every selected asset. The
+                two the old bar offered and this one does not — "Start Transfer"
+                and "Apply Class Policy" — live in Operations ▸ Transfers and on
+                the class itself; a second path to them here would give the
+                estate two ways to do one thing.
+              */}
+              {(
+                [
+                  ['custodian', 'Assign Custodian'],
+                  ['location', 'Move Location'],
+                  ['criticality', 'Set Criticality'],
+                  ['status', 'Change Status'],
+                ] as const
+              ).map(([action, label]) => (
+                <button
+                  key={action}
+                  onClick={() => setBulkAction(action)}
+                  className="rounded-md px-2.5 py-1 text-xs font-medium text-primary-700 hover:bg-primary-100"
+                >
+                  {label}
+                </button>
               ))}
             </div>
             <button onClick={() => setSelected(new Set())} className="ml-auto text-xs text-slate-500 hover:text-slate-800">Clear</button>
@@ -397,6 +462,17 @@ export default function AssetRegistryPage() {
           </div>
         )}
       </div>
+
+      {bulkAction && (
+        <BulkActionDialog
+          action={bulkAction}
+          ids={[...selected]}
+          onClose={() => {
+            setBulkAction(null);
+            setSelected(new Set());
+          }}
+        />
+      )}
     </div>
   );
 }

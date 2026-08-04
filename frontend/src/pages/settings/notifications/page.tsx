@@ -3,6 +3,7 @@ import { PageHeader } from '@/components/ui/primitives';
 import { Button } from '@/components/ui/Button';
 import { SettingsNav } from '@/components/settings/SettingsNav';
 import { useToast } from '@/components/providers/ToastProvider';
+import { preferencesApi, usePreferenceMutation, usePreferences } from '@/api/preferences';
 import { cn } from '@/lib/utils';
 
 type Channel = 'email' | 'push' | 'inApp';
@@ -51,15 +52,42 @@ function Toggle({ on, onClick, label }: { on: boolean; onClick: () => void; labe
 
 export default function NotificationSettingsPage() {
   const { toast } = useToast();
-  const [prefs, setPrefs] = useState<Record<string, Record<Channel, boolean>>>(
-    () => Object.fromEntries(CATEGORIES.map((c) => [c.id, { ...c.defaults }])),
-  );
-  const [digest, setDigest] = useState('Daily digest');
+  const { data: stored } = usePreferences();
+  const save = usePreferenceMutation(preferencesApi.update);
+
+  /**
+   * Stored choices layered over the per-category defaults.
+   *
+   * A category the user has never touched falls back to its default rather
+   * than to "off" — an absent key means "not chosen", not "silence me".
+   */
+  const [prefs, setPrefs] = useState<Record<string, Record<Channel, boolean>> | null>(null);
+  const [digestChoice, setDigestChoice] = useState<string | null>(null);
+
+  const effective =
+    prefs ??
+    Object.fromEntries(CATEGORIES.map((c) => [c.id, { ...c.defaults, ...(stored?.notifications?.[c.id] ?? {}) }]));
+  const digest = digestChoice ?? stored?.digest ?? 'Daily digest';
+  const dirty = prefs !== null || digestChoice !== null;
 
   const toggle = (catId: string, ch: Channel) =>
-    setPrefs((prev) => ({ ...prev, [catId]: { ...prev[catId], [ch]: !prev[catId][ch] } }));
+    setPrefs({ ...effective, [catId]: { ...(effective[catId] as Record<Channel, boolean>), [ch]: !effective[catId]?.[ch] } });
 
-  const onSave = () => toast({ title: 'Preferences saved', description: 'Your notification settings have been updated.', tone: 'success' });
+  const setDigest = (value: string) => setDigestChoice(value);
+
+  const onSave = () => {
+    save.mutate([{ notifications: effective as Record<string, { email: boolean; push: boolean; inApp: boolean }>, digest }], {
+      onSuccess: () => {
+        // Cleared so the fields go back to reading the stored values, which are
+        // now the ones just written.
+        setPrefs(null);
+        setDigestChoice(null);
+        toast({ title: 'Preferences saved', description: 'Applied to every device you sign in on.', tone: 'success' });
+      },
+      onError: () =>
+        toast({ title: 'Could not save preferences', description: 'The request failed. Please try again.', tone: 'error' }),
+    });
+  };
 
   return (
     <div className="h-full flex flex-col space-y-6">
@@ -67,7 +95,11 @@ export default function NotificationSettingsPage() {
         title="Notifications"
         subtitle="Choose how and where Access Genie reaches you for each type of event."
         breadcrumb={[{ label: 'Settings', href: '/settings/profile' }, { label: 'Notifications' }]}
-        actions={<Button variant="primary" onClick={onSave}>Save preferences</Button>}
+        actions={
+          <Button variant="primary" disabled={save.isPending || !dirty} onClick={onSave}>
+            {save.isPending ? 'Saving…' : dirty ? 'Save preferences' : 'Saved'}
+          </Button>
+        }
       />
 
       <SettingsNav />
@@ -93,7 +125,11 @@ export default function NotificationSettingsPage() {
                   {CHANNELS.map((c) => (
                     <td key={c.key} className="px-4 py-3.5 text-center">
                       <div className="flex justify-center">
-                        <Toggle on={prefs[cat.id][c.key]} onClick={() => toggle(cat.id, c.key)} label={`${cat.label} — ${c.label}`} />
+                        <Toggle
+                          on={effective[cat.id]?.[c.key] ?? false}
+                          onClick={() => toggle(cat.id, c.key)}
+                          label={`${cat.label} — ${c.label}`}
+                        />
                       </div>
                     </td>
                   ))}

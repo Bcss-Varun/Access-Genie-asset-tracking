@@ -443,17 +443,27 @@ export default function LabelPrintingPage() {
           breadcrumb={[{ label: 'Assets', href: '/assets' }, { label: 'Labels' }]}
           actions={
             <>
+              {/*
+                The browser's own print dialog, which offers "Save as PDF" on
+                every platform. There is no PDF library here, and shipping one
+                to reproduce a layout the print stylesheet already renders
+                correctly would be a worse file from more code.
+              */}
               <Button
                 variant="outline"
-                onClick={() =>
+                disabled={!selectedAssets.length}
+                onClick={() => {
                   toast({
-                    title: 'Preparing PDF',
-                    description: `${selectedAssets.length} label${selectedAssets.length === 1 ? '' : 's'} queued for export`,
+                    title: 'Opening the print dialog',
+                    description: 'Choose "Save as PDF" as the destination to get a file.',
                     tone: 'info',
-                  })
-                }
+                  });
+                  // Deferred a frame so the toast paints before the modal print
+                  // dialog blocks the main thread.
+                  requestAnimationFrame(() => window.print());
+                }}
               >
-                Download PDF
+                Save as PDF
               </Button>
               <Button onClick={runPrint} disabled={!selectedAssets.length}>
                 🖨 Print {selectedAssets.length > 0 ? `(${selectedAssets.length})` : ''}

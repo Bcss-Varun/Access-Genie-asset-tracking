@@ -30,6 +30,7 @@ import { categoryEmoji } from '@/lib/tracking-ui';
 import { facilityBySlug, journeyForAsset, journeys, presenceById } from '@/lib/tracking-data';
 import { cn, dayKey, formatDate, formatDateTime, formatTime, relTime } from '@/lib/utils';
 import type { JourneyEventKind, JourneyStop } from '@access-genie/shared';
+import { downloadCsv } from '@/api/configuration';
 
 // ── How each kind of event reads on the line ─────────────────────────────────
 // A Gap is the only one drawn as an absence: hollow dot, dashed connector, muted
@@ -176,6 +177,18 @@ export default function AssetJourneyPage() {
   const stops = journey?.stops ?? [];
   const presence = openId ? presenceById(openId) : undefined;
 
+
+  /** Download what is on screen — built here because only the browser knows the filtered rows. */
+  const exportRows = (name: string, rows: Record<string, unknown>[]) => {
+    const n = downloadCsv(`${name}-${new Date().toISOString().slice(0, 10)}.csv`, rows);
+    toast({
+      title: n > 0 ? `${n} row${n === 1 ? '' : 's'} exported` : 'Nothing to export',
+      description: n > 0 ? 'Downloaded as CSV.' : 'Nothing matches the current filters.',
+      tone: n > 0 ? 'success' : 'info',
+    });
+  };
+
+
   return (
     <div className="space-y-5 pb-4">
       <PageHeader
@@ -188,11 +201,26 @@ export default function AssetJourneyPage() {
             <ScopePicker value={scope} onChange={setScope} />
             <Button
               variant="outline"
-              onClick={() => toast({
-                title: 'Journey export queued',
-                description: `${listed.length} trails with their stops and timestamps`,
-                tone: 'success',
-              })}
+              onClick={() =>
+                // One row per stop, not per trail: a journey is only useful in
+                // a spreadsheet if each place it stopped is its own line.
+                exportRows(
+                  'asset-journeys',
+                  listed.flatMap((j) =>
+                    j.stops.map((stop, i) => ({
+                      'Asset ID': j.assetId,
+                      Asset: j.assetName,
+                      Stop: i + 1,
+                      Zone: stop.zone,
+                      At: stop.at,
+                      Event: stop.kind,
+                      'Dwell (min)': stop.dwellMin ?? '',
+                      Actor: stop.actor ?? '',
+                      Note: stop.note ?? '',
+                    })),
+                  ),
+                )
+              }
             >
               ⤓ Export
             </Button>
@@ -323,11 +351,22 @@ export default function AssetJourneyPage() {
             </Link>
             <Button
               size="sm" variant="ghost" className="ml-auto"
-              onClick={() => toast({
-                title: 'Trail exported',
-                description: `${journey.assetName} · ${journey.stops.length} stops with timestamps`,
-                tone: 'success',
-              })}
+              onClick={() =>
+                exportRows(
+                  `trail-${journey.assetId}`,
+                  journey.stops.map((stop, i) => ({
+                    'Asset ID': journey.assetId,
+                    Asset: journey.assetName,
+                    Stop: i + 1,
+                    Zone: stop.zone,
+                    At: stop.at,
+                    Event: stop.kind,
+                    'Dwell (min)': stop.dwellMin ?? '',
+                    Actor: stop.actor ?? '',
+                    Note: stop.note ?? '',
+                  })),
+                )
+              }
             >
               ⤓ Export trail
             </Button>

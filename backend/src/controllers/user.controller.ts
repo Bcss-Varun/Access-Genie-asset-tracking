@@ -3,7 +3,9 @@ import { validatedQuery } from '../middleware/validate.js';
 import { ApiError } from '../utils/ApiError.js';
 import { asyncHandler } from '../utils/asyncHandler.js';
 import { sendData, sendList } from '../utils/response.js';
+import type { ModuleKey, RoleId } from '@access-genie/shared';
 import * as userService from '../services/user.service.js';
+import * as roleGrantService from '../services/roleGrant.service.js';
 import { recordAudit } from '../services/audit.service.js';
 import type { CreateUserInput, UpdateUserInput } from '../validators/user.validator.js';
 import type { ListQueryInput } from '../validators/common.js';
@@ -17,7 +19,25 @@ export const list = asyncHandler(async (_req: Request, res: Response) => {
 });
 
 export const roles = asyncHandler(async (_req: Request, res: Response) => {
-  sendData(res, userService.listRoles());
+  sendData(res, await roleGrantService.listRoles());
+});
+
+/** Widen or narrow what a role may reach. Signs out everyone holding it. */
+export const updateRoleGrants = asyncHandler(async (req: Request, res: Response) => {
+  const id = req.params.id as RoleId;
+  const view = await roleGrantService.setRoleGrants(id, req.body.modules as ModuleKey[]);
+
+  recordAudit(req, { action: 'role.grants', target: id, category: 'Administration', metadata: { modules: view.modules } });
+  sendData(res, view);
+});
+
+/** Return a role to the shipped matrix. */
+export const resetRoleGrants = asyncHandler(async (req: Request, res: Response) => {
+  const id = req.params.id as RoleId;
+  const view = await roleGrantService.resetRoleGrants(id);
+
+  recordAudit(req, { action: 'role.reset', target: id, category: 'Administration' });
+  sendData(res, view);
 });
 
 export const getOne = asyncHandler(async (req: Request, res: Response) => {

@@ -3,7 +3,8 @@ import { PageHeader, Badge, Avatar } from '@/components/ui/primitives';
 import { Button } from '@/components/ui/Button';
 import { SettingsNav } from '@/components/settings/SettingsNav';
 import { useSession } from '@/components/providers/SessionProvider';
-import { useToast } from '@/components/providers/ToastProvider';
+import { useMutate } from '@/api/mutate';
+import { profileApi } from '@/api/configuration';
 
 const TIMEZONES = [
   'Asia/Kolkata',
@@ -18,18 +19,37 @@ const inputCls =
 const labelCls = 'block text-sm font-medium text-slate-700 mb-1.5';
 
 export default function ProfileSettingsPage() {
-  const { session } = useSession();
+  const { session, refresh } = useSession();
   const { user, role } = session;
-  const { toast } = useToast();
+  const { run, isPending } = useMutate();
 
+  // Seeded from the session, not from hard-coded strings: the phone number and
+  // timezone here used to be literals, so every account showed the same ones.
   const [name, setName] = useState(user.name);
   const [title, setTitle] = useState(user.title);
-  const [phone, setPhone] = useState('+91 98490 55148');
-  const [timezone, setTimezone] = useState('Asia/Kolkata');
+  const [phone, setPhone] = useState(user.phone ?? '');
+  const [timezone, setTimezone] = useState(user.timezone ?? 'Asia/Kolkata');
 
-  const onSave = (e: React.FormEvent) => {
+  const dirty =
+    name !== user.name || title !== user.title || phone !== (user.phone ?? '') || timezone !== (user.timezone ?? 'Asia/Kolkata');
+
+  const onSave = async (e: React.FormEvent) => {
     e.preventDefault();
-    toast({ title: 'Profile saved', description: 'Your profile changes have been applied.', tone: 'success' });
+    const saved = await run(profileApi.update({ name: name.trim(), title: title.trim(), phone: phone.trim(), timezone }), {
+      success: 'Profile saved',
+      successDetail: 'Your name and initials update everywhere they appear.',
+      describe: 'save your profile',
+    });
+    // The header, the avatar and every "assigned to" label read the session,
+    // so it is re-read rather than left showing the previous name.
+    if (saved) await refresh();
+  };
+
+  const reset = () => {
+    setName(user.name);
+    setTitle(user.title);
+    setPhone(user.phone ?? '');
+    setTimezone(user.timezone ?? 'Asia/Kolkata');
   };
 
   return (
@@ -56,7 +76,7 @@ export default function ProfileSettingsPage() {
       </div>
 
       {/* Editable form */}
-      <form onSubmit={onSave} className="glass-panel rounded-xl p-5 space-y-5">
+      <form onSubmit={(e) => void onSave(e)} className="glass-panel rounded-xl p-5 space-y-5">
         <h3 className="font-heading font-semibold text-slate-800">Personal details</h3>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
           <div>
@@ -88,14 +108,12 @@ export default function ProfileSettingsPage() {
           </div>
         </div>
         <div className="flex items-center justify-end gap-2 pt-2 border-t border-slate-100">
-          <Button
-            type="button"
-            variant="outline"
-            onClick={() => { setName(user.name); setTitle(user.title); setPhone('+91 98490 55148'); setTimezone('Asia/Kolkata'); }}
-          >
+          <Button type="button" variant="outline" disabled={isPending || !dirty} onClick={reset}>
             Reset
           </Button>
-          <Button type="submit" variant="primary">Save changes</Button>
+          <Button type="submit" variant="primary" disabled={isPending || !dirty || name.trim().length < 2}>
+            {isPending ? 'Saving…' : dirty ? 'Save changes' : 'Saved'}
+          </Button>
         </div>
       </form>
     </div>

@@ -4,7 +4,10 @@ import { allInspections } from '@/lib/dataset';
 import type { Inspection, InspectionStatus } from '@access-genie/shared';
 import { PageHeader, KpiCard, Badge, EmptyState } from '@/components/ui/primitives';
 import { Button } from '@/components/ui/Button';
-import { useToast } from '@/components/providers/ToastProvider';
+import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
+import { InspectionDialog } from '@/components/maintenance/InspectionDialog';
+import { useMutate } from '@/api/mutate';
+import { inspectionsApi } from '@/api/maintenance';
 import { cn, relTime } from '@/lib/utils';
 
 const STATUSES: InspectionStatus[] = ['Scheduled', 'In Progress', 'Passed', 'Failed'];
@@ -13,9 +16,25 @@ const statusTone = (s: InspectionStatus): 'emerald' | 'red' | 'amber' | 'slate' 
   s === 'Passed' ? 'emerald' : s === 'Failed' ? 'red' : s === 'In Progress' ? 'amber' : 'slate';
 
 export default function InspectionsPage() {
-  const { toast } = useToast();
-  const [inspections] = useState<Inspection[]>(() => allInspections.map((i) => ({ ...i })));
+  const { run, isPending } = useMutate();
   const [filter, setFilter] = useState<'All' | InspectionStatus>('All');
+  const [dialog, setDialog] = useState<{ mode: 'new' } | { mode: 'edit'; inspection: Inspection } | null>(null);
+  const [deleting, setDeleting] = useState<Inspection | null>(null);
+
+  // Read the hydrated binding directly rather than snapshotting into state: a
+  // copy taken on first render never sees the refetch that follows a write, so
+  // a newly scheduled inspection would not appear until reload.
+  const inspections = allInspections;
+
+  const remove = async () => {
+    if (!deleting) return;
+    await run(inspectionsApi.remove(deleting.id), {
+      success: 'Inspection removed',
+      successDetail: deleting.title,
+      describe: 'remove that inspection',
+    });
+    setDeleting(null);
+  };
 
   const count = (s: InspectionStatus) => inspections.filter((i) => i.status === s).length;
   const filtered = filter === 'All' ? inspections : inspections.filter((i) => i.status === filter);
@@ -34,15 +53,7 @@ export default function InspectionsPage() {
         title="Inspections"
         subtitle="Scheduled and completed asset inspections across all facilities."
         breadcrumb={[{ label: 'Maintenance', href: '/maintenance' }, { label: 'Inspections' }]}
-        actions={
-          <Button
-            onClick={() =>
-              toast({ title: 'New inspection', description: 'Inspection scheduler opened (demo).', tone: 'info' })
-            }
-          >
-            + New Inspection
-          </Button>
-        }
+        actions={<Button onClick={() => setDialog({ mode: 'new' })}>+ New Inspection</Button>}
       />
 
       {/* KPI row */}
@@ -108,9 +119,17 @@ export default function InspectionsPage() {
                   <td className="px-6 py-4 text-slate-500">{relTime(i.dueDate)}</td>
                   <td className="px-6 py-4 text-slate-600">{i.inspector}</td>
                   <td className="px-6 py-4 text-right">
-                    <Link to={`/inspections/${i.id}`} className="text-primary-600 hover:text-primary-700 text-xs font-medium">
-                      Open →
-                    </Link>
+                    <div className="flex items-center justify-end gap-1">
+                      <Link to={`/inspections/${i.id}`} className="px-2 text-xs font-medium text-primary-600 hover:text-primary-700">
+                        Open →
+                      </Link>
+                      <Button size="sm" variant="ghost" onClick={() => setDialog({ mode: 'edit', inspection: i })}>
+                        Edit
+                      </Button>
+                      <Button size="sm" variant="ghost" onClick={() => setDeleting(i)}>
+                        Delete
+                      </Button>
+                    </div>
                   </td>
                 </tr>
               ))}
@@ -119,12 +138,31 @@ export default function InspectionsPage() {
         </div>
         {filtered.length === 0 && (
           <EmptyState
-            variant="no-results"
-            title="No inspections match this filter"
-            description="Try selecting a different status."
+            variant={inspections.length === 0 ? 'empty' : 'no-results'}
+            icon="🔍"
+            title={inspections.length === 0 ? 'No inspections scheduled' : 'No inspections match this filter'}
+            description={
+              inspections.length === 0
+                ? 'An inspection is a dated, assignable set of checks against one asset. Scheduling one puts it in somebody\u2019s field queue.'
+                : 'Try selecting a different status.'
+            }
+            action={inspections.length === 0 ? <Button onClick={() => setDialog({ mode: 'new' })}>+ New Inspection</Button> : undefined}
           />
         )}
       </div>
+
+      {dialog?.mode === 'new' && <InspectionDialog onClose={() => setDialog(null)} />}
+      {dialog?.mode === 'edit' && <InspectionDialog existing={dialog.inspection} onClose={() => setDialog(null)} />}
+      {deleting && (
+        <ConfirmDialog
+          title={`Remove ${deleting.title}?`}
+          description="It disappears from the field queue. Any results already recorded against it go with it."
+          confirmLabel="Remove"
+          busy={isPending}
+          onConfirm={() => void remove()}
+          onCancel={() => setDeleting(null)}
+        />
+      )}
     </div>
   );
 }

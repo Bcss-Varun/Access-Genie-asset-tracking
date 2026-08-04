@@ -2,6 +2,9 @@ import type { FilterQuery } from 'mongoose';
 import type { ApiMeta, WorkOrderStatus } from '@access-genie/shared';
 import { Activity, Asset, WorkOrder, nextId, type WorkOrderDoc } from '../models/index.js';
 import { ApiError } from '../utils/ApiError.js';
+import { logger } from '../config/logger.js';
+import { consumeParts } from './inventory.service.js';
+import { markEstateChanged } from './derivation.scheduler.js';
 import { csvFilter, escapeRegex, paginate, parsePagination } from '../utils/query.js';
 import type { CreateWorkOrderInput, UpdateWorkOrderInput, WorkOrderListQuery } from '../validators/workOrder.validator.js';
 
@@ -126,6 +129,7 @@ export async function changeWorkOrderStatus(
   const previous = workOrder.status;
   workOrder.status = status;
   if (note) workOrder.comments.push({ author: actor, text: note, at: new Date() });
+  if (status === 'Completed') workOrder.completedAt = new Date();
   await workOrder.save();
 
   await Activity.create({
@@ -135,6 +139,37 @@ export async function changeWorkOrderStatus(
     actor,
     timestamp: new Date(),
   });
+
+  /*
+   * Completing the work is what takes the parts off the shelf.
+   *
+   * Not when they are added to the order — a planner listing what a job will
+   * need has not used anything yet, and decrementing then would make stock
+   * wrong for every job that gets planned and cancelled. Completion is the
+   * point at which the parts are known to be physically gone.
+   *
+   * Short stock is reported, not enforced: see consumeParts for why a
+   * technician must always be able to close the job.
+   */
+  if (status === 'Completed' && workOrder.parts.length > 0) {
+    const shortfalls = (
+      await consumeParts(
+        workOrder.parts.map((p) => ({ sku: p.sku, qty: p.qty })),
+        `work order ${id}`,
+      )
+    ).filter((r) => r.shortfall);
+
+    if (shortfalls.length > 0) {
+      logger.warn('Work order consumed more stock than was recorded', {
+        workOrder: id,
+        shortfalls: shortfalls.map((s) => `${s.sku} short by ${s.shortfall}`).join(', '),
+      });
+    }
+  }
+
+  // Closing a corrective order changes the asset's health, and closing a PM
+  // clears an overdue finding.
+  markEstateChanged('work-order-status');
 
   return workOrder.toObject();
 }

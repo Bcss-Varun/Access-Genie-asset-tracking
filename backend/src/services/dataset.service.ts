@@ -53,8 +53,11 @@ import {
   WorkOrder,
   Zone,
   buildScopeTree,
+  ChecklistTemplate,
+  ReportSubscription,
 } from '../models/index.js';
 import { listAssetClasses } from './assetClass.service.js';
+import { getOrgSettings } from './configuration.service.js';
 import { getDashboardSummary } from './dashboard.service.js';
 import { aliasId } from '../utils/response.js';
 
@@ -148,6 +151,9 @@ export async function getDataset(modules: ModuleKey[], userId: string): Promise<
     helpArticles,
     helpCategories,
     unknownTagReads,
+    checklistTemplates,
+    reportSubscriptions,
+    orgSettings,
   ] = await Promise.all([
     can('assets') ? Asset.find().sort({ _id: 1 }).lean() : empty,
     can('assets') ? listAssetClasses() : empty,
@@ -227,6 +233,13 @@ export async function getDataset(modules: ModuleKey[], userId: string): Promise<
     // unexplained reads, so a registration closes that exception rather than
     // creating a second, unrelated list.
     can('assets') ? UnknownDetection.find({ state: { $in: ['New', 'Investigating'] } }).sort({ lastSeen: -1 }).lean() : empty,
+
+    // Organisation configuration: the checklist library, standing report
+    // deliveries, and the tenant's own identity. Settings are ungated — the
+    // shell renders the organisation's name and colours for everyone.
+    can('maintenance') ? ChecklistTemplate.find().sort({ name: 1 }).lean() : empty,
+    can('analytics') ? ReportSubscription.find().sort({ reportName: 1 }).lean() : empty,
+    getOrgSettings(),
   ]);
 
   // The aggregate figures the charts read — a fleet-wide utilization trend and
@@ -295,6 +308,9 @@ export async function getDataset(modules: ModuleKey[], userId: string): Promise<
     helpArticles: aliasId(helpArticles, 'slug'),
     helpCategories,
     unknownTagReads,
+    checklistTemplates,
+    reportSubscriptions,
+    orgSettings,
     scopeTree: buildScopeTree(scopeNodes),
     observedAt: new Date().toISOString(),
   };

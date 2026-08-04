@@ -25,6 +25,9 @@ import type {
   AlertRule,
   AnomalyEvent,
   ApprovalWorkflow,
+  ChecklistTemplate,
+  ReportSubscription,
+  OrgSettings,
   Asset,
   AssetClass,
   AssetDoc,
@@ -142,6 +145,10 @@ export interface Dataset {
   helpArticles: HelpArticle[];
   helpCategories: HelpCategory[];
   unknownTagReads: UnknownDetection[];
+  checklistTemplates: ChecklistTemplate[];
+  reportSubscriptions: ReportSubscription[];
+  /** A singleton, not a list — the tenant's own identity and formatting. */
+  orgSettings: OrgSettings;
   users: PublicUser[];
   scopeTree: ScopeNode | null;
   observedAt: string;
@@ -199,6 +206,29 @@ export let allPendingScans: PendingScan[] = [];
 export let allHelpArticles: HelpArticle[] = [];
 export let allHelpCategories: HelpCategory[] = [];
 export let allUnknownTagReads: UnknownDetection[] = [];
+export let allChecklistTemplates: ChecklistTemplate[] = [];
+export let allReportSubscriptions: ReportSubscription[] = [];
+
+/**
+ * The organisation's own record.
+ *
+ * A value rather than a list, and given defaults so a screen rendering before
+ * hydration shows the product's own name instead of an empty header.
+ */
+export let orgSettings: OrgSettings = {
+  id: 'ORG',
+  name: 'Access Genie',
+  legalName: '',
+  logoEmoji: '🧞',
+  primaryColor: '#4f46e5',
+  accentColor: '#0ea5e9',
+  loginMessage: '',
+  supportEmail: '',
+  timezone: 'Asia/Kolkata',
+  dateFormat: 'DD MMM YYYY',
+  currency: 'INR',
+  updatedAt: new Date().toISOString(),
+};
 
 // Aggregates over the whole estate, not just the slices above — see the API's
 // dataset service for why they are computed there rather than reduced here.
@@ -264,6 +294,9 @@ export function hydrate(next: Dataset): void {
   allHelpArticles = next.helpArticles ?? [];
   allHelpCategories = next.helpCategories ?? [];
   allUnknownTagReads = next.unknownTagReads ?? [];
+  allChecklistTemplates = next.checklistTemplates ?? [];
+  allReportSubscriptions = next.reportSubscriptions ?? [];
+  if (next.orgSettings) orgSettings = next.orgSettings;
   utilizationDowntimeSeries = next.utilizationDowntime ?? [];
   categoryBreakdown = next.categoryBreakdown ?? [];
   // The directory lives in rbac.ts, next to the role matrix it is read with;

@@ -8,6 +8,7 @@ import {
   AssetDocument,
   AssetGroup,
   Certification,
+  ChecklistTemplate,
   CycleCount,
   ForecastSeries,
   Inspection,
@@ -17,6 +18,31 @@ import {
   Report,
 } from '../models/index.js';
 import { requireModule, validate } from '../middleware/index.js';
+import * as pmController from '../controllers/pm.controller.js';
+import * as complianceController from '../controllers/compliance.controller.js';
+import * as fieldworkController from '../controllers/fieldwork.controller.js';
+import * as configurationController from '../controllers/configuration.controller.js';
+import {
+  createApprovalWorkflowSchema,
+  createAiModelSchema,
+  createChecklistTemplateSchema,
+  createIntegrationSchema,
+  createReportSubscriptionSchema,
+  updateAiModelSchema,
+  updateApprovalWorkflowSchema,
+  updateReportSubscriptionSchema,
+  updateChecklistTemplateSchema,
+  updateIntegrationSchema,
+} from '../validators/configuration.validator.js';
+import {
+  createCertificationSchema,
+  createCycleCountSchema,
+  createInspectionSchema,
+  updateCertificationSchema,
+  updateCycleCountSchema,
+  updateInspectionSchema,
+} from '../validators/compliance.validator.js';
+import { createPmScheduleSchema, updatePmScheduleSchema } from '../validators/pm.validator.js';
 import { idParamSchema } from '../validators/common.js';
 import { createAssetClassSchema, updateAssetClassSchema } from '../validators/assetClass.validator.js';
 import { createReportSchema, updateReportSchema } from '../validators/platform.validator.js';
@@ -90,6 +116,35 @@ const pm = createResource(PmSchedule, {
   text: true,
 });
 router.get('/pm-schedules', requireModule('maintenance'), pm.validateQuery, pm.list);
+// Writable: a schedule is the input to automated work-order generation, so the
+// maintenance programme has to be editable for any of it to mean anything.
+router.post('/pm-schedules', requireModule('maintenance'), validate({ body: createPmScheduleSchema }), pmController.create);
+router.patch('/pm-schedules/:id', requireModule('maintenance'), validate({ params: idParamSchema, body: updatePmScheduleSchema }), pmController.update);
+router.delete('/pm-schedules/:id', requireModule('maintenance'), validate({ params: idParamSchema }), pmController.remove);
+router.post('/pm-schedules/run-automation', requireModule('maintenance'), pmController.runAutomation);
+
+// ── Compliance records ───────────────────────────────────────────────────────
+// Inspections, certifications and cycle counts were read-only: a compliance
+// programme that could be displayed but never run. See compliance.service.ts.
+const comp = requireModule('compliance', 'maintenance');
+router.post('/inspections', comp, validate({ body: createInspectionSchema }), complianceController.createInspection);
+router.patch('/inspections/:id', comp, validate({ params: idParamSchema, body: updateInspectionSchema }), complianceController.updateInspection);
+router.delete('/inspections/:id', comp, validate({ params: idParamSchema }), complianceController.removeInspection);
+
+router.post('/certifications', comp, validate({ body: createCertificationSchema }), complianceController.createCertification);
+router.patch('/certifications/:id', comp, validate({ params: idParamSchema, body: updateCertificationSchema }), complianceController.updateCertification);
+router.delete('/certifications/:id', comp, validate({ params: idParamSchema }), complianceController.removeCertification);
+
+router.post('/cycle-counts', comp, validate({ body: createCycleCountSchema }), complianceController.createCycleCount);
+router.patch('/cycle-counts/:id', comp, validate({ params: idParamSchema, body: updateCycleCountSchema }), complianceController.updateCycleCount);
+router.delete('/cycle-counts/:id', comp, validate({ params: idParamSchema }), complianceController.removeCycleCount);
+
+// ── Mobile workforce ─────────────────────────────────────────────────────────
+// One queue across work orders and inspections, and scan-to-act. See
+// fieldwork.service.ts for why they are merged rather than shown as two lists.
+router.get('/field/queue', requireModule('maintenance', 'assets'), fieldworkController.queue);
+router.get('/field/queue/all', requireModule('maintenance', 'assets'), fieldworkController.allWork);
+router.post('/field/scan/:id', requireModule('assets'), validate({ params: idParamSchema }), fieldworkController.scan);
 router.get('/pm-schedules/:id', requireModule('maintenance'), pm.getOne);
 
 const inspections = createResource(Inspection, {
@@ -103,14 +158,28 @@ router.get('/inspections', requireModule('maintenance'), inspections.validateQue
 router.get('/inspections/:id', requireModule('maintenance'), inspections.getOne);
 
 // ── AI / MLOps ───────────────────────────────────────────────────────────────
+// Writable: the registry records models that exist elsewhere, and a registry
+// nobody can add to only ever describes what shipped with the seed. Nothing
+// here trains anything — see the validator.
 const models = createResource(AiModel, {
   label: 'Model',
   filters: ['status'],
   sortable: ['name', 'accuracy', 'driftPct', 'lastTrained'],
   defaultSort: '-accuracy',
   paginated: false,
+  writable: {
+    create: createAiModelSchema,
+    update: updateAiModelSchema,
+    idSequence: ['aiModel', 'MDL'],
+    timestamps: { createdAt: 'createdAt', updatedAt: 'updatedAt' },
+    audit: { action: 'ai_model', category: 'AI' },
+  },
 });
-router.get('/ai/models', requireModule('ai'), models.validateQuery, models.list);
+const ai = requireModule('ai');
+router.get('/ai/models', ai, models.validateQuery, models.list);
+router.post('/ai/models', ai, models.validateCreate, models.create);
+router.patch('/ai/models/:id', ai, validate({ params: idParamSchema }), models.validateUpdate, models.update);
+router.delete('/ai/models/:id', ai, validate({ params: idParamSchema }), models.remove);
 router.get('/ai/models/:id', requireModule('ai'), models.getOne);
 
 const forecasts = createResource(ForecastSeries, {
@@ -161,6 +230,33 @@ router.patch(
 );
 router.delete('/reports/:id', requireModule('analytics'), validate({ params: idParamSchema }), reports.remove);
 
+// Running a report queries the live estate and writes a file the browser can
+// download — see reportRun.service.ts. `/exports/:id/download` is mounted here
+// rather than beside the export list because it is the other half of this.
+const analytics = requireModule('analytics');
+router.post('/reports/:id/run', analytics, validate({ params: idParamSchema }), configurationController.runReport);
+router.get('/exports/:id/download', analytics, validate({ params: idParamSchema }), configurationController.downloadExport);
+
+router.get('/report-subscriptions', analytics, configurationController.listSubscriptions);
+router.post(
+  '/report-subscriptions',
+  analytics,
+  validate({ body: createReportSubscriptionSchema }),
+  configurationController.createSubscription,
+);
+router.patch(
+  '/report-subscriptions/:id',
+  analytics,
+  validate({ params: idParamSchema, body: updateReportSubscriptionSchema }),
+  configurationController.updateSubscription,
+);
+router.delete(
+  '/report-subscriptions/:id',
+  analytics,
+  validate({ params: idParamSchema }),
+  configurationController.removeSubscription,
+);
+
 // ── Compliance ───────────────────────────────────────────────────────────────
 const cycleCounts = createResource(CycleCount, {
   label: 'Cycle count',
@@ -181,14 +277,29 @@ const certifications = createResource(Certification, {
 router.get('/certifications', requireModule('compliance'), certifications.validateQuery, certifications.list);
 
 // ── Administration ───────────────────────────────────────────────────────────
+// Both of these were read-only while their screens offered "Add" buttons that
+// opened a toast. Connecting a system and drafting an approval chain are the
+// two things an administrator sets up on day one, so both are writable.
+const admin = requireModule('admin');
+
 const integrations = createResource(Integration, {
   label: 'Integration',
   filters: ['status', 'category'],
   sortable: ['name', 'category', 'lastSync'],
   defaultSort: 'name',
   paginated: false,
+  writable: {
+    create: createIntegrationSchema,
+    update: updateIntegrationSchema,
+    idSequence: ['integration', 'INT'],
+    timestamps: { updatedAt: 'lastSync' },
+    audit: { action: 'integration', category: 'Configuration' },
+  },
 });
-router.get('/integrations', requireModule('admin'), integrations.validateQuery, integrations.list);
+router.get('/integrations', admin, integrations.validateQuery, integrations.list);
+router.post('/integrations', admin, integrations.validateCreate, integrations.create);
+router.patch('/integrations/:id', admin, validate({ params: idParamSchema }), integrations.validateUpdate, integrations.update);
+router.delete('/integrations/:id', admin, validate({ params: idParamSchema }), integrations.remove);
 
 const workflows = createResource(ApprovalWorkflow, {
   label: 'Approval workflow',
@@ -196,7 +307,38 @@ const workflows = createResource(ApprovalWorkflow, {
   sortable: ['name', 'status'],
   defaultSort: 'name',
   paginated: false,
+  writable: {
+    create: createApprovalWorkflowSchema,
+    update: updateApprovalWorkflowSchema,
+    idSequence: ['approvalWorkflow', 'WF'],
+    audit: { action: 'approval_workflow', category: 'Configuration' },
+  },
 });
-router.get('/approval-workflows', requireModule('admin'), workflows.validateQuery, workflows.list);
+router.get('/approval-workflows', admin, workflows.validateQuery, workflows.list);
+router.post('/approval-workflows', admin, workflows.validateCreate, workflows.create);
+router.patch('/approval-workflows/:id', admin, validate({ params: idParamSchema }), workflows.validateUpdate, workflows.update);
+router.delete('/approval-workflows/:id', admin, validate({ params: idParamSchema }), workflows.remove);
+
+// ── Checklist library ────────────────────────────────────────────────────────
+// The list is hand-written because it joins usage counts; the writes are plain.
+const checklists = createResource(ChecklistTemplate, {
+  label: 'Checklist template',
+  filters: ['category'],
+  sortable: ['name', 'category'],
+  defaultSort: 'name',
+  paginated: false,
+  writable: {
+    create: createChecklistTemplateSchema,
+    update: updateChecklistTemplateSchema,
+    idSequence: ['checklistTemplate', 'TPLC'],
+    timestamps: { createdAt: 'createdAt', updatedAt: 'updatedAt' },
+    audit: { action: 'checklist_template', category: 'Configuration' },
+  },
+});
+const maint = requireModule('maintenance');
+router.get('/checklist-templates', maint, configurationController.listChecklistTemplates);
+router.post('/checklist-templates', maint, checklists.validateCreate, checklists.create);
+router.patch('/checklist-templates/:id', maint, validate({ params: idParamSchema }), checklists.validateUpdate, checklists.update);
+router.delete('/checklist-templates/:id', maint, validate({ params: idParamSchema }), checklists.remove);
 
 export default router;

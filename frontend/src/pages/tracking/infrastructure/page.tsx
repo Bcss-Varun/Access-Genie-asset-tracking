@@ -39,6 +39,7 @@ import type {
   CoverageCell, DeviceDiagnostic, DeviceRole, DeviceState, FirmwareCampaign, TrackingDevice,
 } from '@access-genie/shared';
 import { nowMs, cn, formatDate, relTime } from '@/lib/utils';
+import { downloadCsv } from '@/api/configuration';
 
 const TAB_KEYS = ['tags', 'gateways', 'readers', 'health'] as const;
 type TabKey = (typeof TAB_KEYS)[number];
@@ -353,10 +354,43 @@ export default function TrackingInfrastructurePage() {
       refreshTracking: true,
     });
   };
+  /**
+   * Diagnostics is a request to the device, and there is no device protocol
+   * here — so rather than announcing results that will never arrive, this
+   * reports what the platform already knows about it. Everything below comes
+   * from its last check-in.
+   */
   const runDiagnostics = (d: TrackingDevice) =>
-    toast({ title: `Diagnostics running on ${d.name}`, description: 'Results land on this panel in about a minute', tone: 'info' });
-  const exportRows = (n: number) =>
-    toast({ title: 'Export started', description: `${plural(n)} → CSV in the Export Center`, tone: 'success' });
+    toast({
+      title: `${d.name} — last reported state`,
+      description: `${d.state} · battery ${d.batteryPct ?? '—'}% · firmware ${d.firmware} · seen ${relTime(d.lastSeen)}`,
+      tone: d.state === 'Healthy' ? 'success' : 'info',
+    });
+
+  /** Download the fleet rows on screen. Previously "queued" nothing anywhere. */
+  const exportRows = (devices: TrackingDevice[]) => {
+    const n = downloadCsv(
+      `tracking-devices-${new Date().toISOString().slice(0, 10)}.csv`,
+      devices.map((d) => ({
+        'Device ID': d.id,
+        Name: d.name,
+        Role: d.role,
+        Technology: d.technology,
+        State: d.state,
+        Facility: d.facility,
+        Zone: d.zone ?? '',
+        Firmware: d.firmware,
+        'Battery %': d.batteryPct ?? '',
+        'Last seen': d.lastSeen,
+        'Replace by': d.replaceBy ?? '',
+      })),
+    );
+    toast({
+      title: n > 0 ? `${n} device${n === 1 ? '' : 's'} exported` : 'Nothing to export',
+      description: n > 0 ? 'Downloaded as CSV.' : 'No devices match the current filters.',
+      tone: n > 0 ? 'success' : 'info',
+    });
+  };
   const bulk = (fn: (ids: string[]) => void | Promise<void>) => { void fn([...selected]); setSelected(new Set()); };
   const setCampaign = (id: string, patch: Partial<FirmwareCampaign>) =>
     setCampaigns((prev) => prev.map((c) => (c.id === id ? { ...c, ...patch } : c)));
@@ -696,7 +730,7 @@ export default function TrackingInfrastructurePage() {
               </button>
               <div className="ml-auto flex items-center gap-2">
                 <span className="text-xs text-slate-400">{filtered.length} of {fleet.length}</span>
-                <Button size="sm" variant="outline" onClick={() => exportRows(filtered.length)}>Export</Button>
+                <Button size="sm" variant="outline" onClick={() => exportRows(filtered)}>Export</Button>
               </div>
             </div>
 
@@ -707,7 +741,13 @@ export default function TrackingInfrastructurePage() {
                   <button type="button" onClick={() => bulk(reboot)} className={BULK}>Reboot</button>
                   <button type="button" onClick={() => bulk(scheduleFirmware)} className={BULK}>Schedule firmware</button>
                   <button type="button" onClick={() => bulk(markReplacement)} className={BULK}>Mark for replacement</button>
-                  <button type="button" onClick={() => bulk((ids) => exportRows(ids.length))} className={BULK}>Export</button>
+                  <button
+                    type="button"
+                    onClick={() => bulk((ids) => exportRows(fleet.filter((d) => ids.includes(d.id))))}
+                    className={BULK}
+                  >
+                    Export
+                  </button>
                 </div>
                 <button type="button" onClick={() => setSelected(new Set())} className="ml-auto text-xs text-slate-500 hover:text-slate-800">Clear</button>
               </div>

@@ -16,16 +16,27 @@ export interface PreferencesPayload {
   activeScope: string | null;
   savedViews: SavedViewDoc[];
   dismissed: string[];
+  notifications: Record<string, { email: boolean; push: boolean; inApp: boolean }>;
+  digest: string;
 }
 
 /** The shape sent back to the client, with the model's optionals normalized. */
-function toPayload(doc: Pick<UserPreferenceDoc, 'theme' | 'activeFacility' | 'activeScope' | 'savedViews' | 'dismissed'>): PreferencesPayload {
+function toPayload(
+  doc: Pick<
+    UserPreferenceDoc,
+    'theme' | 'activeFacility' | 'activeScope' | 'savedViews' | 'dismissed' | 'notifications' | 'digest'
+  >,
+): PreferencesPayload {
   return {
     theme: doc.theme,
     activeFacility: doc.activeFacility ?? null,
     activeScope: doc.activeScope ?? null,
     savedViews: doc.savedViews ?? [],
     dismissed: doc.dismissed ?? [],
+    // An empty map is meaningful: it means "never chosen", and the screen falls
+    // back to its own per-category defaults rather than switching everything off.
+    notifications: doc.notifications ?? {},
+    digest: doc.digest ?? 'Daily digest',
   };
 }
 
@@ -43,6 +54,8 @@ const DEFAULTS: PreferencesPayload = {
   activeScope: null,
   savedViews: [],
   dismissed: [],
+  notifications: {},
+  digest: 'Daily digest',
 };
 
 export async function getPreferences(userId: string): Promise<PreferencesPayload> {
@@ -55,6 +68,8 @@ export interface PreferencesPatch {
   activeFacility?: string | null;
   activeScope?: string | null;
   dismissed?: string[];
+  notifications?: Record<string, { email: boolean; push: boolean; inApp: boolean }>;
+  digest?: string;
 }
 
 /**
@@ -68,7 +83,7 @@ export async function updatePreferences(userId: string, patch: PreferencesPatch)
   const set: Record<string, unknown> = {};
   const unset: Record<string, ''> = {};
 
-  for (const key of ['theme', 'activeFacility', 'activeScope', 'dismissed'] as const) {
+  for (const key of ['theme', 'activeFacility', 'activeScope', 'dismissed', 'notifications', 'digest'] as const) {
     if (!(key in patch)) continue;
     const value = patch[key];
     // `null` means "clear it" — distinct from omitting the key, which means

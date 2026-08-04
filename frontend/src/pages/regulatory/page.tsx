@@ -1,7 +1,7 @@
+import { Link } from 'react-router-dom';
 import { allComplianceFrameworks } from '@/lib/dataset';
 import { PageHeader, Badge } from '@/components/ui/primitives';
 import { Button } from '@/components/ui/Button';
-import { useToast } from '@/components/providers/ToastProvider';
 import { relTime } from '@/lib/utils';
 
 const FRAMEWORKS = allComplianceFrameworks;
@@ -12,7 +12,6 @@ const barColor = (s: string) =>
   s === 'Certified' ? 'bg-emerald-500' : s === 'In Progress' ? 'bg-amber-500' : 'bg-red-500';
 
 export default function RegulatoryPage() {
-  const { toast } = useToast();
 
   return (
     <div className="h-full flex flex-col space-y-6">
@@ -46,14 +45,16 @@ export default function RegulatoryPage() {
               <span>{f.evidence} evidence items</span>
             </div>
 
-            <Button
-              variant="outline"
-              size="sm"
-              className="mt-4 w-full"
-              onClick={() => toast({ title: `${f.name} evidence`, description: `Opening ${f.evidence} evidence items (demo).`, tone: 'info' })}
-            >
-              View evidence
-            </Button>
+            {/*
+              The evidence is the compliance register itself — certifications,
+              inspections and the audit log. This links to it rather than
+              announcing a viewer that does not exist.
+            */}
+            <Link to="/compliance-reports" className="mt-4 block">
+              <Button variant="outline" size="sm" className="w-full">
+                View evidence
+              </Button>
+            </Link>
           </div>
         ))}
       </div>

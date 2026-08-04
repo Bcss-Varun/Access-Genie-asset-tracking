@@ -1,9 +1,14 @@
+import { useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
-import { allUsers, roles, resolveModules, findScope } from '@/lib/rbac';
 import type { ModuleKey } from '@access-genie/shared';
+import { allUsers, roles, resolveModules, findScope } from '@/lib/rbac';
 import { PageHeader, Badge, EmptyState, Avatar } from '@/components/ui/primitives';
 import { Button } from '@/components/ui/Button';
-import { useToast } from '@/components/providers/ToastProvider';
+import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
+import { EditUserDialog } from '@/components/admin/EditUserDialog';
+import { useMutate } from '@/api/mutate';
+import { adminApi } from '@/api/users';
+import { useSession } from '@/components/providers/SessionProvider';
 
 const tierTone: Record<string, 'primary' | 'emerald' | 'amber' | 'slate'> = {
   Platform: 'primary',
@@ -30,8 +35,24 @@ const moduleLabel: Record<ModuleKey, string> = {
 
 export default function UserDetailPage() {
   const { id = '' } = useParams();
-  const { toast } = useToast();
+  const { session } = useSession();
+  const { run, isPending } = useMutate();
+  const [editing, setEditing] = useState(false);
+  const [suspending, setSuspending] = useState(false);
+
   const user = allUsers.find((u) => u.id === id);
+  const isSelf = session.user.id === id;
+
+  // Suspending ends every session the account has open — that is the point of
+  // the action, so it is stated before the button rather than discovered after.
+  const setStatus = (status: 'active' | 'suspended') =>
+    run(adminApi.updateUser(id, { status }), {
+      success: status === 'suspended' ? `${user?.name ?? id} suspended` : `${user?.name ?? id} reactivated`,
+      successDetail: status === 'suspended' ? 'They have been signed out everywhere.' : 'They can sign in again.',
+      describe: `${status === 'suspended' ? 'suspend' : 'reactivate'} that account`,
+    });
+
+  const reactivate = () => void setStatus('active');
 
   if (!user) {
     return (
@@ -75,14 +96,35 @@ export default function UserDetailPage() {
           </div>
         </div>
         <div className="flex items-center gap-2 shrink-0">
-          <Button variant="outline" onClick={() => toast({ title: 'Edit role', description: `Role editing for ${user.name} is on the roadmap.`, tone: 'info' })}>
-            Edit role
+          <Button variant="outline" onClick={() => setEditing(true)}>
+            Edit user
           </Button>
-          <Button variant="danger" onClick={() => toast({ title: 'Deactivate', description: `${user.name} would be deactivated.`, tone: 'error' })}>
-            Deactivate
-          </Button>
+          {user.status === 'active' ? (
+            <Button variant="danger" disabled={isPending || isSelf} onClick={() => setSuspending(true)}>
+              Suspend
+            </Button>
+          ) : (
+            <Button disabled={isPending} onClick={reactivate}>
+              Reactivate
+            </Button>
+          )}
         </div>
       </div>
+
+      {editing && <EditUserDialog user={user} onClose={() => setEditing(false)} />}
+      {suspending && (
+        <ConfirmDialog
+          title={`Suspend ${user.name}?`}
+          description="They are signed out everywhere immediately and cannot sign in again until reactivated. Nothing they own is deleted."
+          confirmLabel="Suspend"
+          busy={isPending}
+          onConfirm={async () => {
+            await setStatus('suspended');
+            setSuspending(false);
+          }}
+          onCancel={() => setSuspending(false)}
+        />
+      )}
 
       <div className="glass-panel rounded-xl p-5">
         <div className="flex items-center justify-between mb-4">

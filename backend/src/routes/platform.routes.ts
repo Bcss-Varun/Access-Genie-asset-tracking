@@ -18,10 +18,13 @@ import {
 import { requireModule, validate } from '../middleware/index.js';
 import { idParamSchema } from '../validators/common.js';
 import * as apiKeyController from '../controllers/apiKey.controller.js';
+import * as configurationController from '../controllers/configuration.controller.js';
+import { createPasskeySchema, updateOrgSettingsSchema } from '../validators/configuration.validator.js';
 import {
   createApiKeySchema,
   createEscalationPolicySchema,
   createExportJobSchema,
+  createRetentionPolicySchema,
   createSupportTicketSchema,
   createTeamSchema,
   createWebhookSchema,
@@ -144,12 +147,35 @@ mountWritable('/webhooks', createResource(Webhook, {
 }), { create: true, update: true, remove: true }, 'admin');
 
 // ── Platform operations ──────────────────────────────────────────────────────
+// ── Organisation identity ────────────────────────────────────────────────────
+// A singleton rather than a collection, so it does not go through the factory.
+// Readable by anyone signed in — the login screen and the shell both render the
+// organisation's name and colours — but writable only by an administrator.
+router.get('/org-settings', configurationController.getOrgSettings);
+router.patch(
+  '/org-settings',
+  requireModule('admin'),
+  validate({ body: updateOrgSettingsSchema }),
+  configurationController.updateOrgSettings,
+);
+
 mount('/backups', createResource(Backup, {
   label: 'Backup',
   sortable: ['when', 'status'],
   defaultSort: '-when',
   paginated: false,
 }), 'admin');
+
+// Taking a snapshot is a write; restoring one is refused from here on purpose —
+// see configuration.service.ts. The route exists so the answer is a clear
+// instruction rather than a button that silently does nothing.
+router.post('/backups', requireModule('admin'), configurationController.createBackup);
+router.post(
+  '/backups/:id/restore',
+  requireModule('admin'),
+  validate({ params: idParamSchema }),
+  configurationController.restoreBackup,
+);
 
 mount('/invoices', createResource(Invoice, {
   label: 'Invoice',
@@ -220,9 +246,9 @@ mount('/compliance-frameworks', createResource(ComplianceFramework, {
   paginated: false,
 }), 'compliance');
 
-// Update only. A retention policy is created by whoever writes the compliance
-// programme, not from a screen, and deleting one would orphan the records it
-// governs.
+// A compliance programme is written from this screen, not loaded from a
+// fixture: a class of data the organisation holds and has no policy for is the
+// gap the page exists to close, so it can be added here.
 mountWritable('/retention-policies', createResource(RetentionPolicy, {
   label: 'Retention policy',
   filters: ['legalHold'],
@@ -230,10 +256,12 @@ mountWritable('/retention-policies', createResource(RetentionPolicy, {
   defaultSort: 'dataClass',
   paginated: false,
   writable: {
+    create: createRetentionPolicySchema,
     update: updateRetentionPolicySchema,
+    idSequence: ['retentionPolicy', 'RP'],
     audit: { action: 'retention_policy', category: 'Compliance' },
   },
-}), { update: true }, 'compliance', 'admin');
+}), { create: true, update: true, remove: true }, 'compliance', 'admin');
 
 mount('/report-packs', createResource(ReportPack, {
   label: 'Report pack',
@@ -244,6 +272,9 @@ mount('/report-packs', createResource(ReportPack, {
 }), 'compliance', 'analytics');
 
 // ── Personal ─────────────────────────────────────────────────────────────────
+// Enrolment and removal are keyed to the session, never to a body field: a
+// credential you can register or revoke on someone else's account is not a
+// second factor. That check lives in the service, so both go through it.
 mount('/passkeys', createResource(Passkey, {
   label: 'Passkey',
   filters: ['userId'],
@@ -251,5 +282,8 @@ mount('/passkeys', createResource(Passkey, {
   defaultSort: '-added',
   paginated: false,
 }), 'workspace');
+
+router.post('/passkeys', validate({ body: createPasskeySchema }), configurationController.createPasskey);
+router.delete('/passkeys/:id', validate({ params: idParamSchema }), configurationController.removePasskey);
 
 export default router;

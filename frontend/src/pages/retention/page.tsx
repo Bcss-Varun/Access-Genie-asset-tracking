@@ -1,33 +1,105 @@
-import { allRetentionPolicies } from '@/lib/dataset';
 import { useState } from 'react';
-import { PageHeader, Badge } from '@/components/ui/primitives';
+import type { RetentionPolicy } from '@access-genie/shared';
+import { allRetentionPolicies } from '@/lib/dataset';
+import { PageHeader, Badge, EmptyState } from '@/components/ui/primitives';
 import { Button } from '@/components/ui/Button';
-import { useToast } from '@/components/providers/ToastProvider';
+import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
+import { FormDialog, Field, FieldRow, CheckField, Select, TextInput } from '@/components/ui/FormDialog';
+import { useMutate } from '@/api/mutate';
+import { governanceApi } from '@/api/platform';
+import { retentionApi } from '@/api/configuration';
 import { cn } from '@/lib/utils';
 
-interface RetentionPolicy {
-  id: string;
-  dataClass: string;
-  retention: string;
-  disposal: string;
-  legalHold: boolean;
+/**
+ * Retention and legal hold.
+ *
+ * Placing a legal hold flipped a boolean in React and said "(demo)" out loud.
+ * A hold is a legal instruction that disposal must stop; a control that
+ * announces one without recording it is the worst possible outcome for the one
+ * thing this screen exists to do.
+ */
+
+const RETENTION_PERIODS = ['1 year', '3 years', '5 years', '7 years', '10 years', 'Indefinite'];
+const DISPOSAL_METHODS = [
+  'Secure erase (NIST 800-88)',
+  'Cryptographic erasure',
+  'Physical destruction',
+  'Anonymise and retain',
+  'Delete from all systems',
+];
+
+function PolicyDialog({ onClose }: { onClose: () => void }) {
+  const { run, isPending } = useMutate();
+  const [dataClass, setDataClass] = useState('');
+  const [retention, setRetention] = useState(RETENTION_PERIODS[2] as string);
+  const [disposal, setDisposal] = useState(DISPOSAL_METHODS[0] as string);
+  const [legalHold, setLegalHold] = useState(false);
+
+  const submit = async () => {
+    const ok = await run(retentionApi.create({ dataClass: dataClass.trim(), retention, disposal, legalHold }), {
+      success: 'Policy created',
+      successDetail: `${dataClass.trim()} — kept ${retention.toLowerCase()}, then ${disposal.toLowerCase()}.`,
+      describe: 'create that policy',
+    });
+    if (ok) onClose();
+  };
+
+  return (
+    <FormDialog
+      icon="🗄️"
+      title="New retention policy"
+      description="A class of data the organisation holds, how long it is kept, and what happens to it after."
+      submitLabel="Create policy"
+      busy={isPending}
+      disabled={dataClass.trim().length < 2}
+      onSubmit={() => void submit()}
+      onCancel={onClose}
+    >
+      <Field label="Data class" required hint="What the policy governs — be specific enough that it is obvious what is covered.">
+        <TextInput autoFocus value={dataClass} onChange={(e) => setDataClass(e.target.value)} placeholder="Asset custody records" />
+      </Field>
+
+      <FieldRow>
+        <Field label="Retention period">
+          <Select value={retention} onChange={(e) => setRetention(e.target.value)} options={RETENTION_PERIODS.map((r) => ({ value: r, label: r }))} />
+        </Field>
+        <Field label="Disposal method">
+          <Select value={disposal} onChange={(e) => setDisposal(e.target.value)} options={DISPOSAL_METHODS.map((d) => ({ value: d, label: d }))} />
+        </Field>
+      </FieldRow>
+
+      <CheckField
+        label="Place under legal hold immediately"
+        hint="Freezes disposal regardless of the retention period."
+        checked={legalHold}
+        onChange={setLegalHold}
+      />
+    </FormDialog>
+  );
 }
 
-const INITIAL = allRetentionPolicies;
 export default function RetentionPage() {
-  const { toast } = useToast();
-  const [policies, setPolicies] = useState<RetentionPolicy[]>(INITIAL);
+  const { run, isPending } = useMutate();
+  const [creating, setCreating] = useState(false);
+  const [deleting, setDeleting] = useState<RetentionPolicy | null>(null);
 
-  const toggleHold = (id: string) => {
-    setPolicies((prev) => prev.map((p) => (p.id === id ? { ...p, legalHold: !p.legalHold } : p)));
-    const p = policies.find((x) => x.id === id);
-    if (p) {
-      toast({
-        title: p.legalHold ? 'Legal hold released' : 'Legal hold placed',
-        description: `${p.dataClass} — disposal is now ${p.legalHold ? 'permitted' : 'frozen'} (demo).`,
-        tone: p.legalHold ? 'default' : 'info',
-      });
-    }
+  const policies = allRetentionPolicies;
+
+  const toggleHold = (p: RetentionPolicy) =>
+    void run(governanceApi.updateRetentionPolicy(p.id, { legalHold: !p.legalHold }), {
+      success: p.legalHold ? 'Legal hold released' : 'Legal hold placed',
+      successDetail: `${p.dataClass} — disposal is now ${p.legalHold ? 'permitted' : 'frozen'}.`,
+      describe: `${p.legalHold ? 'release' : 'place'} that legal hold`,
+    });
+
+  const remove = async () => {
+    if (!deleting) return;
+    await run(retentionApi.remove(deleting.id), {
+      success: 'Policy removed',
+      successDetail: `${deleting.dataClass} is no longer governed by a retention rule.`,
+      describe: 'remove that policy',
+    });
+    setDeleting(null);
   };
 
   const onHold = policies.filter((p) => p.legalHold).length;
@@ -38,11 +110,7 @@ export default function RetentionPage() {
         title="Data Retention & Legal Hold"
         subtitle="Retention schedules, disposal methods, and legal-hold controls by data class."
         breadcrumb={[{ label: 'Compliance' }, { label: 'Retention' }]}
-        actions={
-          <Button onClick={() => toast({ title: 'New policy', description: 'Retention policy editor opened (demo).', tone: 'info' })}>
-            + New Policy
-          </Button>
-        }
+        actions={<Button onClick={() => setCreating(true)}>+ New Policy</Button>}
       />
 
       <div className="text-sm text-slate-500">
@@ -58,7 +126,8 @@ export default function RetentionPage() {
                 <th className="px-6 py-4">Retention Period</th>
                 <th className="px-6 py-4">Disposal Method</th>
                 <th className="px-6 py-4">Legal Hold</th>
-                <th className="px-6 py-4 text-right">Toggle</th>
+                <th className="px-6 py-4 text-right">Hold</th>
+                <th className="px-6 py-4 text-right"></th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
@@ -79,7 +148,8 @@ export default function RetentionPage() {
                     <button
                       role="switch"
                       aria-checked={p.legalHold}
-                      onClick={() => toggleHold(p.id)}
+                      disabled={isPending}
+                      onClick={() => toggleHold(p)}
                       className={cn(
                         'relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:ring-offset-1',
                         p.legalHold ? 'bg-amber-500' : 'bg-slate-300',
@@ -89,12 +159,38 @@ export default function RetentionPage() {
                       <span className={cn('inline-block h-5 w-5 transform rounded-full bg-white shadow transition-transform', p.legalHold ? 'translate-x-5' : 'translate-x-0.5')} />
                     </button>
                   </td>
+                  <td className="px-6 py-4 text-right">
+                    <Button size="sm" variant="ghost" onClick={() => setDeleting(p)}>
+                      Remove
+                    </Button>
+                  </td>
                 </tr>
               ))}
             </tbody>
           </table>
+
+          {policies.length === 0 && (
+            <EmptyState
+              icon="🗄️"
+              title="No retention policies"
+              description="Every class of data this organisation holds should have a stated retention period and disposal method. Without one, nothing is ever formally allowed to be deleted."
+              action={<Button onClick={() => setCreating(true)}>+ New Policy</Button>}
+            />
+          )}
         </div>
       </div>
+
+      {creating && <PolicyDialog onClose={() => setCreating(false)} />}
+      {deleting && (
+        <ConfirmDialog
+          title={`Remove the ${deleting.dataClass} policy?`}
+          description="That class of data will no longer have a stated retention period or disposal method."
+          confirmLabel="Remove"
+          busy={isPending}
+          onConfirm={() => void remove()}
+          onCancel={() => setDeleting(null)}
+        />
+      )}
     </div>
   );
 }

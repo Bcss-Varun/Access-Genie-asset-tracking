@@ -25,3 +25,36 @@ export const changePasswordSchema = z
 
 export type LoginInput = z.infer<typeof loginSchema>;
 export type ChangePasswordInput = z.infer<typeof changePasswordSchema>;
+
+/**
+ * What a person may change about themselves.
+ *
+ * Deliberately narrow: name, title and contact details. Email identifies the
+ * account and role decides what it can do, so neither is editable here — those
+ * go through an administrator, which is what the profile screen already says.
+ */
+export const updateProfileSchema = z
+  .object({
+    name: z.string().trim().min(2).max(120),
+    title: z.string().trim().min(2).max(160),
+    phone: z.string().trim().max(40),
+    timezone: z.string().trim().max(60),
+  })
+  .partial();
+
+export type UpdateProfileInput = z.infer<typeof updateProfileSchema>;
+
+// ── Multi-factor ─────────────────────────────────────────────────────────────
+/** Six digits, or a recovery code in the `XXXXX-XXXXX` shape. */
+const mfaCode = z.string().trim().min(6).max(16);
+
+export const verifyMfaSchema = z.object({
+  challengeToken: z.string().trim().min(10).max(200),
+  code: mfaCode,
+});
+
+export const mfaCodeSchema = z.object({ code: mfaCode });
+
+/** Turning MFA off, or reissuing recovery codes, re-proves the password first. */
+export const mfaPasswordSchema = z.object({ password: z.string().min(1).max(200) });
+

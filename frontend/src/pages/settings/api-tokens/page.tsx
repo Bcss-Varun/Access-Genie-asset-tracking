@@ -1,25 +1,113 @@
+import { useState } from 'react';
+import type { ApiKey } from '@access-genie/shared';
 import { allApiKeys } from '@/lib/dataset';
 import { PageHeader, Badge, EmptyState } from '@/components/ui/primitives';
 import { Button } from '@/components/ui/Button';
+import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
+import { FormDialog, Field, TextInput } from '@/components/ui/FormDialog';
 import { SettingsNav } from '@/components/settings/SettingsNav';
 import { useToast } from '@/components/providers/ToastProvider';
+import { useMutate } from '@/api/mutate';
+import { apiKeysApi, type IssuedApiKey } from '@/api/platform';
 import { relTime } from '@/lib/utils';
 
-// NOTE: sample content. This section has no backing collection yet — sessions,
-// tokens and tickets are all platform records that need their own models and
-// endpoints before this screen can read live data. Everything else in the app
-// reads from MongoDB; these three lists are the exception, and are marked so
-// they are not mistaken for wired-up data.
-// This screen shows the signed-in user's own tokens, not the org's keys.
-const TOKENS = allApiKeys.filter((k) => k.scope === 'personal');
+/**
+ * Personal access tokens.
+ *
+ * Generating one used to raise "copy it now — it will not be shown again" over
+ * a token that was never minted. It is minted server-side now, and the secret
+ * genuinely is shown exactly once: only its last four characters are stored, so
+ * there is nothing to show a second time.
+ */
+
 const th = 'px-4 py-3 text-left font-semibold uppercase tracking-wider text-[11px] text-slate-500';
 const td = 'px-4 py-3.5';
 
+/** What a personal token may do. Kept short — a token should hold the least it needs. */
+const SCOPE_OPTIONS = [
+  'assets:read',
+  'assets:write',
+  'tracking:read',
+  'tracking:write',
+  'maintenance:read',
+  'maintenance:write',
+  'inventory:read',
+  'analytics:read',
+];
+
+function GenerateDialog({ onIssued, onClose }: { onIssued: (key: IssuedApiKey) => void; onClose: () => void }) {
+  const { run, isPending } = useMutate();
+  const [name, setName] = useState('');
+  const [scopes, setScopes] = useState<string[]>(['assets:read']);
+
+  const toggle = (scope: string) =>
+    setScopes((prev) => (prev.includes(scope) ? prev.filter((s) => s !== scope) : [...prev, scope]));
+
+  const submit = async () => {
+    const issued = await run(apiKeysApi.create({ name: name.trim(), scope: 'personal', scopes }), {
+      describe: 'generate that token',
+    });
+    if (!issued) return;
+    onIssued(issued);
+    onClose();
+  };
+
+  return (
+    <FormDialog
+      icon="🔑"
+      title="Generate a personal token"
+      description="It acts as you, limited to the scopes you pick. The secret is shown once and never stored."
+      submitLabel="Generate"
+      busy={isPending}
+      disabled={name.trim().length < 1 || scopes.length === 0}
+      onSubmit={() => void submit()}
+      onCancel={onClose}
+    >
+      <Field label="What is it for" required hint="A name you will recognise in six months.">
+        <TextInput autoFocus value={name} onChange={(e) => setName(e.target.value)} placeholder="Nightly stock sync script" />
+      </Field>
+
+      <Field label={`Scopes — ${scopes.length} selected`} required>
+        <div className="grid grid-cols-1 gap-1.5 rounded-lg border border-slate-200 p-3 sm:grid-cols-2">
+          {SCOPE_OPTIONS.map((scope) => (
+            <label key={scope} className="flex cursor-pointer items-center gap-2 text-sm text-slate-700">
+              <input
+                type="checkbox"
+                checked={scopes.includes(scope)}
+                onChange={() => toggle(scope)}
+                className="h-4 w-4 rounded border-slate-300 text-primary-600 focus:ring-primary-500/30"
+              />
+              <code className="font-mono text-xs">{scope}</code>
+            </label>
+          ))}
+        </div>
+      </Field>
+    </FormDialog>
+  );
+}
+
 export default function ApiTokensSettingsPage() {
   const { toast } = useToast();
+  const { run, isPending } = useMutate();
 
-  const onGenerate = () =>
-    toast({ title: 'Token generated', description: 'Copy it now — it will not be shown again.', tone: 'success' });
+  // Read inside the component so a refetch after issuing is picked up.
+  const TOKENS = allApiKeys.filter((k) => k.scope === 'personal');
+
+  const [generating, setGenerating] = useState(false);
+  const [issued, setIssued] = useState<IssuedApiKey | null>(null);
+  const [revoking, setRevoking] = useState<ApiKey | null>(null);
+
+  const onGenerate = () => setGenerating(true);
+
+  const revoke = async () => {
+    if (!revoking) return;
+    await run(apiKeysApi.revoke(revoking.id), {
+      success: 'Token revoked',
+      successDetail: `“${revoking.name}” can no longer access the API.`,
+      describe: 'revoke that token',
+    });
+    setRevoking(null);
+  };
 
   return (
     <div className="h-full flex flex-col space-y-6">
@@ -68,7 +156,7 @@ export default function ApiTokensSettingsPage() {
                       {t.lastUsed ? <span className="text-slate-500">{relTime(t.lastUsed)}</span> : <span className="text-slate-400">Never</span>}
                     </td>
                     <td className={td + ' text-right'}>
-                      <Button variant="ghost" size="sm" onClick={() => toast({ title: 'Token revoked', description: `“${t.name}” can no longer access the API.`, tone: 'success' })}>Revoke</Button>
+                      <Button variant="ghost" size="sm" onClick={() => setRevoking(t)}>Revoke</Button>
                     </td>
                   </tr>
                 ))}
@@ -77,6 +165,55 @@ export default function ApiTokensSettingsPage() {
           </div>
         )}
       </div>
+
+      {generating && <GenerateDialog onIssued={setIssued} onClose={() => setGenerating(false)} />}
+
+      {/*
+        Shown once, and only once — the server keeps the last four characters
+        and nothing else, so there is no second chance to reveal it.
+      */}
+      {issued && (
+        <FormDialog
+          icon="🔑"
+          title="Copy your token now"
+          description="This is the only time it will be shown. Store it somewhere safe before closing."
+          submitLabel="I have copied it"
+          cancelLabel="Close"
+          onSubmit={() => setIssued(null)}
+          onCancel={() => setIssued(null)}
+        >
+          <Field label={issued.name}>
+            <div className="flex gap-2">
+              <TextInput readOnly value={issued.secret} className="font-mono text-xs" onFocus={(e) => e.currentTarget.select()} />
+              <button
+                type="button"
+                onClick={() => {
+                  void navigator.clipboard.writeText(issued.secret);
+                  toast({ title: 'Copied', description: 'The token is on your clipboard.', tone: 'success' });
+                }}
+                className="shrink-0 rounded-lg border border-slate-300 px-3 text-sm font-medium text-slate-600 hover:bg-slate-50"
+              >
+                Copy
+              </button>
+            </div>
+          </Field>
+          <p className="text-xs text-slate-500">
+            Send it as <code className="font-mono">Authorization: Bearer &lt;token&gt;</code>. Scopes:{' '}
+            {issued.scopes.join(', ')}.
+          </p>
+        </FormDialog>
+      )}
+
+      {revoking && (
+        <ConfirmDialog
+          title={`Revoke “${revoking.name}”?`}
+          description="Anything using this token stops working immediately. The record is kept so the audit log still resolves."
+          confirmLabel="Revoke"
+          busy={isPending}
+          onConfirm={() => void revoke()}
+          onCancel={() => setRevoking(null)}
+        />
+      )}
     </div>
   );
 }

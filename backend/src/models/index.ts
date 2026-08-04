@@ -115,7 +115,11 @@ export {
   Warehouse,
   Supplier,
   PurchaseOrder,
+  StockMovement,
+  STOCK_MOVEMENT_KINDS,
   type PartDoc,
+  type StockMovementDoc,
+  type StockMovementKind,
   type WarehouseDoc,
   type SupplierDoc,
   type PurchaseOrderDoc,
@@ -181,3 +185,19 @@ export {
   type HelpArticleDoc,
   type HelpCategoryDoc,
 } from './platform.js';
+
+// ── Organisation configuration ───────────────────────────────────────────────
+export {
+  ChecklistTemplate,
+  ReportSubscription,
+  OrgSettings,
+  ExportArtifact,
+  RoleGrant,
+  SUBSCRIPTION_CADENCES,
+  type ChecklistTemplateDoc,
+  type ReportSubscriptionDoc,
+  type OrgSettingsDoc,
+  type ExportArtifactDoc,
+  type RoleGrantDoc,
+  type SubscriptionCadence,
+} from './configuration.js';

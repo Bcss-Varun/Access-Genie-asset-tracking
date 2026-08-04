@@ -12,6 +12,14 @@ export const updatePreferencesSchema = z
     activeFacility: z.string().trim().min(1).max(64).nullable(),
     activeScope: z.string().trim().min(1).max(64).nullable(),
     dismissed: z.array(z.string().trim().min(1).max(64)).max(50),
+    // Bounded by category count and shape, but not by category *name* — the
+    // screen owns that list, and pinning it here would mean a schema change
+    // every time a notification type is added.
+    notifications: z.record(
+      z.string().trim().min(1).max(40),
+      z.object({ email: z.boolean(), push: z.boolean(), inApp: z.boolean() }),
+    ),
+    digest: z.string().trim().min(1).max(40),
   })
   .partial()
   .refine((patch) => Object.keys(patch).length > 0, { message: 'Provide at least one preference to update' });

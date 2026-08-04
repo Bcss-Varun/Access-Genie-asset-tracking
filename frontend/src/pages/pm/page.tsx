@@ -4,7 +4,11 @@ import { allPmSchedules } from '@/lib/dataset';
 import type { PmSchedule, PmFrequency } from '@access-genie/shared';
 import { PageHeader, Badge, KpiCard, EmptyState } from '@/components/ui/primitives';
 import { Button } from '@/components/ui/Button';
+import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
+import { PmScheduleDialog } from '@/components/maintenance/PmScheduleDialog';
 import { useToast } from '@/components/providers/ToastProvider';
+import { useMutate } from '@/api/mutate';
+import { pmApi } from '@/api/maintenance';
 import { cn, nowMs } from '@/lib/utils';
 
 // ── token helpers ─────────────────────────────────────────────────────────────
@@ -50,7 +54,10 @@ const FREQUENCIES: PmFrequency[] = ['Monthly', 'Quarterly', 'Semi-Annual', 'Annu
 
 export default function PmSchedulesPage() {
   const { toast } = useToast();
+  const { run, isPending } = useMutate();
   const [freqs, setFreqs] = useState<Set<PmFrequency>>(new Set());
+  const [dialog, setDialog] = useState<{ mode: 'new' } | { mode: 'edit'; pm: PmSchedule } | null>(null);
+  const [deleting, setDeleting] = useState<PmSchedule | null>(null);
 
   // ── KPIs ─────────────────────────────────────────────────────────────────────
   const total = allPmSchedules.length;
@@ -77,12 +84,38 @@ export default function PmSchedulesPage() {
       return next;
     });
 
-  const generateWo = (p: PmSchedule) =>
+  /**
+   * Raise everything that has fallen due.
+   *
+   * One button for the whole programme rather than one per row: the automation
+   * is idempotent — a schedule with an order already open is advanced without
+   * raising a second — so "generate for this one" would either duplicate work
+   * or quietly do nothing, and neither reads honestly on a row.
+   */
+  const runAutomation = async () => {
+    const result = await run(pmApi.runAutomation(), { describe: 'run the maintenance automation' });
+    if (!result) return;
+
+    const raised = result.pmRaised + result.conditionRaised;
     toast({
-      title: 'Work order generated',
-      description: `${p.title} — WO created for ${p.assetName} and assigned to ${p.assignedTeam}.`,
-      tone: 'success',
+      title: raised > 0 ? `${raised} work order${raised === 1 ? '' : 's'} raised` : 'Nothing was due',
+      description:
+        raised > 0
+          ? `${result.pmRaised} from schedules, ${result.conditionRaised} from asset condition · ${result.schedulesAdvanced} schedule${result.schedulesAdvanced === 1 ? '' : 's'} rolled forward.`
+          : 'No schedule has fallen due and no asset is below the health floor.',
+      tone: raised > 0 ? 'success' : 'info',
     });
+  };
+
+  const remove = async () => {
+    if (!deleting) return;
+    await run(pmApi.remove(deleting.id), {
+      success: 'Schedule deleted',
+      successDetail: `${deleting.title} — work orders already raised from it are unaffected.`,
+      describe: 'delete that schedule',
+    });
+    setDeleting(null);
+  };
 
   return (
     <div className="h-full flex flex-col space-y-6">
@@ -94,15 +127,14 @@ export default function PmSchedulesPage() {
           { label: 'Preventive (PM)' },
         ]}
         actions={
-          <Button
-            variant="primary"
-            size="md"
-            onClick={() =>
-              toast({ title: 'New PM schedule', description: 'The PM plan builder is not part of this demo.', tone: 'info' })
-            }
-          >
-            New PM Schedule
-          </Button>
+          <>
+            <Button variant="outline" disabled={isPending} onClick={() => void runAutomation()}>
+              {isPending ? 'Running…' : 'Raise due work'}
+            </Button>
+            <Button variant="primary" onClick={() => setDialog({ mode: 'new' })}>
+              New PM Schedule
+            </Button>
+          </>
         }
       />
 
@@ -188,9 +220,14 @@ export default function PmSchedulesPage() {
                     <td className="px-4 py-3"><ComplianceBar pct={p.compliancePct} /></td>
                     <td className="px-4 py-3 text-slate-600 whitespace-nowrap">{p.assignedTeam}</td>
                     <td className="px-4 py-3 text-right">
-                      <Button variant="outline" size="sm" onClick={() => generateWo(p)}>
-                        Generate WO
-                      </Button>
+                      <div className="flex items-center justify-end gap-1">
+                        <Button variant="ghost" size="sm" onClick={() => setDialog({ mode: 'edit', pm: p })}>
+                          Edit
+                        </Button>
+                        <Button variant="ghost" size="sm" onClick={() => setDeleting(p)}>
+                          Delete
+                        </Button>
+                      </div>
                     </td>
                   </tr>
                 );
@@ -201,17 +238,38 @@ export default function PmSchedulesPage() {
 
         {rows.length === 0 && (
           <EmptyState
-            variant="no-results"
-            title="No PM plans match"
-            description="Try a different frequency filter."
+            variant={allPmSchedules.length === 0 ? 'empty' : 'no-results'}
+            icon="🗓️"
+            title={allPmSchedules.length === 0 ? 'No preventive schedules yet' : 'No PM plans match'}
+            description={
+              allPmSchedules.length === 0
+                ? 'A schedule is what makes maintenance happen without anyone remembering to ask. Without one, every work order is a reaction to something already broken.'
+                : 'Try a different frequency filter.'
+            }
             action={
-              <Button variant="outline" size="sm" onClick={() => setFreqs(new Set())}>
-                Reset filters
-              </Button>
+              allPmSchedules.length === 0 ? (
+                <Button onClick={() => setDialog({ mode: 'new' })}>New PM Schedule</Button>
+              ) : (
+                <Button variant="outline" size="sm" onClick={() => setFreqs(new Set())}>
+                  Reset filters
+                </Button>
+              )
             }
           />
         )}
       </div>
+
+      {dialog?.mode === 'new' && <PmScheduleDialog onClose={() => setDialog(null)} />}
+      {dialog?.mode === 'edit' && <PmScheduleDialog existing={dialog.pm} onClose={() => setDialog(null)} />}
+      {deleting && (
+        <ConfirmDialog
+          title={`Delete ${deleting.title}?`}
+          description="No further work will be raised for this asset on this cadence. Work orders already raised from it stay in the queue."
+          busy={isPending}
+          onConfirm={() => void remove()}
+          onCancel={() => setDeleting(null)}
+        />
+      )}
     </div>
   );
 }

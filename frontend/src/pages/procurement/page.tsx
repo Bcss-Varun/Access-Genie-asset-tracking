@@ -4,7 +4,9 @@ import { allPurchaseOrders } from '@/lib/dataset';
 import type { PoStatus, PurchaseOrder } from '@access-genie/shared';
 import { PageHeader, KpiCard, Badge, EmptyState } from '@/components/ui/primitives';
 import { Button } from '@/components/ui/Button';
-import { useToast } from '@/components/providers/ToastProvider';
+import { PurchaseOrderDialog } from '@/components/inventory/InventoryDialogs';
+import { useMutate } from '@/api/mutate';
+import { procurementApi } from '@/api/inventory';
 import { nowMs, formatMoney, relTime } from '@/lib/utils';
 
 const STATUSES: PoStatus[] = ['Draft', 'Approved', 'Sent', 'Received', 'Cancelled'];
@@ -26,9 +28,22 @@ function isThisMonth(iso: string): boolean {
 }
 
 export default function ProcurementPage() {
-  const { toast } = useToast();
+  const { run, isPending } = useMutate();
   const orders = useMemo(() => allPurchaseOrders, []);
   const [filter, setFilter] = useState<'All' | PoStatus>('All');
+  const [dialog, setDialog] = useState<{ mode: 'new' } | { mode: 'edit'; po: PurchaseOrder } | null>(null);
+
+  /**
+   * Receiving is the only thing that raises stock from a delivery, so it is
+   * offered directly on the row rather than only inside the editor — it is what
+   * somebody standing at the loading bay actually needs.
+   */
+  const receive = (po: PurchaseOrder) =>
+    void run(procurementApi.receive(po.id), {
+      success: 'Delivery received',
+      successDetail: `${po.lines.length} line${po.lines.length === 1 ? '' : 's'} added to stock from ${po.supplierName}.`,
+      describe: 'receive that delivery',
+    });
 
   const openCount = orders.filter((o) => OPEN_STATUSES.includes(o.status)).length;
   const sentCount = orders.filter((o) => o.status === 'Sent').length;
@@ -55,11 +70,7 @@ export default function ProcurementPage() {
           { label: 'Inventory', href: '/assets' },
           { label: 'Procurement' },
         ]}
-        actions={
-          <Button onClick={() => toast({ title: 'New purchase order', description: 'Draft PO created — add line items to continue.', tone: 'info' })}>
-            + New PO
-          </Button>
-        }
+        actions={<Button onClick={() => setDialog({ mode: 'new' })}>+ New PO</Button>}
       />
 
       {/* KPI row */}
@@ -96,6 +107,7 @@ export default function ProcurementPage() {
                 <th className="px-6 py-4">Expected</th>
                 <th className="px-6 py-4 text-right">Lines</th>
                 <th className="px-6 py-4 text-right">Total</th>
+                <th className="px-6 py-4 text-right">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
@@ -118,15 +130,40 @@ export default function ProcurementPage() {
                   <td className="px-6 py-4 text-slate-500">{relTime(po.expectedAt)}</td>
                   <td className="px-6 py-4 text-right text-slate-600 tabular-nums">{po.lines.length}</td>
                   <td className="px-6 py-4 text-right font-semibold text-slate-900 tabular-nums">{formatMoney(po.total)}</td>
+                  <td className="px-6 py-4 text-right">
+                    <div className="flex items-center justify-end gap-1">
+                      {po.status !== 'Received' && po.status !== 'Cancelled' && (
+                        <Button size="sm" variant="outline" disabled={isPending} onClick={() => receive(po)}>
+                          Receive
+                        </Button>
+                      )}
+                      <Button size="sm" variant="ghost" onClick={() => setDialog({ mode: 'edit', po })}>
+                        Edit
+                      </Button>
+                    </div>
+                  </td>
                 </tr>
               ))}
             </tbody>
           </table>
         </div>
         {filtered.length === 0 && (
-          <EmptyState variant="no-results" title="No purchase orders" description={`No POs with status “${filter}”.`} />
+          <EmptyState
+            variant={orders.length === 0 ? 'empty' : 'no-results'}
+            icon="🧾"
+            title={orders.length === 0 ? 'No purchase orders' : 'No purchase orders match'}
+            description={
+              orders.length === 0
+                ? 'Raising an order here is what puts parts on the shelf: receiving it later is the only thing that adds stock from a delivery.'
+                : `No POs with status “${filter}”.`
+            }
+            action={orders.length === 0 ? <Button onClick={() => setDialog({ mode: 'new' })}>+ New PO</Button> : undefined}
+          />
         )}
       </div>
+
+      {dialog?.mode === 'new' && <PurchaseOrderDialog onClose={() => setDialog(null)} />}
+      {dialog?.mode === 'edit' && <PurchaseOrderDialog existing={dialog.po} onClose={() => setDialog(null)} />}
     </div>
   );
 }

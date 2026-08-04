@@ -21,6 +21,14 @@ router.post('/:id/acknowledge', validate({ params: idParamSchema, body: alertAct
 router.post('/:id/escalate', validate({ params: idParamSchema, body: alertActionSchema }), controller.escalate);
 router.post('/:id/resolve', validate({ params: idParamSchema, body: alertActionSchema }), controller.resolve);
 
+// Assignment is not one of the lifecycle transitions — it gives the alert an
+// owner, and acknowledges it on the way through. See the service.
+router.post(
+  '/:id/assign',
+  validate({ params: idParamSchema, body: z.object({ assignee: z.string().trim().min(2).max(120) }) }),
+  controller.assign,
+);
+
 router.post(
   '/bulk/acknowledge',
   validate({ body: z.object({ ids: z.array(z.string().min(1)).min(1).max(200) }) }),

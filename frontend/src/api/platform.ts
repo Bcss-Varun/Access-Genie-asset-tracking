@@ -70,6 +70,7 @@ export const governanceApi = {
   createEscalationPolicy: (body: Record<string, unknown>) => apiPost<EscalationPolicy>('/escalation-policies', body),
   updateEscalationPolicy: (id: string, body: Record<string, unknown>) =>
     apiPatch<EscalationPolicy>(`/escalation-policies/${id}`, body),
+  removeEscalationPolicy: (id: string) => apiDelete(`/escalation-policies/${id}`),
   updateRetentionPolicy: (id: string, body: { retention?: string; disposal?: string; legalHold?: boolean }) =>
     apiPatch<RetentionPolicy>(`/retention-policies/${id}`, body),
 };

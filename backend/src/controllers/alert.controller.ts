@@ -45,6 +45,17 @@ export const acknowledge = transition('Acknowledged', 'alert.acknowledge');
 export const escalate = transition('Escalated', 'alert.escalate');
 export const resolve = transition('Resolved', 'alert.resolve');
 
+export const assign = asyncHandler(async (req: Request, res: Response) => {
+  const actor = req.auth?.user.name ?? 'system';
+  const id = req.params.id as string;
+  const { assignee } = req.body as { assignee: string };
+
+  const alert = await alertService.assignAlert(id, assignee, actor);
+
+  recordAudit(req, { action: 'alert.assign', target: id, category: 'Alerts', metadata: { assignee } });
+  sendData(res, alert);
+});
+
 export const acknowledgeMany = asyncHandler(async (req: Request, res: Response) => {
   const actor = req.auth?.user.name ?? 'system';
   const { ids } = req.body as { ids: string[] };

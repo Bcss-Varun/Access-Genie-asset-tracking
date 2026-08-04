@@ -347,6 +347,9 @@ export interface Alert {
   assetName?: string;
   status: AlertStatus;
   source: string;
+  /** Who owns it — an alert nobody is named against is one nobody works. */
+  assignedTo?: string;
+  assignedAt?: string;
   /** Set by the acknowledge / resolve transitions. */
   acknowledgedBy?: string;
   acknowledgedAt?: string;

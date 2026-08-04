@@ -2,6 +2,7 @@ import type { FilterQuery } from 'mongoose';
 import type { ApiMeta } from '@access-genie/shared';
 import { Activity, Asset, CustodyRecord, Insight, WorkOrder, healthStatusFor, nextId, type AssetDoc } from '../models/index.js';
 import { ApiError } from '../utils/ApiError.js';
+import { logger } from '../config/logger.js';
 import { csvFilter, escapeRegex, paginate, parsePagination } from '../utils/query.js';
 import { projectAssetUpdate, projectNewAsset, retireAssetFromGraph } from './assetGraph.service.js';
 import type { AssetListQuery, CreateAssetInput, UpdateAssetInput } from '../validators/asset.validator.js';
@@ -213,4 +214,38 @@ export async function getAssetStats() {
     byStatus: byStatus.map((s) => ({ status: s._id, count: s.count })),
     byCategory: byCategory.map((c) => ({ category: c._id, count: c.count, value: Math.round(c.value) })),
   };
+}
+
+/**
+ * Apply one change to a selection.
+ *
+ * Written as a loop over `updateAsset` rather than a single `updateMany`, on
+ * purpose: that function writes the activity timeline, retires tracking on a
+ * status change and marks the estate for re-derivation. A bulk write that
+ * skipped all of it would leave a hundred assets with a new status, no audit
+ * trail and stale scores.
+ *
+ * Failures are collected rather than thrown. Someone changing the custodian of
+ * forty assets should not lose thirty-nine of them because one was deleted in
+ * another tab — the response says which ones did not apply and why.
+ */
+export async function bulkUpdateAssets(
+  ids: string[],
+  patch: UpdateAssetInput,
+  actor: string,
+): Promise<{ updated: string[]; failed: { id: string; reason: string }[] }> {
+  const updated: string[] = [];
+  const failed: { id: string; reason: string }[] = [];
+
+  for (const id of ids) {
+    try {
+      await updateAsset(id, patch, actor);
+      updated.push(id);
+    } catch (err) {
+      failed.push({ id, reason: err instanceof ApiError ? err.message : 'Update failed' });
+    }
+  }
+
+  logger.info('Bulk asset update', { requested: ids.length, updated: updated.length, failed: failed.length });
+  return { updated, failed };
 }

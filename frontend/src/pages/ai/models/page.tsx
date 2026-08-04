@@ -4,8 +4,108 @@ import { allModels } from '@/lib/dataset';
 import type { AiModel, ModelStatus } from '@access-genie/shared';
 import { PageHeader, Badge, KpiCard, EmptyState } from '@/components/ui/primitives';
 import { Button } from '@/components/ui/Button';
-import { useToast } from '@/components/providers/ToastProvider';
+import { FormDialog, Field, FieldRow, Select, TextInput } from '@/components/ui/FormDialog';
+import { useMutate } from '@/api/mutate';
+import { aiModelsApi } from '@/api/configuration';
+import { useSession } from '@/components/providers/SessionProvider';
 import { cn, relTime } from '@/lib/utils';
+
+/**
+ * Register a model.
+ *
+ * The registry records models that run elsewhere — this platform does not host
+ * training, and the button that used to say so out loud ("not part of this
+ * demo") was describing a limitation rather than doing the job the page can
+ * genuinely do: keep an accurate inventory of what is in production, whose it
+ * is, and when it was last retrained.
+ */
+function RegisterModelDialog({ onClose }: { onClose: () => void }) {
+  const { run, isPending } = useMutate();
+  const { session } = useSession();
+
+  const [name, setName] = useState('');
+  const [task, setTask] = useState('');
+  const [status, setStatus] = useState<ModelStatus>('Staging');
+  const [version, setVersion] = useState('v1.0');
+  const [accuracy, setAccuracy] = useState('0');
+  const [framework, setFramework] = useState('scikit-learn');
+  const [owner, setOwner] = useState(session.user.name);
+  const [lastTrained, setLastTrained] = useState(new Date().toISOString().slice(0, 10));
+
+  const submit = async () => {
+    const ok = await run(
+      aiModelsApi.create({
+        name: name.trim(),
+        task: task.trim(),
+        status,
+        version: version.trim(),
+        accuracy: Number(accuracy) || 0,
+        framework: framework.trim(),
+        owner: owner.trim(),
+        lastTrained: new Date(lastTrained).toISOString(),
+      }),
+      {
+        success: `${name.trim()} registered`,
+        successDetail: `${status} · ${version.trim()}`,
+        describe: 'register that model',
+      },
+    );
+    if (ok) onClose();
+  };
+
+  return (
+    <FormDialog
+      icon="🧠"
+      title="Register a model"
+      description="Records a model that runs elsewhere. Training and serving happen outside this platform."
+      submitLabel="Register"
+      busy={isPending}
+      disabled={name.trim().length < 2 || task.trim().length < 2 || owner.trim().length < 2}
+      onSubmit={() => void submit()}
+      onCancel={onClose}
+    >
+      <FieldRow>
+        <Field label="Model name" required>
+          <TextInput autoFocus value={name} onChange={(e) => setName(e.target.value)} placeholder="Failure risk classifier" />
+        </Field>
+        <Field label="Task" required hint="What it predicts, in words.">
+          <TextInput value={task} onChange={(e) => setTask(e.target.value)} placeholder="Predict 30-day failure risk" />
+        </Field>
+      </FieldRow>
+
+      <FieldRow>
+        <Field label="Status">
+          <Select
+            value={status}
+            onChange={(e) => setStatus(e.target.value as ModelStatus)}
+            options={['Production', 'Staging', 'Training', 'Retired'].map((v) => ({ value: v, label: v }))}
+          />
+        </Field>
+        <Field label="Version">
+          <TextInput value={version} onChange={(e) => setVersion(e.target.value)} placeholder="v1.0" />
+        </Field>
+      </FieldRow>
+
+      <FieldRow>
+        <Field label="Accuracy %" hint="Whatever your evaluation reported. Left at zero if not measured.">
+          <TextInput type="number" min={0} max={100} value={accuracy} onChange={(e) => setAccuracy(e.target.value)} />
+        </Field>
+        <Field label="Last trained" required>
+          <TextInput type="date" value={lastTrained} onChange={(e) => setLastTrained(e.target.value)} />
+        </Field>
+      </FieldRow>
+
+      <FieldRow>
+        <Field label="Framework">
+          <TextInput value={framework} onChange={(e) => setFramework(e.target.value)} placeholder="scikit-learn" />
+        </Field>
+        <Field label="Owner" required hint="Who to ask when it drifts.">
+          <TextInput value={owner} onChange={(e) => setOwner(e.target.value)} />
+        </Field>
+      </FieldRow>
+    </FormDialog>
+  );
+}
 
 // ── token helpers ─────────────────────────────────────────────────────────────
 type Tone = 'slate' | 'primary' | 'emerald' | 'amber' | 'red';
@@ -64,7 +164,7 @@ function DriftBar({ value }: { value: number }) {
 const STATUS_FILTERS: (ModelStatus | 'All')[] = ['All', 'Production', 'Staging', 'Shadow', 'Retired'];
 
 export default function ModelRegistryPage() {
-  const { toast } = useToast();
+  const [registering, setRegistering] = useState(false);
   const [status, setStatus] = useState<ModelStatus | 'All'>('All');
 
   // ── KPIs ─────────────────────────────────────────────────────────────────────
@@ -95,11 +195,7 @@ export default function ModelRegistryPage() {
             <Link to="/ai/explainability">
               <Button variant="outline" size="md">Explainability</Button>
             </Link>
-            <Button
-              variant="primary"
-              size="md"
-              onClick={() => toast({ title: 'Register model', description: 'Model onboarding is not part of this demo.', tone: 'info' })}
-            >
+            <Button variant="primary" size="md" onClick={() => setRegistering(true)}>
               Register model
             </Button>
           </>
@@ -195,6 +291,8 @@ export default function ModelRegistryPage() {
           />
         )}
       </div>
+
+      {registering && <RegisterModelDialog onClose={() => setRegistering(false)} />}
     </div>
   );
 }

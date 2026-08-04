@@ -5,6 +5,9 @@ import type { Report } from '@access-genie/shared';
 import { PageHeader, Badge, KpiCard, EmptyState } from '@/components/ui/primitives';
 import { Button } from '@/components/ui/Button';
 import { useToast } from '@/components/providers/ToastProvider';
+import { useMutate } from '@/api/mutate';
+import { reportRunApi } from '@/api/configuration';
+import { reportsApi } from '@/api/platform';
 import { cn, relTime, nowMs } from '@/lib/utils';
 
 const isToday = (iso: string) =>
@@ -13,7 +16,9 @@ const isToday = (iso: string) =>
 
 export default function ReportLibraryPage() {
   const { toast } = useToast();
+  const { run: mutate, isPending } = useMutate();
   const [active, setActive] = useState<string>('All');
+  const [running, setRunning] = useState<string | null>(null);
 
   const categories = useMemo(
     () => ['All', ...Array.from(new Set(allReports.map((r) => r.category)))],
@@ -29,10 +34,48 @@ export default function ReportLibraryPage() {
 
   const filtered = active === 'All' ? allReports : allReports.filter((r) => r.category === active);
 
-  const run = (r: Report) =>
-    toast({ title: 'Report queued', description: `“${r.name}” is running — you’ll be notified when it’s ready.`, tone: 'info' });
+  /**
+   * Run the report and hand the file straight to the browser.
+   *
+   * Not "queued": the server queries the estate, renders it and stores the
+   * file within the request, so there is nothing to wait for and telling
+   * someone to expect a notification would be a lie about work already done.
+   */
+  const runReport = async (r: Report) => {
+    setRunning(r.id);
+    try {
+      const result = await mutate(reportRunApi.run(r.id), { describe: `run “${r.name}”` });
+      if (!result) return;
+
+      if (result.rowCount === 0) {
+        toast({
+          title: 'Nothing to report',
+          description: `“${r.name}” ran against an empty result set — there is no data in this category yet.`,
+          tone: 'info',
+        });
+        return;
+      }
+
+      await reportRunApi.download(result.job.id);
+      toast({
+        title: `${r.name} downloaded`,
+        description: `${result.rowCount} row${result.rowCount === 1 ? '' : 's'} · ${result.job.format} · also in the Export Centre.`,
+        tone: 'success',
+      });
+    } finally {
+      setRunning(null);
+    }
+  };
+
+  /** Flip the standing schedule. The subscription itself lives on Subscriptions. */
   const schedule = (r: Report) =>
-    toast({ title: 'Schedule updated', description: `“${r.name}” will now run automatically.`, tone: 'success' });
+    void mutate(reportsApi.update(r.id, { scheduled: !r.scheduled }), {
+      success: r.scheduled ? 'Schedule removed' : 'Marked as scheduled',
+      successDetail: r.scheduled
+        ? `“${r.name}” will no longer be delivered automatically.`
+        : `Add recipients under Analytics ▸ Subscriptions to have “${r.name}” delivered.`,
+      describe: 'change that schedule',
+    });
 
   return (
     <div className="h-full flex flex-col space-y-6">
@@ -77,7 +120,23 @@ export default function ReportLibraryPage() {
       </div>
 
       {filtered.length === 0 ? (
-        <EmptyState variant="no-results" title="No reports in this category" description="Try another category filter." />
+        <EmptyState
+          variant={allReports.length === 0 ? 'empty' : 'no-results'}
+          icon="📊"
+          title={allReports.length === 0 ? 'No reports defined' : 'No reports in this category'}
+          description={
+            allReports.length === 0
+              ? 'A report is a saved question about the estate. Running one queries the live data and downloads the answer.'
+              : 'Try another category filter.'
+          }
+          action={
+            allReports.length === 0 ? (
+              <Link to="/reports/builder">
+                <Button>＋ New Report</Button>
+              </Link>
+            ) : undefined
+          }
+        />
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
           {filtered.map((r) => (
@@ -115,8 +174,12 @@ export default function ReportLibraryPage() {
                 <Link to={`/reports/${r.id}`} className="mr-auto text-sm font-medium text-primary-600 hover:text-primary-700">
                   Open →
                 </Link>
-                <Button variant="outline" size="sm" onClick={() => run(r)}>Run</Button>
-                <Button variant="ghost" size="sm" onClick={() => schedule(r)}>Schedule</Button>
+                <Button variant="outline" size="sm" disabled={running === r.id} onClick={() => void runReport(r)}>
+                  {running === r.id ? 'Running…' : 'Run'}
+                </Button>
+                <Button variant="ghost" size="sm" disabled={isPending} onClick={() => schedule(r)}>
+                  {r.scheduled ? 'Unschedule' : 'Schedule'}
+                </Button>
               </div>
             </div>
           ))}

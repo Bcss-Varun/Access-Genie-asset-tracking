@@ -32,6 +32,7 @@ import {
 } from '@/lib/tracking-data';
 import { cn } from '@/lib/utils';
 import type { TrackedZone } from '@access-genie/shared';
+import { downloadCsv } from '@/api/configuration';
 
 /** What the operator is looking for, not what the data model calls it. */
 type View = 'all' | 'armed' | 'violations' | 'weak';
@@ -122,6 +123,18 @@ export default function GeofenceMonitoringPage() {
     [zoneRecord, scoped],
   );
 
+
+  /** Download what is on screen — built here because only the browser knows the filtered rows. */
+  const exportRows = (name: string, rows: Record<string, unknown>[]) => {
+    const n = downloadCsv(`${name}-${new Date().toISOString().slice(0, 10)}.csv`, rows);
+    toast({
+      title: n > 0 ? `${n} row${n === 1 ? '' : 's'} exported` : 'Nothing to export',
+      description: n > 0 ? 'Downloaded as CSV.' : 'Nothing matches the current filters.',
+      tone: n > 0 ? 'success' : 'info',
+    });
+  };
+
+
   return (
     <div className="space-y-5 pb-4">
       <PageHeader
@@ -134,11 +147,21 @@ export default function GeofenceMonitoringPage() {
             <ScopePicker value={scope} onChange={setScope} />
             <Button
               variant="outline"
-              onClick={() => toast({
-                title: 'Zone report queued',
-                description: `${stats.total} zones with their policy, coverage and violations`,
-                tone: 'success',
-              })}
+              onClick={() =>
+                exportRows(
+                  'geofence-zones',
+                  zonesInScope.map((z) => ({
+                    'Zone ID': z.id,
+                    Name: z.name,
+                    Facility: z.facility,
+                    Kind: z.kind,
+                    Policy: z.policy,
+                    Armed: isArmed(z) ? 'Yes' : 'No',
+                    'Coverage %': z.coverage,
+                    'Violations (24h)': z.violations24h,
+                  })),
+                )
+              }
             >
               ⤓ Export
             </Button>

@@ -5,6 +5,8 @@ import type { Part } from '@access-genie/shared';
 import { PageHeader, KpiCard, EmptyState } from '@/components/ui/primitives';
 import { Button } from '@/components/ui/Button';
 import { useToast } from '@/components/providers/ToastProvider';
+import { useMutate } from '@/api/mutate';
+import { procurementApi } from '@/api/inventory';
 import { cn, formatMoney } from '@/lib/utils';
 
 // Suggested order quantity: top back up to 2× the reorder point.
@@ -19,6 +21,7 @@ function stockBarColor(onHand: number, reorderPoint: number): string {
 
 export default function ReorderPage() {
   const { toast } = useToast();
+  const { run, isPending } = useMutate();
   const parts = useMemo(() => reorderParts(), []);
   const [selected, setSelected] = useState<Set<string>>(() => new Set());
 
@@ -41,30 +44,46 @@ export default function ReorderPage() {
     setSelected(allSelected ? new Set() : new Set(parts.map((p) => p.id)));
   }
 
-  function createPo() {
-    const chosen = parts.filter((p) => selected.has(p.id));
-    const supplierIds = new Set(chosen.map((p) => p.supplierId));
-    const value = chosen.reduce((sum, p) => sum + lineValue(p), 0);
-    toast({
-      title: `Drafted ${supplierIds.size} purchase order${supplierIds.size === 1 ? '' : 's'}`,
-      description: `${chosen.length} line item${chosen.length === 1 ? '' : 's'} grouped by supplier · ${formatMoney(value)} committed`,
-      tone: 'success',
-    });
+  /**
+   * Draft the orders.
+   *
+   * The server groups by supplier and skips any supplier that already has an
+   * open draft, so pressing this twice cannot produce two orders for the same
+   * vendor — which is why the result reports both numbers rather than assuming
+   * everything was created.
+   */
+  async function createPo() {
+    const result = await run(procurementApi.draftReorders(), { describe: 'draft those purchase orders' });
+    if (!result) return;
+
     setSelected(new Set());
+    toast({
+      title:
+        result.drafted > 0
+          ? `Drafted ${result.drafted} purchase order${result.drafted === 1 ? '' : 's'}`
+          : 'Nothing new to draft',
+      description:
+        result.skipped > 0
+          ? `${result.skipped} supplier${result.skipped === 1 ? ' already has' : 's already have'} an open draft — those were left alone.`
+          : result.drafted > 0
+            ? 'Grouped by supplier, in Procurement as drafts. Nothing is committed until you send them.'
+            : 'Every part below its reorder point either has no supplier or is already on a draft order.',
+      tone: result.drafted > 0 ? 'success' : 'info',
+    });
   }
 
   return (
     <div className="h-full flex flex-col space-y-6">
       <PageHeader
         title="Reorder & Procurement"
-        subtitle="Parts at or below their reorder point, with AI-suggested order quantities."
+        subtitle="Parts at or below their reorder point, with suggested order quantities — enough to reach twice the reorder point."
         breadcrumb={[
           { label: 'Inventory', href: '/assets' },
           { label: 'Reorder & Procurement' },
         ]}
         actions={
-          <Button onClick={createPo} disabled={selected.size === 0}>
-            Create PO from selected{selected.size > 0 ? ` (${selected.size})` : ''}
+          <Button onClick={() => void createPo()} disabled={isPending || parts.length === 0}>
+            {isPending ? 'Drafting…' : 'Draft POs for everything below reorder'}
           </Button>
         }
       />

@@ -7,6 +7,7 @@ import { buildMeta } from '../utils/response.js';
 import { revokeAllForUser } from './token.service.js';
 import type { CreateUserInput, UpdateUserInput } from '../validators/user.validator.js';
 import type { ListQueryInput } from '../validators/common.js';
+import type { UpdateProfileInput } from '../validators/auth.validator.js';
 
 const SORTABLE = ['name', 'email', 'roleId', 'createdAt', 'lastLoginAt'];
 
@@ -123,3 +124,24 @@ export function listRoles() {
     modules: role.modules === '*' ? 'all' : role.modules,
   }));
 }
+
+/**
+ * Update your own profile.
+ *
+ * Separate from `updateUser` on purpose. That function is an administrator
+ * acting on someone else and carries the guards that go with it — role changes,
+ * suspensions, session revocation. This one is a person editing their own
+ * details, so it takes the id from the session and cannot touch anything that
+ * grants access.
+ */
+export async function updateOwnProfile(id: string, input: UpdateProfileInput): Promise<PublicUser> {
+  const user = await User.findById(id);
+  if (!user) throw ApiError.notFound('User');
+
+  Object.assign(user, input);
+  if (input.name) user.initials = deriveInitials(input.name);
+  await user.save();
+
+  return user.toPublic();
+}
+

@@ -39,6 +39,11 @@ import {
 } from '@/lib/tracking-data';
 import { cn, formatMoney, relTime } from '@/lib/utils';
 import type { PresenceState } from '@access-genie/shared';
+import { downloadCsv } from '@/api/configuration';
+import { useMutate } from '@/api/mutate';
+import { movementsApi } from '@/api/tracking-ops';
+import { alertsApi } from '@/api/alerts';
+import { useSession } from '@/components/providers/SessionProvider';
 
 const TAB_KEYS = ['map', 'list'] as const;
 type TabKey = (typeof TAB_KEYS)[number];
@@ -64,14 +69,12 @@ function SortHead({ k, label, sort, onSort }: { k: SortKey; label: string; sort:
 }
 
 const BULK_BTN = 'rounded-md px-2.5 py-1 text-xs font-medium text-primary-700 hover:bg-primary-100';
-const BULK_ACTIONS = [
-  { label: 'Assign custodian', description: 'custody request sent for approval' },
-  { label: 'Start transfer', description: 'draft movement created, awaiting sign-off' },
-  { label: 'Export', description: 'positions and custody written to CSV' },
-] as const;
+
 
 export default function LiveTrackingPage() {
   const { toast } = useToast();
+  const { run, isPending } = useMutate();
+  const { session } = useSession();
   const [scope, setScope] = useFacilityScope();
   const [tab, setTab] = useTabs<TabKey>(TAB_KEYS, 'map');
 
@@ -158,15 +161,46 @@ export default function LiveTrackingPage() {
 
   // ── Actions ────────────────────────────────────────────────────────────────
 
-  const reportMissing = useCallback((ids: string[]) => {
-    if (ids.length === 0) return;
-    setReported((prev) => { const n = new Set(prev); ids.forEach((i) => n.add(i)); return n; });
-    toast({
-      title: ids.length === 1 ? 'Recovery search opened' : `${ids.length} recovery searches opened`,
-      description: 'Security has the last known position, custodian and time of loss',
-      tone: 'error',
-    });
-  }, [toast]);
+  /**
+   * Report an asset missing.
+   *
+   * Raises a critical alert per asset — that is the queue security actually
+   * works, and it is what "opened a recovery search" has to mean if it is to
+   * mean anything. The last known position goes in the alert's source so
+   * whoever picks it up starts where the asset was last seen.
+   */
+  const reportMissing = useCallback(
+    async (ids: string[]) => {
+      if (ids.length === 0) return;
+
+      const rows = scoped.filter((p) => ids.includes(p.assetId));
+      const results = await Promise.all(
+        rows.map((p) =>
+          run(
+            alertsApi.create({
+              title: `Recovery — ${p.assetName} reported missing`,
+              severity: 'Critical',
+              type: 'Security',
+              assetId: p.assetId,
+              source: `Last seen ${p.zone} · ${p.custodian ?? 'no custodian'} · ${relTime(p.lastSeen)}`,
+            }),
+            { describe: 'open that recovery search' },
+          ),
+        ),
+      );
+
+      const opened = results.filter(Boolean).length;
+      if (opened === 0) return;
+
+      setReported((prev) => { const n = new Set(prev); ids.forEach((i) => n.add(i)); return n; });
+      toast({
+        title: opened === 1 ? 'Recovery search opened' : `${opened} recovery searches opened`,
+        description: 'Critical alerts raised with the last known position, custodian and time of loss.',
+        tone: 'error',
+      });
+    },
+    [toast, run, scoped],
+  );
 
   /** Every map filter has to come off, or "locate" can land on a plan that is
    *  filtering out the very asset it was asked to point at. */
@@ -208,6 +242,22 @@ export default function LiveTrackingPage() {
   };
 
   // ── List data ──────────────────────────────────────────────────────────────
+
+  /**
+   * Download what is on screen.
+   *
+   * This used to say "queued" and put nothing anywhere. The rows the user has
+   * filtered to only exist in the browser, so the file is built here rather
+   * than asked for from the server with the filter state re-sent.
+   */
+  const exportRows = (name: string, rows: Record<string, unknown>[]) => {
+    const n = downloadCsv(`${name}-${new Date().toISOString().slice(0, 10)}.csv`, rows);
+    toast({
+      title: n > 0 ? `${n} row${n === 1 ? '' : 's'} exported` : 'Nothing to export',
+      description: n > 0 ? 'Downloaded as CSV.' : 'Nothing matches the current filters.',
+      tone: n > 0 ? 'success' : 'info',
+    });
+  };
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -296,7 +346,22 @@ export default function LiveTrackingPage() {
             </Link>
             <Button
               variant="outline"
-              onClick={() => toast({ title: 'Position export queued', description: `${filtered.length} assets with their latest fix`, tone: 'success' })}
+              onClick={() =>
+                exportRows(
+                  'asset-positions',
+                  filtered.map((a) => ({
+                    'Asset ID': a.assetId,
+                    Name: a.assetName,
+                    Zone: a.zone,
+                    State: a.state,
+                    Precision: a.precision,
+                    Confidence: a.confidence,
+                    Custody: a.custody,
+                    Custodian: a.custodian ?? '',
+                    'Last seen': a.lastSeen,
+                  })),
+                )
+              }
             >
               ⤓ Export
             </Button>
@@ -446,16 +511,42 @@ export default function LiveTrackingPage() {
                 <button onClick={() => { const first = Array.from(selected)[0]; if (first) locateOnMap(first); }} className={BULK_BTN}>
                   Locate on map
                 </button>
-                {BULK_ACTIONS.map((a) => (
+                {/*
+                  The bar used to offer "Assign custodian", "Start transfer" and
+                  "Export" as three toasts. Assigning and transferring are real
+                  flows that live on the asset registry and Operations, and a
+                  second copy here would have been a second way to do them that
+                  could disagree. Export is the one that belongs on this screen —
+                  it exports what this screen is showing — so it is the one that
+                  stayed, and it writes a file.
+                */}
+                {[{ label: 'Export selection' }].map((a) => (
                   <button
                     key={a.label} className={BULK_BTN}
-                    onClick={() => toast({ title: a.label, description: `${selected.size} assets · ${a.description}`, tone: 'info' })}
+                    onClick={() =>
+                      exportRows(
+                        'selected-positions',
+                        filtered
+                          .filter((p) => selected.has(p.assetId))
+                          .map((p) => ({
+                            'Asset ID': p.assetId,
+                            Name: p.assetName,
+                            Zone: p.zone,
+                            State: p.state,
+                            Precision: p.precision,
+                            Confidence: p.confidence,
+                            Custody: p.custody,
+                            Custodian: p.custodian ?? '',
+                            'Last seen': p.lastSeen,
+                          })),
+                      )
+                    }
                   >
                     {a.label}
                   </button>
                 ))}
                 <button
-                  onClick={() => { reportMissing(Array.from(selected)); setSelected(new Set()); }}
+                  onClick={() => { void reportMissing(Array.from(selected)); setSelected(new Set()); }}
                   className="rounded-md px-2.5 py-1 text-xs font-medium text-health-critical hover:bg-red-100"
                 >
                   Report missing
@@ -577,16 +668,42 @@ export default function LiveTrackingPage() {
                 <Button size="sm" variant="outline">Replay journey</Button>
               </Link>
             )}
+            {/*
+              Real custody: this books the asset out through the movements
+              ledger, which is what the check-in/out screen and the asset's own
+              custody history both read. "Request sent" was neither sent nor
+              recorded.
+            */}
             <Button
-              size="sm" variant="outline"
-              onClick={() => toast({ title: 'Custody request sent', description: `${asset.assetName} · awaiting acceptance by the new custodian`, tone: 'info' })}
+              size="sm"
+              variant="outline"
+              disabled={isPending || asset.custody === 'Checked Out'}
+              title={asset.custody === 'Checked Out' ? `Already held by ${asset.custodian ?? 'someone'}` : undefined}
+              onClick={() =>
+                void run(
+                  movementsApi.create({
+                    assetId: asset.assetId,
+                    assetName: asset.assetName,
+                    direction: 'Out',
+                    person: session.user.name,
+                    purpose: 'Taken from the live tracking map',
+                    location: asset.zone,
+                  }),
+                  {
+                    success: 'Checked out to you',
+                    successDetail: `${asset.assetName} — recorded in the custody ledger.`,
+                    describe: 'take custody of that asset',
+                    refreshTracking: true,
+                  },
+                )
+              }
             >
-              Assign custodian
+              Take custody
             </Button>
             <Button
               size="sm" variant="danger" className="ml-auto"
               disabled={reported.has(asset.assetId) || asset.state === 'Missing'}
-              onClick={() => reportMissing([asset.assetId])}
+              onClick={() => void reportMissing([asset.assetId])}
             >
               {reported.has(asset.assetId) || asset.state === 'Missing' ? 'Recovery open' : 'Report missing'}
             </Button>

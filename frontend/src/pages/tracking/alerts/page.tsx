@@ -42,6 +42,7 @@ import type {
   AlertLifecycle, AlertPriority, AutomationRule, Incident, TrackingAlert, TrackingAlertCategory,
 } from '@access-genie/shared';
 import { nowMs, cn, formatMoney, relTime } from '@/lib/utils';
+import { downloadCsv } from '@/api/configuration';
 
 const TAB_KEYS = ['queue', 'incidents', 'automation', 'analytics'] as const;
 
@@ -441,6 +442,18 @@ export default function TrackingAlertsPage() {
   const incidentSettled = drawerIncident?.state === 'Resolved' || drawerIncident?.state === 'Closed';
   const drawerRule = openRuleId ? automationRules.find((r) => r.id === openRuleId) ?? null : null;
 
+
+  /** Download what is on screen — built here because only the browser knows the filtered rows. */
+  const exportRows = (name: string, rows: Record<string, unknown>[]) => {
+    const n = downloadCsv(`${name}-${new Date().toISOString().slice(0, 10)}.csv`, rows);
+    toast({
+      title: n > 0 ? `${n} row${n === 1 ? '' : 's'} exported` : 'Nothing to export',
+      description: n > 0 ? 'Downloaded as CSV.' : 'Nothing matches the current filters.',
+      tone: n > 0 ? 'success' : 'info',
+    });
+  };
+
+
   return (
     <div className="space-y-5 pb-4">
       <PageHeader
@@ -451,7 +464,31 @@ export default function TrackingAlertsPage() {
           <>
             <LiveStamp />
             <ScopePicker value={scope} onChange={setScope} />
-            <Button variant="outline" onClick={() => toast({ title: 'Alert digest queued', description: `${openAlerts.length} open alerts → Export Center`, tone: 'success' })}>
+            <Button
+              variant="outline"
+              onClick={() =>
+                exportRows(
+                  'open-alerts',
+                  openAlerts.map((a) => ({
+                    ID: a.id,
+                    Title: a.title,
+                    Priority: a.priority,
+                    Category: a.category,
+                    State: a.state,
+                    Asset: a.assetName ?? '',
+                    'Asset ID': a.assetId ?? '',
+                    Facility: a.facility,
+                    Location: a.location,
+                    Raised: a.raisedAt,
+                    'SLA due': a.slaDueAt,
+                    'SLA breached': a.slaBreached ? 'Yes' : 'No',
+                    Team: a.team,
+                    'Assigned to': a.assignee ?? 'Unassigned',
+                    Recommendation: a.recommendation,
+                  })),
+                )
+              }
+            >
               Export digest
             </Button>
           </>
@@ -866,7 +903,12 @@ export default function TrackingAlertsPage() {
               <p className="mt-1 text-sm text-primary-900">{drawerAlert.recommendation}</p>
               <Button
                 size="sm" className="mt-2.5"
-                onClick={() => toast({ title: drawerAlert.recommendationAction, description: `${drawerAlert.id} · ${drawerAlert.location}`, tone: 'info' })}
+                onClick={() =>
+                // The recommendation is advice; acting on it means taking the
+                // alert on, which is the same acknowledge transition the queue
+                // uses — so it goes through `act` rather than a second path.
+                void act([drawerAlert.id], 'ack')
+              }
               >
                 {drawerAlert.recommendationAction}
               </Button>

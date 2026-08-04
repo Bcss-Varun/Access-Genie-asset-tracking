@@ -2,7 +2,9 @@ import { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { PageHeader, KpiCard, Badge } from '@/components/ui/primitives';
 import { Button } from '@/components/ui/Button';
-import { useToast } from '@/components/providers/ToastProvider';
+import { FormDialog, Field, Select, TextArea } from '@/components/ui/FormDialog';
+import { AssetPicker } from '@/components/ui/AssetPicker';
+import { flattenScope } from '@/lib/rbac';
 import { relTime } from '@/lib/utils';
 import type { Transfer, TransferStatus } from '@access-genie/shared';
 import { allTransfers } from '@/lib/dataset';
@@ -23,10 +25,71 @@ const STATUS_TONE: Record<TransferStatus, 'amber' | 'primary' | 'slate' | 'emera
   Rejected: 'slate',
 };
 
+/**
+ * Raise a relocation request.
+ *
+ * The destination is picked from the scope tree rather than typed, so a
+ * transfer cannot be routed to a place that does not exist — which is how one
+ * sits in the queue forever waiting for a receiver nobody can identify.
+ */
+function NewTransferDialog({ onClose }: { onClose: () => void }) {
+  const { run, isPending } = useMutate();
+
+  const places = flattenScope().filter(({ node }) => node.level !== 'org' && node.level !== 'region');
+  const [assetId, setAssetId] = useState('');
+  const [to, setTo] = useState(places[0]?.node.name ?? '');
+  const [reason, setReason] = useState('');
+
+  const submit = async () => {
+    const ok = await run(operationsApi.requestTransfer({ assetId, to, reason: reason.trim() }), {
+      success: 'Transfer requested',
+      successDetail: 'It needs approval from somebody other than you before it can move.',
+      describe: 'request that transfer',
+    });
+    if (ok) onClose();
+  };
+
+  return (
+    <FormDialog
+      icon="🚚"
+      title="New transfer"
+      description="Moves an asset permanently. Approval is required, and the server refuses an approval from whoever raised it."
+      submitLabel="Request transfer"
+      busy={isPending}
+      disabled={!assetId || !to || reason.trim().length < 3}
+      onSubmit={() => void submit()}
+      onCancel={onClose}
+    >
+      <AssetPicker value={assetId} onChange={setAssetId} required />
+
+      <Field label="Destination" required>
+        {places.length > 0 ? (
+          <Select
+            value={to}
+            onChange={(e) => setTo(e.target.value)}
+            options={places.map(({ node, depth }) => ({
+              value: node.name,
+              label: `${'  '.repeat(Math.max(0, depth - 1))}${node.name}`,
+            }))}
+          />
+        ) : (
+          <p className="rounded-lg bg-amber-50 px-3 py-2 text-xs text-amber-700">
+            There is nowhere to transfer to yet. Add a facility under Administration ▸ Facilities.
+          </p>
+        )}
+      </Field>
+
+      <Field label="Why" required hint="Read by whoever approves it — give them enough to decide.">
+        <TextArea value={reason} onChange={(e) => setReason(e.target.value)} placeholder="Reassigned to the Hyderabad team after the office move." />
+      </Field>
+    </FormDialog>
+  );
+}
+
 export default function TransfersPage() {
-  const { toast } = useToast();
   const { run } = useMutate();
   const [transfers, setTransfers] = useState<Transfer[]>(allTransfers);
+  const [creating, setCreating] = useState(false);
 
   const kpis = useMemo(() => {
     const open = transfers.filter((t) => t.status !== 'Received').length;
@@ -75,9 +138,7 @@ export default function TransfersPage() {
     });
   }
 
-  function newTransfer() {
-    toast({ title: 'New transfer', description: 'Transfer request drafted — assign an approver to route it.', tone: 'info' });
-  }
+
 
   return (
     <div className="h-full flex flex-col space-y-6">
@@ -85,7 +146,7 @@ export default function TransfersPage() {
         title="Transfers & Movements"
         subtitle="Asset relocation requests with segregation-of-duties approval routing."
         breadcrumb={[{ label: 'Operations', href: '/operations/transfers' }, { label: 'Transfers' }]}
-        actions={<Button onClick={newTransfer}>+ New Transfer</Button>}
+        actions={<Button onClick={() => setCreating(true)}>+ New Transfer</Button>}
       />
 
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
@@ -154,6 +215,8 @@ export default function TransfersPage() {
           </table>
         </div>
       </div>
+
+      {creating && <NewTransferDialog onClose={() => setCreating(false)} />}
     </div>
   );
 }

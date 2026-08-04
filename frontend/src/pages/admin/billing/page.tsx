@@ -3,6 +3,7 @@ import { PageHeader, Badge, KpiCard } from '@/components/ui/primitives';
 import { Button } from '@/components/ui/Button';
 import { useToast } from '@/components/providers/ToastProvider';
 import { cn, formatMoney } from '@/lib/utils';
+import { downloadCsv } from '@/api/configuration';
 
 // Amounts are INR, exclusive of 18% GST (shown separately on the invoice).
 const invoices = allInvoices;
@@ -34,7 +35,14 @@ export default function BillingPage() {
         subtitle="Plan, usage & invoices for your Access Genie tenant. All amounts in INR."
         breadcrumb={[{ label: 'Administration' }, { label: 'Billing' }]}
         actions={
-          <Button variant="outline" onClick={() => toast({ title: 'Manage plan', description: 'Contact your account executive to change plans.', tone: 'info' })}>
+          <Button variant="outline" onClick={() =>
+              toast({
+                title: 'Plan changes are handled off-platform',
+                description: 'This deployment has no billing provider wired to it — talk to whoever owns the contract.',
+                tone: 'info',
+              })
+            }
+          >
             Manage Plan
           </Button>
         }
@@ -116,7 +124,19 @@ export default function BillingPage() {
                     <Button
                       size="sm"
                       variant="ghost"
-                      onClick={() => toast({ title: 'Download', description: `Preparing ${inv.id}.pdf`, tone: 'info' })}
+                      // Invoices are issued by the billing provider, not generated here. The
+              // row's own numbers are downloadable; the PDF is not this platform's
+              // to produce, and a button that made one would be inventing a document.
+              onClick={() => {
+                const n = downloadCsv(`${inv.id}.csv`, [
+                  { Invoice: inv.id, Date: inv.date, Amount: inv.amount, Status: inv.status },
+                ]);
+                toast({
+                  title: n > 0 ? `${inv.id} downloaded` : 'Nothing to download',
+                  description: 'The invoice line as CSV. The signed PDF comes from your billing provider.',
+                  tone: n > 0 ? 'success' : 'info',
+                });
+              }}
                     >
                       Download
                     </Button>

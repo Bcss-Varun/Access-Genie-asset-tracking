@@ -1,8 +1,28 @@
-import { roles, resolveModules } from '@/lib/rbac';
-import type { ModuleKey, RoleId } from '@access-genie/shared';
-import { PageHeader, Badge } from '@/components/ui/primitives';
+import { useEffect, useState } from 'react';
+import { useQuery } from '@tanstack/react-query';
+import type { ModuleKey } from '@access-genie/shared';
+import { PageHeader, Badge, TableSkeleton, ErrorState } from '@/components/ui/primitives';
 import { Button } from '@/components/ui/Button';
-import { useToast } from '@/components/providers/ToastProvider';
+import { FormDialog, CheckField } from '@/components/ui/FormDialog';
+import { useMutate } from '@/api/mutate';
+import { adminApi, type RoleView } from '@/api/users';
+import { useSession } from '@/components/providers/SessionProvider';
+import { cn } from '@/lib/utils';
+
+/**
+ * Roles & permissions.
+ *
+ * The button here used to promise custom role creation. It is not offered,
+ * because roles are the axis every `requireModule(...)` in the API and every
+ * entry in the navigation is written against — inventing new ones at runtime
+ * would leave all of that referring to a set that no longer describes the
+ * system.
+ *
+ * What an administrator actually asks for is narrower and entirely safe: "our
+ * facility managers also need Analytics". So the matrix is editable. Changing a
+ * role signs out everyone holding it, so the new permissions apply at once
+ * rather than whenever their tokens happen to expire.
+ */
 
 const tierTone: Record<string, 'primary' | 'emerald' | 'amber' | 'slate'> = {
   Platform: 'primary',
@@ -12,78 +32,211 @@ const tierTone: Record<string, 'primary' | 'emerald' | 'amber' | 'slate'> = {
   Business: 'slate',
 };
 
-const MODULES: { key: ModuleKey; label: string }[] = [
-  { key: 'workspace', label: 'Workspace' },
-  { key: 'assets', label: 'Assets' },
-  { key: 'tracking', label: 'Tracking' },
-  { key: 'ai', label: 'AI' },
-  { key: 'maintenance', label: 'Maint.' },
-  { key: 'inventory', label: 'Inventory' },
-  { key: 'operations', label: 'Ops' },
-  { key: 'analytics', label: 'Analytics' },
-  { key: 'alerts', label: 'Alerts' },
-  { key: 'compliance', label: 'Compliance' },
-  { key: 'admin', label: 'Admin' },
-  { key: 'system', label: 'System' },
+const MODULES: { key: ModuleKey; label: string; blurb: string }[] = [
+  { key: 'workspace', label: 'Workspace', blurb: 'Dashboards, notifications, the home screen' },
+  { key: 'assets', label: 'Assets', blurb: 'The registry, registration, custody' },
+  { key: 'tracking', label: 'Tracking', blurb: 'Live map, journeys, geofences, devices' },
+  { key: 'ai', label: 'AI', blurb: 'Insights, forecasting, anomaly detection' },
+  { key: 'maintenance', label: 'Maint.', blurb: 'Work orders, PM schedules, inspections' },
+  { key: 'inventory', label: 'Inventory', blurb: 'Parts, stock, purchase orders' },
+  { key: 'operations', label: 'Ops', blurb: 'Transfers, reservations, cycle counts' },
+  { key: 'analytics', label: 'Analytics', blurb: 'Reports, exports, BI' },
+  { key: 'alerts', label: 'Alerts', blurb: 'Alert queue, rules, escalation' },
+  { key: 'compliance', label: 'Compliance', blurb: 'Certifications, audit log, retention' },
+  { key: 'admin', label: 'Admin', blurb: 'Users, roles, org configuration' },
+  { key: 'system', label: 'System', blurb: 'API keys, integrations, platform internals' },
 ];
 
+function EditRoleDialog({ role, onClose }: { role: RoleView; onClose: () => void }) {
+  const { run, isPending } = useMutate();
+  const [modules, setModules] = useState<ModuleKey[]>(role.modules);
+
+  const toggle = (key: ModuleKey) =>
+    setModules((prev) => (prev.includes(key) ? prev.filter((m) => m !== key) : [...prev, key]));
+
+  const save = async () => {
+    const ok = await run(adminApi.setRoleGrants(role.id, modules), {
+      success: `${role.name} updated`,
+      successDetail: `${modules.length} module${modules.length === 1 ? '' : 's'} — everyone holding this role has been signed out.`,
+      describe: 'change those permissions',
+    });
+    if (ok) onClose();
+  };
+
+  const reset = async () => {
+    const ok = await run(adminApi.resetRoleGrants(role.id), {
+      success: `${role.name} reset`,
+      successDetail: 'Back to the shipped defaults.',
+      describe: 'reset that role',
+    });
+    if (ok) onClose();
+  };
+
+  const changed =
+    modules.length !== role.modules.length || modules.some((m) => !role.modules.includes(m));
+
+  return (
+    <FormDialog
+      icon="🔐"
+      title={`${role.name} permissions`}
+      description={`${role.userCount} ${role.userCount === 1 ? 'person holds' : 'people hold'} this role. Saving signs them all out so the change takes effect immediately.`}
+      submitLabel="Save permissions"
+      width="lg"
+      busy={isPending}
+      disabled={!changed || modules.length === 0}
+      onSubmit={() => void save()}
+      onCancel={onClose}
+      footer={
+        role.customised ? (
+          <Button type="button" variant="ghost" disabled={isPending} onClick={() => void reset()}>
+            Reset to default
+          </Button>
+        ) : undefined
+      }
+    >
+      <div className="grid gap-2.5 sm:grid-cols-2">
+        {MODULES.map((m) => (
+          <CheckField
+            key={m.key}
+            label={m.label}
+            hint={m.blurb}
+            checked={modules.includes(m.key)}
+            onChange={() => toggle(m.key)}
+          />
+        ))}
+      </div>
+
+      {modules.length === 0 && (
+        <p className="rounded-lg bg-red-50 px-3 py-2 text-xs text-red-700">
+          A role must grant at least one module — otherwise nobody holding it can reach any screen.
+        </p>
+      )}
+    </FormDialog>
+  );
+}
+
 export default function AdminRolesPage() {
-  const { toast } = useToast();
-  const roleList = Object.values(roles);
+  const { session } = useSession();
+  const canEdit = session.role.id === 'super_admin' || session.role.id === 'org_admin';
+
+  const { data, isLoading, error, refetch } = useQuery({
+    queryKey: ['roles'],
+    queryFn: adminApi.roles,
+  });
+
+  const [editing, setEditing] = useState<RoleView | null>(null);
+
+  // Keep the open dialog in step with a refetch, so it never edits stale grants
+  // after another administrator has changed the same role.
+  useEffect(() => {
+    if (!editing || !data) return;
+    const fresh = data.find((r) => r.id === editing.id);
+    if (fresh && fresh.modules.join() !== editing.modules.join()) setEditing(fresh);
+  }, [data, editing]);
+
+  const customised = data?.filter((r) => r.customised).length ?? 0;
 
   return (
     <div className="h-full flex flex-col space-y-6">
       <PageHeader
         title="Roles & Permissions"
-        subtitle="Which modules each role can access. Roles drive the role-adaptive navigation."
+        subtitle="Which modules each role can access. Roles drive the role-adaptive navigation and the API's own gate."
         breadcrumb={[{ label: 'Administration', href: '/admin/org' }, { label: 'Roles' }]}
-        actions={
-          <Button onClick={() => toast({ title: 'New Role', description: 'Custom role creation is on the roadmap.', tone: 'info' })}>
-            + New Role
-          </Button>
-        }
       />
 
       <div className="glass-panel rounded-xl overflow-hidden">
-        <div className="flex items-center justify-between p-5 pb-3">
-          <h2 className="font-heading font-semibold text-slate-900">Permission Matrix</h2>
-          <span className="text-xs text-slate-400">{roleList.length} roles × {MODULES.length} modules</span>
+        <div className="flex flex-wrap items-center justify-between gap-2 p-5 pb-3">
+          <div>
+            <h2 className="font-heading font-semibold text-slate-900">Permission Matrix</h2>
+            <p className="mt-0.5 text-xs text-slate-500">
+              {canEdit
+                ? 'Click a role to change what it can reach. Everyone holding it is signed out so the change applies at once.'
+                : 'Only an administrator can change these.'}
+            </p>
+          </div>
+          <span className="text-xs text-slate-400">
+            {(data?.length ?? 0)} roles × {MODULES.length} modules
+            {customised > 0 && ` · ${customised} customised`}
+          </span>
         </div>
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm border-collapse">
-            <thead>
-              <tr className="border-y border-slate-100 bg-slate-50/70 text-xs font-semibold uppercase tracking-wide text-slate-500">
-                <th className="px-5 py-2.5 text-left sticky left-0 bg-slate-50/70 z-10">Role</th>
-                <th className="px-3 py-2.5 text-left">Tier</th>
-                {MODULES.map((m) => (
-                  <th key={m.key} className="px-3 py-2.5 text-center whitespace-nowrap">{m.label}</th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {roleList.map((role) => {
-                const granted = new Set(resolveModules(role.id as RoleId));
-                return (
-                  <tr key={role.id} className="border-b border-slate-100 last:border-0 hover:bg-slate-50/60 transition-colors">
-                    <td className="px-5 py-3 font-medium text-slate-800 whitespace-nowrap sticky left-0 bg-white z-10">{role.name}</td>
-                    <td className="px-3 py-3"><Badge tone={tierTone[role.tier] ?? 'slate'}>{role.tier}</Badge></td>
-                    {MODULES.map((m) => {
-                      const has = granted.has(m.key);
-                      return (
-                        <td key={m.key} className="px-3 py-3 text-center">
-                          <span className={has ? 'text-emerald-600 font-semibold' : 'text-slate-300'}>
-                            {has ? '✓' : '–'}
-                          </span>
+
+        {isLoading ? (
+          <TableSkeleton rows={9} columns={6} />
+        ) : error ? (
+          <ErrorState title="Could not load roles" description="The permission matrix is served by the API." onRetry={() => void refetch()} />
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm border-collapse">
+              <thead>
+                <tr className="border-y border-slate-100 bg-slate-50/70 text-xs font-semibold uppercase tracking-wide text-slate-500">
+                  <th className="sticky left-0 z-10 bg-slate-50/70 px-5 py-2.5 text-left">Role</th>
+                  <th className="px-3 py-2.5 text-left">Tier</th>
+                  <th className="px-3 py-2.5 text-center">Users</th>
+                  {MODULES.map((m) => (
+                    <th key={m.key} title={m.blurb} className="whitespace-nowrap px-3 py-2.5 text-center">
+                      {m.label}
+                    </th>
+                  ))}
+                  {canEdit && <th className="px-5 py-2.5 text-right">Edit</th>}
+                </tr>
+              </thead>
+              <tbody>
+                {(data ?? []).map((role) => {
+                  const granted = new Set<ModuleKey>(role.modules);
+                  return (
+                    <tr key={role.id} className="border-b border-slate-100 transition-colors last:border-0 hover:bg-slate-50/60">
+                      <td className="sticky left-0 z-10 whitespace-nowrap bg-white px-5 py-3 font-medium text-slate-800">
+                        {role.name}
+                        {role.customised && (
+                          <Badge tone="amber" className="ml-2">customised</Badge>
+                        )}
+                      </td>
+                      <td className="px-3 py-3">
+                        <Badge tone={tierTone[role.tier] ?? 'slate'}>{role.tier}</Badge>
+                      </td>
+                      <td className="px-3 py-3 text-center tabular-nums text-slate-600">{role.userCount}</td>
+                      {MODULES.map((m) => {
+                        const has = granted.has(m.key);
+                        // A grant that differs from the shipped matrix is marked,
+                        // so a deployment's own decisions stay visible.
+                        const isDefault = role.defaultModules.includes(m.key);
+                        return (
+                          <td key={m.key} className="px-3 py-3 text-center">
+                            <span
+                              className={cn(
+                                'font-semibold',
+                                has ? (isDefault ? 'text-emerald-600' : 'text-amber-600') : 'text-slate-300',
+                              )}
+                              title={has !== isDefault ? (has ? 'Added for this deployment' : 'Removed for this deployment') : undefined}
+                            >
+                              {has ? '✓' : '–'}
+                            </span>
+                          </td>
+                        );
+                      })}
+                      {canEdit && (
+                        <td className="px-5 py-3 text-right">
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            disabled={!role.editable}
+                            title={role.editable ? undefined : 'Super Admin holds every module by definition'}
+                            onClick={() => setEditing(role)}
+                          >
+                            Edit
+                          </Button>
                         </td>
-                      );
-                    })}
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        </div>
+                      )}
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        )}
       </div>
+
+      {editing && <EditRoleDialog role={editing} onClose={() => setEditing(null)} />}
     </div>
   );
 }

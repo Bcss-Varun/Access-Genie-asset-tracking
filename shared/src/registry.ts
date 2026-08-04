@@ -530,3 +530,57 @@ export interface HelpCategory {
   icon: string;
   description: string;
 }
+
+// ── Organisation configuration ───────────────────────────────────────────────
+/**
+ * A reusable checklist body.
+ *
+ * `usageCount` is joined on read — how many inspections currently reference the
+ * template by name — rather than stored, so deleting an inspection lowers it.
+ */
+export interface ChecklistTemplate {
+  id: string;
+  name: string;
+  category: string;
+  icon: string;
+  description: string;
+  items: string[];
+  usageCount?: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export const SUBSCRIPTION_CADENCES = ['Daily', 'Weekly', 'Monthly', 'Quarterly'] as const;
+export type SubscriptionCadence = (typeof SUBSCRIPTION_CADENCES)[number];
+
+/** A standing instruction to deliver a report on a schedule. */
+export interface ReportSubscription {
+  id: string;
+  reportId: string;
+  reportName: string;
+  cadence: SubscriptionCadence;
+  format: string;
+  recipients: string[];
+  enabled: boolean;
+  nextRun: string;
+  lastRun?: string;
+  createdBy: string;
+  createdAt: string;
+}
+
+/** Tenant identity and formatting preferences — a singleton keyed `ORG`. */
+export interface OrgSettings {
+  id: string;
+  name: string;
+  legalName: string;
+  logoEmoji: string;
+  /** Six-digit hex, applied by the shell as a CSS variable. */
+  primaryColor: string;
+  accentColor: string;
+  loginMessage: string;
+  supportEmail: string;
+  timezone: string;
+  dateFormat: string;
+  currency: string;
+  updatedAt: string;
+}

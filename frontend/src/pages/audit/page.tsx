@@ -1,8 +1,12 @@
-import { Link } from 'react-router-dom';
+import { useState } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
 import { allAuditLog, allCycleCounts, allCustody, allCertifications, allAssets } from '@/lib/dataset';
+import { TRACKED_FACILITIES } from '@/lib/tracking-data';
 import { PageHeader, KpiCard, Badge } from '@/components/ui/primitives';
 import { Button } from '@/components/ui/Button';
-import { useToast } from '@/components/providers/ToastProvider';
+import { FormDialog, Field, FieldRow, Select, TextInput } from '@/components/ui/FormDialog';
+import { useMutate } from '@/api/mutate';
+import { auditsApi } from '@/api/tracking-ops';
 import { relTime } from '@/lib/utils';
 
 const HUBS: { href: string; title: string; desc: string }[] = [
@@ -12,11 +16,91 @@ const HUBS: { href: string; title: string; desc: string }[] = [
   { href: '/audit-log', title: 'Immutable Log', desc: 'Tamper-evident, hash-chained system of record.' },
 ];
 
+/**
+ * Open a real audit session.
+ *
+ * "Start Audit" used to raise a toast saying a workspace had been created.
+ * There is a real one — the counting session the Inventory Tracking screen
+ * works through — so this creates that and takes you to it.
+ */
+function StartAuditDialog({ onClose }: { onClose: () => void }) {
+  const { run, isPending } = useMutate();
+  const navigate = useNavigate();
+
+  const facilities = TRACKED_FACILITIES;
+  const [name, setName] = useState('');
+  const [scope, setScope] = useState('Whole facility');
+  const [facility, setFacility] = useState(facilities[0]?.name ?? '');
+  const [expected, setExpected] = useState(String(allAssets.length));
+  const [dueInDays, setDueInDays] = useState('14');
+
+  const submit = async () => {
+    const created = await run(
+      auditsApi.start({
+        name: name.trim(),
+        scope,
+        facility,
+        expected: Number(expected) || 0,
+        dueInDays: Number(dueInDays) || 14,
+      }),
+      {
+        success: 'Audit opened',
+        successDetail: `${name.trim()} — counting starts on Inventory Tracking.`,
+        describe: 'open that audit',
+        refreshTracking: true,
+      },
+    );
+    if (!created) return;
+    onClose();
+    navigate('/tracking/inventory');
+  };
+
+  return (
+    <FormDialog
+      icon="📋"
+      title="Start an audit"
+      description="Opens a counting session. Progress and variance are worked through on Inventory Tracking."
+      submitLabel="Open audit"
+      busy={isPending}
+      disabled={name.trim().length < 3 || !facility}
+      onSubmit={() => void submit()}
+      onCancel={onClose}
+    >
+      <Field label="Audit name" required>
+        <TextInput autoFocus value={name} onChange={(e) => setName(e.target.value)} placeholder="Q3 physical verification" />
+      </Field>
+
+      <FieldRow>
+        <Field label="Facility" required>
+          {facilities.length > 0 ? (
+            <Select value={facility} onChange={(e) => setFacility(e.target.value)} options={facilities.map((f) => ({ value: f.name, label: f.name }))} />
+          ) : (
+            <TextInput value={facility} onChange={(e) => setFacility(e.target.value)} placeholder="Hyderabad Campus" />
+          )}
+        </Field>
+        <Field label="Scope">
+          <TextInput value={scope} onChange={(e) => setScope(e.target.value)} placeholder="Whole facility" />
+        </Field>
+      </FieldRow>
+
+      <FieldRow>
+        <Field label="Expected count" hint="How many assets should be found.">
+          <TextInput type="number" min={0} value={expected} onChange={(e) => setExpected(e.target.value)} />
+        </Field>
+        <Field label="Due in (days)">
+          <TextInput type="number" min={1} value={dueInDays} onChange={(e) => setDueInDays(e.target.value)} />
+        </Field>
+      </FieldRow>
+    </FormDialog>
+  );
+}
+
 export default function AuditCenterPage() {
-  const { toast } = useToast();
+  const [starting, setStarting] = useState(false);
 
   const coveredAssets = new Set(allCustody.map((c) => c.assetId)).size;
-  const coverage = Math.round((coveredAssets / allAssets.length) * 100);
+  // Guarded: an empty registry made this NaN%.
+  const coverage = allAssets.length === 0 ? 0 : Math.round((coveredAssets / allAssets.length) * 100);
   const openFindings = allCertifications.filter((c) => c.status !== 'Valid').length
     + allCycleCounts.filter((c) => c.status === 'Variance').length;
 
@@ -28,11 +112,7 @@ export default function AuditCenterPage() {
         title="Audit Center"
         subtitle="Compliance command post — audits, findings, custody and evidence in one place."
         breadcrumb={[{ label: 'Compliance' }, { label: 'Audit Center' }]}
-        actions={
-          <Button onClick={() => toast({ title: 'Audit started', description: 'A new audit workspace has been created (demo).', tone: 'success' })}>
-            Start Audit
-          </Button>
-        }
+        actions={<Button onClick={() => setStarting(true)}>Start Audit</Button>}
       />
 
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
@@ -84,6 +164,8 @@ export default function AuditCenterPage() {
           </ul>
         </div>
       </div>
+
+      {starting && <StartAuditDialog onClose={() => setStarting(false)} />}
     </div>
   );
 }

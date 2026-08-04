@@ -1,11 +1,12 @@
 import type { CookieOptions, Request, Response } from 'express';
-import { ROLES, resolveModules } from '@access-genie/shared';
+import { ROLES } from '@access-genie/shared';
 import { env } from '../config/env.js';
 import { ApiError } from '../utils/ApiError.js';
 import { asyncHandler } from '../utils/asyncHandler.js';
 import { sendData } from '../utils/response.js';
 import * as authService from '../services/auth.service.js';
 import { listSessions, revokeAllForUser, revokeRefreshToken, revokeSession } from '../services/token.service.js';
+import { updateOwnProfile } from '../services/user.service.js';
 import { recordAudit } from '../services/audit.service.js';
 
 const REFRESH_COOKIE = env.COOKIE_NAME;
@@ -45,11 +46,66 @@ function clientContext(req: Request) {
 
 export const login = asyncHandler(async (req: Request, res: Response) => {
   const { email, password } = req.body as { email: string; password: string };
-  const { auth, refreshToken, refreshExpiresAt } = await authService.login(email, password, clientContext(req));
+  const result = await authService.login(email, password, clientContext(req));
+
+  // A correct password against an MFA-protected account is a challenge, not a
+  // session: no cookie is set and nothing is audited as a sign-in yet.
+  if (result.mfaRequired) {
+    sendData(res, { mfaRequired: true, challengeToken: result.challengeToken });
+    return;
+  }
+
+  res.cookie(REFRESH_COOKIE, result.refreshToken, refreshCookieOptions(result.refreshExpiresAt));
+  recordAudit(req, { action: 'auth.login', target: result.auth.user.id, category: 'Authentication' });
+  sendData(res, result.auth);
+});
+
+// ── Multi-factor ─────────────────────────────────────────────────────────────
+export const verifyMfa = asyncHandler(async (req: Request, res: Response) => {
+  const { challengeToken, code } = req.body as { challengeToken: string; code: string };
+  const { auth, refreshToken, refreshExpiresAt } = await authService.verifyMfa(challengeToken, code, clientContext(req));
 
   res.cookie(REFRESH_COOKIE, refreshToken, refreshCookieOptions(refreshExpiresAt));
-  recordAudit(req, { action: 'auth.login', target: auth.user.id, category: 'Authentication' });
+  recordAudit(req, { action: 'auth.login_mfa', target: auth.user.id, category: 'Authentication' });
   sendData(res, auth);
+});
+
+export const beginMfaSetup = asyncHandler(async (req: Request, res: Response) => {
+  if (!req.auth) throw ApiError.unauthorized();
+  sendData(res, await authService.beginMfaSetup(req.auth.user.id));
+});
+
+export const completeMfaSetup = asyncHandler(async (req: Request, res: Response) => {
+  if (!req.auth) throw ApiError.unauthorized();
+
+  const result = await authService.completeMfaSetup(req.auth.user.id, (req.body as { code: string }).code);
+  recordAudit(req, { action: 'auth.mfa_enabled', target: req.auth.user.id, category: 'Security' });
+  sendData(res, result);
+});
+
+export const disableMfa = asyncHandler(async (req: Request, res: Response) => {
+  if (!req.auth) throw ApiError.unauthorized();
+
+  await authService.disableMfa(req.auth.user.id, (req.body as { password: string }).password);
+  recordAudit(req, { action: 'auth.mfa_disabled', target: req.auth.user.id, category: 'Security' });
+  sendData(res, { mfaEnabled: false });
+});
+
+export const regenerateRecoveryCodes = asyncHandler(async (req: Request, res: Response) => {
+  if (!req.auth) throw ApiError.unauthorized();
+
+  const codes = await authService.regenerateRecoveryCodes(req.auth.user.id, (req.body as { password: string }).password);
+  recordAudit(req, { action: 'auth.recovery_codes', target: req.auth.user.id, category: 'Security' });
+  sendData(res, { recoveryCodes: codes });
+});
+
+/** How many unused recovery codes are left — the Security screen's counter. */
+export const mfaStatus = asyncHandler(async (req: Request, res: Response) => {
+  if (!req.auth) throw ApiError.unauthorized();
+  sendData(res, {
+    mfaEnabled: req.auth.user.mfaEnabled ?? false,
+    recoveryCodesRemaining: await authService.remainingRecoveryCodes(req.auth.user.id),
+  });
 });
 
 export const refresh = asyncHandler(async (req: Request, res: Response) => {
@@ -86,8 +142,20 @@ export const me = asyncHandler(async (req: Request, res: Response) => {
   sendData(res, {
     user: req.auth.user,
     role: ROLES[req.auth.roleId],
-    modules: resolveModules(req.auth.roleId),
+    // Already resolved by requireAuth — reusing it keeps this identical to
+    // what the gate will actually enforce on the next request.
+    modules: req.auth.modules,
   });
+});
+
+/** Update your own profile. Scoped to the session, never to an id in the path. */
+export const updateProfile = asyncHandler(async (req: Request, res: Response) => {
+  if (!req.auth) throw ApiError.unauthorized();
+
+  const user = await updateOwnProfile(req.auth.user.id, req.body);
+  recordAudit(req, { action: 'profile.update', target: user.id, category: 'Configuration' });
+
+  sendData(res, { user, role: ROLES[req.auth.roleId], modules: req.auth.modules });
 });
 
 export const changePassword = asyncHandler(async (req: Request, res: Response) => {

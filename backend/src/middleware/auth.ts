@@ -1,8 +1,9 @@
 import type { RequestHandler } from 'express';
-import { resolveModules, type ModuleKey, type RoleId } from '@access-genie/shared';
+import type { ModuleKey, RoleId } from '@access-genie/shared';
 import { User } from '../models/index.js';
 import { ApiError } from '../utils/ApiError.js';
 import { verifyAccessToken } from '../services/token.service.js';
+import { grantedModules } from '../services/roleGrant.service.js';
 import { asyncHandler } from '../utils/asyncHandler.js';
 
 /**
@@ -28,7 +29,10 @@ export const requireAuth: RequestHandler = asyncHandler(async (req, _res, next) 
   req.auth = {
     user: user.toPublic(),
     roleId: user.roleId,
-    modules: resolveModules(user.roleId),
+    // Effective grants, not the shipped matrix — an administrator may have
+    // widened or narrowed this role. Served from a process cache that is
+    // dropped on write, so a change lands on the very next request.
+    modules: await grantedModules(user.roleId),
   };
 
   next();

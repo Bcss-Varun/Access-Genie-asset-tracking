@@ -1,16 +1,35 @@
+import { useState } from 'react';
+import type { EscalationPolicy } from '@access-genie/shared';
 import { allEscalationPolicies, allOnCallShifts } from '@/lib/dataset';
-import { PageHeader, Badge } from '@/components/ui/primitives';
+import { PageHeader, Badge, EmptyState, Avatar } from '@/components/ui/primitives';
 import { Button } from '@/components/ui/Button';
-import { useToast } from '@/components/providers/ToastProvider';
-import { Avatar } from '@/components/ui/primitives';
+import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
+import { EscalationPolicyDialog } from '@/components/alerts/EscalationPolicyDialog';
+import { useMutate } from '@/api/mutate';
+import { governanceApi } from '@/api/platform';
 
-const POLICIES = allEscalationPolicies;
-const ROTATION = allOnCallShifts;
 const initials = (name: string) =>
   name.split(' ').map((p) => p[0]).slice(0, 2).join('').toUpperCase();
 
 export default function EscalationsPage() {
-  const { toast } = useToast();
+  const { run, isPending } = useMutate();
+  const [dialog, setDialog] = useState<{ mode: 'new' } | { mode: 'edit'; policy: EscalationPolicy } | null>(null);
+  const [deleting, setDeleting] = useState<EscalationPolicy | null>(null);
+
+  // Read the hydrated bindings inside the component — module-scope copies never
+  // see a re-hydration after a write.
+  const POLICIES = allEscalationPolicies;
+  const ROTATION = allOnCallShifts;
+
+  const remove = async () => {
+    if (!deleting) return;
+    await run(governanceApi.removeEscalationPolicy(deleting.id), {
+      success: `${deleting.name} deleted`,
+      successDetail: 'Alerts at this severity will no longer escalate on a ladder.',
+      describe: 'delete that policy',
+    });
+    setDeleting(null);
+  };
 
   return (
     <div className="h-full flex flex-col space-y-6">
@@ -18,12 +37,19 @@ export default function EscalationsPage() {
         title="Escalation Policies"
         subtitle="Tiered routing rules and on-call rotation that decide who gets paged when."
         breadcrumb={[{ label: 'Alerts', href: '/alerts' }, { label: 'Escalation Policies' }]}
-        actions={
-          <Button onClick={() => toast({ title: 'New policy', description: 'The escalation policy builder is on the roadmap.', tone: 'info' })}>
-            + New Policy
-          </Button>
-        }
+        actions={<Button onClick={() => setDialog({ mode: 'new' })}>+ New Policy</Button>}
       />
+
+      {POLICIES.length === 0 && (
+        <div className="glass-panel rounded-xl">
+          <EmptyState
+            icon="📣"
+            title="No escalation policies"
+            description="Without one, a critical alert sits in the queue until somebody happens to look. A policy decides who is told, how, and how long to wait before telling somebody more senior."
+            action={<Button onClick={() => setDialog({ mode: 'new' })}>+ New Policy</Button>}
+          />
+        </div>
+      )}
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
         {POLICIES.map((p) => (
@@ -57,12 +83,14 @@ export default function EscalationsPage() {
 
             <div className="mt-auto pt-3 border-t border-slate-100 flex items-center justify-between text-xs text-slate-400">
               <span className="font-mono">{p.id}</span>
-              <button
-                className="font-medium text-primary-600 hover:underline"
-                onClick={() => toast({ title: 'Policy opened', description: `${p.name} — editor coming soon.`, tone: 'info' })}
-              >
-                Edit
-              </button>
+              <span className="flex items-center gap-2">
+                <button className="font-medium text-primary-600 hover:underline" onClick={() => setDialog({ mode: 'edit', policy: p })}>
+                  Edit
+                </button>
+                <button className="font-medium text-slate-400 hover:text-red-600 hover:underline" onClick={() => setDeleting(p)}>
+                  Delete
+                </button>
+              </span>
             </div>
           </div>
         ))}
@@ -107,6 +135,18 @@ export default function EscalationsPage() {
           </table>
         </div>
       </div>
+
+      {dialog?.mode === 'new' && <EscalationPolicyDialog onClose={() => setDialog(null)} />}
+      {dialog?.mode === 'edit' && <EscalationPolicyDialog existing={dialog.policy} onClose={() => setDialog(null)} />}
+      {deleting && (
+        <ConfirmDialog
+          title={`Delete ${deleting.name}?`}
+          description="Alerts matching this severity will still be raised — they just will not escalate to anyone on a timer."
+          busy={isPending}
+          onConfirm={() => void remove()}
+          onCancel={() => setDeleting(null)}
+        />
+      )}
     </div>
   );
 }

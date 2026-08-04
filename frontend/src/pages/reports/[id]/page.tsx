@@ -1,32 +1,23 @@
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { getReport, allAssets } from '@/lib/dataset';
 import { UtilizationDowntimeChart, ValueByCategoryDonut } from '@/components/charts/DashboardCharts';
 import { PageHeader, Badge, EmptyState } from '@/components/ui/primitives';
 import { Button } from '@/components/ui/Button';
 import { useToast } from '@/components/providers/ToastProvider';
+import { useMutate } from '@/api/mutate';
+import { reportRunApi } from '@/api/configuration';
+import { reportsApi } from '@/api/platform';
+import { resolveMetric } from '@/lib/report-metrics';
 import { formatMoney, relTime } from '@/lib/utils';
-
-// Deterministic display value for a metric name (stable across renders/builds).
-function metricValue(name: string, seed: number): string {
-  const n = name.toLowerCase();
-  const h = Array.from(name).reduce((a, c) => a + c.charCodeAt(0), seed);
-  if (n.includes('value') || n.includes('tco') || n.includes('exposure') || n.includes('savings') || n.includes('$'))
-    return formatMoney(50_00_000 + (h % 90) * 12_00_000);
-  if (n.includes('%') || n.includes('utilization') || n.includes('compliance') || n.includes('coverage'))
-    return `${62 + (h % 34)}%`;
-  if (n.includes('mttr')) return `${2 + (h % 6)}.${h % 10}h`;
-  if (n.includes('mtbf')) return `${180 + (h % 120)}h`;
-  if (n.includes('index')) return `${(h % 100)}`;
-  if (n.includes('age')) return `${4 + (h % 20)}d`;
-  return `${12 + (h % 240)}`;
-}
 
 const wantsUtilChart = (category: string) => ['Utilization', 'Maintenance', 'AI'].includes(category);
 
 export default function ReportViewerPage() {
   const { id = '' } = useParams();
   const { toast } = useToast();
+  const { run, isPending } = useMutate();
+  const [running, setRunning] = useState(false);
   const report = getReport(id);
 
   const rows = useMemo(() => {
@@ -63,6 +54,40 @@ export default function ReportViewerPage() {
     );
   }
 
+  /** Run it and hand the file over — the same path the library's Run button uses. */
+  const runReport = async () => {
+    setRunning(true);
+    try {
+      const result = await run(reportRunApi.run(report.id), { describe: `run “${report.name}”` });
+      if (!result) return;
+
+      if (result.rowCount === 0) {
+        toast({
+          title: 'Nothing to report',
+          description: 'It ran against an empty result set — there is no data in this category yet.',
+          tone: 'info',
+        });
+        return;
+      }
+
+      await reportRunApi.download(result.job.id);
+      toast({
+        title: `${report.name} downloaded`,
+        description: `${result.rowCount} row${result.rowCount === 1 ? '' : 's'} · ${result.job.format}`,
+        tone: 'success',
+      });
+    } finally {
+      setRunning(false);
+    }
+  };
+
+  const toggleSchedule = () =>
+    void run(reportsApi.update(report.id, { scheduled: !report.scheduled }), {
+      success: report.scheduled ? 'Schedule removed' : 'Marked as scheduled',
+      successDetail: report.scheduled ? undefined : 'Add recipients under Analytics ▸ Subscriptions to have it delivered.',
+      describe: 'change that schedule',
+    });
+
   const th = 'px-4 py-3 text-left font-semibold uppercase tracking-wider text-[11px] text-slate-500';
   const td = 'px-4 py-3.5';
 
@@ -78,14 +103,14 @@ export default function ReportViewerPage() {
         ]}
         actions={
           <>
-            <Button variant="outline" onClick={() => toast({ title: 'Export started', description: `Generating ${report.format} of “${report.name}”…`, tone: 'info' })}>
-              Export
+            <Button variant="outline" disabled={isPending} onClick={() => toggleSchedule()}>
+              {report.scheduled ? 'Unschedule' : 'Schedule'}
             </Button>
-            <Button variant="outline" onClick={() => toast({ title: 'Schedule updated', description: `“${report.name}” will run automatically.`, tone: 'success' })}>
-              Schedule
-            </Button>
-            <Button onClick={() => toast({ title: 'Subscribed', description: `You’ll receive “${report.name}” by email.`, tone: 'success' })}>
-              Subscribe
+            <Link to="/subscriptions">
+              <Button variant="outline">Subscribe</Button>
+            </Link>
+            <Button disabled={running} onClick={() => void runReport()}>
+              {running ? 'Running…' : 'Run & download'}
             </Button>
           </>
         }
@@ -101,14 +126,30 @@ export default function ReportViewerPage() {
         {report.scheduled && <Badge tone="emerald" className="ml-auto">Scheduled</Badge>}
       </div>
 
-      {/* KPI tiles from the report's metrics (capped at 4) */}
+      {/*
+        Each tile is a real query over the estate. A metric this platform does
+        not measure says so rather than showing a number — see lib/report-metrics.
+      */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        {report.metrics.slice(0, 4).map((m, i) => (
-          <div key={m} className="glass-panel rounded-xl p-5">
-            <div className="text-sm font-medium text-slate-500 mb-1">{m}</div>
-            <div className="text-2xl font-bold font-heading text-slate-900">{metricValue(m, i * 7 + 3)}</div>
-          </div>
-        ))}
+        {report.metrics.slice(0, 4).map((m) => {
+          const resolved = resolveMetric(m);
+          return (
+            <div key={m} className="glass-panel rounded-xl p-5">
+              <div className="mb-1 text-sm font-medium text-slate-500">{m}</div>
+              {resolved ? (
+                <>
+                  <div className="font-heading text-2xl font-bold text-slate-900">{resolved.value}</div>
+                  <div className="mt-1 text-[11px] text-slate-400">{resolved.basis}</div>
+                </>
+              ) : (
+                <>
+                  <div className="font-heading text-2xl font-bold text-slate-300">—</div>
+                  <div className="mt-1 text-[11px] text-slate-400">Not measured by this platform</div>
+                </>
+              )}
+            </div>
+          );
+        })}
       </div>
 
       {/* Rendered chart body */}

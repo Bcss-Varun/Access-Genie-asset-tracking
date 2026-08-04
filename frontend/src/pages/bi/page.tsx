@@ -5,6 +5,7 @@ import { PageHeader, Badge } from '@/components/ui/primitives';
 import { Button } from '@/components/ui/Button';
 import { useToast } from '@/components/providers/ToastProvider';
 import { cn, formatMoney } from '@/lib/utils';
+import { downloadCsv } from '@/api/configuration';
 
 type DimName = 'Category' | 'Status' | 'Facility';
 type MeaName = 'Count' | 'Book Value' | 'Avg Health' | 'Avg Utilization';
@@ -87,7 +88,21 @@ export default function BiExplorerPage() {
         subtitle="Ad-hoc pivots over the live asset graph — pick a dimension and measure."
         breadcrumb={[{ label: 'Analytics', href: '/reports' }, { label: 'BI Explorer' }]}
         actions={
-          <Button variant="outline" onClick={() => toast({ title: 'CSV exported', description: `Downloaded ${measure} by ${dim} (${rows.length} rows).`, tone: 'success' })}>
+          <Button
+            variant="outline"
+            onClick={() => {
+              // The pivot on screen, as its own file — the rows only exist here.
+              const n = downloadCsv(
+                `${dim}-by-${measure}-${new Date().toISOString().slice(0, 10)}.csv`,
+                rows.map((r) => ({ [dim]: r.label, Assets: r.count, [measure]: r.value })),
+              );
+              toast({
+                title: n > 0 ? `${n} row${n === 1 ? '' : 's'} exported` : 'Nothing to export',
+                description: n > 0 ? `${measure} by ${dim}, downloaded as CSV.` : 'This pivot has no rows.',
+                tone: n > 0 ? 'success' : 'info',
+              });
+            }}
+          >
             Export CSV
           </Button>
         }

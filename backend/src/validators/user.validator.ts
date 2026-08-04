@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { ROLE_IDS } from '@access-genie/shared';
+import { MODULE_KEYS, ROLE_IDS } from '@access-genie/shared';
 import { csvString, listQuerySchema } from './common.js';
 
 export const userListQuerySchema = listQuerySchema.extend({
@@ -34,3 +34,16 @@ export const updateUserSchema = z.object({
 
 export type CreateUserInput = z.infer<typeof createUserSchema>;
 export type UpdateUserInput = z.infer<typeof updateUserSchema>;
+
+/**
+ * A role's module grants.
+ *
+ * At least one module: a role granting none cannot reach any screen, including
+ * the administration screen that would put it back.
+ */
+export const roleGrantsSchema = z.object({
+  modules: z.array(z.enum(MODULE_KEYS)).min(1).max(MODULE_KEYS.length),
+});
+
+export type RoleGrantsInput = z.infer<typeof roleGrantsSchema>;
+

@@ -1,7 +1,12 @@
 import { Router } from 'express';
 import * as controller from '../controllers/asset.controller.js';
 import { requireModule, validate } from '../middleware/index.js';
-import { assetListQuerySchema, createAssetSchema, updateAssetSchema } from '../validators/asset.validator.js';
+import {
+  assetListQuerySchema,
+  bulkUpdateAssetsSchema,
+  createAssetSchema,
+  updateAssetSchema,
+} from '../validators/asset.validator.js';
 import { idParamSchema } from '../validators/common.js';
 
 const router = Router();
@@ -16,6 +21,11 @@ router.get('/:id', validate({ params: idParamSchema }), controller.getOne);
 router.get('/:id/profile', validate({ params: idParamSchema }), controller.getProfile);
 
 router.post('/', validate({ body: createAssetSchema }), controller.create);
+
+// Registered before `/:id` would ever be reached for a POST, and named `bulk`
+// rather than sitting on `PATCH /` so it can never be confused with a
+// collection-wide update.
+router.post('/bulk', validate({ body: bulkUpdateAssetsSchema }), controller.bulkUpdate);
 router.patch('/:id', validate({ params: idParamSchema, body: updateAssetSchema }), controller.update);
 
 // Retiring an asset is destructive and administrative — deliberately narrower

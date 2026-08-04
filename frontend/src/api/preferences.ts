@@ -21,12 +21,25 @@ export type Theme = 'light' | 'dark' | 'system';
 /** A saved view as it crosses the wire — `lens` is a plain string there. */
 export type StoredView = Omit<SavedView, 'builtIn' | 'lens'> & { lens: string };
 
+/** Which channels a notification category reaches this person on. */
+export interface ChannelPrefs {
+  email: boolean;
+  push: boolean;
+  inApp: boolean;
+}
+
 export interface Preferences {
   theme: Theme;
   activeFacility: string | null;
   activeScope: string | null;
   savedViews: StoredView[];
   dismissed: string[];
+  /**
+   * Empty until the user chooses. That is distinct from "everything off" —
+   * the screen falls back to its own per-category defaults when a key is absent.
+   */
+  notifications: Record<string, ChannelPrefs>;
+  digest: string;
 }
 
 export interface PreferencesPatch {
@@ -34,6 +47,8 @@ export interface PreferencesPatch {
   activeFacility?: string | null;
   activeScope?: string | null;
   dismissed?: string[];
+  notifications?: Record<string, ChannelPrefs>;
+  digest?: string;
 }
 
 export const PREFERENCES_KEY = ['preferences'] as const;

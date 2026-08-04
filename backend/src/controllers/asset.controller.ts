@@ -1,6 +1,7 @@
 import type { Request, Response } from 'express';
 import { validatedQuery } from '../middleware/validate.js';
 import { asyncHandler } from '../utils/asyncHandler.js';
+import { ApiError } from '../utils/ApiError.js';
 import { sendData, sendList } from '../utils/response.js';
 import * as assetService from '../services/asset.service.js';
 import { recordAudit } from '../services/audit.service.js';
@@ -56,3 +57,20 @@ export const remove = asyncHandler(async (req: Request, res: Response) => {
   recordAudit(req, { action: 'asset.delete', target: id, category: 'Assets' });
   res.status(204).send();
 });
+
+/** Apply one change across a selection. Partial success is reported, not thrown. */
+export const bulkUpdate = asyncHandler(async (req: Request, res: Response) => {
+  if (!req.auth) throw ApiError.unauthorized();
+
+  const { ids, patch } = req.body as { ids: string[]; patch: Record<string, unknown> };
+  const result = await assetService.bulkUpdateAssets(ids, patch, req.auth.user.name);
+
+  recordAudit(req, {
+    action: 'asset.bulk_update',
+    target: `${result.updated.length} assets`,
+    category: 'Assets',
+    metadata: { fields: Object.keys(patch), updated: result.updated.length, failed: result.failed.length },
+  });
+  sendData(res, result);
+});
+

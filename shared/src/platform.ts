@@ -111,6 +111,11 @@ export interface PublicUser {
   title: string;
   /** Scope node the user defaults into (see `ScopeNode`). */
   homeScopeId: string;
+  /** Contact details the user maintains themselves, on the profile screen. */
+  phone?: string;
+  timezone?: string;
+  /** Whether a verified authenticator is enrolled. The secret never leaves the server. */
+  mfaEnabled?: boolean;
   status: 'active' | 'suspended';
   lastLoginAt?: string;
   createdAt: string;

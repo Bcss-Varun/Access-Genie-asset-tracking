@@ -4,7 +4,10 @@ import { getAlert } from '@/lib/dataset';
 import type { Alert, AlertStatus } from '@access-genie/shared';
 import { PageHeader, Badge, EmptyState } from '@/components/ui/primitives';
 import { Button } from '@/components/ui/Button';
-import { useToast } from '@/components/providers/ToastProvider';
+import { FormDialog, Field, Select } from '@/components/ui/FormDialog';
+import { useMutate } from '@/api/mutate';
+import { alertsApi } from '@/api/alerts';
+import { allUsers } from '@/lib/rbac';
 import { cn, relTime } from '@/lib/utils';
 
 type Severity = Alert['severity'];
@@ -57,11 +60,16 @@ function buildTimeline(alert: Alert): { label: string; detail: string; ts: strin
 
 export default function AlertDetailPage() {
   const { id = '' } = useParams();
-  const { toast } = useToast();
-  const found = getAlert(id);
-  const [status, setStatusState] = useState<AlertStatus | null>(found ? found.status : null);
+  const { run, isPending } = useMutate();
+  const [assigning, setAssigning] = useState(false);
+  const [assignee, setAssignee] = useState(allUsers[0]?.name ?? '');
 
-  if (!found || status === null) {
+  // Read straight from the hydrated dataset. This used to hold the status in
+  // local state and never tell the server, so acknowledging an alert here was
+  // undone by a reload — and invisible to the colleague working the same queue.
+  const found = getAlert(id);
+
+  if (!found) {
     return (
       <div className="h-full flex flex-col space-y-6">
         <EmptyState
@@ -77,13 +85,32 @@ export default function AlertDetailPage() {
     );
   }
 
-  const alert: Alert = { ...found, status };
+  const alert: Alert = found;
   const timeline = buildTimeline(alert);
 
-  function act(next: AlertStatus, verb: string) {
-    setStatusState(next);
-    toast({ title: `Alert ${verb}`, description: `${alert.id} — ${alert.title}`, tone: 'success' });
-  }
+  const act = (next: AlertStatus, verb: string) => {
+    const call =
+      next === 'Acknowledged'
+        ? alertsApi.acknowledge(alert.id)
+        : next === 'Escalated'
+          ? alertsApi.escalate(alert.id)
+          : alertsApi.resolve(alert.id);
+
+    void run(call, {
+      success: `Alert ${verb}`,
+      successDetail: `${alert.id} — ${alert.title}`,
+      describe: `${verb.replace(/ed$/, '')} that alert`,
+    });
+  };
+
+  const assign = async () => {
+    const ok = await run(alertsApi.assign(alert.id, assignee), {
+      success: 'Alert assigned',
+      successDetail: `${alert.id} is now ${assignee}'s. It has been acknowledged.`,
+      describe: 'assign that alert',
+    });
+    if (ok) setAssigning(false);
+  };
 
   const detailRows: { label: string; value: React.ReactNode }[] = [
     { label: 'Alert ID', value: <span className="font-mono text-xs">{alert.id}</span> },
@@ -153,7 +180,7 @@ export default function AlertDetailPage() {
               <Button
                 variant="primary"
                 size="sm"
-                disabled={alert.status === 'Acknowledged' || alert.status === 'Resolved'}
+                disabled={isPending || alert.status === 'Acknowledged' || alert.status === 'Resolved'}
                 onClick={() => act('Acknowledged', 'acknowledged')}
               >
                 Acknowledge
@@ -161,7 +188,7 @@ export default function AlertDetailPage() {
               <Button
                 variant="secondary"
                 size="sm"
-                disabled={alert.status === 'Escalated' || alert.status === 'Resolved'}
+                disabled={isPending || alert.status === 'Escalated' || alert.status === 'Resolved'}
                 onClick={() => act('Escalated', 'escalated')}
               >
                 Escalate
@@ -169,7 +196,8 @@ export default function AlertDetailPage() {
               <Button
                 variant="outline"
                 size="sm"
-                onClick={() => toast({ title: 'Alert assigned', description: `${alert.id} assigned to Arjun Menon.`, tone: 'info' })}
+                disabled={isPending || alert.status === 'Resolved'}
+                onClick={() => setAssigning(true)}
               >
                 Assign
               </Button>
@@ -213,6 +241,28 @@ export default function AlertDetailPage() {
           </div>
         </div>
       </div>
+      {assigning && (
+        <FormDialog
+          icon="👤"
+          title={`Assign ${alert.id}`}
+          description="Assigning acknowledges it too — somebody taking it on has, by definition, seen it."
+          submitLabel="Assign"
+          busy={isPending}
+          disabled={!assignee}
+          onSubmit={() => void assign()}
+          onCancel={() => setAssigning(false)}
+        >
+          <Field label="Owner" required>
+            <Select
+              autoFocus
+              value={assignee}
+              onChange={(e) => setAssignee(e.target.value)}
+              options={allUsers.map((u) => ({ value: u.name, label: u.name }))}
+            />
+          </Field>
+        </FormDialog>
+      )}
+
     </div>
   );
 }

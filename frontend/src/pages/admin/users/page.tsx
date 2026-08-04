@@ -2,9 +2,11 @@ import { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { allUsers, roles, findScope } from '@/lib/rbac';
 import type { RoleId } from '@access-genie/shared';
+import type { PublicUser } from '@access-genie/shared';
 import { PageHeader, Badge, KpiCard, EmptyState, Avatar } from '@/components/ui/primitives';
 import { Button } from '@/components/ui/Button';
-import { useToast } from '@/components/providers/ToastProvider';
+import { InviteUserDialog } from '@/components/admin/InviteUserDialog';
+import { EditUserDialog } from '@/components/admin/EditUserDialog';
 import { cn } from '@/lib/utils';
 
 const tierTone: Record<string, 'primary' | 'emerald' | 'amber' | 'slate'> = {
@@ -18,9 +20,10 @@ const tierTone: Record<string, 'primary' | 'emerald' | 'amber' | 'slate'> = {
 const ROLE_OPTIONS: (RoleId | 'all')[] = ['all', ...(Object.keys(roles) as RoleId[])];
 
 export default function AdminUsersPage() {
-  const { toast } = useToast();
   const [query, setQuery] = useState('');
   const [roleFilter, setRoleFilter] = useState<RoleId | 'all'>('all');
+  const [inviting, setInviting] = useState(false);
+  const [editing, setEditing] = useState<PublicUser | null>(null);
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -46,11 +49,7 @@ export default function AdminUsersPage() {
         title="Users & Roles"
         subtitle="Everyone with access to the platform, and the role that governs what they can do."
         breadcrumb={[{ label: 'Administration', href: '/admin/org' }, { label: 'Users & Roles' }]}
-        actions={
-          <Button onClick={() => toast({ title: 'Invite User', description: 'Invitations are on the roadmap.', tone: 'info' })}>
-            + Invite User
-          </Button>
-        }
+        actions={<Button onClick={() => setInviting(true)}>+ Invite User</Button>}
       />
 
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
@@ -102,6 +101,8 @@ export default function AdminUsersPage() {
                   <th className="px-5 py-2.5">Role</th>
                   <th className="px-5 py-2.5">Tier</th>
                   <th className="px-5 py-2.5">Home Scope</th>
+                  <th className="px-5 py-2.5">Status</th>
+                  <th className="px-5 py-2.5 text-right">Actions</th>
                 </tr>
               </thead>
               <tbody>
@@ -122,6 +123,12 @@ export default function AdminUsersPage() {
                       <td className="px-5 py-3 text-slate-700">{role.name}</td>
                       <td className="px-5 py-3"><Badge tone={tierTone[role.tier] ?? 'slate'}>{role.tier}</Badge></td>
                       <td className="px-5 py-3 text-slate-500">{scope?.name ?? u.homeScopeId}</td>
+                      <td className="px-5 py-3">
+                        <Badge tone={u.status === 'active' ? 'emerald' : 'red'}>{u.status}</Badge>
+                      </td>
+                      <td className="px-5 py-3 text-right">
+                        <Button variant="ghost" onClick={() => setEditing(u)}>Edit</Button>
+                      </td>
                     </tr>
                   );
                 })}
@@ -130,6 +137,9 @@ export default function AdminUsersPage() {
           </div>
         )}
       </div>
+
+      {inviting && <InviteUserDialog onClose={() => setInviting(false)} />}
+      {editing && <EditUserDialog user={editing} onClose={() => setEditing(null)} />}
     </div>
   );
 }

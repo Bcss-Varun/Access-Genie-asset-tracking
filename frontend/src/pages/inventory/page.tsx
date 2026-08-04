@@ -4,6 +4,8 @@ import { allParts, getWarehouse } from '@/lib/dataset';
 import type { Part, AbcClass } from '@access-genie/shared';
 import { PageHeader, Badge, KpiCard, EmptyState } from '@/components/ui/primitives';
 import { Button } from '@/components/ui/Button';
+import { AdjustStockDialog, PartDialog } from '@/components/inventory/InventoryDialogs';
+import { downloadCsv } from '@/api/configuration';
 import { useToast } from '@/components/providers/ToastProvider';
 import { cn, formatMoney } from '@/lib/utils';
 
@@ -15,11 +17,14 @@ const ABC_FILTERS: AbcFilter[] = ['All', 'A', 'B', 'C'];
 
 const stockBarColor = (below: boolean): string => (below ? 'bg-red-500' : 'bg-emerald-500');
 
+type Dialog = { mode: 'new-part' } | { mode: 'edit-part'; part: Part } | { mode: 'adjust'; part: Part };
+
 export default function InventoryPage() {
   const { toast } = useToast();
   const [query, setQuery] = useState('');
   const [abc, setAbc] = useState<AbcFilter>('All');
   const [belowOnly, setBelowOnly] = useState(false);
+  const [dialog, setDialog] = useState<Dialog | null>(null);
 
   // KPIs (whole catalog, not filtered view)
   const totalSkus = allParts.length;
@@ -50,17 +55,36 @@ export default function InventoryPage() {
         subtitle="On-hand quantities, valuation & reorder health across all parts stores."
         breadcrumb={[{ label: 'Inventory', href: '/inventory' }, { label: 'Stock Overview' }]}
         actions={
-          <Button
-            onClick={() =>
-              toast({
-                title: 'Adjust stock',
-                description: `Queued a stock adjustment task for ${visible.length} SKU${visible.length === 1 ? '' : 's'}.`,
-                tone: 'info',
-              })
-            }
-          >
-            Adjust stock
-          </Button>
+          <>
+            <Button
+              variant="outline"
+              onClick={() => {
+                // Exports the filtered view, not the catalogue: "export this"
+                // means the rows on screen, which only the browser knows.
+                const rows = visible.map((p) => ({
+                  SKU: p.sku,
+                  Name: p.name,
+                  Category: p.category,
+                  Class: p.abcClass,
+                  'On hand': p.onHand,
+                  'Reorder point': p.reorderPoint,
+                  'Unit cost': p.unitCost,
+                  'Stock value': p.onHand * p.unitCost,
+                  Warehouse: getWarehouse(p.warehouseId)?.name ?? p.warehouseId,
+                  Bin: p.bin,
+                }));
+                const n = downloadCsv(`stock-${new Date().toISOString().slice(0, 10)}.csv`, rows);
+                toast({
+                  title: n > 0 ? `${n} row${n === 1 ? '' : 's'} exported` : 'Nothing to export',
+                  description: n > 0 ? 'Downloaded as CSV.' : 'No parts match the current filters.',
+                  tone: n > 0 ? 'success' : 'info',
+                });
+              }}
+            >
+              Export CSV
+            </Button>
+            <Button onClick={() => setDialog({ mode: 'new-part' })}>+ New Part</Button>
+          </>
         }
       />
 
@@ -121,20 +145,29 @@ export default function InventoryPage() {
 
         {visible.length === 0 ? (
           <EmptyState
-            variant="no-results"
-            title="No parts match your filters"
-            description="Try clearing the search or ABC / reorder filters."
+            variant={allParts.length === 0 ? 'empty' : 'no-results'}
+            icon="📦"
+            title={allParts.length === 0 ? 'No parts stocked' : 'No parts match your filters'}
+            description={
+              allParts.length === 0
+                ? 'Parts are what a work order consumes. Without them, completing maintenance cannot draw anything off the shelf and the reorder loop never starts.'
+                : 'Try clearing the search or ABC / reorder filters.'
+            }
             action={
-              <Button
-                variant="outline"
-                onClick={() => {
-                  setQuery('');
-                  setAbc('All');
-                  setBelowOnly(false);
-                }}
-              >
-                Clear filters
-              </Button>
+              allParts.length === 0 ? (
+                <Button onClick={() => setDialog({ mode: 'new-part' })}>+ New Part</Button>
+              ) : (
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    setQuery('');
+                    setAbc('All');
+                    setBelowOnly(false);
+                  }}
+                >
+                  Clear filters
+                </Button>
+              )
             }
           />
         ) : (
@@ -149,6 +182,7 @@ export default function InventoryPage() {
                   <th className={th}>Unit Cost</th>
                   <th className={th}>Ext. Value</th>
                   <th className={th}>Warehouse</th>
+                  <th className={cn(th, 'text-right')}>Actions</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
@@ -192,6 +226,16 @@ export default function InventoryPage() {
                           {wh?.name ?? p.warehouseId}
                         </Link>
                       </td>
+                      <td className={cn(td, 'text-right')}>
+                        <div className="flex items-center justify-end gap-1">
+                          <Button size="sm" variant="outline" onClick={() => setDialog({ mode: 'adjust', part: p })}>
+                            Adjust
+                          </Button>
+                          <Button size="sm" variant="ghost" onClick={() => setDialog({ mode: 'edit-part', part: p })}>
+                            Edit
+                          </Button>
+                        </div>
+                      </td>
                     </tr>
                   );
                 })}
@@ -200,6 +244,10 @@ export default function InventoryPage() {
           </div>
         )}
       </div>
+
+      {dialog?.mode === 'new-part' && <PartDialog onClose={() => setDialog(null)} />}
+      {dialog?.mode === 'edit-part' && <PartDialog existing={dialog.part} onClose={() => setDialog(null)} />}
+      {dialog?.mode === 'adjust' && <AdjustStockDialog part={dialog.part} onClose={() => setDialog(null)} />}
     </div>
   );
 }

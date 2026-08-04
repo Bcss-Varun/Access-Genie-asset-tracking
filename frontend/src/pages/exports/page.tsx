@@ -4,29 +4,45 @@
 
 import { useState } from 'react';
 import { allReports, allExportJobs } from '@/lib/dataset';
-import { PageHeader, Badge, KpiCard } from '@/components/ui/primitives';
+import { PageHeader, Badge, KpiCard, EmptyState } from '@/components/ui/primitives';
 import { Button } from '@/components/ui/Button';
 import { useToast } from '@/components/providers/ToastProvider';
-import { exportsApi } from '@/api/platform';
 import { useMutate } from '@/api/mutate';
-import { useSession } from '@/api/auth';
-import { relTime, } from '@/lib/utils';
+import { reportRunApi } from '@/api/configuration';
+import { relTime } from '@/lib/utils';
 
-const exportHistory = allExportJobs;
-const FORMATS = ['PDF', 'Excel', 'CSV', 'JSON'];
+/**
+ * The export centre.
+ *
+ * Generating used to write a `Queued` row that nothing ever picked up, and
+ * "Download" raised a success toast without a file. Both are real now: the
+ * server queries the estate, renders it and stores the file inside the request,
+ * so a row appears already complete and its download is the actual bytes.
+ *
+ * The format choice is CSV or JSON. PDF and Excel are not offered because
+ * nothing here can produce them — a button that hands you a CSV named `.pdf`
+ * is worse than one that is not there.
+ */
+
+const FORMATS = ['CSV', 'JSON'];
 const fmtSize = (kb: number) => (kb === 0 ? '—' : kb >= 1024 ? `${(kb / 1024).toFixed(1)} MB` : `${kb} KB`);
 
 export default function ExportsPage() {
   const { toast } = useToast();
   const { run, isPending } = useMutate();
-  const { user } = useSession();
+
+  // Read inside the component: a module-scope copy never sees the refetch that
+  // follows a run, so a new export would not appear until reload.
+  const exportHistory = allExportJobs;
+
   // `allReports[0]` is undefined until a report exists, so the initial value is
   // the empty option the picker renders in that case — not a report id.
   const [reportId, setReportId] = useState(allReports[0]?.id ?? '');
-  const [format, setFormat] = useState('PDF');
+  const [format, setFormat] = useState('CSV');
+  const [downloading, setDownloading] = useState<string | null>(null);
 
-  const readyCount = exportHistory.filter((e) => e.status === 'Ready').length;
-  const processingCount = exportHistory.filter((e) => e.status === 'Processing').length;
+  const readyCount = exportHistory.filter((e) => e.status === 'Complete' || e.status === 'Ready').length;
+  const emptyCount = exportHistory.filter((e) => e.status === 'Empty').length;
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -36,13 +52,40 @@ export default function ExportsPage() {
       return;
     }
 
-    // The job row is created queued and the pipeline owns it from there, which
-    // is why the history below is read from the server rather than appended to.
-    await run(exportsApi.create({ report: report.name, format, requestedBy: user.name }), {
-      success: 'Export queued',
-      successDetail: `${report.name} → ${format}. It will appear in history when ready.`,
-      describe: 'queue that export',
+    const result = await run(reportRunApi.run(report.id, format), { describe: 'generate that export' });
+    if (!result) return;
+
+    if (result.rowCount === 0) {
+      toast({
+        title: 'Nothing to export',
+        description: `“${report.name}” ran against an empty result set — the row is recorded, but there is no data yet.`,
+        tone: 'info',
+      });
+      return;
+    }
+
+    await reportRunApi.download(result.job.id);
+    toast({
+      title: `${report.name} downloaded`,
+      description: `${result.rowCount} row${result.rowCount === 1 ? '' : 's'} · ${result.job.format}`,
+      tone: 'success',
     });
+  };
+
+  const download = async (id: string, name: string) => {
+    setDownloading(id);
+    try {
+      await reportRunApi.download(id);
+    } catch {
+      // A row from before exports produced files has no artifact to fetch.
+      toast({
+        title: 'No file for this export',
+        description: `“${name}” has no stored output — re-run the report to produce one.`,
+        tone: 'error',
+      });
+    } finally {
+      setDownloading(null);
+    }
   };
 
   return (
@@ -54,10 +97,10 @@ export default function ExportsPage() {
       />
 
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        <KpiCard label="Total Exports" value={exportHistory.length} sub="Last 3 days" tone="primary" accent />
-        <KpiCard label="Ready" value={readyCount} sub="Available to download" tone="emerald" />
-        <KpiCard label="Processing" value={processingCount} sub="In the queue" tone="amber" />
-        <KpiCard label="Formats" value={FORMATS.length} sub="PDF · Excel · CSV · JSON" tone="slate" />
+        <KpiCard label="Total Exports" value={exportHistory.length} sub="Everything generated" tone="primary" accent />
+        <KpiCard label="With data" value={readyCount} sub="Available to download" tone="emerald" />
+        <KpiCard label="Empty" value={emptyCount} sub="Ran with no matching rows" tone="amber" />
+        <KpiCard label="Formats" value={FORMATS.length} sub="CSV · JSON" tone="slate" />
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -95,7 +138,12 @@ export default function ExportsPage() {
                 ))}
               </div>
             </div>
-            <Button type="submit" disabled={isPending || allReports.length === 0} className="w-full">Generate Export</Button>
+            <Button type="submit" disabled={isPending || allReports.length === 0} className="w-full">
+              {isPending ? 'Generating…' : 'Generate & download'}
+            </Button>
+            <p className="text-xs text-slate-400">
+              Runs against live data and downloads immediately. A copy stays in the history below.
+            </p>
           </form>
         </div>
 
@@ -129,22 +177,31 @@ export default function ExportsPage() {
                     <td className="px-5 py-3 text-xs text-slate-500">{relTime(e.at)}</td>
                     <td className="px-5 py-3 tabular-nums text-slate-500">{fmtSize(e.sizeKb)}</td>
                     <td className="px-5 py-3">
-                      {e.status === 'Ready' ? <Badge tone="emerald">Ready</Badge> : <Badge tone="amber">Processing</Badge>}
+                      <Badge tone={e.status === 'Empty' ? 'amber' : e.status === 'Failed' ? 'red' : 'emerald'}>{e.status}</Badge>
                     </td>
                     <td className="px-5 py-3 text-right">
                       <Button
                         size="sm"
                         variant="outline"
-                        disabled={e.status !== 'Ready'}
-                        onClick={() => toast({ title: 'Download started', description: `${e.report} (${e.format})`, tone: 'success' })}
+                        disabled={e.status === 'Empty' || downloading === e.id}
+                        title={e.status === 'Empty' ? 'This export produced no rows' : undefined}
+                        onClick={() => void download(e.id, e.report)}
                       >
-                        Download
+                        {downloading === e.id ? 'Fetching…' : 'Download'}
                       </Button>
                     </td>
                   </tr>
                 ))}
               </tbody>
             </table>
+
+            {exportHistory.length === 0 && (
+              <EmptyState
+                icon="📤"
+                title="Nothing exported yet"
+                description="Generate one on the left — it runs against live data and the file downloads straight away."
+              />
+            )}
           </div>
         </div>
       </div>

@@ -118,6 +118,30 @@ export async function acknowledgeMany(ids: string[], actor: string): Promise<num
   return result.modifiedCount;
 }
 
+/**
+ * Give an alert an owner.
+ *
+ * Assigning also acknowledges it if it was still Open: somebody taking it on
+ * has, by definition, seen it, and leaving it Open would keep it counted as
+ * unlooked-at in every queue that measures response time.
+ */
+export async function assignAlert(id: string, assignee: string, actor: string): Promise<AlertDoc> {
+  const alert = await Alert.findById(id);
+  if (!alert) throw ApiError.notFound('Alert');
+  if (alert.status === 'Resolved') throw ApiError.badRequest('A resolved alert cannot be reassigned');
+
+  alert.assignedTo = assignee;
+  alert.assignedAt = new Date();
+  if (alert.status === 'Open') {
+    alert.status = 'Acknowledged';
+    alert.acknowledgedBy = actor;
+    alert.acknowledgedAt = new Date();
+  }
+
+  await alert.save();
+  return alert.toObject();
+}
+
 export async function getAlertStats() {
   const [bySeverity, byStatus, open] = await Promise.all([
     Alert.aggregate<{ _id: string; count: number }>([

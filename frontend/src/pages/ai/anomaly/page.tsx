@@ -6,6 +6,9 @@ import { cn, relTime } from '@/lib/utils';
 import { Button } from '@/components/ui/Button';
 import { PageHeader, Badge, KpiCard, EmptyState } from '@/components/ui/primitives';
 import { useToast } from '@/components/providers/ToastProvider';
+import { useMutate } from '@/api/mutate';
+import { maintenanceApi } from '@/api/work-orders';
+import { useSession } from '@/components/providers/SessionProvider';
 
 type SevMeta = { accent: string; tone: 'red' | 'amber' | 'primary'; gauge: string };
 const SEV: Record<AnomalySeverity, SevMeta> = {
@@ -19,8 +22,53 @@ const MAX_Z = 5; // gauge full-scale
 
 export default function AnomalyPage() {
   const { toast } = useToast();
+  const { run, isPending } = useMutate();
+  const { session } = useSession();
   const [dismissed, setDismissed] = useState<Set<string>>(new Set());
   const [severity, setSeverity] = useState<AnomalySeverity | 'All'>('All');
+  const [raised, setRaised] = useState<Set<string>>(new Set());
+
+  /**
+   * Turn a detection into work.
+   *
+   * The anomaly's own numbers go into the description, because whoever picks
+   * the order up needs to know *why* it was raised — "investigate an anomaly"
+   * with no evidence is a job nobody can start.
+   */
+  const raiseWorkOrder = async (a: AnomalyEvent) => {
+    const created = await run(
+      maintenanceApi.create({
+        title: `Investigate ${a.metric} anomaly`,
+        assetId: a.assetId,
+        type: 'Predictive',
+        priority: a.severity === 'Critical' ? 'Critical' : a.severity === 'Warning' ? 'High' : 'Medium',
+        assignedTo: 'Unassigned',
+        // A week: long enough to plan around, short enough that the evidence
+        // is still current when somebody looks.
+        dueDate: new Date(Date.now() + 7 * 86_400_000).toISOString(),
+        description:
+          `Raised from anomaly ${a.id}. ${a.description} ` +
+          `Metric: ${a.metric}. Z-score ${a.zScore}, detector confidence ${a.confidence}%. ` +
+          `Detected ${new Date(a.detectedAt).toISOString()} by ${session.user.name}'s review.`,
+        estimatedHours: 2,
+        aiGenerated: true,
+        checklist: [
+          { label: `Confirm the ${a.metric} reading against the device`, done: false },
+          { label: 'Decide whether it is a fault or a false positive', done: false },
+          { label: 'Raise corrective work if confirmed', done: false },
+        ],
+      }),
+      { describe: 'raise that work order' },
+    );
+    if (!created) return;
+
+    setRaised((prev) => new Set(prev).add(a.id));
+    toast({
+      title: `${created.id} raised`,
+      description: `Investigate ${a.metric} on ${a.assetName} — in the maintenance queue now.`,
+      tone: 'success',
+    });
+  };
 
   const live = useMemo(() => allAnomalies.filter((a) => !dismissed.has(a.id)), [dismissed]);
 
@@ -135,16 +183,17 @@ export default function AnomalyPage() {
 
                 {/* Action row */}
                 <div className="mt-4 flex flex-wrap items-center gap-2 pt-4 border-t border-slate-200">
+                  {/*
+                    "Acknowledge" is gone. An anomaly is a detection, not a
+                    queue item — there is nowhere for an acknowledgement to be
+                    stored and nothing downstream reads one. Raising work is the
+                    action that actually changes what happens next, and that is
+                    now a real work order somebody will find in their queue.
+                  */}
                   <Button
                     size="sm"
-                    onClick={() => toast({ title: 'Anomaly acknowledged', description: `${a.assetName} · ${a.metric}`, tone: 'info' })}
-                  >
-                    Acknowledge
-                  </Button>
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    onClick={() => toast({ title: 'Work order created', description: `Investigate ${a.metric} anomaly on ${a.assetName}`, tone: 'success' })}
+                    disabled={isPending || raised.has(a.id)}
+                    onClick={() => void raiseWorkOrder(a)}
                   >
                     Create WO
                   </Button>

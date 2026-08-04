@@ -19,6 +19,19 @@ import * as insightController from '../controllers/insight.controller.js';
 import * as catalogController from '../controllers/catalog.controller.js';
 import * as preferenceController from '../controllers/preference.controller.js';
 import * as scopeController from '../controllers/scope.controller.js';
+import * as intelligenceController from '../controllers/intelligence.controller.js';
+import * as inventoryController from '../controllers/inventory.controller.js';
+import {
+  createPartSchema,
+  createPurchaseOrderSchema,
+  createSupplierSchema,
+  createWarehouseSchema,
+  stockAdjustmentSchema,
+  updatePartSchema,
+  updatePurchaseOrderSchema,
+  updateSupplierSchema,
+  updateWarehouseSchema,
+} from '../validators/inventory.validator.js';
 import { createScopeSchema, updateScopeSchema } from '../validators/scope.validator.js';
 import {
   renameViewSchema,
@@ -80,6 +93,13 @@ router.patch(
 );
 router.delete('/me/views/:id', validate({ params: idParamSchema }), preferenceController.removeView);
 
+// ── Derived intelligence ─────────────────────────────────────────────────────
+// Health, utilization and risk are computed from observations, work orders and
+// schedules rather than stored by hand; these recompute the estate and
+// regenerate the findings. See metrics.service.ts and insightEngine.service.ts.
+router.post('/intelligence/recompute', requireModule('ai'), intelligenceController.recompute);
+router.get('/intelligence/explain/:id', requireModule('ai'), validate({ params: idParamSchema }), intelligenceController.explain);
+
 // ── Core modules ─────────────────────────────────────────────────────────────
 router.use('/assets', assetRoutes);
 router.use('/work-orders', workOrderRoutes);
@@ -120,6 +140,35 @@ router.get('/inventory/parts', requireModule('inventory'), validate({ query: par
 router.get('/inventory/warehouses', requireModule('inventory'), catalogController.listWarehouses);
 router.get('/inventory/suppliers', requireModule('inventory'), catalogController.listSuppliers);
 router.get('/inventory/purchase-orders', requireModule('inventory'), catalogController.listPurchaseOrders);
+
+// Writes. All four collections were read-only, which made the supply side a
+// display of the seed file — see inventory.service.ts.
+const inv = requireModule('inventory');
+router.post('/inventory/warehouses', inv, validate({ body: createWarehouseSchema }), inventoryController.createWarehouse);
+router.patch('/inventory/warehouses/:id', inv, validate({ params: idParamSchema, body: updateWarehouseSchema }), inventoryController.updateWarehouse);
+router.delete('/inventory/warehouses/:id', inv, validate({ params: idParamSchema }), inventoryController.removeWarehouse);
+
+router.post('/inventory/suppliers', inv, validate({ body: createSupplierSchema }), inventoryController.createSupplier);
+router.patch('/inventory/suppliers/:id', inv, validate({ params: idParamSchema, body: updateSupplierSchema }), inventoryController.updateSupplier);
+router.delete('/inventory/suppliers/:id', inv, validate({ params: idParamSchema }), inventoryController.removeSupplier);
+
+router.post('/inventory/parts', inv, validate({ body: createPartSchema }), inventoryController.createPart);
+router.patch('/inventory/parts/:id', inv, validate({ params: idParamSchema, body: updatePartSchema }), inventoryController.updatePart);
+router.delete('/inventory/parts/:id', inv, validate({ params: idParamSchema }), inventoryController.removePart);
+// Stock moves through here, not through the part form: a movement has a reason.
+router.post('/inventory/parts/:id/adjust', inv, validate({ params: idParamSchema, body: stockAdjustmentSchema }), inventoryController.adjustStock);
+
+// The ledger behind a part's quantity. Keyed by SKU because that is what the
+// detail screen is routed by, and what a movement is recorded against.
+router.get('/inventory/parts/:sku/movements', inv, inventoryController.partMovements);
+
+router.get('/inventory/reorder', inv, inventoryController.reorderList);
+router.post('/inventory/reorder/draft', inv, inventoryController.draftReorders);
+
+router.post('/inventory/purchase-orders', inv, validate({ body: createPurchaseOrderSchema }), inventoryController.createPurchaseOrder);
+router.patch('/inventory/purchase-orders/:id', inv, validate({ params: idParamSchema, body: updatePurchaseOrderSchema }), inventoryController.updatePurchaseOrder);
+// Receiving raises stock for every line — the other half of the loop.
+router.post('/inventory/purchase-orders/:id/receive', inv, validate({ params: idParamSchema }), inventoryController.receivePurchaseOrder);
 
 // ── Notifications (no module gate — every session has an inbox) ───────────────
 router.get('/notifications', catalogController.listNotifications);

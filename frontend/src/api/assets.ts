@@ -38,5 +38,14 @@ export const assetsApi = {
   profile: (id: string) => apiGet<AssetProfile>(`/assets/${id}/profile`),
   create: (input: Record<string, unknown>) => apiPost<Asset>('/assets', input),
   update: (id: string, input: Record<string, unknown>) => apiPatch<Asset>(`/assets/${id}`, input),
+
+  /**
+   * Apply one change to a selection.
+   *
+   * Reports partial success rather than failing the batch: one deleted asset
+   * should not undo the other thirty-nine.
+   */
+  bulkUpdate: (ids: string[], patch: Record<string, unknown>) =>
+    apiPost<{ updated: string[]; failed: { id: string; reason: string }[] }>('/assets/bulk', { ids, patch }),
   remove: (id: string) => apiDelete(`/assets/${id}`),
 };

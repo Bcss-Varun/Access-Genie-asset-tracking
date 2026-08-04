@@ -4,7 +4,12 @@ import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { PageHeader, Badge } from '@/components/ui/primitives';
 import { Button } from '@/components/ui/Button';
-import { useToast } from '@/components/providers/ToastProvider';
+import { FormDialog, Field, FieldRow, Select } from '@/components/ui/FormDialog';
+import { AssetPicker } from '@/components/ui/AssetPicker';
+import { useMutate } from '@/api/mutate';
+import { operationsApi } from '@/api/operations';
+import { useSession } from '@/components/providers/SessionProvider';
+import { allAssets } from '@/lib/dataset';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Reservations & booking — shared-asset scheduling with a week-strip visual.
@@ -35,8 +40,80 @@ const BAR_TONE: Record<ReservationStatus, string> = {
   Cancelled: 'bg-slate-300',
 };
 
+/**
+ * Book a shared asset for part of the week.
+ *
+ * The server refuses an overlapping booking, so this submits and renders the
+ * refusal rather than pre-checking — one source of truth for "is it free",
+ * and no window where the screen says yes and the server says no.
+ */
+function BookDialog({ onClose }: { onClose: () => void }) {
+  const { run, isPending } = useMutate();
+  const { session } = useSession();
+
+  const [assetId, setAssetId] = useState('');
+  const [startDay, setStartDay] = useState('0');
+  const [endDay, setEndDay] = useState('0');
+
+  const from = Number(startDay);
+  const to = Number(endDay);
+
+  const submit = async () => {
+    const asset = allAssets.find((a) => a.id === assetId);
+    if (!asset) return;
+
+    const ok = await run(
+      operationsApi.reserve({
+        assetId,
+        reservedBy: session.user.name,
+        startDay: from,
+        endDay: to,
+        startLabel: WEEK[from] as string,
+        endLabel: WEEK[to] as string,
+      }),
+      {
+        success: 'Reserved',
+        successDetail: `${asset.name} — ${WEEK[from]} to ${WEEK[to]}.`,
+        describe: 'reserve that asset',
+      },
+    );
+    if (ok) onClose();
+  };
+
+  return (
+    <FormDialog
+      icon="📅"
+      title="Reserve an asset"
+      description="Bookings run in whole days across the current week. An overlapping booking is refused."
+      submitLabel="Reserve"
+      busy={isPending}
+      disabled={!assetId || to < from}
+      onSubmit={() => void submit()}
+      onCancel={onClose}
+    >
+      <AssetPicker value={assetId} onChange={setAssetId} required label="Asset to reserve" />
+
+      <FieldRow>
+        <Field label="From" required>
+          <Select
+            value={startDay}
+            onChange={(e) => {
+              setStartDay(e.target.value);
+              if (Number(e.target.value) > to) setEndDay(e.target.value);
+            }}
+            options={WEEK.map((d, i) => ({ value: String(i), label: d }))}
+          />
+        </Field>
+        <Field label="Until" required hint={to < from ? 'The end cannot be before the start.' : undefined}>
+          <Select value={endDay} onChange={(e) => setEndDay(e.target.value)} options={WEEK.map((d, i) => ({ value: String(i), label: d }))} />
+        </Field>
+      </FieldRow>
+    </FormDialog>
+  );
+}
+
 export default function ReservationsPage() {
-  const { toast } = useToast();
+  const [booking, setBooking] = useState(false);
   const [reservations] = useState<Reservation[]>(allReservations);
 
   const conflictIds = new Set<string>();
@@ -56,7 +133,7 @@ export default function ReservationsPage() {
         subtitle="Reserve shared assets across the week and resolve scheduling conflicts."
         breadcrumb={[{ label: 'Operations', href: '/operations/transfers' }, { label: 'Reservations' }]}
         actions={
-          <Button onClick={() => toast({ title: 'New reservation', description: 'Pick a shared asset and a time window to book it.', tone: 'info' })}>
+          <Button onClick={() => setBooking(true)}>
             + New Reservation
           </Button>
         }
@@ -136,6 +213,8 @@ export default function ReservationsPage() {
           </table>
         </div>
       </div>
+      {booking && <BookDialog onClose={() => setBooking(false)} />}
+
     </div>
   );
 }
