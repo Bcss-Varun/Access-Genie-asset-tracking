@@ -94,10 +94,18 @@ export async function deleteAssetClass(id: string): Promise<void> {
   const record = await AssetClass.findById(id).lean<AssetClassDoc>();
   if (!record) throw ApiError.notFound('Asset class');
 
-  // Deleting a class that assets still belong to would leave those assets
-  // describing themselves against a template that no longer exists — and their
-  // per-class attributes unreadable. Refuse, and say how many are in the way.
-  const inUse = await Asset.countDocuments({ category: record.name });
+  /*
+   * Deleting a class that assets still belong to would leave those assets
+   * describing themselves against a template that no longer exists — and their
+   * per-class attributes unreadable. Refuse, and say how many are in the way.
+   *
+   * Counted on `onboarding.classId`, which is the actual relationship. This
+   * used to match `category` against the class *name*, which silently held only
+   * while classes were named after the five reporting categories: a class named
+   * "computer" holding assets filed under "Compute" counted zero, and the guard
+   * waved through a delete that orphaned every one of them.
+   */
+  const inUse = await Asset.countDocuments({ 'onboarding.classId': id });
   if (inUse > 0) {
     throw ApiError.conflict(
       `${inUse} asset${inUse === 1 ? '' : 's'} still belong to "${record.name}". Reassign them before deleting the class.`,

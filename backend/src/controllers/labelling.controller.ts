@@ -6,6 +6,7 @@ import { ApiError } from '../utils/ApiError.js';
 import { recordAudit } from '../services/audit.service.js';
 import * as service from '../services/labelling.service.js';
 import type {
+  CreateDeviceInput,
   CreatePrintJobInput,
   CreateTemplateInput,
   PrintJobQuery,
@@ -63,4 +64,10 @@ export const retryJob = asyncHandler(async (req: Request, res: Response) => {
   const job = await service.retryJob(id);
   recordAudit(req, { action: 'print_job.retry', target: id, category: 'Asset' });
   sendData(res, job);
+});
+
+export const createDevice = asyncHandler(async (req: Request, res: Response) => {
+  const created = await service.createDevice(req.body as CreateDeviceInput);
+  recordAudit(req, { action: 'print_device.create', target: created._id, category: 'Configuration' });
+  sendData(res, created, 201);
 });

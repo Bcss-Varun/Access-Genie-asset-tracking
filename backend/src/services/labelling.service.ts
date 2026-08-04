@@ -4,6 +4,7 @@ import {
   LabelTemplate,
   OPEN_PRINT_JOB_STATES,
   PrintDevice,
+  type PrintDeviceDoc,
   PrintJob,
   nextId,
   type LabelTemplateDoc,
@@ -13,6 +14,7 @@ import { ApiError } from '../utils/ApiError.js';
 import { buildMeta } from '../utils/response.js';
 import { parsePagination } from '../utils/query.js';
 import type {
+  CreateDeviceInput,
   CreatePrintJobInput,
   CreateTemplateInput,
   PrintJobQuery,
@@ -176,4 +178,25 @@ export async function retryJob(id: string): Promise<PrintJobDoc> {
 
   await PrintDevice.updateOne({ _id: job.deviceId }, { $inc: { queueDepth: 1 } });
   return job.toObject();
+}
+
+/**
+ * Register a printer or encoder.
+ *
+ * Devices used to be seed-only, which made Label & Tag Printing unusable on a
+ * real installation: templates could be created but there was nothing to print
+ * them on, and the workspace stayed empty with no way out of it from the UI.
+ */
+export async function createDevice(input: CreateDeviceInput): Promise<PrintDeviceDoc> {
+  const created = await PrintDevice.create({
+    ...input,
+    _id: await nextId('printDevice', 'PRN'),
+    // A freshly registered device is assumed reachable until it says otherwise.
+    state: 'Online',
+    media: 100,
+    queueDepth: 0,
+    lastSeen: new Date(),
+  });
+
+  return created.toObject();
 }

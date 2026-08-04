@@ -14,6 +14,7 @@
 import { useMemo } from 'react';
 import { LABEL_SIZES } from '@/lib/label-data';
 import { shortIdFor } from '@/lib/onboarding';
+import { encodeQr } from '@/lib/qr';
 import type { Asset } from '@access-genie/shared';
 import type { LabelFieldKey, LabelMedium, LabelSizeKey } from '@access-genie/shared';
 
@@ -62,7 +63,43 @@ function FinderEye({ cell, ox, oy }: { cell: number; ox: number; oy: number }) {
   );
 }
 
-/** Matrix symbologies (QR, Data Matrix) — N×N modules with corner finders. */
+/**
+ * A real, scannable QR code.
+ *
+ * Everything else in this file draws a *representation* of a symbology — the
+ * bars and the RFID inlay are illustrative, and that is fine because nobody
+ * decodes a printed picture of an inlay. QR is different: it is the one people
+ * point a phone at, so it has to carry the payload for real. See lib/qr.ts.
+ */
+function QrCode({ payload }: { payload: string }) {
+  const matrix = useMemo(() => encodeQr(payload, 'M'), [payload]);
+  const n = matrix.length;
+  // A quiet zone of four modules is required for a reliable read; without it
+  // scanners struggle to find the symbol against a busy label.
+  const span = n + 8;
+
+  return (
+    <>
+      <rect x={0} y={0} width={100} height={100} fill={STOCK} />
+      {matrix.flatMap((row, r) =>
+        row.map((on, c) =>
+          on ? (
+            <rect
+              key={`${r}-${c}`}
+              x={((c + 4) * 100) / span}
+              y={((r + 4) * 100) / span}
+              width={100 / span + 0.02}
+              height={100 / span + 0.02}
+              fill={INK}
+            />
+          ) : null,
+        ),
+      )}
+    </>
+  );
+}
+
+/** Matrix symbologies (Data Matrix) — N×N modules, illustrative only. */
 function MatrixCode({ payload, modules, finders }: { payload: string; modules: number; finders: boolean }) {
   const cell = 100 / modules;
   const cells = useMemo(() => {
@@ -174,7 +211,7 @@ export function CodeGlyph({ payload, medium, mm }: { payload: string; medium: La
       : medium === 'RFID' ? <InlayCode payload={payload} nfc={false} />
         : medium === 'NFC' ? <InlayCode payload={payload} nfc />
           : medium === 'DataMatrix' ? <MatrixCode payload={payload} modules={16} finders={false} />
-            : <MatrixCode payload={payload} modules={21} finders />;
+            : <QrCode payload={payload} />;
 
   return (
     <svg

@@ -18,6 +18,8 @@ import * as dashboardController from '../controllers/dashboard.controller.js';
 import * as insightController from '../controllers/insight.controller.js';
 import * as catalogController from '../controllers/catalog.controller.js';
 import * as preferenceController from '../controllers/preference.controller.js';
+import * as scopeController from '../controllers/scope.controller.js';
+import { createScopeSchema, updateScopeSchema } from '../validators/scope.validator.js';
 import {
   renameViewSchema,
   savedViewSchema,
@@ -45,7 +47,20 @@ router.use(requireAuth);
 
 // ── Workspace ────────────────────────────────────────────────────────────────
 router.get('/dashboard/summary', requireModule('workspace'), dashboardController.summary);
+// ── Org & facilities ─────────────────────────────────────────────────────────
+// Reads are ungated: the scope picker is part of the chrome and every screen
+// that shows a location needs the tree. Writes are `admin` — the hierarchy is
+// what each role's access is scoped against.
 router.get('/scope/tree', dashboardController.scopeTree);
+router.get('/scope', scopeController.list);
+router.post('/scope', requireModule('admin'), validate({ body: createScopeSchema }), scopeController.create);
+router.patch(
+  '/scope/:id',
+  requireModule('admin'),
+  validate({ params: idParamSchema, body: updateScopeSchema }),
+  scopeController.update,
+);
+router.delete('/scope/:id', requireModule('admin'), validate({ params: idParamSchema }), scopeController.remove);
 
 // The reference dataset the screens read, filtered to the caller's grants.
 // No module gate of its own: the service gates each slice individually, so a

@@ -23,10 +23,11 @@ import { PageHeader, Badge, EmptyState } from '@/components/ui/primitives';
 import { Button } from '@/components/ui/Button';
 import { Tabs, useTabs } from '@/components/tracking/shell';
 import type { LabelSpec } from '@/components/assets/LabelArtwork';
+import { encodeQr } from '@/lib/qr';
 import {
   DEFAULT_TEMPLATE_ID, deviceById, deviceCanRun, identityStatus, labelTemplates, printDevices, templateById,
 } from '@/lib/label-data';
-import { mintTagId, takenTagIds, trackingTechLabel, verifiesOnPrint } from '@/lib/onboarding';
+import { mintTagId, scanUrlFor, takenTagIds, trackingTechLabel, verifiesOnPrint } from '@/lib/onboarding';
 import { cn, relTime, nowMs } from '@/lib/utils';
 import { KIND_FOR_MEDIUM, encodesTag } from '@access-genie/shared';
 import type { LabelFieldKey, LabelMedium } from '@access-genie/shared';
@@ -159,34 +160,65 @@ function CodeGlyph({ id, format, px }: { id: string; format: LabelMedium; px: nu
       );
     }
 
-    // QR / Data Matrix look: N×N matrix with three finder patterns.
-    const N = 21;
+    // ── QR: a real, scannable code ──────────────────────────────────────────
+    // Everything above is illustrative artwork, which is fine for an inlay
+    // nobody decodes. This one gets pointed at by a phone, so it carries the
+    // asset's scan URL for real — see lib/qr.ts.
+    if (format === 'QR') {
+      const matrix = encodeQr(scanUrlFor(id), 'M');
+      const span = matrix.length + 8; // four modules of quiet zone each side
+      const unit = 100 / span;
+      return (
+        <svg
+          viewBox="0 0 100 100"
+          width={px}
+          height={px}
+          shapeRendering="crispEdges"
+          role="img"
+          aria-label={`QR code opening ${id}`}
+        >
+          <rect x="0" y="0" width="100" height="100" fill="#ffffff" />
+          {matrix.flatMap((row, r) =>
+            row.map((on, c) =>
+              on ? (
+                <rect
+                  key={`${r}-${c}`}
+                  x={(c + 4) * unit}
+                  y={(r + 4) * unit}
+                  width={unit + 0.02}
+                  height={unit + 0.02}
+                  fill="#0f172a"
+                />
+              ) : null,
+            ),
+          )}
+        </svg>
+      );
+    }
+
+    // Data Matrix — illustrative only.
+    const N = 16;
     const cell = 100 / N;
-    const finder = (r: number, c: number) =>
-      (r < 7 && c < 7) || (r < 7 && c >= N - 7) || (r >= N - 7 && c < 7);
     const rects: React.ReactNode[] = [];
     for (let r = 0; r < N; r++) {
       for (let c = 0; c < N; c++) {
-        if (finder(r, c)) continue;
+        if (c === 0 || r === N - 1) {
+          rects.push(<rect key={`l-${r}-${c}`} x={c * cell} y={r * cell} width={cell} height={cell} fill="#0f172a" />);
+          continue;
+        }
+        if ((r === 0 || c === N - 1) && (r + c) % 2 === 0) {
+          rects.push(<rect key={`t-${r}-${c}`} x={c * cell} y={r * cell} width={cell} height={cell} fill="#0f172a" />);
+          continue;
+        }
         if (rng() > 0.5) {
           rects.push(<rect key={`${r}-${c}`} x={c * cell} y={r * cell} width={cell} height={cell} fill="#0f172a" />);
         }
       }
     }
-    const FinderEye = ({ ox, oy }: { ox: number; oy: number }) => (
-      <g transform={`translate(${ox} ${oy})`}>
-        <rect x={0} y={0} width={cell * 7} height={cell * 7} fill="#0f172a" />
-        <rect x={cell} y={cell} width={cell * 5} height={cell * 5} fill="#ffffff" />
-        <rect x={cell * 2} y={cell * 2} width={cell * 3} height={cell * 3} fill="#0f172a" />
-      </g>
-    );
     return (
-      <svg viewBox="0 0 100 100" width={px} height={px} shapeRendering="crispEdges" role="img" aria-label={`QR code for ${id}`}>
+      <svg viewBox="0 0 100 100" width={px} height={px} shapeRendering="crispEdges" role="img" aria-label={`Data Matrix for ${id}`}>
         <rect x="0" y="0" width="100" height="100" fill="#ffffff" />
         {rects}
-        <FinderEye ox={0} oy={0} />
-        <FinderEye ox={cell * (N - 7)} oy={0} />
-        <FinderEye ox={0} oy={cell * (N - 7)} />
       </svg>
     );
   }, [id, format, px, rng]);

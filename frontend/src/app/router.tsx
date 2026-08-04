@@ -61,6 +61,15 @@ export const router = createBrowserRouter([
             children: [
               { index: true, element: <WorkspacePage /> },
 
+              // Scan-to-open. Declared here rather than in the generated route
+              // list because it is a contract with something physical — the URL
+              // is printed on labels already in the field, so it must not move
+              // when the generator is next run.
+              {
+                path: 'a/:code',
+                lazy: async () => ({ Component: (await import('@/pages/a/[code]/page')).default }),
+              },
+
               ...generalRoutes,
 
               {

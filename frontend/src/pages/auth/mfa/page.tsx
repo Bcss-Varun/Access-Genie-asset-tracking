@@ -2,11 +2,14 @@ import { Suspense, useEffect, useRef, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { Button } from '@/components/ui/Button';
 import { AuthLayout } from '@/components/layout/AuthLayout';
+import { DEFAULT_LANDING } from '@/lib/nav-config';
 
 function MfaInner() {
   const navigate = useNavigate();
   const [search] = useSearchParams();
-  const next = search.get('next') || '/';
+  // Same default as the password step — an MFA challenge is part of signing in,
+  // not a separate journey, so completing it lands in the same place.
+  const next = search.get('next') || DEFAULT_LANDING;
   const [digits, setDigits] = useState<string[]>(['', '', '', '', '', '']);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);

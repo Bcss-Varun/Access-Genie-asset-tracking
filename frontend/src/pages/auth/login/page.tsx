@@ -6,6 +6,7 @@ import { AuthLayout } from '@/components/layout/AuthLayout';
 import { ApiRequestError } from '@/api/client';
 import { authApi } from '@/api/auth-endpoints';
 import { useAuth } from '@/api/auth';
+import { DEFAULT_LANDING } from '@/lib/nav-config';
 
 /**
  * Password the account shortcuts prefill.
@@ -33,9 +34,16 @@ export default function LoginPage() {
 
   /**
    * Where to land afterwards: an explicit `?next=`, otherwise the route the
-   * guard bounced away from, otherwise the workspace.
+   * guard bounced away from, otherwise the default landing page.
+   *
+   * `from === '/'` is treated as "nowhere in particular" rather than as a
+   * destination. Opening the app at its root while signed out is the ordinary
+   * way in, and `RequireAuth` records that as `from: '/'` — so honouring it
+   * literally would send every normal sign-in to the workspace and make the
+   * default landing page apply to almost nobody.
    */
-  const next = searchParams.get('next') || (location.state as { from?: string } | null)?.from || '/';
+  const from = (location.state as { from?: string } | null)?.from;
+  const next = searchParams.get('next') || (from && from !== '/' ? from : DEFAULT_LANDING);
 
   // The seeded accounts, so a first sign-in does not require knowing one.
   const { data: personas } = useQuery({

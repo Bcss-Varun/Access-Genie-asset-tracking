@@ -1,6 +1,19 @@
 import type { ModuleKey } from '@access-genie/shared';
 
 /**
+ * Where a sign-in lands when nothing more specific was asked for.
+ *
+ * Deliberately a dashboard rather than `/`: someone signing in wants the state
+ * of the estate, not the capability overview. A deep link, or a route the auth
+ * guard bounced away from, still wins over this — see the login screen.
+ *
+ * It sits under the `workspace` grant (the section this route belongs to), which
+ * every role that can sign in holds, so there is no role that lands on a page it
+ * is not allowed to read.
+ */
+export const DEFAULT_LANDING = '/dashboards/executive';
+
+/**
  * A live count rendered as a red pill on a nav row.
  *
  * The nav declares *which* count a row wants, never the number itself — the
@@ -245,7 +258,12 @@ export const navSections: NavSection[] = [
       { label: 'Users & Roles', to: '/admin/users', icon: '👥' },
       { label: 'Roles & Permissions', to: '/admin/roles', icon: '🔐' },
       { label: 'Teams', to: '/admin/teams', icon: '🧑‍🤝‍🧑' },
-      { label: 'Org & Facilities', to: '/admin/org', icon: '🏛️' },
+      // Two rows, not one: the structure view is the whole hierarchy at a
+      // glance, the facilities view is the list of sites you actually work
+      // with. `/admin/facilities` had no nav row at all and was reachable only
+      // by typing the URL or following a link from elsewhere.
+      { label: 'Org & Structure', to: '/admin/org', icon: '🏛️' },
+      { label: 'Facilities', to: '/admin/facilities', icon: '🏭' },
       { label: 'Approval Workflows', to: '/admin/workflows', icon: '🔀' },
       { label: 'Integrations & API', to: '/admin/integrations', icon: '🔌' },
       { label: 'Webhooks', to: '/admin/webhooks', icon: '🪝' },

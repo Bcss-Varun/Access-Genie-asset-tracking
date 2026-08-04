@@ -1,4 +1,5 @@
 import {
+  Asset,
   AssetJourney,
   AssetPresence,
   AuditSession,
@@ -10,6 +11,7 @@ import {
   InventoryRoom,
   MovementTxn,
   Rack,
+  ScopeNodeModel,
   TrackedFacility,
   TrackedZone,
   TrackingAlert,
@@ -57,6 +59,61 @@ export interface TrackingWorkspacePayload {
   observedAt: string;
 }
 
+/**
+ * The facilities the tracking workspace draws on.
+ *
+ * Derived from the scope hierarchy — the same facilities administered under
+ * Org & Facilities — rather than from a list of its own. There used to be two
+ * unconnected notions of "facility": the `ScopeNode` an asset's location points
+ * at, and this workspace's `TrackedFacility`. Adding a site in Administration
+ * therefore did nothing here, and the whole tracking area stayed empty with no
+ * indication that a second, invisible list was the thing it was waiting for.
+ *
+ * A stored `TrackedFacility` still contributes the parts that are genuinely
+ * about tracking rather than about location — the floor-plan flag, radio
+ * coverage, the short label the map chips use — matched by name. Any stored
+ * record with no matching scope node is kept as well, so a database seeded with
+ * the demo estate reads exactly as before.
+ */
+async function facilitiesForWorkspace(): Promise<Record<string, unknown>[]> {
+  const [scopeFacilities, stored, assetCounts] = await Promise.all([
+    ScopeNodeModel.find({ level: 'facility' }).sort({ name: 1 }).lean(),
+    TrackedFacility.find().sort({ name: 1 }).lean(),
+    // `location.name` carries the facility name (see the registration flow), so
+    // this is the live count of assets sitting anywhere in each site.
+    Asset.aggregate<{ _id: string; count: number }>([
+      { $group: { _id: '$location.name', count: { $sum: 1 } } },
+    ]),
+  ]);
+
+  const counts = new Map(assetCounts.map((r) => [r._id, r.count]));
+  const storedByName = new Map(stored.map((f) => [f.name, f]));
+
+  const derived = scopeFacilities.map((node) => {
+    const extra = storedByName.get(node.name);
+    return {
+      // The scope id is the slug: it is stable across a rename, and it appears
+      // in the digital-twin URL where a name-derived slug would silently break
+      // every saved link the first time someone corrects a typo.
+      slug: extra?._id ?? node._id.toLowerCase(),
+      name: node.name,
+      short: extra?.short ?? node.name.split(/\s+/)[0] ?? node.name,
+      building: extra?.building ?? '',
+      emoji: extra?.emoji ?? '🏭',
+      assetsTracked: counts.get(node.name) ?? 0,
+      coverage: extra?.coverage ?? 0,
+      twinReady: extra?.twinReady ?? false,
+    };
+  });
+
+  const claimed = new Set(scopeFacilities.map((n) => n.name));
+  const orphans = stored
+    .filter((f) => !claimed.has(f.name))
+    .map((f) => ({ ...f, slug: f._id, assetsTracked: counts.get(f.name) ?? f.assetsTracked }));
+
+  return [...derived, ...orphans].sort((a, b) => String(a.name).localeCompare(String(b.name)));
+}
+
 export async function getTrackingWorkspace(): Promise<TrackingWorkspacePayload> {
   const [
     facilities,
@@ -77,7 +134,7 @@ export async function getTrackingWorkspace(): Promise<TrackingWorkspacePayload> 
     firmwareCampaigns,
     events,
   ] = await Promise.all([
-    TrackedFacility.find().sort({ name: 1 }).lean(),
+    facilitiesForWorkspace(),
     TrackedZone.find().sort({ facility: 1, name: 1 }).lean(),
     AssetPresence.find().sort({ assetName: 1 }).lean(),
     AssetJourney.find().lean(),
@@ -101,7 +158,7 @@ export async function getTrackingWorkspace(): Promise<TrackingWorkspacePayload> 
   return {
     // These four are keyed by a business identifier the contract also names —
     // see aliasId() for why a virtual cannot do this.
-    facilities: aliasId(facilities, 'slug'),
+    facilities,
     zones,
     presence: aliasId(presence, 'assetId'),
     journeys: aliasId(journeys, 'assetId'),

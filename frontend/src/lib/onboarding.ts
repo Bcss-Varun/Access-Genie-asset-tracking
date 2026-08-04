@@ -339,6 +339,23 @@ export function mintAssetId(assets: Asset[]): string {
 /** Short scan-to-open code (the /a/[shortId] contract in docs/10 §10.2). */
 export const shortIdFor = (assetId: string): string => assetId.replace('AST-', 'AG').toLowerCase();
 
+/** The inverse of `shortIdFor` — what the scan landing route resolves. */
+export const assetIdFromShortId = (code: string): string =>
+  `AST-${code.trim().replace(/^ag/i, '')}`;
+
+/**
+ * What a printed code actually carries.
+ *
+ * An absolute URL rather than the bare asset id: a phone camera opens a URL
+ * with no app installed and nothing to configure, which is the entire point of
+ * putting a code on the thing. The id is recoverable from the last path
+ * segment, so a scanner that only reads text still yields something useful.
+ */
+export const scanUrlFor = (assetId: string, origin?: string): string => {
+  const base = origin ?? (typeof window === 'undefined' ? '' : window.location.origin);
+  return `${base}/a/${shortIdFor(assetId)}`;
+};
+
 /** Never force naming creativity on a dock clerk. */
 export function suggestName(manufacturer: string, model: string, serial: string): string {
   const head = [manufacturer.trim(), model.trim()].filter(Boolean).join(' ');

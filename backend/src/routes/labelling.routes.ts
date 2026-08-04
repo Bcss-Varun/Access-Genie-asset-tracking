@@ -5,6 +5,7 @@ import { LabelTemplate, PrintDevice } from '../models/index.js';
 import { requireModule, validate } from '../middleware/index.js';
 import { idParamSchema } from '../validators/common.js';
 import {
+  createDeviceSchema,
   createPrintJobSchema,
   createTemplateSchema,
   printJobQuerySchema,
@@ -45,6 +46,9 @@ const devices = createResource(PrintDevice, {
   paginated: false,
 });
 router.get('/devices', devices.validateQuery, devices.list);
+// Registering a printer is administrative — a device is shared infrastructure,
+// not something an individual should be able to add mid-print-run.
+router.post('/devices', requireModule('admin'), validate({ body: createDeviceSchema }), controller.createDevice);
 
 // ── Print jobs ───────────────────────────────────────────────────────────────
 router.get('/jobs', validate({ query: printJobQuerySchema }), controller.listJobs);

@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { LABEL_FIELD_KEYS, LABEL_MEDIUMS, LABEL_SIZE_KEYS } from '@access-genie/shared';
+import { LABEL_FIELD_KEYS, LABEL_MEDIUMS, LABEL_SIZE_KEYS, PRINT_DEVICE_KINDS } from '@access-genie/shared';
 import { listQuerySchema } from './common.js';
 
 const templateFields = z.object({
@@ -45,3 +45,21 @@ export type CreateTemplateInput = z.infer<typeof createTemplateSchema>;
 export type UpdateTemplateInput = z.infer<typeof updateTemplateSchema>;
 export type CreatePrintJobInput = z.infer<typeof createPrintJobSchema>;
 export type PrintJobQuery = z.infer<typeof printJobQuerySchema>;
+
+/**
+ * Registering a printer or encoder.
+ *
+ * `supports` is the important field: the job endpoint refuses a template a
+ * device cannot physically produce, so getting it wrong here surfaces later as
+ * a rejected print run rather than a bad device record.
+ */
+export const createDeviceSchema = z.object({
+  name: z.string().trim().min(2).max(80),
+  kind: z.enum(PRINT_DEVICE_KINDS),
+  model: z.string().trim().max(80).default(''),
+  facility: z.string().trim().max(80).default(''),
+  zone: z.string().trim().max(80).default(''),
+  supports: z.array(z.enum(LABEL_MEDIUMS)).min(1, 'Say which media it can produce'),
+});
+
+export type CreateDeviceInput = z.infer<typeof createDeviceSchema>;
