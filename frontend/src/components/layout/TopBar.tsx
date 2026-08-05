@@ -7,7 +7,7 @@ import { notificationsApi } from '@/api/catalog';
 import { Avatar, Kbd } from '@/components/ui/primitives';
 import { cn } from '@/lib/utils';
 import { useTheme } from '@/app/ThemeProvider';
-import { flattenScope } from '@/lib/rbac';
+import { switchableScopes } from '@/lib/rbac';
 
 const SCOPE_LEVEL_LABEL: Record<string, string> = {
   org: 'Organization',
@@ -24,7 +24,10 @@ export function TopBar({ onOpenNav, onOpenPalette }: { onOpenNav: () => void; on
   const { theme, toggleTheme } = useTheme();
   const navigate = useNavigate();
 
-  const { scope, scopeId, setScopeId } = useScope();
+  const { scope, scopeId, setScopeId, isSwitching } = useScope();
+  // Recomputed per render rather than memoised: the tree comes from the
+  // hydrated dataset, which is replaced wholesale when a site is added.
+  const sites = switchableScopes();
 
   const [menuOpen, setMenuOpen] = useState(false);
   const [scopeOpen, setScopeOpen] = useState(false);
@@ -79,7 +82,9 @@ export function TopBar({ onOpenNav, onOpenPalette }: { onOpenNav: () => void; on
         ☰
       </button>
 
-      {/* Scope switcher — Org ▸ Region ▸ Facility ▸ Building ▸ Zone */}
+      {/* Scope switcher — the organisation and the sites under it. Buildings,
+          floors and zones are deliberately absent: they are where an asset
+          physically sits, not a view of the business. See switchableScopes(). */}
       <div className="relative shrink-0" ref={scopeRef}>
         <button
           type="button"
@@ -91,7 +96,7 @@ export function TopBar({ onOpenNav, onOpenPalette }: { onOpenNav: () => void; on
             scopeOpen && 'bg-slate-50',
           )}
         >
-          <span className="text-slate-400" aria-hidden>🌐</span>
+          <span className="text-slate-400" aria-hidden>{isSwitching ? '⏳' : '🌐'}</span>
           <span className="text-left leading-tight">
             <span className="block text-[10px] uppercase tracking-wide text-slate-400">
               {SCOPE_LEVEL_LABEL[scope.level] ?? scope.level}
@@ -103,7 +108,7 @@ export function TopBar({ onOpenNav, onOpenPalette }: { onOpenNav: () => void; on
 
         {scopeOpen && (
           <div role="listbox" className="absolute left-0 top-full mt-1.5 w-72 glass-panel p-1.5 z-50 max-h-96 overflow-y-auto animate-[fadeIn_0.12s_ease-out]">
-            {flattenScope().map(({ node, depth }) => (
+            {sites.map(({ node, depth }) => (
               <button
                 key={node.id}
                 type="button"
@@ -119,14 +124,23 @@ export function TopBar({ onOpenNav, onOpenPalette }: { onOpenNav: () => void; on
                 )}
                 style={{ paddingLeft: `${depth * 12 + 10}px` }}
               >
-                <span className="truncate">{node.name}</span>
-                {typeof node.assetCount === 'number' && (
-                  <span className="text-[11px] text-slate-400 tabular-nums shrink-0">
-                    {node.assetCount.toLocaleString('en-IN')}
-                  </span>
-                )}
+                <span className="truncate">
+                  {node.name}
+                  {depth === 0 && <span className="ml-1.5 text-[10px] uppercase tracking-wide text-slate-400">all sites</span>}
+                </span>
+                {/* Rolled up: a site shows every asset beneath it, so this is
+                    the number you get by selecting it. */}
+                <span className="text-[11px] text-slate-400 tabular-nums shrink-0">
+                  {(node.assetCount ?? 0).toLocaleString('en-IN')}
+                </span>
               </button>
             ))}
+
+            {sites.length === 1 && (
+              <p className="px-2.5 py-2 text-xs text-slate-400">
+                No sites yet — add one under Administration ▸ Facilities.
+              </p>
+            )}
           </div>
         )}
       </div>

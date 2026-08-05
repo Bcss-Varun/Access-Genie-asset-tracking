@@ -1,5 +1,7 @@
 import { z } from 'zod';
 import {
+  GATEWAY_KINDS,
+  GATEWAY_STATUSES,
   GEOFENCE_RULES,
   SENSOR_KINDS,
   SENSOR_STATUSES,
@@ -32,6 +34,29 @@ export const createSensorSchema = z.object({
 });
 
 export const updateSensorSchema = createSensorSchema.partial();
+
+// ── Gateways ─────────────────────────────────────────────────────────────────
+/**
+ * Edge infrastructure — the readers and anchors sensors report through.
+ *
+ * This collection was read-only, which made the whole tracking chain a dead end
+ * on a fresh deployment: a sensor requires a gateway, tag binding during asset
+ * registration picks from sensor stock, and there was no way to create the
+ * first gateway. Three screens that looked functional and could never be used.
+ */
+export const createGatewaySchema = z.object({
+  name: z.string().trim().min(2).max(120),
+  kind: z.enum(GATEWAY_KINDS),
+  status: z.enum(GATEWAY_STATUSES).default('Online'),
+  location: z.string().trim().min(2).max(160),
+  firmwareVersion: z.string().trim().min(1).max(20).default('1.0.0'),
+  uptimePct: z.coerce.number().min(0).max(100).default(100),
+  // Optional: plenty of gateways are on DHCP and the address is not stable
+  // enough to be worth recording.
+  ip: z.string().trim().max(45).optional(),
+});
+
+export const updateGatewaySchema = createGatewaySchema.partial();
 
 // ── Geofences ────────────────────────────────────────────────────────────────
 const percent = z.number().min(0).max(100);

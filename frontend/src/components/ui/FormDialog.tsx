@@ -94,9 +94,13 @@ export function FormDialog({
         <div className="flex items-center justify-between gap-2 border-t border-slate-100 px-6 py-3">
           <div>{footer}</div>
           <div className="flex items-center gap-2">
-            <Button type="button" variant="outline" onClick={onCancel} disabled={busy}>
-              {cancelLabel}
-            </Button>
+            {/* An empty label hides it: a read-only dialog needs one way out,
+                not a Cancel that does the same thing as its Close. */}
+            {cancelLabel !== '' && (
+              <Button type="button" variant="outline" onClick={onCancel} disabled={busy}>
+                {cancelLabel}
+              </Button>
+            )}
             <Button type="submit" disabled={busy || disabled}>
               {busy ? 'Saving…' : submitLabel}
             </Button>

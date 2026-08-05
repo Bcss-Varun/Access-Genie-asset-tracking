@@ -33,17 +33,25 @@ export default function LoginPage() {
   const [loading, setLoading] = useState(false);
 
   /**
-   * Where to land afterwards: an explicit `?next=`, otherwise the route the
-   * guard bounced away from, otherwise the default landing page.
+   * Signing in lands on the dashboard.
    *
-   * `from === '/'` is treated as "nowhere in particular" rather than as a
-   * destination. Opening the app at its root while signed out is the ordinary
-   * way in, and `RequireAuth` records that as `from: '/'` — so honouring it
-   * literally would send every normal sign-in to the workspace and make the
-   * default landing page apply to almost nobody.
+   * It used to return you to whatever page the guard had bounced you off —
+   * which meant a session that expired while you were deep in a work order put
+   * you back in that work order, mid-task, with no sense of what had changed
+   * while you were away. Signing in is the start of a shift, not the
+   * continuation of the last one; the dashboard is what that should open on.
+   *
+   * Two exceptions, both explicit destinations the person chose rather than
+   * places they happened to be:
+   *
+   *   ?next=   the MFA hand-off below, resuming this same sign-in.
+   *   /a/:code a QR label. Someone standing at the equipment with a phone
+   *            asked for that asset — sending them to a dashboard instead
+   *            would make every printed label useless while signed out.
    */
   const from = (location.state as { from?: string } | null)?.from;
-  const next = searchParams.get('next') || (from && from !== '/' ? from : DEFAULT_LANDING);
+  const scanned = from?.startsWith('/a/') ? from : null;
+  const next = searchParams.get('next') || scanned || DEFAULT_LANDING;
 
   // The seeded accounts, so a first sign-in does not require knowing one.
   const { data: personas } = useQuery({

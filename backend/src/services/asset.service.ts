@@ -126,7 +126,9 @@ export async function updateAsset(id: string, input: UpdateAssetInput, actor: st
   // A blank optional field arrives as `undefined`, and assigning that would
   // clear a value the edit never meant to touch — blanking the custodian of an
   // asset because the form's date input was left empty. Absent means "leave it".
-  const defined = Object.fromEntries(Object.entries(input).filter(([, v]) => v !== undefined));
+  // `note` is stripped: it explains the change rather than being part of it.
+  const { note, ...fields } = input;
+  const defined = Object.fromEntries(Object.entries(fields).filter(([, v]) => v !== undefined));
 
   Object.assign(asset, {
     ...defined,
@@ -142,7 +144,9 @@ export async function updateAsset(id: string, input: UpdateAssetInput, actor: st
     await Activity.create({
       assetId: id,
       type: 'Audit',
-      description: `Status changed from ${previousStatus} to ${input.status}`,
+      description: note
+        ? `Status changed from ${previousStatus} to ${input.status} — ${note}`
+        : `Status changed from ${previousStatus} to ${input.status}`,
       actor,
       timestamp: new Date(),
     });

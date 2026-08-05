@@ -157,8 +157,18 @@ export const createAssetSchema = z.object({
   onboarding: onboardingInputSchema.optional(),
 });
 
-/** Everything is optional on update, but `id` can never be reassigned. */
-export const updateAssetSchema = createAssetSchema.omit({ id: true }).partial();
+/**
+ * Everything is optional on update, but `id` can never be reassigned.
+ *
+ * `note` is not a field on the asset — it is the reason for the change, and it
+ * lands on the timeline entry the change produces. Decommissioning an asset
+ * without recording why is the gap an auditor finds six months later, so the
+ * dialog that does it can now pass the reason through.
+ */
+export const updateAssetSchema = createAssetSchema
+  .omit({ id: true })
+  .partial()
+  .extend({ note: z.string().trim().max(300).optional() });
 
 /**
  * A change applied to a selection.

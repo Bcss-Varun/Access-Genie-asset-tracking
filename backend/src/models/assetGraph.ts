@@ -35,6 +35,19 @@ assetGroupSchema.plugin(baseSchemaPlugin);
 export const AssetGroup = model<AssetGroupDoc>('AssetGroup', assetGroupSchema);
 
 // ── Documents attached to an asset ───────────────────────────────────────────
+/**
+ * The paperwork: invoices, warranty certificates, manuals, nameplate photos.
+ *
+ * The bytes live here, base64-encoded, rather than in an object store. There is
+ * no bucket configured for this deployment, and a record that names a file it
+ * cannot produce is worse than no record — someone opens the Documents tab
+ * during an audit and finds a filename that downloads nothing.
+ *
+ * That choice sets the ceiling. A BSON document stops at 16MB and base64 costs
+ * a third on top, so uploads are capped at 5MB (see the validator) — enough for
+ * every invoice and certificate, not enough for a scanned manual. When a bucket
+ * exists, `content` becomes a key and the cap goes away; nothing else moves.
+ */
 export interface AssetDocDoc {
   _id: string; // DOC-01
   assetId: string;
@@ -43,6 +56,10 @@ export interface AssetDocDoc {
   sizeKb: number;
   uploadedAt: Date;
   uploadedBy: string;
+  /** The browser's own MIME type, kept so a download opens in the right app. */
+  mimeType: string;
+  /** base64. `select: false` — the dataset lists documents on every page load. */
+  content?: string;
 }
 
 const assetDocSchema = new Schema<AssetDocDoc>(
@@ -54,6 +71,10 @@ const assetDocSchema = new Schema<AssetDocDoc>(
     sizeKb: { type: Number, required: true, min: 0 },
     uploadedAt: { type: Date, required: true },
     uploadedBy: { type: String, required: true },
+    mimeType: { type: String, required: true, default: 'application/octet-stream' },
+    // Excluded by default: the documents list is part of `/dataset`, and pulling
+    // every file's bytes into that payload would grow it without bound.
+    content: { type: String, select: false },
   },
   { versionKey: false },
 );

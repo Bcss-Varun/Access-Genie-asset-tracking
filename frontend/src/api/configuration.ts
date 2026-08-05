@@ -13,6 +13,7 @@ import type {
   WorkflowStep,
 } from '@access-genie/shared';
 import { apiDelete, apiGet, apiPatch, apiPost, http } from '@/api/client';
+import { filenameFromDisposition, saveBlob } from '@/api/download';
 
 /**
  * The configuration write side.
@@ -112,20 +113,7 @@ export const reportRunApi = {
    */
   download: async (exportId: string): Promise<void> => {
     const res = await http.get(`/exports/${exportId}/download`, { responseType: 'blob' });
-
-    const disposition = String(res.headers['content-disposition'] ?? '');
-    const filename = /filename="?([^";]+)"?/.exec(disposition)?.[1] ?? `${exportId}.csv`;
-
-    const url = URL.createObjectURL(res.data as Blob);
-    const anchor = document.createElement('a');
-    anchor.href = url;
-    anchor.download = filename;
-    document.body.appendChild(anchor);
-    anchor.click();
-    anchor.remove();
-    // Released on the next tick — revoking synchronously can cancel the
-    // download in Safari before it has started reading.
-    setTimeout(() => URL.revokeObjectURL(url), 1_000);
+    saveBlob(res.data as Blob, filenameFromDisposition(res.headers['content-disposition'], `${exportId}.csv`));
   },
 };
 
@@ -151,14 +139,7 @@ export function downloadCsv(filename: string, rows: Record<string, unknown>[]): 
 
   // A BOM, so Excel opens UTF-8 without mangling names and currency symbols.
   const blob = new Blob(['﻿', csv], { type: 'text/csv;charset=utf-8' });
-  const url = URL.createObjectURL(blob);
-  const anchor = document.createElement('a');
-  anchor.href = url;
-  anchor.download = filename.endsWith('.csv') ? filename : `${filename}.csv`;
-  document.body.appendChild(anchor);
-  anchor.click();
-  anchor.remove();
-  setTimeout(() => URL.revokeObjectURL(url), 1_000);
+  saveBlob(blob, filename.endsWith('.csv') ? filename : `${filename}.csv`);
 
   return rows.length;
 }

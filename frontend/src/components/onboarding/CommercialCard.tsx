@@ -12,13 +12,13 @@
 
 import { useState } from 'react';
 import { useRegistry } from '@/components/providers/RegistryProvider';
-import { useToast } from '@/components/providers/ToastProvider';
 import { Button } from '@/components/ui/Button';
 import { Badge } from '@/components/ui/primitives';
+import { UploadDocumentDialog } from '@/components/assets/UploadDocumentDialog';
 import { ConfigCard, Field, Note, Derived, Choice, inputCls } from './fields';
 import { getClassTemplate } from '@/lib/asset-classes';
 import { deriveCommercial, warrantyEndFromTerm } from '@/lib/onboarding';
-import { formatMoney, cn, nowMs } from '@/lib/utils';
+import { formatMoney, cn } from '@/lib/utils';
 import type { DocType } from '@access-genie/shared';
 import type { CommercialData, GateResult, Ownership, RegisteredAsset } from '@access-genie/shared';
 
@@ -29,17 +29,6 @@ const VENDORS = [
 
 const DOC_TYPES: DocType[] = ['Invoice', 'Warranty', 'Manual', 'Certificate', 'Image', 'Report'];
 
-/** Plausible filename for a simulated drop — deterministic, no randomness. */
-const fileNameFor = (type: DocType, asset: RegisteredAsset): string => {
-  const base = `${asset.manufacturer ?? 'Asset'} ${asset.model ?? asset.id}`.trim();
-  return type === 'Invoice' ? `Tax Invoice — ${base} (GST).pdf`
-    : type === 'Warranty' ? `Warranty Certificate — ${base}.pdf`
-      : type === 'Manual' ? `${base} Service Manual.pdf`
-        : type === 'Certificate' ? `BIS/CRS Registration — ${base}.pdf`
-          : type === 'Image' ? `${asset.id} nameplate.jpg`
-            : `${base} Condition Report.pdf`;
-};
-
 export function CommercialCard({
   asset, gates, step,
 }: {
@@ -48,7 +37,6 @@ export function CommercialCard({
   step: number;
 }) {
   const { patchOnboarding, patchAsset } = useRegistry();
-  const { toast } = useToast();
 
   const ob = asset.onboarding;
   const tpl = getClassTemplate(ob.classId);
@@ -56,6 +44,8 @@ export function CommercialCard({
   const d = deriveCommercial(c);
 
   const [term, setTerm] = useState('');
+  /** Which document type the open upload dialog is collecting, if any. */
+  const [uploading, setUploading] = useState<DocType | null>(null);
 
   const financial = gates.find((g) => g.key === 'financial')!;
   const documented = gates.find((g) => g.key === 'documented')!;
@@ -80,20 +70,25 @@ export function CommercialCard({
     patchAsset(asset.id, { warrantyExpiry: end });
   };
 
-  const addDoc = (type: DocType) => {
+  /**
+   * Record a real upload against the registration.
+   *
+   * These buttons used to call `addDoc(type)`, which invented a filename — "Tax
+   * Invoice — Dell PowerEdge (GST).pdf" — and a size derived from how many
+   * documents were already listed, then declared the document attached. The
+   * activation gate then passed on the strength of a file that did not exist.
+   * A class could be activated as "Documented" with nothing behind it.
+   *
+   * The upload itself is real and goes to the asset's document collection; this
+   * mirrors it onto the onboarding record, which is what the gate reads.
+   */
+  const onUploaded = (doc: { id: string; name: string; type: DocType; sizeKb: number; uploadedAt: string }) => {
     patchOnboarding(asset.id, {
       documents: [
         ...ob.documents,
-        {
-          id: `ODOC-${asset.id}-${ob.documents.length + 1}`,
-          name: fileNameFor(type, asset),
-          type,
-          sizeKb: 240 + ob.documents.length * 130,
-          addedAt: new Date(nowMs()).toISOString(),
-        },
+        { id: doc.id, name: doc.name, type: doc.type, sizeKb: doc.sizeKb, addedAt: doc.uploadedAt },
       ],
     });
-    toast({ title: `${type} attached`, tone: 'success' });
   };
 
   const have = new Set(ob.documents.map((doc) => doc.type));
@@ -232,14 +227,17 @@ export function CommercialCard({
 
           {d.warrantyStatus === 'Expired' && (
             <div className="mt-4">
+              {/* Three buttons stood here — "Request AMC quote", "Add extended
+                  warranty", "Flag for replacement" — each raising a success
+                  toast and doing nothing. There is no vendor channel to request
+                  a quote through, no renewal queue, and no replacement plan to
+                  add to. What the platform can genuinely do with an expired
+                  warranty is record the new cover once it is bought, which is
+                  an AMC end date on this very card. */}
               <Note tone="red" icon="⏰">
                 <span className="font-semibold">Warranty expired {Math.abs(d.warrantyRemainingDays ?? 0)} days ago.</span>{' '}
-                Detected automatically — no one has to notice.
-                <div className="mt-2 flex flex-wrap gap-2">
-                  <Button size="sm" variant="outline" onClick={() => toast({ title: 'AMC quote requested from vendor', tone: 'success' })}>Request AMC quote</Button>
-                  <Button size="sm" variant="outline" onClick={() => toast({ title: 'Extended warranty added to renewal queue', tone: 'success' })}>Add extended warranty</Button>
-                  <Button size="sm" variant="ghost" onClick={() => toast({ title: 'Flagged for replacement planning', tone: 'info' })}>Flag for replacement</Button>
-                </div>
+                Detected automatically — no one has to notice. Record replacement cover in the AMC field above once it
+                is in place.
               </Note>
             </div>
           )}
@@ -275,7 +273,7 @@ export function CommercialCard({
                 <button
                   key={t}
                   type="button"
-                  onClick={() => addDoc(t)}
+                  onClick={() => setUploading(t)}
                   className={cn(
                     'rounded-lg border px-3 py-1.5 text-xs font-medium transition-colors',
                     done ? 'border-emerald-200 bg-emerald-50 text-emerald-700'
@@ -302,6 +300,15 @@ export function CommercialCard({
           )}
         </div>
       </div>
+
+      {uploading && (
+        <UploadDocumentDialog
+          assetId={asset.id}
+          defaultType={uploading}
+          onUploaded={onUploaded}
+          onClose={() => setUploading(null)}
+        />
+      )}
     </ConfigCard>
   );
 }

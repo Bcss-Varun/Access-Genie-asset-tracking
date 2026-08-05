@@ -46,6 +46,11 @@ export const API_ERROR_CODES = [
   'FORBIDDEN',
   'NOT_FOUND',
   'CONFLICT',
+  // Emitted when an upload exceeds the body limit. Distinct from
+  // VALIDATION_ERROR because it is raised by the body parser before any route
+  // runs, so it never carries field-level detail — the client shows the
+  // message as-is rather than attaching it to an input.
+  'PAYLOAD_TOO_LARGE',
   'RATE_LIMITED',
   'INTERNAL_ERROR',
 ] as const;

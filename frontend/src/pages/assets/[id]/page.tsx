@@ -9,14 +9,25 @@ import {
   getGroupsForAsset,
   allAssetClasses,
 } from '@/lib/dataset';
-import type { Asset, WorkOrder, ActivityEvent, AIInsight, AssetDoc } from '@access-genie/shared';
+import type { Asset, ActivityEvent, AIInsight, AssetDoc } from '@access-genie/shared';
 import { PageHeader, Badge, EmptyState, Avatar } from '@/components/ui/primitives';
 import { Button } from '@/components/ui/Button';
 import { Dropdown, MenuItem } from '@/components/ui/Dropdown';
 import { useToast } from '@/components/providers/ToastProvider';
 import { useRegistry } from '@/components/providers/RegistryProvider';
 import { SetupChecklist } from '@/components/onboarding/SetupChecklist';
+import { useMutate } from '@/api/mutate';
+import { maintenanceApi } from '@/api/work-orders';
+import { insightsApi } from '@/api/insights';
+import { documentsApi } from '@/api/documents';
+import { downloadCsv } from '@/api/configuration';
+import { UploadDocumentDialog } from '@/components/assets/UploadDocumentDialog';
+import { CustodyDialog, RetireDialog, TransferDialog } from '@/components/assets/AssetActionDialogs';
+import { ExplainDialog } from '@/components/assets/ExplainDialog';
 import { cn, formatMoney, formatDate, relTime, nowMs } from '@/lib/utils';
+
+/** Which modal is open. One key rather than five booleans that can disagree. */
+type DialogKey = 'custody' | 'transfer' | 'retire' | 'upload' | 'explain' | null;
 
 // ── token helpers ─────────────────────────────────────────────────────────────
 const healthHex = (score: number): string =>
@@ -55,6 +66,13 @@ const docTone = (t: string): Tone =>
       : t === 'CAD' || t === 'Manual' ? 'primary'
         : 'slate';
 
+// Was `(sizeKb / 1024).toFixed(1) + ' MB'`, which renders every certificate and
+// invoice as "0.0 MB" — most attachments are well under half a megabyte.
+const fileSize = (sizeKb: number): string =>
+  sizeKb >= 1024 ? `${(sizeKb / 1024).toFixed(1)} MB` : `${Math.max(1, Math.round(sizeKb))} KB`;
+
+const docSizeLabel = (docs: AssetDoc[]): string => fileSize(docs.reduce((sum, d) => sum + d.sizeKb, 0));
+
 const severityMeta = (sev: string): { color: string; ring: string; emoji: string } =>
   sev === 'Critical'
     ? { color: '#ef4444', ring: 'border-l-red-500', emoji: '🚨' }
@@ -81,12 +99,15 @@ const locationPath = (a: Asset): string =>
 
 const daysUntil = (iso: string): number => Math.round((Date.parse(iso) - nowMs()) / 86_400_000);
 
-const linkCls = (variant: 'primary' | 'secondary' | 'outline'): string =>
+const linkCls = (variant: 'primary' | 'secondary' | 'outline' | 'ghost'): string =>
   cn(
     'inline-flex items-center justify-center gap-2 font-medium text-sm px-4 py-2 rounded-lg transition-colors',
     variant === 'primary' && 'bg-primary-600 text-white hover:bg-primary-700 shadow-sm',
     variant === 'secondary' && 'bg-slate-900 text-white hover:bg-slate-800 shadow-sm',
     variant === 'outline' && 'border border-slate-300 text-slate-700 bg-white hover:bg-slate-50',
+    // Matches Button's ghost so a link and a button can sit side by side in the
+    // same row without one looking heavier than the other.
+    variant === 'ghost' && 'text-slate-600 hover:bg-slate-100',
   );
 
 // ── small presentational components ───────────────────────────────────────────
@@ -365,9 +386,15 @@ export default function AssetProfilePage() {
   const { toast } = useToast();
   const navigate = useNavigate();
 
+  const { run, isPending } = useMutate();
+
   const [activeTab, setActiveTab] = useState<TabKey>('overview');
   const [timelineFilter, setTimelineFilter] = useState<string>('All');
-  const [workOrders, setWorkOrders] = useState<WorkOrder[]>(() => getWorkOrdersForAsset(id));
+  const [dialog, setDialog] = useState<DialogKey>(null);
+  // Read straight from the hydrated dataset rather than held in local state:
+  // `useMutate` re-reads it after every write, so a work order raised here
+  // appears because the source of truth changed, not because a setter ran.
+  const workOrders = getWorkOrdersForAsset(id);
 
   // Deep-link: read ?tab= on mount, keep URL in sync on switch (client-only, no Suspense needed).
   useEffect(() => {
@@ -444,44 +471,142 @@ export default function AssetProfilePage() {
     { label: 'Financial exposure', value: Math.min(100, Math.round(asset.purchasePrice / 1500)) },
   ];
 
-  const historyRows: { field: string; from: string; to: string; ts: string; source: string }[] = [
-    { field: 'Status', from: '—', to: asset.status.replace('_', ' '), ts: asset.purchaseDate, source: 'Registration' },
-    { field: 'Custodian', from: '—', to: asset.custodian, ts: asset.purchaseDate, source: 'Registration' },
-    { field: 'Location', from: '—', to: asset.location.name, ts: asset.purchaseDate, source: 'Registration' },
-    { field: 'Lifecycle stage', from: '—', to: asset.lifecycleStage ?? 'In Service', ts: asset.purchaseDate, source: 'Registration' },
-    { field: 'Criticality', from: '—', to: asset.criticality ?? 'Medium', ts: asset.purchaseDate, source: 'Registration' },
-  ];
+  /**
+   * What has actually changed about this asset.
+   *
+   * This table used to be five hardcoded rows asserting that Status, Custodian,
+   * Location, Lifecycle stage and Criticality each changed from "—" on the
+   * purchase date, followed by the fixed line "Registration is the first entry
+   * — no edits recorded since." It printed that sentence whether or not edits
+   * existed, and it never showed one.
+   *
+   * The real record is the activity stream: the service writes an entry for
+   * every status change, move and custody event, with the actor who made it.
+   */
+  const historyRows = activity
+    .filter((e) => e.type === 'Audit' || e.type === 'Movement' || e.type === 'Custody')
+    .map((e) => ({ id: e.id, what: e.description, who: e.actor, ts: e.timestamp, source: e.type }));
 
-  const createWorkOrder = () => {
-    const wo: WorkOrder = {
-      id: `WO-${5100 + workOrders.length}`,
-      title: `Predictive health check — ${asset.name}`,
-      assetId: asset.id,
-      assetName: asset.name,
-      status: 'New',
-      priority: asset.healthScore < 50 ? 'Critical' : 'Medium',
-      type: 'Predictive',
-      assignedTo: 'Unassigned',
-      createdAt: new Date(nowMs()).toISOString(),
-      dueDate: new Date(nowMs() + 3 * 86_400_000).toISOString(),
-      description: 'AI-drafted work order generated from the Asset 360° profile.',
-      estimatedHours: 2,
-      aiGenerated: true,
-      updatedAt: new Date(nowMs()).toISOString(),
-      // A work order starts with an empty execution record, not without one.
-      checklist: [],
-      parts: [],
-      laborLog: [],
-      comments: [],
-    };
-    setWorkOrders((prev) => [wo, ...prev]);
-    goTab('maintenance');
-    notify(`Work order ${wo.id} created`);
+  /**
+   * Raise a work order against this asset.
+   *
+   * This used to mint a client-side id (`WO-${5100 + workOrders.length}`) and
+   * push it into local state. It looked like it worked — the row appeared on
+   * the Maintenance tab, the toast named an id — and it was gone on the next
+   * reload, having never reached the API. Worse than a button that does
+   * nothing, because nobody thinks to check.
+   *
+   * The server owns the id and the created/updated timestamps.
+   */
+  const createWorkOrder = async () => {
+    const created = await run(
+      maintenanceApi.create({
+        title: `Health check — ${asset.name}`,
+        assetId: asset.id,
+        priority: asset.healthScore < 50 ? 'Critical' : 'Medium',
+        type: 'Predictive',
+        description: `Raised from the asset profile. Health ${asset.healthScore}, risk ${asset.riskScore ?? 0}.`,
+        estimatedHours: 2,
+        dueDate: new Date(nowMs() + 3 * 86_400_000).toISOString(),
+      }),
+      { success: 'Work order created', successDetail: `Against ${asset.id}.`, describe: 'create that work order' },
+    );
+    if (created) goTab('maintenance');
+  };
+
+  const downloadDoc = async (d: AssetDoc) => {
+    try {
+      await documentsApi.download(d);
+    } catch {
+      // The metadata row can outlive its bytes — a document seeded before
+      // uploads stored files has nothing to send.
+      notify(`${d.name} has no stored file to download`, 'info');
+    }
+  };
+
+  const removeDoc = (d: AssetDoc) =>
+    run(documentsApi.remove(d.id), {
+      success: `${d.name} removed`,
+      describe: 'remove that document',
+    });
+
+  /** Act on an insight, or dismiss it. Both were toasts; both are endpoints. */
+  const actOnInsight = (insight: AIInsight, label: string) =>
+    run(insightsApi.action(insight.id), {
+      success: `${label} — recorded`,
+      successDetail: `${insight.id} marked as actioned.`,
+      describe: 'record that action',
+    });
+
+  const closeDialog = () => setDialog(null);
+
+  /**
+   * The readings this asset actually has.
+   *
+   * Two sources, both real: the latest telemetry sample the record carries, and
+   * the health-derived trend behind the sparkline. Labelled by origin so the
+   * file cannot be mistaken for a raw sensor history — there is no time-series
+   * store here, only the last sample and a rollup.
+   */
+  const exportSensorCsv = () => {
+    const rows: Record<string, unknown>[] = [];
+    if (tel) {
+      const at = tel.lastPing ? formatDate(tel.lastPing) : '';
+      if (tel.temperature !== undefined) rows.push({ Source: 'Latest sample', Channel: 'Temperature', Value: tel.temperature, Unit: '°C', At: at });
+      if (tel.humidity !== undefined) rows.push({ Source: 'Latest sample', Channel: 'Humidity', Value: tel.humidity, Unit: '%', At: at });
+      if (tel.vibration !== undefined) rows.push({ Source: 'Latest sample', Channel: 'Vibration', Value: tel.vibration, Unit: 'mm/s', At: at });
+      if (tel.batteryLevel !== undefined) rows.push({ Source: 'Latest sample', Channel: 'Battery', Value: tel.batteryLevel, Unit: '%', At: at });
+    }
+    for (const p of trend) {
+      rows.push({ Source: 'Health rollup', Channel: 'Health score', Value: p.value, Unit: '/100', At: p.label });
+    }
+
+    if (downloadCsv(`${asset.id}-readings`, rows) === 0) {
+      notify('There are no readings to export for this asset', 'info');
+    }
+  };
+
+  /**
+   * The financial facts this platform actually holds for one asset.
+   *
+   * Not a TCO report: that needs energy, downtime and operator cost, none of
+   * which are collected here. Naming it for what it contains keeps the file
+   * from being read as something it is not.
+   */
+  const exportFinancials = () => {
+    // Parts consumption is costed — every WoPart carries a unit cost. Labour is
+    // not: hours are logged but no rate is stored anywhere, so it is reported
+    // in hours rather than converted at a rate this platform would be inventing.
+    const partsCost = workOrders.reduce(
+      (sum, wo) => sum + wo.parts.reduce((p, part) => p + part.qty * part.unitCost, 0),
+      0,
+    );
+    const labourHours = workOrders.reduce(
+      (sum, wo) => sum + wo.laborLog.reduce((h, entry) => h + entry.hours, 0),
+      0,
+    );
+
+    downloadCsv(`${asset.id}-financials`, [
+      {
+        Asset: asset.id,
+        Name: asset.name,
+        Category: asset.category,
+        Purchased: formatDate(asset.purchaseDate),
+        'Purchase price': asset.purchasePrice,
+        'Book value': asset.bookValue ?? '',
+        Depreciation: asset.depreciationMethod ?? '',
+        'Age (years)': ageYears,
+        'Warranty expiry': asset.warrantyExpiry ? formatDate(asset.warrantyExpiry) : '',
+        'Work orders': workOrders.length,
+        'Parts cost': partsCost,
+        'Labour hours logged': labourHours,
+      },
+    ]);
   };
 
   const actions = (
     <>
-      <button onClick={createWorkOrder} className={linkCls('primary')}>
+      <button onClick={() => void createWorkOrder()} disabled={isPending} className={linkCls('primary')}>
         + Create Work Order
       </button>
       <Link to={`/assets/${asset.id}/edit`} className={linkCls('outline')}>
@@ -498,10 +623,10 @@ export default function AssetProfilePage() {
         {({ close }) => (
           <>
             <MenuItem onClick={() => { navigate('/tracking'); close(); }}>Locate on Map</MenuItem>
-            <MenuItem onClick={() => { notify('Transfer request drafted'); close(); }}>Transfer</MenuItem>
-            <MenuItem onClick={() => { notify('Asset checked out'); close(); }}>Check-out</MenuItem>
+            <MenuItem onClick={() => { setDialog('transfer'); close(); }}>Transfer</MenuItem>
+            <MenuItem onClick={() => { setDialog('custody'); close(); }}>Custody</MenuItem>
             <MenuItem onClick={() => { navigate(`/assets/labels?ids=${asset.id}`); close(); }}>Print Label</MenuItem>
-            <MenuItem onClick={() => { notify('Retirement workflow started', 'info'); close(); }}>Retire</MenuItem>
+            <MenuItem onClick={() => { setDialog('retire'); close(); }}>Retire</MenuItem>
           </>
         )}
       </Dropdown>
@@ -734,7 +859,7 @@ export default function AssetProfilePage() {
                       <SectionTitle count={insights.length}>AI Insights</SectionTitle>
                       <div className="space-y-4">
                         {insights.map((ins) => (
-                          <InsightCard key={ins.id} ins={ins} onAct={(l) => notify(`${l} — queued`)} />
+                          <InsightCard key={ins.id} ins={ins} onAct={(l) => void actOnInsight(ins, l)} />
                         ))}
                       </div>
                     </div>
@@ -815,14 +940,21 @@ export default function AssetProfilePage() {
                       <div className="flex items-center justify-between rounded-lg border border-slate-200 p-4">
                         <div className="min-w-0">
                           <div className="text-sm font-medium text-slate-800">{locationPath(asset)}</div>
+                          {/* "Geofence: within bounds" was printed here
+                              unconditionally — it said the asset was inside its
+                              boundary whether or not any geofence covered it,
+                              which is the one thing this line exists to tell
+                              you. Containment is evaluated on the tracking
+                              workspace against real observations; the honest
+                              thing here is the zone, which the record knows. */}
                           <div className="text-xs text-slate-500 mt-0.5">
-                            Zone: {asset.location.zone ?? asset.location.building ?? '—'} · Geofence: within bounds
+                            Zone: {asset.location.zone ?? asset.location.building ?? '—'}
                           </div>
                         </div>
                         <div className="flex gap-2 flex-shrink-0">
-                          <Button variant="outline" size="sm" onClick={() => notify('Ping sent to tag')}>
-                            Ping Tag
-                          </Button>
+                          {/* "Ping Tag" raised a toast. Nothing in this platform
+                              can command a tag — readers report, they are not
+                              addressable — so there is nothing to wire it to. */}
                           <Link to="/tracking" className={cn(linkCls('primary'), 'text-xs px-3 py-1.5 rounded-md')}>
                             Open Live Map
                           </Link>
@@ -834,7 +966,11 @@ export default function AssetProfilePage() {
                       icon="📍"
                       title="No tracking device attached"
                       description="Attach an RFID / BLE / UWB tag to see this asset live on the map."
-                      action={<Button variant="outline" size="sm" onClick={() => notify('Attach-tag flow started')}>Attach Tag</Button>}
+                      action={
+                        <Link to={`/assets/labels?ids=${asset.id}`} className={cn(linkCls('outline'), 'text-xs px-3 py-1.5 rounded-md')}>
+                          Print &amp; bind a tag
+                        </Link>
+                      }
                     />
                   )}
                 </div>
@@ -862,10 +998,14 @@ export default function AssetProfilePage() {
                           {asset.healthScore >= 80 ? '> 12 months' : asset.healthScore >= 50 ? '~3–6 months' : '< 30 days'}
                         </div>
                       </div>
+                      {/* The 👍 was removed: nothing stores model feedback, so
+                          it thanked the user for something discarded on the
+                          spot. Explain now opens the real driver breakdown. */}
                       <div className="flex gap-2">
-                        <Button variant="outline" size="sm" onClick={() => notify('Explanation opened')}>Explain</Button>
-                        <Button variant="primary" size="sm" onClick={createWorkOrder}>Create Predictive WO</Button>
-                        <Button variant="ghost" size="sm" onClick={() => notify('Feedback recorded — thanks!')}>👍</Button>
+                        <Button variant="outline" size="sm" onClick={() => setDialog('explain')}>Explain</Button>
+                        <Button variant="primary" size="sm" disabled={isPending} onClick={() => void createWorkOrder()}>
+                          Create Predictive WO
+                        </Button>
                       </div>
                     </div>
                   </div>
@@ -899,7 +1039,7 @@ export default function AssetProfilePage() {
                       {insights
                         .filter((i) => i.type === 'Predictive Failure' || i.type === 'Anomaly')
                         .map((ins) => (
-                          <InsightCard key={ins.id} ins={ins} onAct={(l) => notify(`${l} — queued`)} />
+                          <InsightCard key={ins.id} ins={ins} onAct={(l) => void actOnInsight(ins, l)} />
                         ))}
                     </div>
                   )}
@@ -982,8 +1122,18 @@ export default function AssetProfilePage() {
                         <KV label="Provider" value={asset.manufacturer ?? '—'} />
                       </div>
                       <div className="mt-4 flex gap-2">
-                        <Button variant="outline" size="sm" onClick={() => notify('Warranty claim drafted')}>File a Claim</Button>
-                        <Button variant="ghost" size="sm" onClick={() => notify('Renewal reminder set')}>Set Reminder</Button>
+                        {/* "File a Claim" and "Set Reminder" were toasts. There
+                            is no claims workflow and no reminder store to write
+                            to. What does exist is an alert rule that fires on
+                            warranty expiry, and the certification register that
+                            tracks renewals — so the buttons point at those
+                            rather than pretending to be them. */}
+                        <Link to="/alerts/rules" className={cn(linkCls('outline'), 'text-xs px-3 py-1.5 rounded-md')}>
+                          Alert me before expiry
+                        </Link>
+                        <Link to="/compliance/certifications" className={cn(linkCls('ghost'), 'text-xs px-3 py-1.5 rounded-md')}>
+                          Track renewal
+                        </Link>
                       </div>
                     </div>
                   ) : (
@@ -1024,8 +1174,8 @@ export default function AssetProfilePage() {
                       <div className="text-xs text-slate-500 mt-0.5">Accountable at {asset.location.name}</div>
                     </div>
                     <div className="ml-auto flex gap-2 flex-shrink-0">
-                      <Button variant="outline" size="sm" onClick={() => notify('Check-out recorded')}>Check-out</Button>
-                      <Button variant="primary" size="sm" onClick={() => notify('Transfer request drafted')}>Transfer</Button>
+                      <Button variant="outline" size="sm" onClick={() => setDialog('custody')}>Custody</Button>
+                      <Button variant="primary" size="sm" onClick={() => setDialog('transfer')}>Transfer</Button>
                     </div>
                   </div>
 
@@ -1047,28 +1197,55 @@ export default function AssetProfilePage() {
                     <EmptyState
                       icon="📁"
                       title="No documents yet"
-                      description="Manuals, certificates, and contracts attached to this asset will appear here."
-                      action={<Button variant="outline" size="sm" onClick={() => notify('Upload dialog opened')}>Upload Document</Button>}
+                      description="Invoices, warranty certificates, manuals and nameplate photos attached to this asset appear here."
+                      action={
+                        <Button variant="outline" size="sm" onClick={() => setDialog('upload')}>
+                          Attach a document
+                        </Button>
+                      }
                     />
                   ) : (
-                    docs.map((d: AssetDoc) => (
-                      <div key={d.id} className="flex items-center gap-3 rounded-lg border border-slate-200 p-3 hover:bg-slate-50 transition-colors">
-                        <span className="text-xl flex-shrink-0">
-                          {d.type === 'Image' ? '🖼️' : d.type === 'CAD' ? '📐' : d.type === 'Invoice' ? '🧾' : '📄'}
+                    <>
+                      <div className="flex items-center justify-between">
+                        <span className="text-xs text-slate-500">
+                          {docs.length} document{docs.length === 1 ? '' : 's'} · {docSizeLabel(docs)}
                         </span>
-                        <div className="min-w-0 flex-1">
-                          <div className="text-sm font-medium text-slate-800 truncate">{d.name}</div>
-                          <div className="text-xs text-slate-500 mt-0.5">
-                            {(d.sizeKb / 1024).toFixed(1)} MB <span className="text-slate-300">•</span> {d.uploadedBy}{' '}
-                            <span className="text-slate-300">•</span> {relTime(d.uploadedAt)}
-                          </div>
-                        </div>
-                        <Badge tone={docTone(d.type)}>{d.type}</Badge>
-                        <button onClick={() => notify(`Downloading ${d.name}`)} className="text-xs text-primary-600 font-medium hover:underline flex-shrink-0">
-                          Download
-                        </button>
+                        <Button variant="outline" size="sm" onClick={() => setDialog('upload')}>
+                          + Attach
+                        </Button>
                       </div>
-                    ))
+
+                      {docs.map((d: AssetDoc) => (
+                        <div key={d.id} className="flex items-center gap-3 rounded-lg border border-slate-200 p-3 hover:bg-slate-50 transition-colors">
+                          <span className="text-xl flex-shrink-0">
+                            {d.type === 'Image' ? '🖼️' : d.type === 'CAD' ? '📐' : d.type === 'Invoice' ? '🧾' : '📄'}
+                          </span>
+                          <div className="min-w-0 flex-1">
+                            <div className="text-sm font-medium text-slate-800 truncate">{d.name}</div>
+                            <div className="text-xs text-slate-500 mt-0.5">
+                              {fileSize(d.sizeKb)} <span className="text-slate-300">•</span> {d.uploadedBy}{' '}
+                              <span className="text-slate-300">•</span> {relTime(d.uploadedAt)}
+                            </div>
+                          </div>
+                          <Badge tone={docTone(d.type)}>{d.type}</Badge>
+                          <button
+                            onClick={() => void downloadDoc(d)}
+                            className="text-xs text-primary-600 font-medium hover:underline flex-shrink-0"
+                          >
+                            Download
+                          </button>
+                          <button
+                            onClick={() => void removeDoc(d)}
+                            disabled={isPending}
+                            className="text-xs text-slate-400 hover:text-red-600 flex-shrink-0 disabled:opacity-40"
+                            aria-label={`Delete ${d.name}`}
+                            title="Delete"
+                          >
+                            ✕
+                          </button>
+                        </div>
+                      ))}
+                    </>
                   )}
                 </div>
               )}
@@ -1112,8 +1289,14 @@ export default function AssetProfilePage() {
                       )}
 
                       <div className="flex gap-2">
-                        <Button variant="outline" size="sm" onClick={() => notify('CSV export started')}>Export CSV</Button>
-                        <Button variant="ghost" size="sm" onClick={() => notify('Threshold rule editor opened')}>Set Threshold Alert</Button>
+                        <Button variant="outline" size="sm" onClick={exportSensorCsv}>Export CSV</Button>
+                        {/* Threshold rules are configured against a channel and
+                            a comparator, which is the alert-rule editor's whole
+                            job. Pointing at it beats a second, narrower editor
+                            that writes to the same collection. */}
+                        <Link to="/alerts/rules" className={cn(linkCls('ghost'), 'text-xs px-3 py-1.5 rounded-md')}>
+                          Set threshold alert
+                        </Link>
                       </div>
                     </>
                   ) : (
@@ -1121,7 +1304,11 @@ export default function AssetProfilePage() {
                       icon="📡"
                       title="No sensors reporting"
                       description="Attach a sensor to stream telemetry for this asset."
-                      action={<Button variant="outline" size="sm" onClick={() => notify('Attach-sensor flow started')}>Attach Sensor</Button>}
+                      action={
+                        <Link to="/tracking/devices" className={cn(linkCls('outline'), 'text-xs px-3 py-1.5 rounded-md')}>
+                          Register a sensor
+                        </Link>
+                      }
                     />
                   )}
                 </div>
@@ -1131,7 +1318,7 @@ export default function AssetProfilePage() {
               {activeTab === 'ai' && (
                 <div className="space-y-4">
                   {insights.length > 0 ? (
-                    insights.map((ins) => <InsightCard key={ins.id} ins={ins} onAct={(l) => notify(`${l} — queued`)} />)
+                    insights.map((ins) => <InsightCard key={ins.id} ins={ins} onAct={(l) => void actOnInsight(ins, l)} />)
                   ) : (
                     <EmptyState icon="✅" title="No AI insights" description="Asset is nominal — the models found nothing that needs attention." />
                   )}
@@ -1142,36 +1329,41 @@ export default function AssetProfilePage() {
               {activeTab === 'history' && (
                 <div className="space-y-3">
                   <p className="text-xs text-slate-500">
-                    Master-data field changes (what value changed, from → to, by whom). Distinct from the Audit Log,
-                    which records system actions and access.
+                    Recorded changes to this asset — status, location and custody — with who made each one. Distinct
+                    from the Audit Log, which records system actions and access.
                   </p>
-                  <div className="overflow-x-auto">
-                    <table className="w-full text-sm">
-                      <thead>
-                        <tr className="text-left text-xs uppercase tracking-wide text-slate-500 border-b border-slate-200">
-                          <th className="py-2 pr-3 font-medium">Field</th>
-                          <th className="py-2 pr-3 font-medium">From</th>
-                          <th className="py-2 pr-3 font-medium">To</th>
-                          <th className="py-2 pr-3 font-medium">Source</th>
-                          <th className="py-2 font-medium">When</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {historyRows.map((r) => (
-                          <tr key={r.field} className="border-b border-slate-100">
-                            <td className="py-2.5 pr-3 font-medium text-slate-800">{r.field}</td>
-                            <td className="py-2.5 pr-3 text-slate-400">{r.from}</td>
-                            <td className="py-2.5 pr-3 text-slate-800">{r.to}</td>
-                            <td className="py-2.5 pr-3">
-                              <span className="text-[10px] font-medium px-1.5 py-0.5 rounded bg-slate-100 text-slate-600">{r.source}</span>
-                            </td>
-                            <td className="py-2.5 text-slate-500">{formatDate(r.ts)}</td>
+                  {historyRows.length === 0 ? (
+                    <EmptyState
+                      icon="📋"
+                      title="No changes recorded yet"
+                      description="Status changes, moves and custody events appear here as they happen."
+                    />
+                  ) : (
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-sm">
+                        <thead>
+                          <tr className="text-left text-xs uppercase tracking-wide text-slate-500 border-b border-slate-200">
+                            <th className="py-2 pr-3 font-medium">Change</th>
+                            <th className="py-2 pr-3 font-medium">By</th>
+                            <th className="py-2 pr-3 font-medium">Kind</th>
+                            <th className="py-2 font-medium">When</th>
                           </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                  <p className="text-xs text-slate-400">Registration is the first entry — no edits recorded since.</p>
+                        </thead>
+                        <tbody>
+                          {historyRows.map((r) => (
+                            <tr key={r.id} className="border-b border-slate-100">
+                              <td className="py-2.5 pr-3 text-slate-800">{r.what}</td>
+                              <td className="py-2.5 pr-3 text-slate-600">{r.who}</td>
+                              <td className="py-2.5 pr-3">
+                                <span className="text-[10px] font-medium px-1.5 py-0.5 rounded bg-slate-100 text-slate-600">{r.source}</span>
+                              </td>
+                              <td className="py-2.5 whitespace-nowrap text-slate-500">{formatDate(r.ts)}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  )}
                 </div>
               )}
 
@@ -1208,8 +1400,12 @@ export default function AssetProfilePage() {
                         <span className="text-sm text-slate-500">Composite of failure, criticality, security &amp; financial exposure.</span>
                       </div>
                       <div className="flex gap-2">
-                        <Button variant="outline" size="sm" onClick={() => notify('Risk explanation opened')}>Explain</Button>
-                        <Button variant="ghost" size="sm" onClick={() => notify('Risk accepted & annotated')}>Accept Risk</Button>
+                        {/* "Accept Risk" is gone: nothing stored an acceptance,
+                            nothing read one, and no score or report changed as
+                            a result. A risk acceptance that vanishes on reload
+                            is worse than none — someone believes it is on
+                            record. */}
+                        <Button variant="outline" size="sm" onClick={() => setDialog('explain')}>Explain</Button>
                       </div>
                     </div>
                   </div>
@@ -1230,7 +1426,7 @@ export default function AssetProfilePage() {
                         {insights
                           .filter((i) => i.type === 'Theft/Security' || i.type === 'Predictive Failure')
                           .map((ins) => (
-                            <InsightCard key={ins.id} ins={ins} onAct={(l) => notify(`${l} — queued`)} />
+                            <InsightCard key={ins.id} ins={ins} onAct={(l) => void actOnInsight(ins, l)} />
                           ))}
                       </div>
                     </div>
@@ -1298,9 +1494,16 @@ export default function AssetProfilePage() {
                     <KV label="Lifecycle Stage" value={asset.lifecycleStage} />
                   </dl>
 
+                  {/* "Export to GL" and "Run TCO Report" were toasts. There is
+                      no ledger integration to export to, and a total-cost-of-
+                      ownership figure needs operating and energy cost this
+                      platform does not collect. What it does hold — purchase,
+                      book value, depreciation and the maintenance spend against
+                      this asset — is exportable, and that is what this does. */}
                   <div className="flex gap-2">
-                    <Button variant="outline" size="sm" onClick={() => notify('Exported to GL/ERP')}>Export to GL</Button>
-                    <Button variant="ghost" size="sm" onClick={() => notify('TCO report generated')}>Run TCO Report</Button>
+                    <Button variant="outline" size="sm" onClick={exportFinancials}>
+                      Export financials (CSV)
+                    </Button>
                   </div>
                 </div>
               )}
@@ -1308,6 +1511,22 @@ export default function AssetProfilePage() {
           </div>
         </div>
       </div>
+
+      {dialog === 'custody' && <CustodyDialog asset={asset} onClose={closeDialog} />}
+      {dialog === 'transfer' && <TransferDialog asset={asset} onClose={closeDialog} />}
+      {dialog === 'retire' && <RetireDialog asset={asset} onClose={closeDialog} />}
+      {dialog === 'upload' && <UploadDocumentDialog assetId={asset.id} onClose={closeDialog} />}
+      {dialog === 'explain' && (
+        <ExplainDialog
+          assetId={asset.id}
+          stored={{
+            healthScore: asset.healthScore,
+            utilization: asset.utilization,
+            riskScore: asset.riskScore,
+          }}
+          onClose={closeDialog}
+        />
+      )}
     </div>
   );
 }

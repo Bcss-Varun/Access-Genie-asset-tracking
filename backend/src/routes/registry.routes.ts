@@ -22,6 +22,8 @@ import * as pmController from '../controllers/pm.controller.js';
 import * as complianceController from '../controllers/compliance.controller.js';
 import * as fieldworkController from '../controllers/fieldwork.controller.js';
 import * as configurationController from '../controllers/configuration.controller.js';
+import * as documentController from '../controllers/document.controller.js';
+import { uploadDocumentSchema } from '../validators/document.validator.js';
 import {
   createApprovalWorkflowSchema,
   createAiModelSchema,
@@ -96,6 +98,26 @@ const documents = createResource(AssetDocument, {
   defaultSort: '-uploadedAt',
 });
 router.get('/asset-documents', requireModule('assets'), documents.validateQuery, documents.list);
+// Upload/download are hand-written: `createResource` writes JSON bodies and
+// reads JSON back, and neither is true of a file.
+router.post(
+  '/asset-documents',
+  requireModule('assets'),
+  validate({ body: uploadDocumentSchema }),
+  documentController.upload,
+);
+router.get(
+  '/asset-documents/:id/download',
+  requireModule('assets'),
+  validate({ params: idParamSchema }),
+  documentController.download,
+);
+router.delete(
+  '/asset-documents/:id',
+  requireModule('assets'),
+  validate({ params: idParamSchema }),
+  documentController.remove,
+);
 
 const trails = createResource(MovementTrail, {
   label: 'Movement trail',

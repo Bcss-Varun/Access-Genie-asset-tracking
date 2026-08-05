@@ -39,6 +39,12 @@ export const errorHandler: ErrorRequestHandler = (err, req, res, _next) => {
   } else if (isDuplicateKeyError(err)) {
     const field = Object.keys(err.keyPattern ?? {})[0] ?? 'field';
     apiError = ApiError.conflict(`A record with this ${field} already exists`);
+  } else if (isPayloadTooLarge(err)) {
+    // body-parser rejects an oversized body before any route sees it, so the
+    // validator's own size message never gets the chance to run. Without this
+    // the user uploads a large file and is told "Something went wrong", which
+    // reads as a broken server rather than as a file they need to shrink.
+    apiError = new ApiError(413, 'PAYLOAD_TOO_LARGE', 'That file is too large — the limit is 5MB');
   } else {
     apiError = ApiError.internal();
   }
@@ -81,4 +87,13 @@ interface DuplicateKeyError {
 
 function isDuplicateKeyError(err: unknown): err is DuplicateKeyError {
   return typeof err === 'object' && err !== null && (err as { code?: number }).code === 11000;
+}
+
+/** What body-parser throws when a request body exceeds the configured limit. */
+function isPayloadTooLarge(err: unknown): boolean {
+  return (
+    typeof err === 'object' &&
+    err !== null &&
+    (err as { type?: string }).type === 'entity.too.large'
+  );
 }

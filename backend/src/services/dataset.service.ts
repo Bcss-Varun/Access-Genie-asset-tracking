@@ -52,11 +52,11 @@ import {
   Warehouse,
   WorkOrder,
   Zone,
-  buildScopeTree,
   ChecklistTemplate,
   ReportSubscription,
 } from '../models/index.js';
 import { listAssetClasses } from './assetClass.service.js';
+import { resolveScope, scopeTreeWithCounts } from './scopeFilter.service.js';
 import { getOrgSettings } from './configuration.service.js';
 import { getDashboardSummary } from './dashboard.service.js';
 import { aliasId } from '../utils/response.js';
@@ -89,8 +89,40 @@ export interface DatasetPayload {
   [slice: string]: unknown;
 }
 
-export async function getDataset(modules: ModuleKey[], userId: string): Promise<DatasetPayload> {
+export async function getDataset(
+  modules: ModuleKey[],
+  userId: string,
+  scopeId?: string,
+): Promise<DatasetPayload> {
   const can = (...required: ModuleKey[]) => required.some((m) => modules.includes(m));
+
+  /**
+   * The scope switcher, applied at source.
+   *
+   * Selecting a facility narrows the estate to that facility and everything
+   * under it. Filtering here rather than in each screen is the only way it can
+   * be consistent: a hundred and twenty pages read these slices, and any one of
+   * them that forgot to filter would quietly show the whole organisation while
+   * the switcher in the chrome claimed otherwise.
+   *
+   * Only asset-derived data is narrowed. Suppliers, report definitions, roles
+   * and the checklist library belong to the organisation, not to a site, and
+   * hiding them inside a facility would break the screens that configure them.
+   */
+  const scope = await resolveScope(scopeId);
+  const scoped = scope !== null && !scope.isRoot;
+
+  // Which assets are in view. Everything below keys off this set, so an asset
+  // and the work orders against it can never disagree about being in scope.
+  const assetFilter = scoped ? { 'location.id': { $in: [...scope.ids] } } : {};
+  const inScopeAssetIds = scoped
+    ? (await Asset.find(assetFilter).select('_id').lean<{ _id: string }[]>()).map((a) => a._id)
+    : null;
+
+  /** `{ assetId: { $in: [...] } }` while a scope is active, otherwise nothing. */
+  const byAsset = inScopeAssetIds ? { assetId: { $in: inScopeAssetIds } } : {};
+  /** For collections keyed by the asset id itself, like movement trails. */
+  const byAssetKey = inScopeAssetIds ? { _id: { $in: inScopeAssetIds } } : {};
 
   // `empty` keeps the payload's shape constant regardless of role: the client
   // then renders an empty section rather than crashing on a missing key, and
@@ -130,7 +162,9 @@ export async function getDataset(modules: ModuleKey[], userId: string): Promise<
     integrations,
     workflows,
     users,
-    scopeNodes,
+    // The flat rows are no longer needed here: the tree is assembled by
+    // `scopeTreeWithCounts`, which has to read the assets anyway to count them.
+    _scopeNodes,
     transfers,
     reservations,
     teams,
@@ -155,23 +189,23 @@ export async function getDataset(modules: ModuleKey[], userId: string): Promise<
     reportSubscriptions,
     orgSettings,
   ] = await Promise.all([
-    can('assets') ? Asset.find().sort({ _id: 1 }).lean() : empty,
+    can('assets') ? Asset.find(assetFilter).sort({ _id: 1 }).lean() : empty,
     can('assets') ? listAssetClasses() : empty,
     can('assets') ? AssetGroup.find().sort({ name: 1 }).lean() : empty,
-    can('assets') ? AssetDocument.find().sort({ uploadedAt: -1 }).lean() : empty,
-    can('assets', 'workspace') ? Activity.find().sort({ timestamp: -1 }).limit(ACTIVITY_LIMIT).lean() : empty,
-    can('compliance', 'assets') ? CustodyRecord.find().sort({ at: -1 }).lean() : empty,
+    can('assets') ? AssetDocument.find(byAsset).sort({ uploadedAt: -1 }).lean() : empty,
+    can('assets', 'workspace') ? Activity.find(byAsset).sort({ timestamp: -1 }).limit(ACTIVITY_LIMIT).lean() : empty,
+    can('compliance', 'assets') ? CustodyRecord.find(byAsset).sort({ at: -1 }).lean() : empty,
 
-    can('maintenance') ? WorkOrder.find().sort({ _id: 1 }).lean() : empty,
-    can('maintenance') ? PmSchedule.find().sort({ nextDue: 1 }).lean() : empty,
-    can('maintenance') ? Inspection.find().sort({ dueDate: 1 }).lean() : empty,
+    can('maintenance') ? WorkOrder.find(byAsset).sort({ _id: 1 }).lean() : empty,
+    can('maintenance') ? PmSchedule.find(byAsset).sort({ nextDue: 1 }).lean() : empty,
+    can('maintenance') ? Inspection.find(byAsset).sort({ dueDate: 1 }).lean() : empty,
 
-    can('ai') ? Insight.find().sort({ createdAt: -1 }).lean() : empty,
+    can('ai') ? Insight.find(byAsset).sort({ createdAt: -1 }).lean() : empty,
     can('ai') ? AiModel.find().sort({ name: 1 }).lean() : empty,
     can('ai') ? ForecastSeries.find().lean() : empty,
-    can('ai') ? AnomalyEvent.find().sort({ detectedAt: -1 }).lean() : empty,
+    can('ai') ? AnomalyEvent.find(byAsset).sort({ detectedAt: -1 }).lean() : empty,
 
-    can('alerts', 'compliance', 'workspace') ? Alert.find().sort({ createdAt: -1 }).limit(ALERT_LIMIT).lean() : empty,
+    can('alerts', 'compliance', 'workspace') ? Alert.find(byAsset).sort({ createdAt: -1 }).limit(ALERT_LIMIT).lean() : empty,
     can('alerts', 'compliance') ? AlertRule.find().sort({ name: 1 }).lean() : empty,
     // A notification is addressed to a person, or broadcast to everyone.
     Notification.find({ $or: [{ userId }, { userId: { $exists: false } }] })
@@ -181,10 +215,14 @@ export async function getDataset(modules: ModuleKey[], userId: string): Promise<
     can('compliance', 'admin') ? AuditLog.find().sort({ timestamp: -1 }).limit(AUDIT_LIMIT).lean() : empty,
 
     can('tracking') ? Zone.find().lean() : empty,
-    can('tracking') ? Sensor.find().sort({ _id: 1 }).lean() : empty,
+    can('tracking') ? Sensor.find(byAsset).sort({ _id: 1 }).lean() : empty,
+    // Gateways and geofences describe the building, not the assets in it. They
+    // are left whole: a reader does not belong to the equipment it happens to
+    // see, and hiding the estate's infrastructure inside a site view would make
+    // the tracking screens unusable from anywhere but the org root.
     can('tracking') ? Gateway.find().sort({ _id: 1 }).lean() : empty,
     can('tracking') ? Geofence.find().sort({ name: 1 }).lean() : empty,
-    can('tracking') ? MovementTrail.find().lean() : empty,
+    can('tracking') ? MovementTrail.find(byAssetKey).lean() : empty,
 
     can('inventory') ? Part.find().sort({ name: 1 }).lean() : empty,
     can('inventory') ? Warehouse.find().sort({ name: 1 }).lean() : empty,
@@ -193,7 +231,7 @@ export async function getDataset(modules: ModuleKey[], userId: string): Promise<
 
     can('analytics') ? Report.find().sort({ name: 1 }).lean() : empty,
     can('operations', 'inventory') ? CycleCount.find().sort({ date: -1 }).lean() : empty,
-    can('compliance') ? Certification.find().sort({ expiresAt: 1 }).lean() : empty,
+    can('compliance') ? Certification.find(byAsset).sort({ expiresAt: 1 }).lean() : empty,
     can('admin') ? Integration.find().sort({ name: 1 }).lean() : empty,
     can('admin') ? ApprovalWorkflow.find().sort({ name: 1 }).lean() : empty,
 
@@ -205,8 +243,8 @@ export async function getDataset(modules: ModuleKey[], userId: string): Promise<
     User.find({ status: 'active' }).sort({ name: 1 }).lean(),
     ScopeNodeModel.find().lean(),
 
-    can('operations', 'assets') ? Transfer.find().sort({ requestedAt: -1 }).lean() : empty,
-    can('operations', 'assets') ? Reservation.find().sort({ startDay: 1 }).lean() : empty,
+    can('operations', 'assets') ? Transfer.find(byAsset).sort({ requestedAt: -1 }).lean() : empty,
+    can('operations', 'assets') ? Reservation.find(byAsset).sort({ startDay: 1 }).lean() : empty,
 
     // Platform administration and governance.
     can('admin') ? Team.find().sort({ name: 1 }).lean() : empty,
@@ -311,7 +349,13 @@ export async function getDataset(modules: ModuleKey[], userId: string): Promise<
     checklistTemplates,
     reportSubscriptions,
     orgSettings,
-    scopeTree: buildScopeTree(scopeNodes),
+    // The whole tree, always — the switcher has to offer every site regardless
+    // of which one is selected, or you could narrow to a facility and have no
+    // way back out. Counts are computed rather than read from the stored
+    // `assetCount`, which nothing maintains; see scopeFilter.service.ts.
+    scopeTree: await scopeTreeWithCounts(),
+    /** Which node the payload was narrowed to, so the client can confirm it. */
+    scopeId: scope?.scopeId ?? null,
     observedAt: new Date().toISOString(),
   };
 }

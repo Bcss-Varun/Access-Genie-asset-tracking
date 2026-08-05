@@ -6,9 +6,11 @@ import * as ops from '../controllers/trackingOps.controller.js';
 import { requireModule, validate } from '../middleware/index.js';
 import { idParamSchema } from '../validators/common.js';
 import {
+  createGatewaySchema,
   createGeofenceSchema,
   createSensorSchema,
   sensorListQuerySchema,
+  updateGatewaySchema,
   updateGeofenceSchema,
 } from '../validators/tracking.validator.js';
 import {
@@ -59,7 +61,17 @@ router.get('/sensors/:id', validate({ params: idParamSchema }), controller.getSe
 router.post('/sensors', validate({ body: createSensorSchema }), controller.createSensor);
 router.delete('/sensors/:id', validate({ params: idParamSchema }), controller.deleteSensor);
 
+// Gateways are shared infrastructure, so writing one is administrative — the
+// same reasoning as registering a print device.
 router.get('/gateways', controller.listGateways);
+router.post('/gateways', requireModule('admin'), validate({ body: createGatewaySchema }), controller.createGateway);
+router.patch(
+  '/gateways/:id',
+  requireModule('admin'),
+  validate({ params: idParamSchema, body: updateGatewaySchema }),
+  controller.updateGateway,
+);
+router.delete('/gateways/:id', requireModule('admin'), validate({ params: idParamSchema }), controller.deleteGateway);
 
 // ── Geofences ────────────────────────────────────────────────────────────────
 router.get('/geofences', controller.listGeofences);

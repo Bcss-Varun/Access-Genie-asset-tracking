@@ -132,6 +132,18 @@ export async function updatePart(id: string, patch: UpdatePartInput): Promise<Pa
 export async function deletePart(id: string): Promise<void> {
   const removed = await Part.findByIdAndDelete(id).lean<PartDoc>();
   if (!removed) throw ApiError.notFound('Part');
+
+  /**
+   * The ledger goes with the part.
+   *
+   * Movements are keyed by SKU, and a SKU is reusable — delete a part, create
+   * another with the same code, and the new one inherits the old one's history.
+   * The detail screen would then draw a stock chart running to a balance the
+   * part has never held, and each row's `after` would contradict what is on the
+   * shelf. Rows that explain a balance nobody holds any more explain nothing.
+   */
+  await StockMovement.deleteMany({ sku: removed.sku });
+
   await refreshWarehouseTotals(removed.warehouseId);
 }
 

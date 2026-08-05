@@ -21,6 +21,10 @@ export function RequireAuth() {
     );
   }
 
+  // `from` is recorded but deliberately not restored on sign-in: the login
+  // screen sends everyone to the dashboard. It reads this for one case only —
+  // a `/a/:code` QR label, where the person is standing at the equipment and
+  // asked for that asset specifically. See the login page for the reasoning.
   if (!session) return <Navigate to="/login" replace state={{ from: location.pathname }} />;
 
   return <Outlet />;

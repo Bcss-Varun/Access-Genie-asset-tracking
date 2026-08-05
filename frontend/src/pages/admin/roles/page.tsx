@@ -19,9 +19,14 @@ import { cn } from '@/lib/utils';
  * system.
  *
  * What an administrator actually asks for is narrower and entirely safe: "our
- * facility managers also need Analytics". So the matrix is editable. Changing a
- * role signs out everyone holding it, so the new permissions apply at once
- * rather than whenever their tokens happen to expire.
+ * facility managers also need Analytics". So the matrix is editable.
+ *
+ * On when a change takes effect — this screen used to say holders were "signed
+ * out", which was not what happened and undersold what does. `requireAuth`
+ * re-reads the user and re-resolves the role's grants on every single request,
+ * so a change lands on the holder's very next action, in both directions, with
+ * no sign-out and nothing to wait for. Their refresh token is revoked as well,
+ * so the client re-authenticates and picks up its new navigation shortly after.
  */
 
 const tierTone: Record<string, 'primary' | 'emerald' | 'amber' | 'slate'> = {
@@ -57,7 +62,7 @@ function EditRoleDialog({ role, onClose }: { role: RoleView; onClose: () => void
   const save = async () => {
     const ok = await run(adminApi.setRoleGrants(role.id, modules), {
       success: `${role.name} updated`,
-      successDetail: `${modules.length} module${modules.length === 1 ? '' : 's'} — everyone holding this role has been signed out.`,
+      successDetail: `${modules.length} module${modules.length === 1 ? '' : 's'} — in effect on their next action.`,
       describe: 'change those permissions',
     });
     if (ok) onClose();
@@ -79,7 +84,7 @@ function EditRoleDialog({ role, onClose }: { role: RoleView; onClose: () => void
     <FormDialog
       icon="🔐"
       title={`${role.name} permissions`}
-      description={`${role.userCount} ${role.userCount === 1 ? 'person holds' : 'people hold'} this role. Saving signs them all out so the change takes effect immediately.`}
+      description={`${role.userCount} ${role.userCount === 1 ? 'person holds' : 'people hold'} this role. The API checks these grants on every request, so a change applies to them immediately — they do not need to sign in again.`}
       submitLabel="Save permissions"
       width="lg"
       busy={isPending}
@@ -150,7 +155,7 @@ export default function AdminRolesPage() {
             <h2 className="font-heading font-semibold text-slate-900">Permission Matrix</h2>
             <p className="mt-0.5 text-xs text-slate-500">
               {canEdit
-                ? 'Click a role to change what it can reach. Everyone holding it is signed out so the change applies at once.'
+                ? 'Click a role to change what it can reach. Grants are checked on every request, so changes apply at once.'
                 : 'Only an administrator can change these.'}
             </p>
           </div>

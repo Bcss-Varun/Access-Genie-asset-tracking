@@ -1,6 +1,16 @@
 import type { TransferStatus } from '@access-genie/shared';
-import { Asset, Reservation, TRANSFER_FLOW, Transfer, nextId, type TransferDoc } from '../models/index.js';
+import {
+  Asset,
+  Reservation,
+  ScopeNodeModel,
+  TRANSFER_FLOW,
+  Transfer,
+  nextId,
+  type ScopeNodeDoc,
+  type TransferDoc,
+} from '../models/index.js';
 import { ApiError } from '../utils/ApiError.js';
+import { logger } from '../config/logger.js';
 
 /**
  * Transfers and reservations.
@@ -81,13 +91,41 @@ export async function advanceTransfer(
   }
   if (status === 'Received') {
     transfer.receivedAt = new Date();
-    // The move is the point of the request: complete it on the asset itself, or
-    // the transfer says "Received" while the registry still shows the old place.
-    const [facility, zone] = transfer.to.split(' · ');
+
+    /**
+     * The move is the point of the request: complete it on the asset itself, or
+     * the transfer says "Received" while the registry still shows the old place.
+     *
+     * `location.id` has to move with `location.name`. Writing the name alone —
+     * which is what this did — left the asset displaying its new home while
+     * still carrying the id of its old one, and `location.id` is what scope
+     * filtering and each role's visibility are resolved against. The result was
+     * an asset that looked moved on every screen and was still, as far as
+     * access control was concerned, in the facility it had left.
+     */
+    const [place, zone] = transfer.to.split(' · ');
+    const destination = await ScopeNodeModel.findOne({ name: place }).lean<ScopeNodeDoc>();
+
     await Asset.updateOne(
       { _id: transfer.assetId },
-      { $set: { 'location.name': facility, ...(zone ? { 'location.zone': zone } : {}) } },
+      {
+        $set: {
+          'location.name': place,
+          // Only when the destination is a real node. A free-text destination
+          // that matches nothing is still recorded as the displayed name, but
+          // it must not silently reassign the asset to some other scope.
+          ...(destination ? { 'location.id': destination._id } : {}),
+          ...(zone ? { 'location.zone': zone } : {}),
+        },
+      },
     );
+
+    if (!destination) {
+      logger.warn('Transfer received to a destination that is not a scope node', {
+        transfer: transfer._id,
+        to: transfer.to,
+      });
+    }
   }
 
   await transfer.save();

@@ -94,10 +94,19 @@ export default function WorkspacePage() {
   const { scope } = useScope();
   const firstName = session.user.name.split(' ')[0];
 
+  // Every figure below is counted from the hydrated dataset, which the server
+  // has already narrowed to the selected site — so "in scope" means exactly
+  // what the switcher says, without this screen re-implementing the filter.
   const openWOs = allWorkOrders.filter((w) => w.status !== 'Completed');
   const criticalAlerts = allInsights.filter((i) => i.severity === 'Critical').length;
   const topInsights = allInsights.slice(0, 3);
   const topWork = openWOs.slice(0, 5);
+
+  const assetsInScope = allAssets.length;
+  const avgHealth =
+    assetsInScope === 0
+      ? null
+      : Math.round(allAssets.reduce((sum, a) => sum + a.healthScore, 0) / assetsInScope);
 
   return (
     <div className="h-full flex flex-col space-y-6">
@@ -112,12 +121,50 @@ export default function WorkspacePage() {
         </p>
       </div>
 
-      {/* KPI row */}
+      {/* KPI row.
+
+          Three of these four used to be invented. "Assets in Scope" fell back
+          to 14,205 whenever the scope carried no count — which was always,
+          because nothing maintained it — under a fixed "↑ 2.4% vs last month".
+          "AI Health Score" was the literal 92, described as "Optimal state",
+          on an estate whose real average could be anything. A dashboard is
+          read at a glance and acted on without checking; numbers on it have to
+          come from somewhere.
+
+          All four now count the rows actually in view, and the whole payload is
+          narrowed to the selected site, so they answer for that site. */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        <KpiCard label="Assets in Scope" value={(scope.assetCount ?? 14205).toLocaleString()} sub={<span>↑ 2.4% vs last month</span>} tone="emerald" />
-        <KpiCard label="Open Work Orders" value={openWOs.length} sub={<span>{openWOs.filter((w) => w.priority === 'Critical').length} critical</span>} tone="amber" />
-        <KpiCard label="Critical Alerts" value={criticalAlerts} sub={<span>needs attention</span>} tone="red" />
-        <KpiCard label="AI Health Score" value={<>92<span className="text-lg text-slate-400">/100</span></>} sub={<span>Optimal state</span>} tone="emerald" accent />
+        <KpiCard
+          label="Assets in Scope"
+          value={assetsInScope.toLocaleString('en-IN')}
+          sub={<span>{scope.name}</span>}
+          tone="emerald"
+        />
+        <KpiCard
+          label="Open Work Orders"
+          value={openWOs.length}
+          sub={<span>{openWOs.filter((w) => w.priority === 'Critical').length} critical</span>}
+          tone="amber"
+        />
+        <KpiCard
+          label="Critical Alerts"
+          value={criticalAlerts}
+          sub={<span>{criticalAlerts === 0 ? 'nothing outstanding' : 'needs attention'}</span>}
+          tone="red"
+        />
+        <KpiCard
+          label="Average Health"
+          value={
+            avgHealth === null ? (
+              '—'
+            ) : (
+              <>{avgHealth}<span className="text-lg text-slate-400">/100</span></>
+            )
+          }
+          sub={<span>{avgHealth === null ? 'no assets in scope' : `across ${assetsInScope} asset${assetsInScope === 1 ? '' : 's'}`}</span>}
+          tone={avgHealth === null || avgHealth >= 80 ? 'emerald' : avgHealth >= 50 ? 'amber' : 'red'}
+          accent
+        />
       </div>
 
       {/* Flagship capabilities — demo spotlight */}

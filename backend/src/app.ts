@@ -35,7 +35,25 @@ export function createApp(): Express {
     }),
   );
 
-  app.use(express.json({ limit: '1mb' }));
+  /**
+   * 1MB is the right ceiling for a JSON API — every other endpoint takes a form
+   * payload, and accepting megabytes on all of them is free DoS surface.
+   *
+   * Document upload is the one exception: a 5MB file is ~6.7MB once base64'd.
+   * Rather than raise the limit everywhere, the large parser is mounted on that
+   * single path. It has to be selected here rather than added on the route,
+   * because whichever `express.json` runs first is the one that consumes the
+   * stream — a stricter global parser would reject the upload before the
+   * route's own parser ever saw it.
+   */
+  const UPLOAD_PATH = `${env.API_PREFIX}/asset-documents`;
+  const largeJson = express.json({ limit: '8mb' });
+  const standardJson = express.json({ limit: '1mb' });
+  app.use((req, res, next) =>
+    req.method === 'POST' && req.path === UPLOAD_PATH
+      ? largeJson(req, res, next)
+      : standardJson(req, res, next),
+  );
   app.use(express.urlencoded({ extended: true, limit: '1mb' }));
   app.use(cookieParser());
   app.use(compression());

@@ -60,11 +60,47 @@ export function hydrateDirectory(users: PublicUser[], tree: ScopeNode | null): v
   if (tree) scopeTree = tree;
 }
 
-/** Flatten the scope tree to a list with depth, for the switcher dropdown. */
+/** Flatten the scope tree to a list with depth. */
 export function flattenScope(node: ScopeNode = scopeTree, depth = 0): { node: ScopeNode; depth: number }[] {
   const out = [{ node, depth }];
   for (const child of node.children ?? []) out.push(...flattenScope(child, depth + 1));
   return out;
+}
+
+/**
+ * The levels the scope switcher offers.
+ *
+ * The hierarchy has two halves that serve different purposes. Org, region and
+ * facility describe *the business* — the parent company and the sites under it,
+ * which is what someone means when they ask to look at one part of the group.
+ * Building, floor and zone describe *where a thing physically sits* inside a
+ * site; they are how an asset records its location, not a lens anyone wants to
+ * view the company through.
+ *
+ * The switcher listed all six, so choosing a view meant scrolling past "1st
+ * Floor", "rack 1" and "Rack 2" to reach the site you wanted. It offers the
+ * organisational levels only — the physical ones still exist, are still what
+ * assets are filed under, and are still counted into the site above them.
+ */
+const SWITCHABLE_LEVELS: ScopeNode['level'][] = ['org', 'region', 'facility'];
+
+/**
+ * Org and the sites beneath it, for the switcher.
+ *
+ * Depth is recomputed over the filtered set rather than carried through from
+ * the full tree, so a facility sitting directly under the org indents one step
+ * rather than inheriting the indentation of levels that are no longer shown.
+ */
+export function switchableScopes(): { node: ScopeNode; depth: number }[] {
+  const walk = (node: ScopeNode, depth: number): { node: ScopeNode; depth: number }[] => {
+    const included = SWITCHABLE_LEVELS.includes(node.level);
+    const here = included ? [{ node, depth }] : [];
+    // A site nested under something hidden still belongs in the list, so the
+    // walk continues through excluded nodes without spending a depth level.
+    const below = (node.children ?? []).flatMap((child) => walk(child, included ? depth + 1 : depth));
+    return [...here, ...below];
+  };
+  return walk(scopeTree, 0);
 }
 
 export function findScope(id: string, node: ScopeNode = scopeTree): ScopeNode | undefined {

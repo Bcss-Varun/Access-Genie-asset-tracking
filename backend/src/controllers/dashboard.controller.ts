@@ -4,7 +4,7 @@ import { ApiError } from '../utils/ApiError.js';
 import { asyncHandler } from '../utils/asyncHandler.js';
 import { sendData } from '../utils/response.js';
 import { getDashboardSummary } from '../services/dashboard.service.js';
-import { ScopeNodeModel, buildScopeTree } from '../models/index.js';
+import { scopeTreeWithCounts } from '../services/scopeFilter.service.js';
 
 export const summary = asyncHandler(async (_req: Request, res: Response) => {
   sendData(res, await getDashboardSummary());
@@ -12,8 +12,9 @@ export const summary = asyncHandler(async (_req: Request, res: Response) => {
 
 /** The Org ▸ Region ▸ Facility ▸ … tree behind the scope switcher. */
 export const scopeTree = asyncHandler(async (_req: Request, res: Response) => {
-  const rows = await ScopeNodeModel.find().lean();
-  sendData(res, buildScopeTree(rows));
+  // Same tree, same counts as the dataset carries — the switcher must not show
+  // one number here and a different one after a refresh.
+  sendData(res, await scopeTreeWithCounts());
 });
 
 /**
@@ -22,5 +23,8 @@ export const scopeTree = asyncHandler(async (_req: Request, res: Response) => {
  */
 export const dataset = asyncHandler(async (req: Request, res: Response) => {
   if (!req.auth) throw ApiError.unauthorized();
-  sendData(res, await getDataset(req.auth.modules, req.auth.user.id));
+  // `?scope=` narrows the payload to one site and everything under it. Absent
+  // means the whole organisation, which is what the root selection sends.
+  const scopeId = typeof req.query.scope === 'string' ? req.query.scope : undefined;
+  sendData(res, await getDataset(req.auth.modules, req.auth.user.id, scopeId));
 });
