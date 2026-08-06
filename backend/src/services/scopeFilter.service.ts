@@ -80,6 +80,8 @@ export async function scopeTreeWithCounts(): Promise<ScopeNode | null> {
 export interface ScopeFilter {
   /** The node the user selected. */
   scopeId: string;
+  /** Its display name — what a response says it narrowed itself to. */
+  name: string;
   /** That node and everything under it. */
   ids: Set<string>;
   /** True when the selection is the whole organisation — nothing to filter. */
@@ -102,7 +104,7 @@ export async function resolveScope(scopeId?: string): Promise<ScopeFilter | null
 
   // The org root covers everything, so filtering against it would be work with
   // no effect — and would wrongly drop assets whose location is missing.
-  if (!node.parentId) return { scopeId, ids: new Set(rows.map((r) => r._id)), isRoot: true };
+  if (!node.parentId) return { scopeId, name: node.name, ids: new Set(rows.map((r) => r._id)), isRoot: true };
 
-  return { scopeId, ids: descendantIds(rows, scopeId), isRoot: false };
+  return { scopeId, name: node.name, ids: descendantIds(rows, scopeId), isRoot: false };
 }

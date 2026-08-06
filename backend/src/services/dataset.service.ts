@@ -58,7 +58,7 @@ import {
 import { listAssetClasses } from './assetClass.service.js';
 import { resolveScope, scopeTreeWithCounts } from './scopeFilter.service.js';
 import { getOrgSettings } from './configuration.service.js';
-import { getDashboardSummary } from './dashboard.service.js';
+import { getScopedAggregates } from './dashboard.service.js';
 import { aliasId } from '../utils/response.js';
 
 /**
@@ -280,16 +280,17 @@ export async function getDataset(
     getOrgSettings(),
   ]);
 
-  // The aggregate figures the charts read — a fleet-wide utilization trend and
-  // the value/count mix by category. Both are aggregations over the whole asset
-  // and work-order collections, so they are computed in MongoDB rather than
-  // reduced from the slices above (which are capped, and would give a different
-  // answer once the estate outgrows the cap).
-  const summary = can('workspace') ? await getDashboardSummary() : null;
+  // The aggregate figures the charts read — a utilization/downtime trend and
+  // the value/count mix by category. Aggregated rather than reduced from the
+  // slices above (which are capped, and would give a different answer once the
+  // estate outgrows the cap), and narrowed by the *same* scope, which it was
+  // not before: these two series reported the whole organisation while every
+  // tile beside them reported one site.
+  const aggregates = can('workspace') ? await getScopedAggregates(assetFilter, byAsset) : null;
 
   return {
-    utilizationDowntime: summary?.utilizationDowntime ?? [],
-    categoryBreakdown: summary?.categoryBreakdown ?? [],
+    utilizationDowntime: aggregates?.utilizationDowntime ?? [],
+    categoryBreakdown: aggregates?.categoryBreakdown ?? [],
     assets,
     assetClasses,
     groups,

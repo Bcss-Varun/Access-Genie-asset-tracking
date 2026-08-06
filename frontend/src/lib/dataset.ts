@@ -224,6 +224,7 @@ export let orgSettings: OrgSettings = {
   accentColor: '#0ea5e9',
   loginMessage: '',
   supportEmail: '',
+  laborRatePerHour: 850,
   timezone: 'Asia/Kolkata',
   dateFormat: 'DD MMM YYYY',
   currency: 'INR',

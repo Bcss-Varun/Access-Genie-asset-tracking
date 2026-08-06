@@ -121,6 +121,11 @@ export class ApiRequestError extends Error {
   }
 }
 
+/** Whether a body is one the API wrote, rather than a proxy's own error page. */
+function isApiEnvelope(payload: unknown): payload is ApiFailure {
+  return typeof payload === 'object' && payload !== null && 'success' in payload;
+}
+
 function toApiError(error: AxiosError<ApiFailure>): ApiRequestError {
   const payload = error.response?.data;
 
@@ -138,8 +143,29 @@ function toApiError(error: AxiosError<ApiFailure>): ApiRequestError {
   if (error.code === 'ECONNABORTED') {
     return new ApiRequestError('The request timed out. Check your connection and try again.', 'TIMEOUT', 0);
   }
-  if (!error.response) {
-    return new ApiRequestError('Cannot reach the Access Genie API. Is the server running?', 'NETWORK_ERROR', 0);
+
+  /**
+   * No response, or a response the API did not write, both mean the same thing:
+   * the request never reached it.
+   *
+   * `errorHandler` answers *every* failure with the `{ success: false }`
+   * envelope — the rate limiter included — so an error body without one came
+   * from whatever sits in front of the API, not from the API. In development
+   * that is the Vite proxy, which answers a refused connection with a plain
+   * 500; in production it is the reverse proxy, answering 502 or 504.
+   *
+   * The distinction matters most on the sign-in form, which was the one place
+   * this went wrong: with the API down, the proxy's 500 fell through to
+   * "Something went wrong", which on a password field reads as *wrong
+   * password*. People retype credentials that were correct all along instead
+   * of starting the server.
+   */
+  if (!error.response || !isApiEnvelope(payload)) {
+    return new ApiRequestError(
+      'Cannot reach the Access Genie API. Is the server running?',
+      'NETWORK_ERROR',
+      error.response?.status ?? 0,
+    );
   }
 
   return new ApiRequestError('Something went wrong.', 'INTERNAL_ERROR', error.response.status);

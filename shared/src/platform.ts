@@ -129,8 +129,22 @@ export interface Session {
   modules: ModuleKey[];
 }
 
-// ── Scope tree (Org ▸ Region ▸ Facility ▸ Building ▸ Floor ▸ Zone) ────────────
-export type ScopeLevel = 'org' | 'region' | 'facility' | 'building' | 'floor' | 'zone';
+// ── Scope tree ───────────────────────────────────────────────────────────────
+//
+//   Group ▸ Organization ▸ Region ▸ Facility ▸ Building ▸ Floor ▸ Zone
+//
+// `group` is the holding company above the operating ones — what lets someone
+// switch from Access Genie to a sister company and see the whole product follow
+// them. It is optional: a deployment with a single organisation has no group
+// node, and the tree is rooted at the org exactly as before.
+//
+// Note what this is *not*. Scoping is a filter over shared collections, not a
+// tenancy boundary — anyone holding the grant can select any organisation in
+// the tree. Real isolation (a `tenantId` on every row, enforced below the
+// query layer) is a separate, larger piece of work; when it lands, this is
+// where it will attach.
+export const SCOPE_LEVELS = ['group', 'org', 'region', 'facility', 'building', 'floor', 'zone'] as const;
+export type ScopeLevel = (typeof SCOPE_LEVELS)[number];
 
 export interface ScopeNode {
   id: string;

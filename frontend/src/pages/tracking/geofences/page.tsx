@@ -24,8 +24,9 @@ import {
   Chip, ChipFilter, Meter, Panel, PresencePill, StatTile, TableShell, scoreTone, td, th,
 } from '@/components/tracking/bits';
 import {
-  FacilitySwitch, POLICY_TEXT, categoryEmoji, fmtDwell, isMisplaced, slugFor,
+  FacilitySwitch, POLICY_TEXT, fmtDwell, isMisplaced, slugFor,
 } from '@/lib/tracking-ui';
+import { categoryEmoji } from '@/lib/asset-categories';
 import {
   TRACKED_FACILITIES, facilityBySlug, inventoryRooms, presenceForFacility, trackedZones,
   zoneById, zonesForFacility,

@@ -20,6 +20,17 @@ export const updatePreferencesSchema = z
       z.object({ email: z.boolean(), push: z.boolean(), inApp: z.boolean() }),
     ),
     digest: z.string().trim().min(1).max(40),
+    // Opaque widget ids, bounded in count and length but not enumerated: which
+    // widgets exist is the client's business, and pinning the list here would
+    // mean a backend deploy every time one is added. `null` resets the user to
+    // their role's default layout.
+    dashboard: z
+      .object({
+        kpis: z.array(z.string().trim().min(1).max(40)).max(8),
+        main: z.array(z.string().trim().min(1).max(40)).max(20),
+        rail: z.array(z.string().trim().min(1).max(40)).max(20),
+      })
+      .nullable(),
   })
   .partial()
   .refine((patch) => Object.keys(patch).length > 0, { message: 'Provide at least one preference to update' });

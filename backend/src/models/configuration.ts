@@ -113,6 +113,16 @@ export interface OrgSettingsDoc {
   timezone: string;
   dateFormat: string;
   currency: string;
+  /**
+   * What an hour of maintenance labour costs, INR.
+   *
+   * Work orders record parts (`qty × unitCost`) and labour *hours*, but nothing
+   * has ever said what an hour is worth — so the maintenance-cost figure had no
+   * way to exist. It is a setting rather than a constant because it differs by
+   * organisation and changes yearly, and the charts name the rate they used so
+   * a reader can tell a rate change from a cost change.
+   */
+  laborRatePerHour: number;
   updatedAt: Date;
 }
 
@@ -130,6 +140,7 @@ const orgSettingsSchema = new Schema<OrgSettingsDoc>(
     timezone: { type: String, default: 'Asia/Kolkata' },
     dateFormat: { type: String, default: 'DD MMM YYYY' },
     currency: { type: String, default: 'INR' },
+    laborRatePerHour: { type: Number, default: 850, min: 0 },
     updatedAt: { type: Date, required: true },
   },
   { versionKey: false },

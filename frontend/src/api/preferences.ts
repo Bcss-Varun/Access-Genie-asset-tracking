@@ -1,4 +1,5 @@
 import { useMutation, useQuery, useQueryClient, type UseQueryResult } from '@tanstack/react-query';
+import type { DashboardLayout } from '@access-genie/shared';
 import { apiDelete, apiGet, apiPatch, apiPost } from '@/api/client';
 import { useAuth } from '@/api/auth';
 import type { Lens, SavedView } from '@/lib/asset-views';
@@ -33,6 +34,12 @@ export interface Preferences {
   activeFacility: string | null;
   activeScope: string | null;
   savedViews: StoredView[];
+  /**
+   * The dashboard this person arranged. `null` means they never have, so the
+   * dashboard follows their role's default — distinct from an empty layout,
+   * which is a dashboard someone deliberately cleared.
+   */
+  dashboard: DashboardLayout | null;
   dismissed: string[];
   /**
    * Empty until the user chooses. That is distinct from "everything off" —
@@ -46,6 +53,8 @@ export interface PreferencesPatch {
   theme?: Theme;
   activeFacility?: string | null;
   activeScope?: string | null;
+  /** `null` resets the user to their role's default dashboard. */
+  dashboard?: DashboardLayout | null;
   dismissed?: string[];
   notifications?: Record<string, ChannelPrefs>;
   digest?: string;

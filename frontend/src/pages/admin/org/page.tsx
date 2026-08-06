@@ -11,6 +11,7 @@ import { useMutate } from '@/api/mutate';
 import { scopeApi, ALLOWED_CHILDREN } from '@/api/scope';
 
 const levelTone: Record<ScopeLevel, 'primary' | 'slate' | 'emerald' | 'amber'> = {
+  group: 'primary',
   org: 'primary',
   region: 'slate',
   facility: 'emerald',

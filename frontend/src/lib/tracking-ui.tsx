@@ -11,12 +11,7 @@
 import { cn } from '@/lib/utils';
 import { relTime } from '@/lib/utils';
 import { TRACKED_FACILITIES } from '@/lib/tracking-data';
-import type { AssetCategory } from '@access-genie/shared';
 import type { AssetPresence, JourneyStop, PresenceState, ZonePolicy } from '@access-genie/shared';
-
-export const categoryEmoji = (c: AssetCategory) =>
-  c === 'Endpoints' ? '📱' : c === 'Compute' ? '💻' : c === 'Network' ? '🌐'
-    : c === 'Sensors' ? '📡' : '⚡';
 
 /** The policy, said out loud. Nobody manages a building in geofence primitives. */
 export const POLICY_TEXT: Record<ZonePolicy, string> = {

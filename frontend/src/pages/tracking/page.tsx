@@ -31,8 +31,9 @@ import {
 } from '@/components/tracking/bits';
 import {
   CRIT_FILTERS, CUSTODY_FILTERS, FacilitySwitch, STATE_FILTERS, STATE_RANK,
-  categoryEmoji, isMisplaced, matchesState, slugFor, stopItem, type StateFilter,
+  isMisplaced, matchesState, slugFor, stopItem, type StateFilter,
 } from '@/lib/tracking-ui';
+import { categoryEmoji } from '@/lib/asset-categories';
 import {
   TRACKED_FACILITIES, alertById, facilityBySlug, journeyForAsset, presenceById,
   presenceForFacility, trackedZones, trackingKpis, zoneById, zonesForFacility,

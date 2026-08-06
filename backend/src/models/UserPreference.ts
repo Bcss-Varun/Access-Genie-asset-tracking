@@ -1,4 +1,5 @@
 import { model, Schema } from 'mongoose';
+import type { DashboardLayout } from '@access-genie/shared';
 import { baseSchemaPlugin } from '../utils/mongoose.js';
 
 /**
@@ -35,6 +36,17 @@ export interface UserPreferenceDoc {
   /** Id of the scope node selected in the top bar. */
   activeScope?: string;
   savedViews: SavedViewDoc[];
+  /**
+   * The dashboard the user arranged for themselves — which tiles, which
+   * widgets, in which order. Absent means "still on the role default", which is
+   * different from an empty layout (a dashboard someone deliberately stripped),
+   * so it is left unset rather than defaulted to empty arrays.
+   *
+   * Stored as opaque id lists: the client resolves them against its widget
+   * registry and drops what it no longer recognises, so renaming a widget in a
+   * later release cannot strand a saved layout.
+   */
+  dashboard?: DashboardLayout;
   /** Screens the user has dismissed the "getting started" panel on. */
   dismissed: string[];
   /**
@@ -63,6 +75,15 @@ const savedViewSchema = new Schema<SavedViewDoc>(
   { _id: false },
 );
 
+const dashboardLayoutSchema = new Schema<DashboardLayout>(
+  {
+    kpis: { type: [String], default: [] },
+    main: { type: [String], default: [] },
+    rail: { type: [String], default: [] },
+  },
+  { _id: false },
+);
+
 const userPreferenceSchema = new Schema<UserPreferenceDoc>(
   {
     _id: { type: String, required: true, ref: 'User' },
@@ -76,6 +97,7 @@ const userPreferenceSchema = new Schema<UserPreferenceDoc>(
     activeFacility: { type: String },
     activeScope: { type: String },
     savedViews: { type: [savedViewSchema], default: [] },
+    dashboard: { type: dashboardLayoutSchema, default: undefined },
     dismissed: { type: [String], default: [] },
   },
   { timestamps: true, _id: false },

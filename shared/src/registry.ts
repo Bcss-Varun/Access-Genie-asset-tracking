@@ -582,5 +582,7 @@ export interface OrgSettings {
   timezone: string;
   dateFormat: string;
   currency: string;
+  /** INR per hour of maintenance labour — the other half of a work order's cost. */
+  laborRatePerHour: number;
   updatedAt: string;
 }

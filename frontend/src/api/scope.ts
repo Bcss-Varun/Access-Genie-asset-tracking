@@ -27,6 +27,7 @@ export const scopeApi = {
 
 /** What each level is called in the interface, and what it looks like. */
 export const LEVEL_LABEL: Record<ScopeLevel, string> = {
+  group: 'Group',
   org: 'Organization',
   region: 'Region',
   facility: 'Facility',
@@ -36,6 +37,7 @@ export const LEVEL_LABEL: Record<ScopeLevel, string> = {
 };
 
 export const LEVEL_ICON: Record<ScopeLevel, string> = {
+  group: '🏢',
   org: '🏛️',
   region: '🌎',
   facility: '🏭',
@@ -49,6 +51,7 @@ export const LEVEL_ICON: Record<ScopeLevel, string> = {
  * enforces with, so the interface never offers an option the server refuses.
  */
 export const ALLOWED_CHILDREN: Record<ScopeLevel, ScopeLevel[]> = {
+  group: ['org'],
   org: ['region', 'facility'],
   region: ['facility'],
   facility: ['building', 'zone'],

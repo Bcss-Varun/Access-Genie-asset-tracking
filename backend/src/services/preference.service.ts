@@ -1,3 +1,4 @@
+import type { DashboardLayout } from '@access-genie/shared';
 import { UserPreference, type SavedViewDoc, type UserPreferenceDoc } from '../models/index.js';
 
 /**
@@ -15,6 +16,8 @@ export interface PreferencesPayload {
   activeFacility: string | null;
   activeScope: string | null;
   savedViews: SavedViewDoc[];
+  /** `null` = never customised, so the dashboard follows the role default. */
+  dashboard: DashboardLayout | null;
   dismissed: string[];
   notifications: Record<string, { email: boolean; push: boolean; inApp: boolean }>;
   digest: string;
@@ -24,7 +27,7 @@ export interface PreferencesPayload {
 function toPayload(
   doc: Pick<
     UserPreferenceDoc,
-    'theme' | 'activeFacility' | 'activeScope' | 'savedViews' | 'dismissed' | 'notifications' | 'digest'
+    'theme' | 'activeFacility' | 'activeScope' | 'savedViews' | 'dashboard' | 'dismissed' | 'notifications' | 'digest'
   >,
 ): PreferencesPayload {
   return {
@@ -32,6 +35,7 @@ function toPayload(
     activeFacility: doc.activeFacility ?? null,
     activeScope: doc.activeScope ?? null,
     savedViews: doc.savedViews ?? [],
+    dashboard: doc.dashboard ?? null,
     dismissed: doc.dismissed ?? [],
     // An empty map is meaningful: it means "never chosen", and the screen falls
     // back to its own per-category defaults rather than switching everything off.
@@ -53,6 +57,7 @@ const DEFAULTS: PreferencesPayload = {
   activeFacility: null,
   activeScope: null,
   savedViews: [],
+  dashboard: null,
   dismissed: [],
   notifications: {},
   digest: 'Daily digest',
@@ -67,6 +72,8 @@ export interface PreferencesPatch {
   theme?: 'light' | 'dark' | 'system';
   activeFacility?: string | null;
   activeScope?: string | null;
+  /** `null` clears the saved layout, putting the user back on the role default. */
+  dashboard?: DashboardLayout | null;
   dismissed?: string[];
   notifications?: Record<string, { email: boolean; push: boolean; inApp: boolean }>;
   digest?: string;
@@ -83,7 +90,7 @@ export async function updatePreferences(userId: string, patch: PreferencesPatch)
   const set: Record<string, unknown> = {};
   const unset: Record<string, ''> = {};
 
-  for (const key of ['theme', 'activeFacility', 'activeScope', 'dismissed', 'notifications', 'digest'] as const) {
+  for (const key of ['theme', 'activeFacility', 'activeScope', 'dismissed', 'notifications', 'digest', 'dashboard'] as const) {
     if (!(key in patch)) continue;
     const value = patch[key];
     // `null` means "clear it" — distinct from omitting the key, which means

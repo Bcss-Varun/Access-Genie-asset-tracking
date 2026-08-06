@@ -2,7 +2,7 @@ import { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useNavigate } from 'react-router-dom';
 import { allAssetClasses } from '@/lib/dataset';
-import type { Asset, AssetCategory, Criticality, AttributeDef } from '@access-genie/shared';
+import { ASSET_CATEGORIES, type Asset, type AssetCategory, type Criticality, type AttributeDef } from '@access-genie/shared';
 import { Button } from '@/components/ui/Button';
 import { useToast } from '@/components/providers/ToastProvider';
 import { assetsApi } from '@/api/assets';
@@ -11,7 +11,7 @@ import { ApiRequestError } from '@/api/client';
 import { cn } from '@/lib/utils';
 
 // ── Constants ─────────────────────────────────────────────────────────────────
-const CATEGORIES: AssetCategory[] = ['Compute', 'Network', 'Endpoints', 'Infrastructure', 'Sensors'];
+const CATEGORIES: readonly AssetCategory[] = ASSET_CATEGORIES;
 const CRITICALITIES: Criticality[] = ['Low', 'Medium', 'High', 'Critical'];
 
 // ── Form state shape ──────────────────────────────────────────────────────────

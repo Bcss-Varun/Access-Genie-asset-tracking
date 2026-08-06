@@ -8,6 +8,7 @@ export { User, type UserDoc, type UserDocument } from './User.js';
 export { RefreshToken, type RefreshTokenDoc } from './RefreshToken.js';
 export { RateLimitHit, type RateLimitHitDoc } from './RateLimitHit.js';
 export { UserPreference, type UserPreferenceDoc, type SavedViewDoc } from './UserPreference.js';
+export { MetricSnapshot, type MetricSnapshotDoc } from './MetricSnapshot.js';
 export { ScopeNodeModel, buildScopeTree, type ScopeNodeDoc } from './ScopeNode.js';
 export { AuditLog, type AuditDoc } from './AuditLog.js';
 export { Notification, type NotificationDoc } from './Notification.js';

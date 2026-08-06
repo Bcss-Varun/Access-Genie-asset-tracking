@@ -117,7 +117,7 @@ export default function ComplianceReportsPage() {
       <PageHeader
         title="Compliance Reports"
         subtitle="Audit-ready evidence packs and compliance report library."
-        breadcrumb={[{ label: 'Analytics', href: '/dashboards' }, { label: 'Compliance Reports' }]}
+        breadcrumb={[{ label: 'Analytics', href: '/reports' }, { label: 'Compliance Reports' }]}
         actions={
           <Link to="/reports/builder">
             <Button>+ New Report</Button>

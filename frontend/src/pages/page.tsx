@@ -1,297 +1,183 @@
-import { Link } from 'react-router-dom';
+import { useState } from 'react';
+import { useDashboardSummary, type DashboardFilters } from '@/api/dashboard';
+import { usePreferences } from '@/api/preferences';
 import { useSession } from '@/components/providers/SessionProvider';
 import { useScope } from '@/components/providers/ScopeProvider';
-import { KpiCard, Badge } from '@/components/ui/primitives';
-import { allAssets, allWorkOrders, allInsights } from '@/lib/dataset';
-import { relTime } from '@/lib/utils';
+import { CustomizePanel } from '@/components/dashboards/CustomizePanel';
+import { FilterBar } from '@/components/dashboards/FilterBar';
+import { KpiTile } from '@/components/dashboards/KpiTile';
+import { TriageStrip } from '@/components/dashboards/TriageStrip';
+import { WidgetBoundary } from '@/components/dashboards/WidgetFrame';
+import { defaultLayoutFor, resolveDashboard } from '@/lib/dashboard/resolve';
+import { cn, nowMs, relTime } from '@/lib/utils';
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Flagship capabilities — the demo spotlight. Each pillar deep-links to the
-// live workflow that demonstrates it.
+// The dashboard. One of them.
+//
+// There used to be a capability overview at `/` and a gallery at `/dashboards`
+// fanning out to eight role dashboards — three clicks and two dead pages
+// between signing in and a number. Then they were stacked into one long page,
+// which was worse in a different way: eight KPI rows deep before the reader
+// learned that three alerts were critical, and a Technician scrolling through
+// Financial and Inventory bands full of zeros they hold no grant to read.
+//
+// This is the third answer and the one the page is built around: what needs
+// attention, then the figures that carry a comparison, then a composition
+// chosen by the role and adjustable by the person.
 // ─────────────────────────────────────────────────────────────────────────────
-type TrackingTag = { label: string; id: string };
-type Feature = {
-  title: string;
-  blurb: string;
-  href: string;
-  icon: string;
-  accent: string;
-  tint: string;
-  tags?: TrackingTag[];
-};
 
-const flagshipFeatures: Feature[] = [
-  {
-    title: 'Real-Time Asset Tracking',
-    blurb: 'Live RTLS positioning across the floor-plan with multi-technology tag support.',
-    href: '/tracking',
-    icon: '🛰️',
-    accent: '#0ea5e9',
-    tint: 'rgba(14,165,233,0.12)',
-    tags: [
-      { label: 'RFID', id: 'E2801160' },
-      { label: 'BLE', id: 'C3:9A:6F' },
-      { label: 'GPS', id: '37.77,-122.41' },
-      { label: 'QR', id: 'AG-QR-1001' },
-      { label: 'UWB', id: 'ANCH-04' },
-    ],
-  },
-  {
-    title: 'AI Asset Intelligence & Utilization',
-    blurb: 'Ranked, explainable AI insights and utilization analytics across the whole fleet.',
-    href: '/ai-insights',
-    icon: '✨',
-    accent: '#6366f1',
-    tint: 'rgba(99,102,241,0.12)',
-  },
-  {
-    title: 'Digital Asset Passport & Lifecycle',
-    blurb: 'A complete passport per asset — procurement, service history and end-of-life.',
-    href: '/lifecycle',
-    icon: '🪪',
-    accent: '#10b981',
-    tint: 'rgba(16,185,129,0.12)',
-  },
-  {
-    title: 'Predictive Maintenance & Auto Work Orders',
-    blurb: 'Failure predictions that auto-generate prioritized work orders before downtime.',
-    href: '/maintenance',
-    icon: '🔧',
-    accent: '#f59e0b',
-    tint: 'rgba(245,158,11,0.12)',
-  },
-  {
-    title: 'Security, Geo-fencing & Compliance',
-    blurb: 'Geofenced zones, custody exceptions and audit-ready compliance monitoring.',
-    href: '/compliance-reports',
-    icon: '🛡️',
-    accent: '#ef4444',
-    tint: 'rgba(239,68,68,0.12)',
-  },
-  {
-    title: 'Mobile Workforce Enablement',
-    blurb: 'Field-ops tooling to scan, check in / out and close work from any device.',
-    href: '/field-ops',
-    icon: '📱',
-    accent: '#14b8a6',
-    tint: 'rgba(20,184,166,0.12)',
-  },
-];
+function greeting(): string {
+  const hour = new Date().getHours();
+  return hour < 12 ? 'Good morning' : hour < 17 ? 'Good afternoon' : 'Good evening';
+}
 
-const quickActions = [
-  { label: 'Asset Tracking', href: '/tracking', icon: '🗺️' },
-  { label: 'AI Asset Intelligence', href: '/ai-insights', icon: '✨' },
-  { label: 'Digital Passports & Lifecycle', href: '/lifecycle', icon: '♻️' },
-  { label: 'Predictive Maintenance', href: '/maintenance', icon: '🔧' },
-  { label: 'Security & Compliance', href: '/compliance-reports', icon: '🛡️' },
-  { label: 'Mobile Workforce', href: '/field-ops', icon: '📱' },
-];
+/**
+ * How old the figures are.
+ *
+ * `relTime` renders the first minute as "0s ago", which on a control that
+ * refreshes every sixty seconds reads like a stuck clock rather than fresh data.
+ */
+function freshness(generatedAt: string): string {
+  return nowMs() - Date.parse(generatedAt) < 60_000 ? 'just now' : relTime(generatedAt);
+}
 
-const severityTone = { Critical: 'red', Warning: 'amber', Opportunity: 'emerald', Info: 'primary' } as const;
-
-export default function WorkspacePage() {
+export default function DashboardPage() {
   const { session } = useSession();
-  const { scope } = useScope();
+  const { scope, isSwitching } = useScope();
+  const { data: preferences } = usePreferences();
+
+  const [filters, setFilters] = useState<DashboardFilters>({ period: '30d' });
+  const [customizing, setCustomizing] = useState(false);
+
+  const { data: summary, isLoading, isFetching, refetch, error } = useDashboardSummary(filters);
+
+  const saved = preferences?.dashboard ?? null;
+  const layout = saved ?? defaultLayoutFor(session.role.id);
+  const { kpis, main, rail } = resolveDashboard({
+    roleId: session.role.id,
+    modules: session.modules,
+    saved,
+    summary,
+  });
+
   const firstName = session.user.name.split(' ')[0];
 
-  // Every figure below is counted from the hydrated dataset, which the server
-  // has already narrowed to the selected site — so "in scope" means exactly
-  // what the switcher says, without this screen re-implementing the filter.
-  const openWOs = allWorkOrders.filter((w) => w.status !== 'Completed');
-  const criticalAlerts = allInsights.filter((i) => i.severity === 'Critical').length;
-  const topInsights = allInsights.slice(0, 3);
-  const topWork = openWOs.slice(0, 5);
-
-  const assetsInScope = allAssets.length;
-  const avgHealth =
-    assetsInScope === 0
-      ? null
-      : Math.round(allAssets.reduce((sum, a) => sum + a.healthScore, 0) / assetsInScope);
-
   return (
-    <div className="h-full flex flex-col space-y-6">
-      {/* Greeting */}
-      <div>
-        <h1 className="text-2xl sm:text-3xl font-heading font-bold tracking-tight text-slate-900">
-          Good morning, {firstName}
-        </h1>
-        <p className="text-slate-500 mt-1">
-          Here&apos;s what&apos;s happening across <span className="font-medium text-slate-700">{scope.name}</span> ·
-          viewing as {session.role.name}.
-        </p>
-      </div>
-
-      {/* KPI row.
-
-          Three of these four used to be invented. "Assets in Scope" fell back
-          to 14,205 whenever the scope carried no count — which was always,
-          because nothing maintained it — under a fixed "↑ 2.4% vs last month".
-          "AI Health Score" was the literal 92, described as "Optimal state",
-          on an estate whose real average could be anything. A dashboard is
-          read at a glance and acted on without checking; numbers on it have to
-          come from somewhere.
-
-          All four now count the rows actually in view, and the whole payload is
-          narrowed to the selected site, so they answer for that site. */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        <KpiCard
-          label="Assets in Scope"
-          value={assetsInScope.toLocaleString('en-IN')}
-          sub={<span>{scope.name}</span>}
-          tone="emerald"
-        />
-        <KpiCard
-          label="Open Work Orders"
-          value={openWOs.length}
-          sub={<span>{openWOs.filter((w) => w.priority === 'Critical').length} critical</span>}
-          tone="amber"
-        />
-        <KpiCard
-          label="Critical Alerts"
-          value={criticalAlerts}
-          sub={<span>{criticalAlerts === 0 ? 'nothing outstanding' : 'needs attention'}</span>}
-          tone="red"
-        />
-        <KpiCard
-          label="Average Health"
-          value={
-            avgHealth === null ? (
-              '—'
-            ) : (
-              <>{avgHealth}<span className="text-lg text-slate-400">/100</span></>
-            )
-          }
-          sub={<span>{avgHealth === null ? 'no assets in scope' : `across ${assetsInScope} asset${assetsInScope === 1 ? '' : 's'}`}</span>}
-          tone={avgHealth === null || avgHealth >= 80 ? 'emerald' : avgHealth >= 50 ? 'amber' : 'red'}
-          accent
-        />
-      </div>
-
-      {/* Flagship capabilities — demo spotlight */}
-      <section className="glass-panel rounded-xl p-6">
-        <div className="flex items-center justify-between gap-3 mb-4">
-          <div>
-            <h2 className="text-base font-semibold font-heading text-slate-800">Flagship Capabilities</h2>
-            <p className="text-xs text-slate-500 mt-0.5">The six pillars of Access Genie — jump straight into any live workflow.</p>
-          </div>
-          <Badge tone="primary">Demo spotlight</Badge>
+    <div className="space-y-5 pb-6">
+      {/* Header — who, where, when, and the two controls that change all three */}
+      <div className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
+        <div className="min-w-0">
+          <h1 className="font-heading text-2xl font-bold tracking-tight text-slate-900 sm:text-3xl">
+            {greeting()}, {firstName}
+          </h1>
+          <p className="mt-1 text-slate-500">
+            <span className="font-medium text-slate-700">{scope.name}</span> · viewing as {session.role.name}
+          </p>
         </div>
-        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-3">
-          {flagshipFeatures.map((f) => (
-            <Link
-              key={f.href}
-              to={f.href}
-              className="group relative overflow-hidden rounded-xl border border-slate-200 bg-white/70 p-4 hover:border-primary-300 hover:shadow-md hover:-translate-y-0.5 transition-all"
-            >
-              <span aria-hidden className="absolute inset-y-0 left-0 w-1" style={{ backgroundColor: f.accent }} />
-              <div className="flex items-start gap-3 pl-1.5">
-                <div
-                  className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg text-xl"
-                  style={{ backgroundColor: f.tint, color: f.accent }}
-                >
-                  {f.icon}
-                </div>
-                <div className="min-w-0 flex-1">
-                  <h3 className="text-sm font-semibold text-slate-800 leading-snug">{f.title}</h3>
-                  <p className="text-xs text-slate-500 mt-1 leading-relaxed">{f.blurb}</p>
-                  {f.tags && (
-                    <div className="mt-2 flex flex-wrap gap-1">
-                      {f.tags.map((t) => (
-                        <span
-                          key={t.label}
-                          className="inline-flex items-center gap-1 rounded-full px-1.5 py-0.5 text-[10px] tracking-wide"
-                          style={{ backgroundColor: f.tint, color: f.accent }}
-                          title={`${t.label} tag id`}
-                        >
-                          <span className="font-semibold">{t.label}</span>
-                          <span className="font-mono opacity-80">{t.id}</span>
-                        </span>
-                      ))}
-                    </div>
-                  )}
-                  <span className="mt-2 inline-flex items-center gap-1 text-xs font-medium text-slate-400 group-hover:text-primary-600 transition-colors">
-                    Explore <span aria-hidden>→</span>
-                  </span>
-                </div>
-              </div>
-            </Link>
+
+        <div className="flex flex-wrap items-center gap-2">
+          <button
+            type="button"
+            onClick={() => void refetch()}
+            disabled={isFetching}
+            className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs font-medium text-slate-500 transition-colors hover:text-slate-800 disabled:opacity-60"
+            title="Re-read the figures now"
+          >
+            <span className={cn(isFetching && 'animate-spin')} aria-hidden>
+              ⟳
+            </span>
+            {/* The honest version of "real-time": say how old it is and offer to
+                fetch again. There is no stream behind this yet. */}
+            {summary ? freshness(summary.meta.generatedAt) : 'loading…'}
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setCustomizing(true)}
+            className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs font-medium text-slate-600 transition-colors hover:border-primary-300 hover:text-primary-700"
+          >
+            Customize
+          </button>
+        </div>
+      </div>
+
+      <FilterBar filters={filters} onChange={setFilters} departments={summary?.meta.departments ?? []} />
+
+      {error && (
+        <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-health-critical">
+          The dashboard figures could not be loaded. {(error as Error).message}
+        </div>
+      )}
+
+      {summary && <TriageStrip triage={summary.triage} />}
+
+      {/* Headline figures */}
+      {kpis.length > 0 && (
+        <div
+          // Four across, so eight tiles form two full rows rather than a row of
+          // five and a ragged three.
+          className={cn(
+            'grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4',
+            (isLoading || isSwitching) && 'opacity-60',
+          )}
+        >
+          {kpis.map((kpi) => (
+            <KpiTile key={kpi.id} label={kpi.label} metric={summary?.kpis[kpi.id]} href={kpi.href} />
           ))}
         </div>
-      </section>
+      )}
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 flex-1">
-        {/* Left: insights + work */}
-        <div className="lg:col-span-2 space-y-6">
-          <section className="glass-panel rounded-xl p-6">
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="text-base font-semibold font-heading text-slate-800">Top AI Insights</h2>
-              <Link to="/ai-insights" className="text-xs font-medium text-primary-600 hover:underline">View all →</Link>
-            </div>
-            <div className="space-y-3">
-              {topInsights.map((ins) => (
-                <Link key={ins.id} to="/ai-insights" className="block rounded-lg border border-slate-200 p-4 hover:border-primary-300 hover:bg-slate-50/60 transition-colors">
-                  <div className="flex items-center gap-2 mb-1">
-                    <Badge tone={severityTone[ins.severity]}>{ins.type}</Badge>
-                    <span className="text-xs text-slate-400">{ins.confidence}% confidence</span>
-                  </div>
-                  <h3 className="text-sm font-semibold text-slate-800">{ins.title}</h3>
-                  <p className="text-xs text-slate-500 mt-0.5 line-clamp-1">{ins.summary}</p>
-                </Link>
-              ))}
-            </div>
-          </section>
+      {isLoading && !summary && <LoadingGrid />}
 
-          <section className="glass-panel rounded-xl p-6">
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="text-base font-semibold font-heading text-slate-800">Open Work Orders</h2>
-              <Link to="/maintenance" className="text-xs font-medium text-primary-600 hover:underline">Go to board →</Link>
-            </div>
-            <div className="divide-y divide-slate-100">
-              {topWork.map((wo) => (
-                <Link key={wo.id} to="/maintenance" className="flex items-center justify-between gap-3 py-2.5 hover:bg-slate-50/60 -mx-2 px-2 rounded-lg transition-colors">
-                  <div className="min-w-0">
-                    <div className="text-sm font-medium text-slate-800 truncate">{wo.title}</div>
-                    <div className="text-xs text-slate-400">{wo.assetName} · {wo.assignedTo}</div>
-                  </div>
-                  <Badge tone={wo.priority === 'Critical' ? 'red' : wo.priority === 'High' ? 'amber' : 'slate'}>{wo.priority}</Badge>
-                </Link>
-              ))}
-            </div>
-          </section>
+      {/* The composed dashboard: wide column, then the rail */}
+      {summary && (
+        <div className="grid grid-cols-1 gap-5 xl:grid-cols-3">
+          <div className="grid auto-rows-min grid-cols-1 gap-5 md:grid-cols-2 xl:col-span-2">
+            {main.map(({ id, Component, wide }) => (
+              <div key={id} className={cn(wide && 'md:col-span-2')}>
+                <WidgetBoundary title={id}>
+                  <Component summary={summary} />
+                </WidgetBoundary>
+              </div>
+            ))}
+            {main.length === 0 && (
+              <p className="glass-panel rounded-xl p-6 text-center text-sm text-slate-400 md:col-span-2">
+                No widgets in the main column — add some from Customize.
+              </p>
+            )}
+          </div>
+
+          <div className="grid auto-rows-min grid-cols-1 gap-5 sm:grid-cols-2 xl:grid-cols-1">
+            {rail.map(({ id, Component }) => (
+              <WidgetBoundary key={id} title={id}>
+                <Component summary={summary} />
+              </WidgetBoundary>
+            ))}
+          </div>
         </div>
+      )}
 
-        {/* Right: quick actions + attention */}
-        <div className="space-y-6">
-          <section className="glass-panel rounded-xl p-6">
-            <h2 className="text-base font-semibold font-heading text-slate-800 mb-4">Quick Actions</h2>
-            <div className="grid grid-cols-2 gap-2">
-              {quickActions.map((a) => (
-                <Link key={a.href} to={a.href} className="flex flex-col items-center justify-center gap-1.5 rounded-lg border border-slate-200 py-4 text-center hover:border-primary-300 hover:bg-primary-50/40 transition-colors">
-                  <span className="text-xl">{a.icon}</span>
-                  <span className="text-xs font-medium text-slate-600">{a.label}</span>
-                </Link>
-              ))}
-            </div>
-          </section>
+      <CustomizePanel
+        open={customizing}
+        onClose={() => setCustomizing(false)}
+        layout={layout}
+        roleId={session.role.id}
+        modules={session.modules}
+        summary={summary}
+      />
+    </div>
+  );
+}
 
-          <section className="glass-panel rounded-xl p-6">
-            <h2 className="text-base font-semibold font-heading text-slate-800 mb-4">Needs Attention</h2>
-            <div className="space-y-2">
-              {[...allAssets].sort((a, b) => (b.riskScore ?? 0) - (a.riskScore ?? 0)).slice(0, 4).map((a) => (
-                <Link key={a.id} to={`/assets/${a.id}`} className="flex items-center justify-between gap-2 rounded-lg p-2 hover:bg-slate-50 transition-colors">
-                  <div className="min-w-0">
-                    <div className="text-sm font-medium text-slate-800 truncate">{a.name}</div>
-                    <div className="text-xs text-slate-400">{a.location.name} · {relTime(a.telemetry?.lastPing ?? '')}</div>
-                  </div>
-                  <span className={`text-sm font-bold ${(a.riskScore ?? 0) > 70 ? 'text-health-critical' : (a.riskScore ?? 0) > 40 ? 'text-health-warning' : 'text-health-good'}`}>
-                    {a.riskScore ?? 0}
-                  </span>
-                </Link>
-              ))}
-            </div>
-          </section>
-        </div>
-      </div>
+function LoadingGrid() {
+  return (
+    <div className="grid grid-cols-1 gap-5 xl:grid-cols-3" aria-hidden>
+      {Array.from({ length: 5 }, (_, i) => (
+        <div
+          key={i}
+          className={cn('glass-panel h-56 animate-pulse rounded-xl bg-slate-100/60', i < 2 && 'xl:col-span-2')}
+        />
+      ))}
     </div>
   );
 }

@@ -10,6 +10,7 @@ import { scopeTree } from '@/lib/rbac';
 import { getClassTemplate, getMonitoringProfile, GATE_LABELS } from '@/lib/asset-classes';
 import { allSensors, TAG_ID_PREFIX } from '@/lib/dataset';
 import { nowMs } from '@/lib/utils';
+import { depreciationOn } from '@access-genie/shared';
 import type { Asset, SensorKind, TrackingTech } from '@access-genie/shared';
 import type {
   AssetOnboarding, ClassTemplate, CommercialData, DerivedCommercial,
@@ -112,16 +113,25 @@ export function deriveCommercial(c: CommercialData | undefined, now = nowMs()): 
 
   const amcRemainingDays = daysFromNow(parse(c.amcEnd));
 
-  // Straight-line to zero over the class's useful life. Leased assets are not
-  // capitalised, so they carry no book value.
-  let bookValue: number | null = null;
-  let depreciatedToDate: number | null = null;
-  if (c.ownership === 'Owned' && c.purchasePrice && c.usefulLifeYears && ageDays !== null) {
-    const lifeDays = c.usefulLifeYears * 365;
-    const used = Math.min(1, ageDays / lifeDays);
-    depreciatedToDate = Math.round(c.purchasePrice * used);
-    bookValue = Math.max(0, c.purchasePrice - depreciatedToDate);
-  }
+  // Depreciation is not derived here any more. It used to be — straight-line,
+  // inline, client-side — while the server had its own idea of `bookValue` and
+  // nothing reconciled the two. The arithmetic now lives in the contract package
+  // and both sides call it, so this panel and the dashboard's value chart cannot
+  // disagree about what one asset is worth. Leasing and missing inputs are
+  // handled in there: `null` means "not depreciable", not zero.
+  const state = depreciationOn(
+    {
+      purchasePrice: c.purchasePrice,
+      purchaseDate: c.purchaseDate,
+      commissionDate: c.commissionDate,
+      usefulLifeYears: c.usefulLifeYears,
+      method: c.depreciationMethod,
+      ownership: c.ownership,
+    },
+    now,
+  );
+  const bookValue = state?.bookValue ?? null;
+  const depreciatedToDate = state?.accumulated ?? null;
 
   return { ageDays, warrantyRemainingDays, warrantyStatus, amcRemainingDays, bookValue, depreciatedToDate };
 }
