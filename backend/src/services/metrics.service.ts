@@ -1,15 +1,18 @@
+import type { AnyBulkWriteOperation } from 'mongoose';
 import type { AssetHealth, Criticality } from '@access-genie/shared';
 import {
   Asset,
   AssetClass,
   AssetPresence,
   CustodyRecord,
+  MetricSnapshot,
   PmSchedule,
   WorkOrder,
   healthStatusFor,
   type AssetDoc,
 } from '../models/index.js';
 import { presenceStateFor } from './observation.service.js';
+import { depreciationFor, loadClassTerms, type ClassTerms } from './depreciation.service.js';
 
 /**
  * Derived asset metrics — health, utilization, risk.
@@ -52,6 +55,12 @@ export interface AssetMetrics {
   healthStatus: AssetHealth;
   utilization: number;
   riskScore: number;
+  /**
+   * Depreciated value today. `null` for an asset that cannot be depreciated —
+   * leased, or with no price or date — which is a different answer from ₹0 and
+   * is stored as an absent field rather than a zero.
+   */
+  bookValue: number | null;
   /** Why each score is what it is — surfaced in the UI, never discarded. */
   drivers: string[];
 }
@@ -59,6 +68,8 @@ export interface AssetMetrics {
 /** Everything the formulas need, gathered once for the whole estate. */
 export interface MetricsContext {
   usefulLifeByClass: Map<string, number>;
+  /** Useful life and method per class — the depreciation inputs. */
+  classTerms: Map<string, ClassTerms>;
   openCorrectiveByAsset: Map<string, number>;
   overduePmByAsset: Map<string, number>;
   lastSeenByAsset: Map<string, Date>;
@@ -78,7 +89,7 @@ export async function loadMetricsContext(): Promise<MetricsContext> {
   const now = Date.now();
   const windowStart = new Date(now - UTILIZATION_WINDOW_DAYS * 86_400_000);
 
-  const [classes, openWork, pmSchedules, presence, custody] = await Promise.all([
+  const [classes, openWork, pmSchedules, presence, custody, classTerms] = await Promise.all([
     AssetClass.find().select('_id name usefulLifeYears').lean(),
     WorkOrder.aggregate<{ _id: string; count: number }>([
       { $match: { status: { $ne: 'Completed' }, type: { $ne: 'Preventive' } } },
@@ -88,6 +99,7 @@ export async function loadMetricsContext(): Promise<MetricsContext> {
     AssetPresence.find().select('_id lastSeen zone homeZone').lean(),
     // Days on which the asset was in someone's hands — the other half of "in use".
     CustodyRecord.find({ at: { $gte: windowStart } }).select('assetId at').lean(),
+    loadClassTerms(),
   ]);
 
   const overduePmByAsset = new Map<string, number>();
@@ -112,6 +124,7 @@ export async function loadMetricsContext(): Promise<MetricsContext> {
 
   return {
     usefulLifeByClass: new Map(classes.map((c) => [c._id, c.usefulLifeYears ?? DEFAULT_USEFUL_LIFE_YEARS])),
+    classTerms,
     openCorrectiveByAsset: new Map(openWork.map((w) => [w._id, w.count])),
     overduePmByAsset,
     lastSeenByAsset: new Map(presence.map((p) => [p._id, new Date(p.lastSeen)])),
@@ -213,11 +226,23 @@ export function computeMetrics(asset: AssetDoc, ctx: MetricsContext): AssetMetri
     drivers.push('no tag bound — cannot be located');
   }
 
+  // ── Book value ────────────────────────────────────────────────────────────
+  // Materialised for the same reason the scores are: the registry sorts and
+  // filters on it in MongoDB, and a value that exists only in application code
+  // cannot be sorted on without pulling the collection into memory. Until this
+  // existed, `bookValue` was a stored column nothing ever wrote — whatever the
+  // seed set stayed there while the asset aged around it.
+  const depreciation = depreciationFor(asset, ctx.classTerms, ctx.now);
+  if (depreciation?.fullyDepreciated) {
+    drivers.push(`fully depreciated over its ${depreciation.usefulLifeYears}-year life`);
+  }
+
   return {
     healthScore,
     healthStatus: healthStatusFor(healthScore),
     utilization,
     riskScore: clamp(risk),
+    bookValue: depreciation?.bookValue ?? null,
     drivers,
   };
 }
@@ -233,32 +258,82 @@ export function computeMetrics(asset: AssetDoc, ctx: MetricsContext): AssetMetri
 export async function recomputeAllMetrics(): Promise<{ scanned: number; updated: number }> {
   const [assets, ctx] = await Promise.all([Asset.find().lean<AssetDoc[]>(), loadMetricsContext()]);
 
-  const ops = [];
+  const ops: AnyBulkWriteOperation<AssetDoc>[] = [];
   for (const asset of assets) {
     const next = computeMetrics(asset, ctx);
     const unchanged =
       asset.healthScore === next.healthScore &&
       asset.utilization === next.utilization &&
-      asset.riskScore === next.riskScore;
+      asset.riskScore === next.riskScore &&
+      (asset.bookValue ?? null) === next.bookValue;
     if (unchanged) continue;
+
+    // A non-depreciable asset has its book value *removed* rather than zeroed:
+    // "leased, so not capitalised" and "worth nothing" are different facts, and
+    // the screens render the absent one as an em-dash.
+    const set: Record<string, unknown> = {
+      healthScore: next.healthScore,
+      healthStatus: next.healthStatus,
+      utilization: next.utilization,
+      riskScore: next.riskScore,
+    };
+    if (next.bookValue !== null) set.bookValue = next.bookValue;
 
     ops.push({
       updateOne: {
         filter: { _id: asset._id },
         update: {
-          $set: {
-            healthScore: next.healthScore,
-            healthStatus: next.healthStatus,
-            utilization: next.utilization,
-            riskScore: next.riskScore,
-          },
+          $set: set,
+          ...(next.bookValue === null ? { $unset: { bookValue: '' } } : {}),
         },
       },
     });
   }
 
   if (ops.length > 0) await Asset.bulkWrite(ops);
+  await recordDailySnapshot(assets, ctx);
   return { scanned: assets.length, updated: ops.length };
+}
+
+/**
+ * Write down today's derived averages.
+ *
+ * These three scores are overwritten in place on every pass, so yesterday's
+ * fleet health cannot be recovered from anything once today's is computed.
+ * Everything else the dashboard trends is either timestamped or arithmetic;
+ * this is the only history that has to be captured as it goes by.
+ *
+ * Keyed by UTC date and upserted, so the pass can run every ten minutes and
+ * still leave exactly one row per day — the last write of the day wins.
+ */
+async function recordDailySnapshot(assets: AssetDoc[], ctx: MetricsContext): Promise<void> {
+  if (assets.length === 0) return;
+
+  const mean = (pick: (a: AssetDoc) => number) =>
+    Math.round(assets.reduce((sum, a) => sum + pick(a), 0) / assets.length);
+
+  const at = new Date(ctx.now);
+  const day = at.toISOString().slice(0, 10);
+
+  let bookValue = 0;
+  for (const asset of assets) {
+    bookValue += depreciationFor(asset, ctx.classTerms, ctx.now)?.bookValue ?? 0;
+  }
+
+  await MetricSnapshot.findByIdAndUpdate(
+    day,
+    {
+      $set: {
+        at,
+        assetCount: assets.length,
+        avgHealth: mean((a) => a.healthScore ?? 0),
+        avgUtilization: mean((a) => a.utilization ?? 0),
+        avgRisk: mean((a) => a.riskScore ?? 0),
+        bookValue: Math.round(bookValue),
+      },
+    },
+    { upsert: true },
+  );
 }
 
 /** Metrics for one asset, with the factors — what the explainability screen reads. */

@@ -8,6 +8,7 @@ import { Dropdown, MenuItem } from '@/components/ui/Dropdown';
 import { assetsApi } from '@/api/assets';
 import { useMutate } from '@/api/mutate';
 import { cn, formatMoney } from '@/lib/utils';
+import { categoryEmoji } from '@/lib/asset-categories';
 
 // ── Lifecycle stages (ordered left→right on the board) ───────────────────────
 const STAGES = [
@@ -29,9 +30,6 @@ const stageTheme: Record<Stage, { dot: string; bar: string; head: string; badge:
   'EOL Planning': { dot: 'bg-orange-500', bar: 'bg-orange-500', head: 'text-orange-700', badge: 'amber', emoji: '📉' },
   'Retired/Disposed': { dot: 'bg-health-critical', bar: 'bg-health-critical', head: 'text-red-700', badge: 'red', emoji: '🗑️' },
 };
-
-const categoryEmoji = (c: Asset['category']) =>
-  c === 'Endpoints' ? '📱' : c === 'Compute' ? '💻' : c === 'Network' ? '🌐' : c === 'Sensors' ? '📡' : c === 'Infrastructure' ? '⚡' : '⚙️';
 
 const healthColor = (h: number) =>
   h > 80 ? 'bg-health-good' : h > 50 ? 'bg-health-warning' : 'bg-health-critical';

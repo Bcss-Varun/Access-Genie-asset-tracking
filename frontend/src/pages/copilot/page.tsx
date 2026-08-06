@@ -2,7 +2,8 @@ import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { PageHeader } from '@/components/ui/primitives';
 import { Button } from '@/components/ui/Button';
-import { categoryEmoji, riskBar, riskTone } from '@/components/dashboards/DashboardKit';
+import { riskBar, riskTone } from '@/components/dashboards/DashboardKit';
+import { categoryEmoji } from '@/lib/asset-categories';
 import { allAssets, categoryBreakdown, allInsights } from '@/lib/dataset';
 import { cn, formatMoney } from '@/lib/utils';
 

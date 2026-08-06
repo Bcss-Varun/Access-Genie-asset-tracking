@@ -9,6 +9,7 @@ import { useAuth } from '@/api/auth';
 import { useRefreshDataset } from '@/api/dataset';
 import { ApiRequestError } from '@/api/client';
 import { cn } from '@/lib/utils';
+import { ASSET_CATEGORIES } from '@access-genie/shared';
 
 // ── Target fields ──────────────────────────────────────────────────────────────
 type TargetField = 'name' | 'serialNumber' | 'category' | 'custodian' | 'purchasePrice' | 'status' | 'ignore';
@@ -23,7 +24,7 @@ const TARGET_FIELDS: { value: TargetField; label: string }[] = [
   { value: 'ignore', label: '— Ignore —' },
 ];
 
-const KNOWN_CATEGORIES = ['Compute', 'Network', 'Endpoints', 'Infrastructure', 'Sensors'];
+const KNOWN_CATEGORIES: readonly string[] = ASSET_CATEGORIES;
 
 // ── Sample CSV (raw rows) ──────────────────────────────────────────────────────
 const SAMPLE_HEADERS = ['Asset Name', 'Serial', 'Category', 'Custodian', 'Purchase Price', 'Status'];

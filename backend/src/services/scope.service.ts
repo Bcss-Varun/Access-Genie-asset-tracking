@@ -16,9 +16,16 @@ import type { CreateScopeInput, UpdateScopeInput } from '../validators/scope.val
  * models/ScopeNode.ts for why).
  */
 
-/** Which levels may sit directly under which. The org is the root and has no parent. */
+/**
+ * Which levels may sit directly under which.
+ *
+ * The group is the root when one exists — the holding company above the
+ * operating ones. An organisation may still be parentless, so a deployment with
+ * a single company needs no group node at all.
+ */
 const ALLOWED_PARENTS: Record<ScopeLevel, ScopeLevel[]> = {
-  org: [],
+  group: [],
+  org: ['group'],
   region: ['org'],
   // A facility can hang straight off the org — not every organisation groups
   // its sites into regions, and forcing an invented one is worse than allowing
@@ -31,6 +38,7 @@ const ALLOWED_PARENTS: Record<ScopeLevel, ScopeLevel[]> = {
 
 /** ID prefix per level, so an ID says what it is: `FAC-3`, `BLD-7`, `ZN-12`. */
 const ID_PREFIX: Record<ScopeLevel, string> = {
+  group: 'GRP',
   org: 'ORG',
   region: 'REG',
   facility: 'FAC',

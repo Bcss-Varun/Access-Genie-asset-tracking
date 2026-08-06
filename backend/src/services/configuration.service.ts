@@ -105,10 +105,23 @@ export async function deleteSubscription(id: string): Promise<void> {
  */
 export async function getOrgSettings(): Promise<OrgSettingsDoc> {
   const existing = await OrgSettings.findById('ORG').lean<OrgSettingsDoc>();
-  if (existing) return existing;
+  if (existing) return withDefaults(existing);
 
   const created = await OrgSettings.create({ _id: 'ORG', updatedAt: new Date() });
-  return created.toObject();
+  return withDefaults(created.toObject());
+}
+
+/**
+ * Fill in fields added after this document was written.
+ *
+ * A schema default applies when a document is *created*, not when an older one
+ * is read — and `.lean()` skips document construction entirely, so a field
+ * added in a later release comes back `undefined` on every existing row no
+ * matter what the schema says. Coalescing at this one read is what stops that
+ * being a crash in whichever caller happens to use it first.
+ */
+function withDefaults(doc: OrgSettingsDoc): OrgSettingsDoc {
+  return { ...doc, laborRatePerHour: doc.laborRatePerHour ?? 850 };
 }
 
 export async function updateOrgSettings(patch: UpdateOrgSettingsInput): Promise<OrgSettingsDoc> {

@@ -5,6 +5,7 @@ import { Link } from 'react-router-dom';
 import { PageHeader, KpiCard } from "@/components/ui/primitives";
 import { allWorkOrders, allAssets, getAssetById } from "@/lib/dataset";
 import { nowMs } from '@/lib/utils';
+import { categoryEmoji } from '@/lib/asset-categories';
 import type {
   WorkOrder,
   WorkOrderStatus,
@@ -71,9 +72,9 @@ function initials(name: string): string {
   return ((parts[0]?.[0] ?? "") + (parts[1]?.[0] ?? "")).toUpperCase() || "—";
 }
 
-function categoryEmoji(assetId: string): string {
-  const c = getAssetById(assetId)?.category;
-  return c === 'Endpoints' ? '📱' : c === 'Compute' ? '💻' : c === 'Network' ? '🌐' : '⚙️';
+/** Work orders carry an asset id, not a category — resolve, then draw. */
+function assetEmoji(assetId: string): string {
+  return categoryEmoji(getAssetById(assetId)?.category);
 }
 
 function typeEmoji(t: WorkOrderType): string {
@@ -461,7 +462,7 @@ export default function MaintenancePage() {
                             to={`/assets/${wo.assetId}`}
                             className="mt-1.5 flex items-center gap-1 text-xs text-slate-500 hover:text-primary-500 transition-colors"
                           >
-                            <span>{categoryEmoji(wo.assetId)}</span>
+                            <span>{assetEmoji(wo.assetId)}</span>
                             <span className="truncate">{wo.assetName}</span>
                           </Link>
 
@@ -556,7 +557,7 @@ export default function MaintenancePage() {
                           to={`/assets/${wo.assetId}`}
                           className="inline-flex items-center gap-1.5 text-slate-600 dark:text-slate-300 hover:text-primary-500 transition-colors"
                         >
-                          <span>{categoryEmoji(wo.assetId)}</span>
+                          <span>{assetEmoji(wo.assetId)}</span>
                           {wo.assetName}
                         </Link>
                       </td>

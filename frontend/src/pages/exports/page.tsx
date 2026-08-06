@@ -93,7 +93,7 @@ export default function ExportsPage() {
       <PageHeader
         title="Exports"
         subtitle="Generate and download report exports across formats."
-        breadcrumb={[{ label: 'Analytics', href: '/dashboards' }, { label: 'Exports' }]}
+        breadcrumb={[{ label: 'Analytics', href: '/reports' }, { label: 'Exports' }]}
       />
 
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">

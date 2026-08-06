@@ -7,6 +7,7 @@ import { formatMoney } from "@/lib/utils";
 import { nowMs } from '@/lib/utils';
 import { insightsApi } from '@/api/insights';
 import { useMutate } from '@/api/mutate';
+import { categoryEmoji } from '@/lib/asset-categories';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Helpers (module scope → deterministic, no hydration drift)
@@ -26,10 +27,6 @@ function relTime(iso: string): string {
 
 /** Compact INR (lakh/crore) — shares the platform-wide money formatter. */
 const fmtInr = formatMoney;
-
-function catEmoji(cat?: string): string {
-  return cat === 'Endpoints' ? '📱' : cat === 'Compute' ? '💻' : cat === 'Network' ? '🌐' : cat === 'Sensors' ? '📡' : cat === 'Infrastructure' ? '⚡' : '⚙️';
-}
 
 const TYPE_META: Record<InsightType, string> = {
   "Predictive Failure": "🔧",
@@ -320,7 +317,7 @@ export default function AIInsightsPage() {
                         to={`/assets/${ins.assetId}`}
                         className="inline-flex items-center gap-1.5 text-xs font-medium px-2.5 py-1 rounded-full bg-slate-100 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 hover:border-primary-500/50 text-slate-700 dark:text-slate-200 transition-colors"
                       >
-                        <span>{catEmoji(getAssetById(ins.assetId)?.category)}</span>
+                        <span>{categoryEmoji(getAssetById(ins.assetId)?.category)}</span>
                         <span>{ins.assetName}</span>
                         <span className="text-slate-400">→</span>
                       </Link>

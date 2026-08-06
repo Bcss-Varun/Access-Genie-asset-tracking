@@ -26,7 +26,7 @@ import { Drawer, LiveStamp, ScopePicker, useFacilityScope } from '@/components/t
 import {
   Chip, ChipFilter, Panel, PresencePill, TableShell, td, th, type Tone,
 } from '@/components/tracking/bits';
-import { categoryEmoji } from '@/lib/tracking-ui';
+import { categoryEmoji } from '@/lib/asset-categories';
 import { facilityBySlug, journeyForAsset, journeys, presenceById } from '@/lib/tracking-data';
 import { cn, dayKey, formatDate, formatDateTime, formatTime, relTime } from '@/lib/utils';
 import type { JourneyEventKind, JourneyStop } from '@access-genie/shared';

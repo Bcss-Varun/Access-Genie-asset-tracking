@@ -82,7 +82,57 @@ export function flattenScope(node: ScopeNode = scopeTree, depth = 0): { node: Sc
  * organisational levels only — the physical ones still exist, are still what
  * assets are filed under, and are still counted into the site above them.
  */
-const SWITCHABLE_LEVELS: ScopeNode['level'][] = ['org', 'region', 'facility'];
+const SWITCHABLE_LEVELS: ScopeNode['level'][] = ['group', 'org', 'region', 'facility'];
+
+/** The two levels the dashboard's Organization filter offers: the group and the companies in it. */
+export const ORGANIZATION_LEVELS: ScopeNode['level'][] = ['group', 'org'];
+
+/** Everything below an organisation — what the dashboard's Location filter offers. */
+export const LOCATION_LEVELS: ScopeNode['level'][] = ['region', 'facility', 'building'];
+
+/**
+ * The organisations selectable in the dashboard's Organization filter.
+ *
+ * The group itself is first ("everything"), then each company under it. A
+ * deployment with a single organisation and no group node yields one entry,
+ * and the filter renders as a static label rather than a dropdown of one.
+ */
+export function organizationScopes(): { node: ScopeNode; depth: number }[] {
+  return flattenScope().filter(({ node }) => ORGANIZATION_LEVELS.includes(node.level));
+}
+
+/**
+ * Sites inside one organisation.
+ *
+ * Scoped to the selected organisation rather than the whole tree, which is what
+ * keeps the two filters from contradicting each other: you cannot pick a
+ * facility belonging to a company you are not looking at.
+ */
+export function locationScopesWithin(organizationId: string): { node: ScopeNode; depth: number }[] {
+  const org = findScope(organizationId);
+  if (!org) return [];
+  return flattenScope(org, 0)
+    .filter(({ node }) => LOCATION_LEVELS.includes(node.level))
+    .map(({ node, depth }) => ({ node, depth: Math.max(0, depth - 1) }));
+}
+
+/** The organisation a scope node sits in — the Organization filter's value for any selection. */
+export function organizationOf(scopeId: string): ScopeNode | undefined {
+  const path: ScopeNode[] = [];
+  const walk = (node: ScopeNode, trail: ScopeNode[]): boolean => {
+    const next = [...trail, node];
+    if (node.id === scopeId) {
+      path.push(...next);
+      return true;
+    }
+    return (node.children ?? []).some((child) => walk(child, next));
+  };
+  walk(scopeTree, []);
+
+  // The deepest organisation on the path, falling back to the group so a
+  // selection made above any company still resolves to something.
+  return [...path].reverse().find((n) => n.level === 'org') ?? path.find((n) => n.level === 'group');
+}
 
 /**
  * Org and the sites beneath it, for the switcher.

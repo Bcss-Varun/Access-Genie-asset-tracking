@@ -1,11 +1,9 @@
 // ─────────────────────────────────────────────────────────────────────────────
-// DashboardKit — small, hook-free presentational building blocks shared across
-// the role dashboards. Pure SVG / markup so pages can stay server components.
-// (Interactive charts live in @/components/charts/DashboardCharts.)
+// DashboardKit — the small, hook-free pieces the dashboard widgets are drawn
+// from. Pure markup and SVG; the card around them is `WidgetFrame`.
 // ─────────────────────────────────────────────────────────────────────────────
 
-import { Link } from 'react-router-dom';
-import type { AIInsight, InsightType } from '@access-genie/shared';
+import type { InsightType } from '@access-genie/shared';
 import { cn } from '@/lib/utils';
 
 export const insightEmoji: Record<InsightType, string> = {
@@ -17,41 +15,27 @@ export const insightEmoji: Record<InsightType, string> = {
   Lifecycle: '♻️',
 };
 
-// ── Card ─────────────────────────────────────────────────────────────────────
-export function Card({
-  title, action, children, className,
-}: {
-  title?: React.ReactNode; action?: React.ReactNode; children: React.ReactNode; className?: string;
-}) {
-  return (
-    <div className={cn('glass-panel rounded-xl p-6 flex flex-col', className)}>
-      {(title || action) && (
-        <div className="flex items-center justify-between mb-4">
-          {title && <h3 className="font-bold text-lg font-heading text-slate-900">{title}</h3>}
-          {action}
-        </div>
-      )}
-      {children}
-    </div>
-  );
-}
-
 // ── Horizontal bar list (categorical distributions) ──────────────────────────
 export type HBar = { label: string; value: number; color?: string; caption?: string };
+
 export function HBars({
-  data, format = (n: number) => `${n}`, barClassName,
+  data,
+  format = (n: number) => `${n}`,
+  barClassName,
 }: {
-  data: HBar[]; format?: (n: number) => string; barClassName?: string;
+  data: HBar[];
+  format?: (n: number) => string;
+  barClassName?: string;
 }) {
   const max = Math.max(1, ...data.map((d) => d.value));
   return (
     <ul className="space-y-3">
       {data.map((d) => (
         <li key={d.label} className="flex items-center gap-3">
-          <span className="w-32 shrink-0 truncate text-sm font-medium text-slate-600" title={d.label}>
+          <span className="w-28 shrink-0 truncate text-sm font-medium text-slate-600" title={d.label}>
             {d.label}
           </span>
-          <div className="relative flex-1 h-2.5 rounded-full bg-slate-100 overflow-hidden">
+          <div className="relative h-2.5 flex-1 overflow-hidden rounded-full bg-slate-100">
             <div
               className={cn('h-full rounded-full', !d.color && (barClassName ?? 'bg-primary-500'))}
               style={{ width: `${Math.round((d.value / max) * 100)}%`, backgroundColor: d.color }}
@@ -60,42 +44,48 @@ export function HBars({
           <span className="w-16 shrink-0 text-right text-sm font-semibold tabular-nums text-slate-800">
             {format(d.value)}
           </span>
-          {d.caption && <span className="w-20 shrink-0 text-right text-xs text-slate-400">{d.caption}</span>}
+          {d.caption && <span className="w-16 shrink-0 text-right text-xs text-slate-400">{d.caption}</span>}
         </li>
       ))}
     </ul>
   );
 }
 
-// ── Funnel (decreasing centered bars) ────────────────────────────────────────
+// ── Funnel (decreasing centred bars) ─────────────────────────────────────────
 export function Funnel({ stages }: { stages: { label: string; value: number; color: string }[] }) {
   const max = Math.max(1, ...stages.map((s) => s.value));
   return (
     <div className="space-y-2">
-      {stages.map((s) => {
-        const pct = Math.max(8, Math.round((s.value / max) * 100));
-        return (
-          <div key={s.label} className="flex flex-col items-center">
-            <div
-              className="relative flex items-center justify-between rounded-lg px-3 py-2 text-white shadow-sm transition-all"
-              style={{ width: `${pct}%`, minWidth: 120, backgroundColor: s.color }}
-            >
-              <span className="text-xs font-semibold truncate">{s.label}</span>
-              <span className="text-sm font-bold tabular-nums">{s.value}</span>
-            </div>
+      {stages.map((s) => (
+        <div key={s.label} className="flex flex-col items-center">
+          <div
+            className="relative flex items-center justify-between rounded-lg px-3 py-2 text-white shadow-sm"
+            style={{ width: `${Math.max(8, Math.round((s.value / max) * 100))}%`, minWidth: 130, backgroundColor: s.color }}
+          >
+            <span className="truncate text-xs font-semibold">{s.label}</span>
+            <span className="text-sm font-bold tabular-nums">{s.value}</span>
           </div>
-        );
-      })}
+        </div>
+      ))}
     </div>
   );
 }
 
-// ── Grouped two-series horizontal bars (e.g. book vs purchase) ───────────────
+// ── Grouped two-series bars (e.g. purchase vs book value) ────────────────────
 export function GroupedBars({
-  rows, aColor, bColor, aLabel, bLabel, format = (n: number) => `${n}`,
+  rows,
+  aColor,
+  bColor,
+  aLabel,
+  bLabel,
+  format = (n: number) => `${n}`,
 }: {
   rows: { label: string; a: number; b: number }[];
-  aColor: string; bColor: string; aLabel: string; bLabel: string; format?: (n: number) => string;
+  aColor: string;
+  bColor: string;
+  aLabel: string;
+  bLabel: string;
+  format?: (n: number) => string;
 }) {
   const max = Math.max(1, ...rows.flatMap((r) => [r.a, r.b]));
   return (
@@ -113,14 +103,14 @@ export function GroupedBars({
       <ul className="space-y-3">
         {rows.map((r) => (
           <li key={r.label} className="flex items-center gap-3">
-            <span className="w-32 shrink-0 truncate text-sm font-medium text-slate-600" title={r.label}>
+            <span className="w-24 shrink-0 truncate text-sm font-medium text-slate-600" title={r.label}>
               {r.label}
             </span>
             <div className="flex-1 space-y-1">
-              <div className="h-2 rounded-full bg-slate-100 overflow-hidden">
+              <div className="h-2 overflow-hidden rounded-full bg-slate-100">
                 <div className="h-full rounded-full" style={{ width: `${Math.round((r.a / max) * 100)}%`, backgroundColor: aColor }} />
               </div>
-              <div className="h-2 rounded-full bg-slate-100 overflow-hidden">
+              <div className="h-2 overflow-hidden rounded-full bg-slate-100">
                 <div className="h-full rounded-full" style={{ width: `${Math.round((r.b / max) * 100)}%`, backgroundColor: bColor }} />
               </div>
             </div>
@@ -135,66 +125,59 @@ export function GroupedBars({
   );
 }
 
-// ── AI insight panel (matches executive dashboard feed) ──────────────────────
-const sevTone: Record<string, string> = {
-  Critical: 'text-health-critical',
-  Warning: 'text-amber-600',
-  Opportunity: 'text-emerald-600',
-  Info: 'text-slate-500',
-};
-export function InsightPanel({
-  insights, title = '✨ AI Insights', viewAllHref = '/ai-insights',
+// ── A compact table inside a widget ──────────────────────────────────────────
+export const TH = 'px-3 py-2 text-left text-[10px] font-semibold uppercase tracking-wider text-slate-500';
+export const TD = 'px-3 py-2.5 align-top';
+
+export function WidgetTable<T>({
+  columns,
+  rows,
+  renderRow,
+  keyOf,
 }: {
-  insights: AIInsight[]; title?: string; viewAllHref?: string;
+  columns: string[];
+  rows: T[];
+  /** The `<td>` cells for one row — the `<tr>` is supplied. */
+  renderRow: (row: T) => React.ReactNode;
+  keyOf: (row: T) => string;
 }) {
   return (
-    <Card
-      title={title}
-      action={
-        <Link to={viewAllHref} className="text-xs font-medium px-2 py-1 bg-primary-500/10 text-primary-600 rounded-full hover:bg-primary-500/20 transition-colors">
-          View all
-        </Link>
-      }
-    >
-      <div className="flex-1 space-y-4 overflow-y-auto pr-1">
-        {insights.map((insight) => (
-          <Link
-            key={insight.id}
-            to={viewAllHref}
-            className="block p-4 rounded-lg bg-slate-50 border border-slate-200 hover:border-primary-500/50 transition-colors"
-          >
-            <div className="flex items-start">
-              <div className="text-xl mr-3">{insightEmoji[insight.type]}</div>
-              <div className="min-w-0 flex-1">
-                <div className="flex items-center justify-between gap-2">
-                  <h4 className="text-sm font-bold text-slate-900 truncate">{insight.title}</h4>
-                  <span className={cn('text-[11px] font-semibold shrink-0', sevTone[insight.severity])}>
-                    {insight.confidence}%
-                  </span>
-                </div>
-                <p className="text-xs text-slate-500 mt-1 line-clamp-2">{insight.summary}</p>
-                <div className="mt-2 flex items-center justify-between">
-                  <span className="text-xs text-primary-600 font-medium">{insight.actionLabel} →</span>
-                  {insight.impactLabel && (
-                    <span className="text-[11px] text-slate-400">{insight.impactLabel}</span>
-                  )}
-                </div>
-              </div>
-            </div>
-          </Link>
-        ))}
-      </div>
-    </Card>
+    <div className="-mx-5 -mb-5 overflow-x-auto">
+      <table className="w-full text-left text-sm whitespace-nowrap">
+        <thead className="border-y border-slate-100 bg-slate-50/70">
+          <tr>
+            {columns.map((c) => (
+              <th key={c} className={TH}>
+                {c}
+              </th>
+            ))}
+          </tr>
+        </thead>
+        <tbody className="divide-y divide-slate-100">
+          {rows.map((row) => (
+            <tr key={keyOf(row)} className="transition-colors hover:bg-slate-50">
+              {renderRow(row)}
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
   );
 }
 
 // ── Small helpers ────────────────────────────────────────────────────────────
-export const categoryEmoji = (c: string): string =>
-  c === 'Endpoints' ? '📱' : c === 'Compute' ? '💻' : c === 'Network' ? '🌐' : c === 'Sensors' ? '📡' : c === 'Infrastructure' ? '⚡' : '📦';
+/** Percentage, but 0 rather than NaN when there is nothing to divide by. */
+export const pctOf = (part: number, whole: number): number => (whole > 0 ? Math.round((part / whole) * 100) : 0);
+
+/** Mean of a list, or `undefined` when empty — an empty estate has no average. */
+export function meanOf<T>(rows: T[], value: (row: T) => number): number | undefined {
+  return rows.length ? Math.round(rows.reduce((sum, row) => sum + value(row), 0) / rows.length) : undefined;
+}
 
 export function riskTone(score: number): string {
   return score > 70 ? 'text-health-critical' : score > 40 ? 'text-amber-600' : 'text-emerald-600';
 }
+
 export function riskBar(score: number): string {
   return score > 70 ? 'bg-health-critical' : score > 40 ? 'bg-health-warning' : 'bg-health-good';
 }

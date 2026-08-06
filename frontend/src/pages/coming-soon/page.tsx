@@ -9,6 +9,7 @@ function titleCase(s: string): string {
     .join(' ');
 }
 
+
 /**
  * Catch-all for routes that are specced in the blueprint but not yet built.
  *
@@ -26,11 +27,7 @@ export default function ComingSoonPage() {
   const segments = path.split('/').filter(Boolean);
   const breadcrumb = item ? [{ label: item.group }, { label: item.label }] : undefined;
 
-  let title = item?.label;
-  if (!title) {
-    const last = segments[segments.length - 1] ?? 'Page';
-    title = segments[0] === 'dashboards' ? `${titleCase(last)} Dashboard` : titleCase(last);
-  }
+  const title = item?.label ?? titleCase(segments[segments.length - 1] ?? 'Page');
 
   return (
     <ComingSoon

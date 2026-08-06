@@ -81,7 +81,7 @@ export default function FinancialsPage() {
       <PageHeader
         title="Financials"
         subtitle="Portfolio valuation, accumulated depreciation and asset-level book value."
-        breadcrumb={[{ label: 'Analytics', href: '/dashboards' }, { label: 'Financials' }]}
+        breadcrumb={[{ label: 'Analytics', href: '/reports' }, { label: 'Financials' }]}
       />
 
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">

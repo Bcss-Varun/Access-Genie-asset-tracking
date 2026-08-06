@@ -22,7 +22,23 @@ import { Button } from '@/components/ui/Button';
 import { getMonitoringProfile } from '@/lib/asset-classes';
 import { cn } from '@/lib/utils';
 
-const ICONS = ['📦', '💻', '🌐', '📱', '⚡', '📡', '🚚', '🏥', '🔬', '🛠️', '🎥', '❄️', '🔐', '🪑'];
+/**
+ * What a class can be marked with.
+ *
+ * Scoped to IT: the hospital, film camera, chair, truck and freezer glyphs that
+ * used to be here came from a general facilities list, and none of them names
+ * anything this estate holds — a picker offering a chair before a monitor makes
+ * the common case the hard one. Roughly in the order someone would look for
+ * them: the generic one first (it is the default, and a default that sits at the
+ * end of the row looks like a stray selection), then machines, network, what
+ * people carry, what plugs in, and finally the room.
+ */
+const ICONS = [
+  '📦',
+  '💻', '🖥️', '🗄️', '💾', '🌐', '📡', '🛰️',
+  '📱', '⌨️', '🖱️', '🖨️', '📟', '📷', '📺', '🎧',
+  '🔌', '🔋', '⚡', '🛡️', '💿', '🧰', '🔬',
+];
 
 export default function AssetClassesPage() {
   const { classes, createClass } = useClassLibrary();

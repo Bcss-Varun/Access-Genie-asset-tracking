@@ -14,6 +14,7 @@ import { Button } from '@/components/ui/Button';
 import { Dropdown, MenuItem } from '@/components/ui/Dropdown';
 import { useToast } from '@/components/providers/ToastProvider';
 import { cn, formatMoney, relTime, nowMs } from '@/lib/utils';
+import { categoryEmoji } from '@/lib/asset-categories';
 
 // ── token helpers ─────────────────────────────────────────────────────────────
 type Tone = 'slate' | 'primary' | 'emerald' | 'amber' | 'red';
@@ -30,15 +31,6 @@ const priorityTone = (p: WorkOrderPriority): Tone =>
 
 const typeEmoji = (t: WorkOrderType): string =>
   t === 'Preventive' ? '🛡️' : t === 'Corrective' ? '🔧' : t === 'Predictive' ? '📈' : '🔍';
-
-const categoryEmoji = (c?: string): string =>
-  c === 'Compute' ? '💻'
-    : c === 'Endpoints' ? '📱'
-      : c === 'Network' ? '🌐'
-        : c === 'Infrastructure' ? '⚡'
-          : c === 'Facilities' ? '🏢'
-            : c === 'Sensors' ? '📡'
-              : '🖥️';
 
 const initials = (name: string): string => {
   if (!name || name === 'Unassigned') return '—';

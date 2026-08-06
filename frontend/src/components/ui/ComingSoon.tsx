@@ -34,10 +34,10 @@ export function ComingSoon({
             to="/"
             className="text-sm font-medium px-4 py-2 rounded-lg bg-primary-600 text-white hover:bg-primary-700 transition-colors"
           >
-            Back to Workspace
+            Back to Dashboard
           </Link>
-          <Link to="/dashboards" className="text-sm font-medium text-slate-500 hover:text-slate-800">
-            View dashboards →
+          <Link to="/assets" className="text-sm font-medium text-slate-500 hover:text-slate-800">
+            Asset registry →
           </Link>
         </div>
       </div>

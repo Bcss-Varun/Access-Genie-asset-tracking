@@ -14,7 +14,40 @@ export type AssetStatus = (typeof ASSET_STATUSES)[number];
 export const ASSET_HEALTHS = ['Good', 'Warning', 'Critical'] as const;
 export type AssetHealth = (typeof ASSET_HEALTHS)[number];
 
-export const ASSET_CATEGORIES = ['Compute', 'Network', 'Endpoints', 'Infrastructure', 'Sensors'] as const;
+/**
+ * What an asset *reports as* — the one axis every dashboard, filter and report
+ * groups by.
+ *
+ * The five original values described a data centre rather than an IT estate:
+ * every phone, monitor, dock, headset, licence and cable in the building landed
+ * in "Endpoints" or nowhere, which makes a category filter that cannot answer
+ * the question it exists for. These are the kinds of thing an IT team actually
+ * buys, tags and writes down.
+ *
+ * **Append-only.** Each value is stored on `Asset`, `AssetClass` and
+ * `TrackingPresence` as a Mongoose enum, so removing or renaming one orphans
+ * every document holding it — the document stays, and every subsequent save
+ * fails validation on a field nobody touched. Add freely; retire nothing
+ * without a migration.
+ *
+ * The order is the display order everywhere the list is rendered, so related
+ * kinds sit together: machines, then the network, then what people carry and
+ * plug in, then what runs the building.
+ */
+export const ASSET_CATEGORIES = [
+  'Compute',
+  'Storage',
+  'Network',
+  'Endpoints',
+  'Mobile',
+  'Peripherals',
+  'Accessories',
+  'Audio Visual',
+  'Security',
+  'Software',
+  'Infrastructure',
+  'Sensors',
+] as const;
 export type AssetCategory = (typeof ASSET_CATEGORIES)[number];
 
 export const CRITICALITIES = ['Low', 'Medium', 'High', 'Critical'] as const;
@@ -461,26 +494,198 @@ export interface CategoryBreakdown {
   value: number;
 }
 
-/** Payload of `GET /dashboard/summary` — everything the home page renders. */
+// ── The dashboard ────────────────────────────────────────────────────────────
+//
+// One screen, composed per role. The contract below is what `GET
+// /dashboard/summary?scope=&period=` answers, and it encodes two rules the
+// dashboard is built on.
+//
+// **Stock vs flow.** A flow metric (work orders raised, alerts acknowledged)
+// happened *during* a window, so it can be compared with the window before it
+// and drawn as a series. A stock metric (how many assets exist, what they are
+// worth) is only ever "as of now" — there are no historical snapshots in this
+// system, so a trend line for portfolio value would be invented. Flow metrics
+// carry `previous`/`series`; stock metrics leave them out, and the tile renders
+// the number alone rather than a fabricated sparkline.
+//
+// **Grants are in the payload, not just the UI.** Every group below is
+// optional, and the server omits what the caller's role may not read. A
+// Technician's response has no `portfolioValue` key at all, so no client bug
+// can surface one.
+
+export const DASHBOARD_PERIODS = ['7d', '30d', '90d', 'fy'] as const;
+export type DashboardPeriod = (typeof DASHBOARD_PERIODS)[number];
+
+export type MetricUnit = 'count' | 'inr' | 'pct' | 'hours' | 'score';
+
+/**
+ * One number on the dashboard.
+ *
+ * `previous` and `series` are present only for flow metrics — see above. When
+ * `value` is `null` the metric has no answer for this scope (an estate with no
+ * PM schedules has no compliance percentage), which the tile renders as an
+ * em-dash rather than as zero.
+ */
+export interface Metric {
+  value: number | null;
+  unit: MetricUnit;
+  /** The same metric over the preceding window of equal length. Flow only. */
+  previous?: number;
+  /** Oldest → newest buckets across the window, for the sparkline. Flow only. */
+  series?: number[];
+  /** Whether a rise is good news — drives the delta chip's colour, not its sign. */
+  higherIsBetter?: boolean;
+  /** Free-text qualifier under the value, e.g. "across 14 assets". */
+  caption?: string;
+}
+
+export const KPI_IDS = [
+  'totalAssets', 'portfolioValue', 'bookValue', 'depreciatedValue', 'avgHealth', 'avgUtilization', 'riskIndex',
+  'availability', 'missingAssets', 'assetsUnderMaintenance', 'trackedPct', 'movementVolume',
+  'openWorkOrders', 'overdueWorkOrders', 'completedWorkOrders', 'mttrHours', 'mtbfDays', 'maintenanceCost', 'pmCompliance',
+  'openAlerts', 'criticalAlerts', 'alertResponseMins', 'geofenceBreaches', 'custodyExceptions',
+  'assetsAtRisk', 'predictedFailures', 'anomalies24h', 'aiSavings',
+  'stockValue', 'stockouts', 'belowReorder', 'fillRate',
+  'myOpenWork', 'myDueToday', 'myOverdue', 'myClosedThisPeriod',
+] as const;
+export type KpiId = (typeof KPI_IDS)[number];
+
+/** Counts behind the "needs you now" strip. Each one deep-links to its queue. */
+export interface DashboardTriage {
+  criticalAlerts: number;
+  overdueWorkOrders: number;
+  unassignedWork: number;
+  missingAssets: number;
+  stockouts: number;
+  expiringCerts: number;
+}
+
+/** A month of maintenance, split by the kind of work and what it cost. */
+export interface MaintenanceMonth {
+  label: string;
+  preventive: number;
+  corrective: number;
+  predictive: number;
+  inspection: number;
+  /** Parts consumed plus labour at the organisation's configured rate, INR. */
+  cost: number;
+}
+
+/** One row of the lifecycle overview — a count of assets crossing a threshold. */
+export interface LifecycleCount {
+  key: string;
+  label: string;
+  count: number;
+}
+
+export interface DashboardCharts {
+  utilizationDowntime?: UtilizationDowntimePoint[];
+  categoryBreakdown?: CategoryBreakdown[];
+  statusMix?: { status: AssetStatus; count: number }[];
+  riskDistribution?: { label: string; value: number }[];
+  woPipeline?: { label: string; value: number }[];
+  alertsByType?: { label: string; value: number }[];
+  abcAnalysis?: { label: string; value: number; caption: string }[];
+  valueByCategory?: { label: string; purchase: number; book: number }[];
+  /** Purchase / book / accumulated by month — computed, not stored. See `./depreciation`. */
+  valueTrend?: import('./depreciation.js').DepreciationPoint[];
+  /** Where the estate physically sits, biggest first. */
+  topLocations?: { label: string; value: number }[];
+  lifecycle?: LifecycleCount[];
+  maintenanceByMonth?: MaintenanceMonth[];
+  utilizationBands?: { label: string; value: number }[];
+  /** What the estate is doing right now, not what its record says. */
+  liveStatus?: { label: string; value: number }[];
+  /**
+   * Health, utilization and risk over time.
+   *
+   * The one series on the dashboard that is *remembered* rather than computed:
+   * those three scores are materialised and overwritten on every derivation
+   * pass, so their history exists only because a daily snapshot captured it.
+   * Empty until the scheduler has run on more than one day — the chart says it
+   * is collecting rather than drawing a line through a single point.
+   */
+  scoreHistory?: { at: string; health: number; utilization: number; risk: number }[];
+}
+
+export type DashboardRisk = Pick<Asset, 'id' | 'name' | 'category' | 'healthScore' | 'riskScore' | 'status'> & {
+  location?: string;
+};
+
+/** A work order flattened to what a dashboard row needs — no join, no detail. */
+export interface DashboardWork {
+  id: string;
+  title: string;
+  assetId: string;
+  assetName: string;
+  status: WorkOrderStatus;
+  priority: WorkOrderPriority;
+  assignedTo: string;
+  dueDate: string;
+  overdue: boolean;
+}
+
+export interface DashboardAlert {
+  id: string;
+  title: string;
+  severity: AlertSeverity;
+  type: string;
+  status: AlertStatus;
+  assetName?: string;
+  createdAt: string;
+}
+
+export interface DashboardLists {
+  topRisks?: DashboardRisk[];
+  alertsToTriage?: DashboardAlert[];
+  overdueWork?: DashboardWork[];
+  myWork?: DashboardWork[];
+  recentActivity?: ActivityEvent[];
+  expiringCerts?: { id: string; name: string; assetName: string; expiresAt: string; daysLeft: number }[];
+  /** The assets earning their keep least — the reallocation candidates. */
+  underutilized?: { id: string; name: string; utilization: number }[];
+}
+
+/** Payload of `GET /dashboard/summary` — everything the dashboard renders. */
 export interface DashboardSummary {
-  kpis: {
-    totalAssets: number;
-    activeAssets: number;
-    criticalAssets: number;
-    missingAssets: number;
-    openWorkOrders: number;
-    overdueWorkOrders: number;
-    openAlerts: number;
-    portfolioValue: number;
-    avgHealth: number;
-    avgUtilization: number;
-    trackedPct: number;
+  meta: {
+    scopeId: string | null;
+    scopeName: string;
+    period: DashboardPeriod;
+    /** The window the flow figures were counted over — what a custom range resolves to. */
+    from: string;
+    to: string;
+    /** Filters in force, echoed back so the client never disagrees with the payload. */
+    department: string | null;
+    category: AssetCategory | null;
+    /**
+     * Departments present in the estate in scope, for the filter's options.
+     * Empty when nothing has been registered with one — the filter says so
+     * rather than offering a list of nothing.
+     */
+    departments: string[];
+    /** When the server computed this. The header reads it as "updated 2m ago". */
+    generatedAt: string;
   };
-  categoryBreakdown: CategoryBreakdown[];
-  utilizationDowntime: UtilizationDowntimePoint[];
-  statusMix: { status: AssetStatus; count: number }[];
-  topRisks: Pick<Asset, 'id' | 'name' | 'category' | 'healthScore' | 'riskScore' | 'status'>[];
-  recentActivity: ActivityEvent[];
+  triage: DashboardTriage;
+  kpis: Partial<Record<KpiId, Metric>>;
+  charts: DashboardCharts;
+  lists: DashboardLists;
+}
+
+/**
+ * A user's own dashboard composition, stored on their preferences document.
+ *
+ * The ids are plain strings rather than a union on purpose: which widgets exist
+ * is a question about the client build, and a layout saved by one release must
+ * not stop a later release from starting up because a widget was renamed. The
+ * client resolves the list against its registry and silently drops what it no
+ * longer recognises — see `lib/dashboard/resolve.ts`.
+ */
+export interface DashboardLayout {
+  kpis: string[];
+  main: string[];
+  rail: string[];
 }
 
 /** Payload of `GET /tracking/live` — the live map in one round-trip. */

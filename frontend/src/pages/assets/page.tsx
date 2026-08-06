@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
-import type { Asset } from '@access-genie/shared';
+import { ASSET_CATEGORIES, type Asset } from '@access-genie/shared';
 import { PageHeader, Badge, EmptyState } from '@/components/ui/primitives';
 import { Button } from '@/components/ui/Button';
 import { Dropdown, MenuItem } from '@/components/ui/Dropdown';
@@ -11,15 +11,13 @@ import { LENS_FILTERS, describeView, viewToQuery, type Lens, type SavedView } fr
 import { BulkActionDialog, type BulkAction } from '@/components/assets/BulkActionDialog';
 import { downloadCsv } from '@/api/configuration';
 import { relTime, cn } from '@/lib/utils';
-
-const categoryEmoji = (c: Asset['category']) =>
-  c === 'Endpoints' ? '📱' : c === 'Compute' ? '💻' : c === 'Network' ? '🌐' : c === 'Sensors' ? '📡' : c === 'Infrastructure' ? '⚡' : '⚙️';
+import { categoryEmoji } from '@/lib/asset-categories';
 
 const statusTone = (s: Asset['status']) =>
   s === 'Active' ? 'emerald' : s === 'Maintenance' ? 'amber' : s === 'Missing' ? 'red' : 'slate';
 
 const STATUSES = ['All', 'Active', 'Maintenance', 'Missing', 'Staging', 'End_Of_Life'] as const;
-const CATEGORIES = ['All', 'Compute', 'Network', 'Endpoints', 'Infrastructure', 'Sensors'] as const;
+const CATEGORIES = ['All', ...ASSET_CATEGORIES] as const;
 
 type SortKey = 'name' | 'status' | 'healthScore' | 'category' | 'utilization' | 'riskScore' | 'lastPing';
 const OPTIONAL_COLUMNS = ['category', 'location', 'custodian', 'utilization', 'riskScore', 'lastPing'] as const;

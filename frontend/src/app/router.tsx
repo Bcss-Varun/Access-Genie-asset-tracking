@@ -1,4 +1,4 @@
-import { createBrowserRouter } from 'react-router-dom';
+import { createBrowserRouter, Navigate } from 'react-router-dom';
 import { AppShell } from '@/components/layout/AppShell';
 import { AppProviders } from '@/components/providers/AppProviders';
 import { RequireAuth } from './RequireAuth';
@@ -9,7 +9,7 @@ import { LABELS_PATH, pageRoutes, TRACKING_PREFIX } from './page-routes';
 import LoginPage from '@/pages/auth/login/page';
 import ForgotPasswordPage from '@/pages/auth/forgot-password/page';
 import MfaPage from '@/pages/auth/mfa/page';
-import WorkspacePage from '@/pages/page';
+import DashboardPage from '@/pages/page';
 import ComingSoonPage from '@/pages/coming-soon/page';
 
 /**
@@ -59,7 +59,14 @@ export const router = createBrowserRouter([
               </AppProviders>
             ),
             children: [
-              { index: true, element: <WorkspacePage /> },
+              { index: true, element: <DashboardPage /> },
+
+              // The eight role dashboards and the gallery that listed them are
+              // now one screen at `/`. Old links — bookmarks, printed decks,
+              // breadcrumbs still in the wild — land there rather than on the
+              // "coming soon" catch-all below.
+              { path: 'dashboards', element: <Navigate to="/" replace /> },
+              { path: 'dashboards/*', element: <Navigate to="/" replace /> },
 
               // Scan-to-open. Declared here rather than in the generated route
               // list because it is a contract with something physical — the URL

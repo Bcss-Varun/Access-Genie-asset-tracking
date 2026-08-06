@@ -3,15 +3,16 @@ import type { ModuleKey } from '@access-genie/shared';
 /**
  * Where a sign-in lands when nothing more specific was asked for.
  *
- * Deliberately a dashboard rather than `/`: someone signing in wants the state
- * of the estate, not the capability overview. A deep link, or a route the auth
+ * `/` is the dashboard — the single one. It used to be a capability overview
+ * with the real numbers a click further in, behind a gallery of eight role
+ * dashboards; all of that is now one screen. A deep link, or a route the auth
  * guard bounced away from, still wins over this — see the login screen.
  *
  * It sits under the `workspace` grant (the section this route belongs to), which
  * every role that can sign in holds, so there is no role that lands on a page it
  * is not allowed to read.
  */
-export const DEFAULT_LANDING = '/dashboards/executive';
+export const DEFAULT_LANDING = '/';
 
 /**
  * A live count rendered as a red pill on a nav row.
@@ -60,14 +61,16 @@ export interface NavSection {
 // request rather than merely an absent menu item.
 // ─────────────────────────────────────────────────────────────────────────────
 export const navSections: NavSection[] = [
+  // One dashboard, not a gallery of eight: the section row *is* the dashboard,
+  // so there is no "Dashboards" child row pointing at a list of them.
   {
     id: 'workspace',
-    label: 'My Workspace',
+    label: 'Dashboard',
+    fullLabel: 'Dashboard — the whole estate on one screen',
     module: 'workspace',
     to: '/',
-    icon: '🏠',
+    icon: '📊',
     items: [
-      { label: 'Dashboards', to: '/dashboards', icon: '📊' },
       { label: 'AI Copilot', to: '/copilot', icon: '🤖' },
       { label: 'Notifications', to: '/notifications', icon: '📬' },
     ],

@@ -32,7 +32,18 @@ export default defineConfig(({ mode }) => {
       },
     },
 
-    server: { port, proxy },
+    /**
+     * `allowedHosts` is what lets a tunnel reach this server.
+     *
+     * Vite refuses any request whose Host header it does not recognise — a DNS
+     * rebinding defence — so an ngrok domain is rejected with "Blocked request"
+     * until it is named here. Comma-separate more in VITE_ALLOWED_HOSTS.
+     */
+    server: {
+      port,
+      proxy,
+      allowedHosts: (env.VITE_ALLOWED_HOSTS ?? '').split(',').map((h) => h.trim()).filter(Boolean),
+    },
 
     // `vite preview` serves the real build, so it needs the same proxy: the
     // production bundle has to be exercisable against a live API.

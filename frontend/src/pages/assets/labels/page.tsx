@@ -32,6 +32,7 @@ import { cn, relTime, nowMs } from '@/lib/utils';
 import { KIND_FOR_MEDIUM, encodesTag } from '@access-genie/shared';
 import type { LabelFieldKey, LabelMedium } from '@access-genie/shared';
 import type { RegisteredAsset, TagBinding } from '@access-genie/shared';
+import { categoryEmoji } from '@/lib/asset-categories';
 
 // ── Deep-link entry ──────────────────────────────────────────────────────────
 // `/assets/labels?ids=AST-1003,AST-1010` is how the registry's bulk bar and the
@@ -62,10 +63,6 @@ const td = 'px-4 py-3 align-middle';
 const inputCls = 'w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-800 outline-none focus:ring-2 focus:ring-primary-500';
 
 const IDENTITY_TONE = { Verified: 'emerald', Bound: 'amber', Unlabelled: 'red' } as const;
-
-const categoryEmoji = (c: RegisteredAsset['category']) =>
-  c === 'Endpoints' ? '📱' : c === 'Compute' ? '💻' : c === 'Network' ? '🌐'
-    : c === 'Sensors' ? '📡' : c === 'Infrastructure' ? '⚡' : '⚙️';
 
 // ── Label artwork ────────────────────────────────────────────────────────────
 // The sheet preview draws its own glyphs at screen scale rather than reusing the
