@@ -1,6 +1,7 @@
 import { z } from 'zod';
 import { INTEGRATION_STATUSES } from '@access-genie/shared';
 import { SUBSCRIPTION_CADENCES } from '../models/configuration.js';
+import { partialUpdate } from './common.js';
 
 /**
  * Bodies for the configuration screens.
@@ -21,7 +22,7 @@ export const createIntegrationSchema = z.object({
   status: z.enum(INTEGRATION_STATUSES).default('Disconnected'),
 });
 
-export const updateIntegrationSchema = createIntegrationSchema.partial();
+export const updateIntegrationSchema = partialUpdate(createIntegrationSchema);
 
 // ── Approval workflows ───────────────────────────────────────────────────────
 const workflowStepSchema = z.object({
@@ -37,7 +38,7 @@ export const createApprovalWorkflowSchema = z.object({
   status: z.enum(['Active', 'Draft']).default('Draft'),
 });
 
-export const updateApprovalWorkflowSchema = createApprovalWorkflowSchema.partial();
+export const updateApprovalWorkflowSchema = partialUpdate(createApprovalWorkflowSchema);
 
 // ── Checklist templates ──────────────────────────────────────────────────────
 export const createChecklistTemplateSchema = z.object({
@@ -48,7 +49,7 @@ export const createChecklistTemplateSchema = z.object({
   items: z.array(z.string().trim().min(1).max(200)).min(1).max(80),
 });
 
-export const updateChecklistTemplateSchema = createChecklistTemplateSchema.partial();
+export const updateChecklistTemplateSchema = partialUpdate(createChecklistTemplateSchema);
 
 // ── Report subscriptions ─────────────────────────────────────────────────────
 export const createReportSubscriptionSchema = z.object({
@@ -111,7 +112,7 @@ export const createAiModelSchema = z.object({
   predictionsPerDay: z.coerce.number().int().min(0).default(0),
 });
 
-export const updateAiModelSchema = createAiModelSchema.partial();
+export const updateAiModelSchema = partialUpdate(createAiModelSchema);
 
 // ── Passkeys ─────────────────────────────────────────────────────────────────
 export const createPasskeySchema = z.object({

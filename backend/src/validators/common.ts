@@ -1,5 +1,42 @@
 import { z } from 'zod';
 
+type WithoutDefaults<T extends z.ZodRawShape> = {
+  [K in keyof T]: T[K] extends z.ZodDefault<infer Inner> ? Inner : T[K];
+};
+
+/**
+ * Derive a PATCH schema from a create schema.
+ *
+ * **Use this instead of `.partial()`.** `.partial()` marks a field optional but
+ * leaves its `.default(…)` in place, so a PATCH that omits the field still
+ * parses to the default — and every update service writes what it is handed,
+ * skipping only `undefined`. The result is silent data loss on the fields the
+ * caller never mentioned:
+ *
+ *     PATCH /work-orders/WO-7  { "title": "…" }
+ *       → status reset to New, priority to Medium, checklist and parts emptied
+ *
+ *     PATCH /assets/AST-16  { "name": "…" }
+ *       → status reset to Active, healthScore to 100, purchasePrice to 0
+ *
+ * Twenty of this project's update schemas had that bug. Stripping the defaults
+ * before going partial is what makes "absent means leave it alone" true, which
+ * is what the services already document themselves as doing.
+ *
+ * Defaults nested *inside* an object field are left alone deliberately: sending
+ * `onboarding` at all replaces the whole object, so its defaults should apply.
+ */
+export function partialUpdate<T extends z.ZodRawShape>(schema: z.ZodObject<T>) {
+  const stripped = Object.fromEntries(
+    Object.entries(schema.shape).map(([key, field]) => [
+      key,
+      field instanceof z.ZodDefault ? field.removeDefault() : field,
+    ]),
+  ) as WithoutDefaults<T>;
+
+  return z.object(stripped).partial();
+}
+
 /** `?page=&limit=&sort=&q=` — shared by every list endpoint. */
 export const listQuerySchema = z.object({
   page: z.coerce.number().int().min(1).default(1),

@@ -41,7 +41,7 @@ export default function ScanLandingPage() {
 
   const rows: [string, string][] = [
     ['Asset ID', asset.id],
-    ['Serial', asset.serialNumber],
+    ['Serial', asset.serialNumber || '—'],
     ['Category', asset.category],
     ['Status', asset.status],
     ['Location', asset.location?.name ?? '—'],

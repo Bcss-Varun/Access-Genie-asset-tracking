@@ -7,6 +7,7 @@ import { ApiRequestError } from '@/api/client';
 import { authApi } from '@/api/auth-endpoints';
 import { useAuth } from '@/api/auth';
 import { DEFAULT_LANDING } from '@/lib/nav-config';
+import { cn } from '@/lib/utils';
 
 /**
  * Password the account shortcuts prefill.
@@ -31,6 +32,7 @@ export default function LoginPage() {
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
 
   /**
    * Signing in lands on the dashboard.
@@ -107,74 +109,130 @@ export default function LoginPage() {
     setError(null);
   };
 
-  const useDemo = () => pick(personas?.[0]?.email ?? '');
+  const field =
+    'w-full rounded-lg border border-slate-300 bg-white px-3.5 py-2.5 text-sm text-slate-900 shadow-sm outline-none transition ' +
+    'placeholder:text-slate-400 hover:border-slate-400 focus:border-primary-500 focus:ring-4 focus:ring-primary-500/15';
 
   return (
     <AuthLayout>
       <div>
-        <h2 className="text-2xl font-heading font-bold text-slate-900">Sign in</h2>
-        <p className="text-sm text-slate-500 mt-1">Welcome back. Sign in to your workspace.</p>
+        <h2 className="font-heading text-[1.7rem] font-bold tracking-tight text-slate-900">Sign in</h2>
+        <p className="mt-1.5 text-sm text-slate-500">Welcome back. Sign in to your workspace.</p>
 
-        <form onSubmit={submit} className="space-y-4 mt-6">
+        <form onSubmit={submit} className="mt-7 space-y-4">
           {error && (
-            <div className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">{error}</div>
+            <div
+              role="alert"
+              className="flex items-start gap-2.5 rounded-lg border border-red-200 bg-red-50 px-3 py-2.5 text-sm text-red-700"
+            >
+              <span aria-hidden className="mt-px shrink-0">⚠️</span>
+              <span>{error}</span>
+            </div>
           )}
-          <label className="block">
-            <span className="text-sm font-medium text-slate-700">Work email</span>
+
+          <div>
+            <label htmlFor="login-email" className="mb-1.5 block text-sm font-medium text-slate-700">
+              Work email
+            </label>
             <input
+              id="login-email"
               type="text"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               placeholder="you@company.com"
               autoComplete="email"
-              className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none focus:border-primary-500 focus:ring-2 focus:ring-primary-500/30"
+              className={field}
             />
-          </label>
-          <label className="block">
-            <div className="flex items-center justify-between">
-              <span className="text-sm font-medium text-slate-700">Password</span>
-              <Link to="/forgot-password" className="text-xs text-primary-600 hover:underline">Forgot?</Link>
+          </div>
+
+          <div>
+            <div className="mb-1.5 flex items-baseline justify-between">
+              <label htmlFor="login-password" className="text-sm font-medium text-slate-700">
+                Password
+              </label>
+              <Link to="/forgot-password" className="text-xs font-medium text-primary-600 hover:underline">
+                Forgot?
+              </Link>
             </div>
-            <input
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              placeholder="••••••••"
-              autoComplete="current-password"
-              className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none focus:border-primary-500 focus:ring-2 focus:ring-primary-500/30"
-            />
-          </label>
-          <Button type="submit" className="w-full" disabled={loading}>
+            {/*
+              Reveal is not a nicety on this form. The password is typed on a
+              phone in a warehouse as often as at a desk, and "wrong password" on
+              a value that was mistyped is the single most common way people get
+              stuck at a login screen.
+            */}
+            <div className="relative">
+              <input
+                id="login-password"
+                type={showPassword ? 'text' : 'password'}
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                placeholder="••••••••"
+                autoComplete="current-password"
+                className={`${field} pr-11`}
+              />
+              <button
+                type="button"
+                onClick={() => setShowPassword((s) => !s)}
+                aria-label={showPassword ? 'Hide password' : 'Show password'}
+                aria-pressed={showPassword}
+                className="absolute inset-y-0 right-0 flex w-11 items-center justify-center rounded-r-lg text-slate-400 transition-colors hover:text-slate-700 focus:outline-none focus-visible:text-primary-600"
+              >
+                <span aria-hidden className="text-sm">{showPassword ? '🙈' : '👁️'}</span>
+              </button>
+            </div>
+          </div>
+
+          <Button type="submit" className="w-full !py-2.5" disabled={loading}>
             {loading ? 'Signing in…' : 'Sign in'}
           </Button>
         </form>
 
-        <button onClick={useDemo} className="mt-3 w-full text-center text-xs text-slate-500 hover:text-slate-800">
-          Use demo account →
-        </button>
-
         {/* The seeded personas, so each role can be tried without a user list. */}
         {personas && personas.length > 0 && (
-          <div className="mt-6 border-t border-slate-100 pt-4">
-            <p className="text-[10px] uppercase tracking-wider text-slate-400 font-semibold mb-2">Sign in as</p>
-            <div className="space-y-1">
+          <div className="mt-7">
+            <div className="flex items-center gap-3">
+              <span className="h-px flex-1 bg-slate-200" />
+              <span className="text-[10px] font-semibold uppercase tracking-wider text-slate-400">
+                Or sign in as
+              </span>
+              <span className="h-px flex-1 bg-slate-200" />
+            </div>
+
+            <div className="mt-3 grid gap-1.5">
               {personas.map((p) => (
                 <button
                   key={p.email}
                   type="button"
                   onClick={() => pick(p.email)}
-                  className="w-full flex items-center gap-2.5 rounded-lg px-2 py-1.5 text-left hover:bg-slate-50 transition-colors"
+                  className={cn(
+                    'group flex w-full items-center gap-3 rounded-lg border px-2.5 py-2 text-left transition-colors',
+                    email === p.email
+                      ? 'border-primary-300 bg-primary-50/70'
+                      : 'border-transparent hover:border-slate-200 hover:bg-slate-50',
+                  )}
                 >
-                  <span className="h-6 w-6 shrink-0 rounded-full bg-primary-100 text-primary-700 text-[10px] font-bold flex items-center justify-center">
+                  <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-primary-100 text-[10px] font-bold text-primary-700">
                     {p.initials}
                   </span>
                   <span className="min-w-0 flex-1">
-                    <span className="block text-xs font-medium text-slate-700 truncate">{p.name}</span>
-                    <span className="block text-[11px] text-slate-400 truncate">{p.roleName}</span>
+                    <span className="block truncate text-xs font-semibold text-slate-700">{p.name}</span>
+                    <span className="block truncate text-[11px] text-slate-400">{p.roleName}</span>
+                  </span>
+                  <span
+                    aria-hidden
+                    className="shrink-0 text-xs text-slate-300 transition-colors group-hover:text-primary-500"
+                  >
+                    →
                   </span>
                 </button>
               ))}
             </div>
+
+            <p className="mt-3 text-center text-[11px] leading-relaxed text-slate-400">
+              {DEMO_PASSWORD
+                ? 'Picking an account fills both fields.'
+                : 'Picking an account fills the email — type the password to continue.'}
+            </p>
           </div>
         )}
       </div>

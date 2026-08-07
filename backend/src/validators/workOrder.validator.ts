@@ -4,7 +4,7 @@ import {
   WORK_ORDER_STATUSES,
   WORK_ORDER_TYPES,
 } from '@access-genie/shared';
-import { csvString, isoDateString, listQuerySchema } from './common.js';
+import { csvString, isoDateString, listQuerySchema, partialUpdate } from './common.js';
 
 export const workOrderListQuerySchema = listQuerySchema.extend({
   status: csvString,
@@ -43,7 +43,7 @@ export const createWorkOrderSchema = z.object({
     .default([]),
 });
 
-export const updateWorkOrderSchema = createWorkOrderSchema.omit({ assetId: true }).partial();
+export const updateWorkOrderSchema = partialUpdate(createWorkOrderSchema.omit({ assetId: true }));
 
 /** Status changes go through their own endpoint so they can be audited. */
 export const workOrderStatusSchema = z.object({

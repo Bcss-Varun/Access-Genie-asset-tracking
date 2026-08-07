@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { ALERT_SEVERITIES, CUSTODY_ACTIONS } from '@access-genie/shared';
+import { partialUpdate } from './common.js';
 
 /**
  * Bodies for the supporting collections that screens write to — custody moves
@@ -23,4 +24,4 @@ export const createAlertRuleSchema = z.object({
   enabled: z.boolean().default(true),
 });
 
-export const updateAlertRuleSchema = createAlertRuleSchema.partial();
+export const updateAlertRuleSchema = partialUpdate(createAlertRuleSchema);

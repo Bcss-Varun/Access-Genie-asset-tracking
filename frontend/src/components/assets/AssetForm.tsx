@@ -200,9 +200,10 @@ export function AssetForm({ mode, asset }: { mode: 'create' | 'edit'; asset?: As
     const e: Partial<Record<'name' | 'category' | 'serialNumber', string>> = {};
     if (!form.name.trim()) e.name = 'Asset name is required.';
     if (!form.category) e.category = 'Select a category.';
-    if (!form.serialNumber.trim()) e.serialNumber = 'Serial number is required.';
+    // No serial-number check: plenty of assets genuinely have none, and the
+    // server stores the absence rather than substituting a placeholder.
     return e;
-  }, [form.name, form.category, form.serialNumber]);
+  }, [form.name, form.category]);
 
   const isValid = Object.keys(errors).length === 0;
   const dirty = useMemo(() => JSON.stringify(form) !== JSON.stringify(initial) || tagDraft.trim() !== '', [form, initial, tagDraft]);

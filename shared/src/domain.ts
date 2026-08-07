@@ -83,6 +83,21 @@ export interface Asset {
   id: string;
   name: string;
   category: AssetCategory;
+  /**
+   * May be empty, because plenty of real assets have no serial.
+   *
+   * Cables, furniture, tooling and anything bought in bulk arrive with no
+   * manufacturer serial at all. It used to be required, and the registration
+   * flow papered over that by inventing `INT-<provisional-id>` — a value that
+   * looked like a serial, was not one, and (because the provisional id is
+   * discarded before the record is saved) did not even match the asset it was
+   * attached to.
+   *
+   * The field is always present; an asset without a serial carries `''`. That
+   * keeps the shape of every asset identical, so no reader has to test for the
+   * key's existence — only for whether it holds anything. Screens show "—",
+   * search skips it, and the uniqueness rule applies only to non-empty values.
+   */
   serialNumber: string;
   status: AssetStatus;
   healthScore: number; // 0-100

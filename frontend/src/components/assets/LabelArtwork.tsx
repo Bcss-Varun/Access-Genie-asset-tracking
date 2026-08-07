@@ -233,7 +233,9 @@ export function CodeGlyph({ payload, medium, mm }: { payload: string; medium: La
 export function fieldValue(key: LabelFieldKey, asset: Asset, tagId?: string): string {
   switch (key) {
     case 'name': return asset.name;
-    case 'serial': return `SN ${asset.serialNumber}`;
+    // Prints nothing when the asset has no serial — a label reading
+    // "SN undefined" gets stuck on real equipment and outlives the bug.
+    case 'serial': return asset.serialNumber ? `SN ${asset.serialNumber}` : '';
     case 'category': return asset.category;
     case 'custodian': return asset.custodian;
     case 'location': return asset.location.zone

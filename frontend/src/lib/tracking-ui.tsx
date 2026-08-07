@@ -10,7 +10,7 @@
 
 import { cn } from '@/lib/utils';
 import { relTime } from '@/lib/utils';
-import { TRACKED_FACILITIES } from '@/lib/tracking-data';
+import { TRACKED_FACILITIES, presenceForFacility } from '@/lib/tracking-data';
 import type { AssetPresence, JourneyStop, PresenceState, ZonePolicy } from '@access-genie/shared';
 
 /** The policy, said out loud. Nobody manages a building in geofence primitives. */
@@ -64,26 +64,49 @@ export const stopItem = (s: JourneyStop) => ({
 export const slugFor = (facilityName: string) =>
   TRACKED_FACILITIES.find((f) => f.name === facilityName)?.slug ?? TRACKED_FACILITIES[0].slug;
 
-/** With the whole estate in scope a plan still needs one building — this picks it. */
+/**
+ * With the whole estate in scope a plan still needs one building — this picks it.
+ *
+ * Two things it has to survive: an estate with more facilities than fit on one
+ * row, and facilities that carry no tracked assets at all. Both arrived the
+ * moment sister companies were added to the scope tree. So the strip wraps
+ * rather than overflowing, and a site with nothing to plot says so instead of
+ * looking identical to one with fifty assets and then opening on an empty grid.
+ */
 export function FacilitySwitch({ value, onChange }: { value: string; onChange: (slug: string) => void }) {
   return (
-    <div className="flex items-center gap-1">
-      {TRACKED_FACILITIES.map((f) => (
-        <button
-          key={f.slug}
-          type="button"
-          onClick={() => onChange(f.slug)}
-          aria-pressed={value === f.slug}
-          className={cn(
-            'rounded-md border px-2 py-1 text-[11px] font-medium transition-colors',
-            value === f.slug
-              ? 'border-primary-200 bg-primary-50 text-primary-700'
-              : 'border-slate-200 text-slate-500 hover:bg-slate-50',
-          )}
-        >
-          <span aria-hidden>{f.emoji}</span> {f.short}
-        </button>
-      ))}
+    <div className="flex max-w-full flex-wrap items-center gap-1">
+      {TRACKED_FACILITIES.map((f) => {
+        const count = presenceForFacility(f.slug).length;
+        return (
+          <button
+            key={f.slug}
+            type="button"
+            onClick={() => onChange(f.slug)}
+            aria-pressed={value === f.slug}
+            title={count === 0 ? `${f.name} — no tracked assets` : `${f.name} — ${count} tracked`}
+            className={cn(
+              'flex items-center gap-1 rounded-md border px-2 py-1 text-[11px] font-medium transition-colors',
+              value === f.slug
+                ? 'border-primary-200 bg-primary-50 text-primary-700'
+                : count === 0
+                  ? 'border-slate-200 text-slate-400 hover:bg-slate-50'
+                  : 'border-slate-200 text-slate-600 hover:bg-slate-50',
+            )}
+          >
+            <span aria-hidden>{f.emoji}</span>
+            <span>{f.short}</span>
+            <span
+              className={cn(
+                'tabular-nums',
+                count === 0 ? 'text-slate-300' : value === f.slug ? 'text-primary-500' : 'text-slate-400',
+              )}
+            >
+              {count}
+            </span>
+          </button>
+        );
+      })}
     </div>
   );
 }

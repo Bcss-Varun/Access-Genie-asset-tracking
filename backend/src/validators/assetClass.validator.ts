@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { partialUpdate } from './common.js';
 import {
   ASSET_CATEGORIES,
   ATTRIBUTE_TYPES,
@@ -73,7 +74,7 @@ const attributeRules = <T extends { attributes?: z.infer<typeof attributeSchema>
     );
 
 export const createAssetClassSchema = attributeRules(assetClassFields);
-export const updateAssetClassSchema = attributeRules(assetClassFields.partial());
+export const updateAssetClassSchema = attributeRules(partialUpdate(assetClassFields));
 
 export type CreateAssetClassInput = z.infer<typeof createAssetClassSchema>;
 export type UpdateAssetClassInput = z.infer<typeof updateAssetClassSchema>;

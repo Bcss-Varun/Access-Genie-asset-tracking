@@ -6,7 +6,7 @@ import {
   SENSOR_KINDS,
   SENSOR_STATUSES,
 } from '@access-genie/shared';
-import { csvString, isoDateString, listQuerySchema } from './common.js';
+import { csvString, isoDateString, listQuerySchema, partialUpdate } from './common.js';
 
 // ── Sensors / devices ────────────────────────────────────────────────────────
 export const sensorListQuerySchema = listQuerySchema.extend({
@@ -33,7 +33,7 @@ export const createSensorSchema = z.object({
   lastReading: isoDateString.optional(),
 });
 
-export const updateSensorSchema = createSensorSchema.partial();
+export const updateSensorSchema = partialUpdate(createSensorSchema);
 
 // ── Gateways ─────────────────────────────────────────────────────────────────
 /**
@@ -56,7 +56,7 @@ export const createGatewaySchema = z.object({
   ip: z.string().trim().max(45).optional(),
 });
 
-export const updateGatewaySchema = createGatewaySchema.partial();
+export const updateGatewaySchema = partialUpdate(createGatewaySchema);
 
 // ── Geofences ────────────────────────────────────────────────────────────────
 const percent = z.number().min(0).max(100);

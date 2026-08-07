@@ -1,6 +1,6 @@
 import { z } from 'zod';
 import { PO_STATUSES } from '@access-genie/shared';
-import { isoDateString } from './common.js';
+import { isoDateString, partialUpdate } from './common.js';
 
 /** Inventory and procurement writes. */
 
@@ -9,7 +9,7 @@ const warehouseFields = {
   location: z.string().trim().min(2).max(120),
 };
 export const createWarehouseSchema = z.object(warehouseFields);
-export const updateWarehouseSchema = z.object(warehouseFields).partial();
+export const updateWarehouseSchema = partialUpdate(z.object(warehouseFields));
 
 const supplierFields = {
   name: z.string().trim().min(2).max(120),
@@ -20,7 +20,7 @@ const supplierFields = {
   onTimePct: z.coerce.number().min(0).max(100).default(100),
 };
 export const createSupplierSchema = z.object(supplierFields);
-export const updateSupplierSchema = z.object(supplierFields).partial();
+export const updateSupplierSchema = partialUpdate(z.object(supplierFields));
 
 const partFields = {
   sku: z.string().trim().min(2).max(60),
@@ -42,7 +42,7 @@ export const createPartSchema = z.object(partFields);
  * `onHand` is not updatable here on purpose — stock moves through the
  * adjustment endpoint, which records why. See inventory.service.ts.
  */
-export const updatePartSchema = z.object(partFields).omit({ onHand: true, sku: true }).partial();
+export const updatePartSchema = partialUpdate(z.object(partFields).omit({ onHand: true, sku: true }));
 
 export const stockAdjustmentSchema = z.object({
   delta: z.number().int().refine((n) => n !== 0, 'An adjustment of zero changes nothing'),
@@ -63,7 +63,7 @@ const poFields = {
   lines: z.array(poLine).min(1, 'A purchase order needs at least one line'),
 };
 export const createPurchaseOrderSchema = z.object(poFields);
-export const updatePurchaseOrderSchema = z.object(poFields).omit({ supplierId: true }).partial();
+export const updatePurchaseOrderSchema = partialUpdate(z.object(poFields).omit({ supplierId: true }));
 
 export type CreateWarehouseInput = z.infer<typeof createWarehouseSchema>;
 export type UpdateWarehouseInput = z.infer<typeof updateWarehouseSchema>;

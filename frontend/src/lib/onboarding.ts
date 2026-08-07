@@ -161,12 +161,23 @@ export function evaluateGates(asset: RegisteredAsset, template?: ClassTemplate):
     key, label: GATE_LABELS[key], required: req.has(key), state, detail,
   });
 
-  // Identified — the commit condition, so it is met by definition post-commit.
-  const idOk = Boolean(asset.name && asset.serialNumber && ob.classId);
+  /*
+   * Identified — the commit condition, so it is met by definition post-commit.
+   *
+   * A serial is *not* part of it. It used to be, and that would now strand every
+   * serial-less asset permanently short of activation: the gate could never be
+   * satisfied, and there is nothing the registrant could type to satisfy it. An
+   * asset is identified by its name and its class; the serial is evidence when
+   * it exists, and its absence is a fact about the equipment, not an omission.
+   */
+  const idOk = Boolean(asset.name && ob.classId);
+  const descriptor = [asset.manufacturer, asset.model].filter(Boolean).join(' ') || asset.name;
   const identified = gate(
     'identified',
     idOk ? 'met' : 'open',
-    idOk ? `${[asset.manufacturer, asset.model].filter(Boolean).join(' ') || asset.name} · SN ${asset.serialNumber}` : 'Name, class and serial are required',
+    idOk
+      ? `${descriptor}${asset.serialNumber ? ` · SN ${asset.serialNumber}` : ' · no serial'}`
+      : 'Name and class are required',
   );
 
   const located = gate(
@@ -301,6 +312,9 @@ export function checkDuplicate(
   const pool = assets.filter((a) => a.id !== selfId && !a.onboarding.voidedAt);
   const mfr = manufacturer.trim().toLowerCase();
 
+  // Assets with no serial cannot match: `''` never equals a search term the
+  // `s.length < 3` guard above has already let through, and it cannot come
+  // within edit distance 2 of one either.
   const exact = pool.filter((a) => a.serialNumber.trim().toLowerCase() === s);
   if (exact.length) {
     const retired = exact.filter((a) => a.status === 'End_Of_Life');

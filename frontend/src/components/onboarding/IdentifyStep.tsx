@@ -222,7 +222,7 @@ export function IdentifyStep({
 
           <Field
             label="Serial number" required={!noSerial} error={err('serialNumber')} htmlFor="ob-serial"
-            hint={!noSerial ? 'Checked against the registry as you type.' : 'An internal ID will be minted at commit.'}
+            hint={!noSerial ? 'Checked against the registry as you type.' : 'Recorded without one — the asset ID identifies it.'}
           >
             <input
               id="ob-serial"

@@ -1,6 +1,6 @@
 import { z } from 'zod';
 import { LABEL_FIELD_KEYS, LABEL_MEDIUMS, LABEL_SIZE_KEYS, PRINT_DEVICE_KINDS } from '@access-genie/shared';
-import { listQuerySchema } from './common.js';
+import { listQuerySchema, partialUpdate } from './common.js';
 
 const templateFields = z.object({
   name: z.string().trim().min(2).max(60),
@@ -20,7 +20,7 @@ export const createTemplateSchema = templateFields.refine(
   { message: 'A field can only appear once on a template', path: ['fields'] },
 );
 
-export const updateTemplateSchema = templateFields.partial().refine(
+export const updateTemplateSchema = partialUpdate(templateFields).refine(
   (t) => !t.fields || new Set(t.fields).size === t.fields.length,
   { message: 'A field can only appear once on a template', path: ['fields'] },
 );

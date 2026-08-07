@@ -382,7 +382,13 @@ curl -s -X POST "$BASE/assets" \
 - `custodian` and `purchaseDate` are optional here by design ("commit early,
   enrich forever") — an unclaimed asset is stored as `Unassigned` and dated from
   its registration.
-- `serialNumber` is unique — reusing one returns **409 CONFLICT**. Good test case.
+- `serialNumber` is **optional**. Omit it, or send `""`, and the asset is stored
+  with an empty serial — the API never invents one. Anything actually typed must
+  be 2–64 characters, and must be unique: reusing one returns **409 CONFLICT**.
+  Any number of assets may share the *absence* of a serial, because the unique
+  index is partial (`$type: string, $gt: ""`).
+- Sending `"serialNumber": ""` on a **PATCH** is how you clear an existing one.
+  That is the only way — see the PATCH note in §10.
 - `healthStatus` is derived server-side; sending it is ignored.
 
 ### 8.2 Work orders — gate `maintenance`
@@ -765,7 +771,21 @@ NEW=$(python3 -c 'import json;print(json.load(open("/tmp/ag_body"))["data"]["id"
 if [ -n "$NEW" ]; then
   check "duplicate serial" 409 "$(code -X POST "$BASE/assets" -H "$AUTH" -H 'Content-Type: application/json' \
     -d '{"name":"Dup","category":"Compute","serialNumber":"SN-SMOKE-001","location":{"id":"FAC-HQ","name":"HQ"}}')"
+  # Two assets with no serial at all must both be accepted.
+  check "no serial #1"     201 "$(code -X POST "$BASE/assets" -H "$AUTH" -H 'Content-Type: application/json' \
+    -d '{"name":"No Serial 1","category":"Accessories","location":{"id":"FAC-HQ","name":"HQ"}}')"
+  N1=$(python3 -c 'import json;print(json.load(open("/tmp/ag_body"))["data"]["id"])' 2>/dev/null || echo "")
+  check "no serial #2"     201 "$(code -X POST "$BASE/assets" -H "$AUTH" -H 'Content-Type: application/json' \
+    -d '{"name":"No Serial 2","category":"Accessories","serialNumber":"","location":{"id":"FAC-HQ","name":"HQ"}}')"
+  N2=$(python3 -c 'import json;print(json.load(open("/tmp/ag_body"))["data"]["id"])' 2>/dev/null || echo "")
+  [ -n "$N1" ] && curl -s -o /dev/null -X DELETE "$BASE/assets/$N1" -H "$AUTH"
+  [ -n "$N2" ] && curl -s -o /dev/null -X DELETE "$BASE/assets/$N2" -H "$AUTH"
   check "patch"            200 "$(code -X PATCH "$BASE/assets/$NEW" -H "$AUTH" -H 'Content-Type: application/json' -d '{"status":"Maintenance"}')"
+  # A partial update must not disturb anything it did not name.
+  check "patch preserves"  200 "$(code "$BASE/assets/$NEW" -H "$AUTH")"
+  grep -q '"serialNumber":"SN-SMOKE-001"' /tmp/ag_body \
+    && { echo "  ✓ untouched fields survived the patch"; pass=$((pass+1)); } \
+    || { echo "  ✗ patch clobbered a field it was not given"; fail=$((fail+1)); }
   check "delete"           204 "$(code -X DELETE "$BASE/assets/$NEW" -H "$AUTH")"
 fi
 
@@ -791,6 +811,9 @@ BASE=http://localhost:4000/api/v1 EMAIL='…' PASSWORD='…' ./smoke.sh
 | Validation | Enum value not in the list | 422 listing valid options |
 | Validation | Empty string in an optional field | Accepted, treated as absent |
 | Uniqueness | Duplicate serial number | 409 `CONFLICT` |
+| Uniqueness | Two assets with **no** serial | Both accepted |
+| Partial update | PATCH one field, re-read the record | **Every other field unchanged** |
+| Partial update | PATCH `{"serialNumber": ""}` | Serial cleared, nothing else touched |
 | Pagination | `limit=999` | 422 (max is 200) |
 | Pagination | `page` past the end | 200, empty `data`, correct `meta` |
 | Routing | Missing `/v1` | 404 |
@@ -818,7 +841,13 @@ In Postman, add it at collection level.
 2. **A non-envelope error body means the API never saw the request** — a proxy
    or tunnel answered instead. Check the API is actually running on :4000.
 3. **PATCH is partial.** Send only the fields you are changing; a PATCH is not a
-   replace.
+   replace, and omitting a field leaves it alone. Note the corollary: because
+   omission means "leave it", the *only* way to blank a field is to send it
+   explicitly — `{"serialNumber": ""}`. (Until 2026-08-06 this was broken across
+   twenty update schemas: Zod's `.partial()` keeps `.default()`, so an omitted
+   field arrived as its default and was written. Renaming a work order reset its
+   status to `New`. Fixed by `partialUpdate()` in `validators/common.ts` — use
+   that, never bare `.partial()`, when adding a resource.)
 4. **Access tokens last 15 minutes.** Long test runs need a re-login step.
 5. **Role changes are immediate** — the user is re-read on every request, so
    there is no cache to wait out.

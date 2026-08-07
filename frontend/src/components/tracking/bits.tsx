@@ -294,13 +294,26 @@ export function Panel({
 }) {
   return (
     <section className={cn('glass-panel flex flex-col overflow-hidden', className)}>
+      {/*
+        `flex-wrap` on the header matters. `actions` is `shrink-0`, so a wide
+        control group used to win every pixel it wanted and squeeze the title
+        column to nothing — the heading then wrapped one word per line and the
+        controls spilled across it. Wrapping means an over-wide group drops to
+        its own row instead, which is the only outcome that stays readable as
+        the estate grows and these strips get longer.
+      */}
       {(title || actions) && (
-        <header className="flex items-start justify-between gap-3 border-b border-slate-200 px-4 py-3">
-          <div className="min-w-0">
+        <header className="flex flex-wrap items-start justify-between gap-x-3 gap-y-2 border-b border-slate-200 px-4 py-3">
+          <div className="min-w-[12rem] flex-1">
             {title && <h2 className="font-heading text-sm font-semibold text-slate-800">{title}</h2>}
             {subtitle && <p className="mt-0.5 text-xs text-slate-500">{subtitle}</p>}
           </div>
-          {actions && <div className="flex shrink-0 items-center gap-1.5">{actions}</div>}
+          {/* `max-w-full` is what lets a wrapping control group actually wrap:
+              `shrink-0` alone sizes the box to its content, so a long strip ran
+              past the panel edge and was clipped by `overflow-hidden`. */}
+          {actions && (
+            <div className="flex max-w-full shrink-0 flex-wrap items-center justify-end gap-1.5">{actions}</div>
+          )}
         </header>
       )}
       <div className={cn('min-h-0 flex-1', padded && 'p-4', bodyClassName)}>{children}</div>

@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { partialUpdate } from './common.js';
 
 /**
  * Bodies for the platform collections that screens actually write to.
@@ -53,7 +54,7 @@ export const createTeamSchema = z.object({
   extra: z.number().int().min(0).max(10_000).default(0),
 });
 
-export const updateTeamSchema = createTeamSchema.partial();
+export const updateTeamSchema = partialUpdate(createTeamSchema);
 
 // ── Support ──────────────────────────────────────────────────────────────────
 export const createSupportTicketSchema = z.object({
@@ -91,7 +92,7 @@ export const createEscalationPolicySchema = z.object({
   tiers: z.array(escalationTierSchema).max(10).default([]),
 });
 
-export const updateEscalationPolicySchema = createEscalationPolicySchema.partial();
+export const updateEscalationPolicySchema = partialUpdate(createEscalationPolicySchema);
 
 /**
  * Deliberately narrow. Retention is a compliance control, so the screen may
@@ -129,7 +130,7 @@ export const createReportSchema = z.object({
   scheduled: z.boolean().default(false),
 });
 
-export const updateReportSchema = createReportSchema.partial();
+export const updateReportSchema = partialUpdate(createReportSchema);
 
 // ── Exports ──────────────────────────────────────────────────────────────────
 export const createExportJobSchema = z.object({

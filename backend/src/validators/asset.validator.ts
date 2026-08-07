@@ -14,7 +14,7 @@ import {
   TRACKING_INTENTS,
   TRACKING_TECHS,
 } from '@access-genie/shared';
-import { blankToUndefined, csvString, isoDateString, listQuerySchema } from './common.js';
+import { blankToUndefined, csvString, isoDateString, listQuerySchema, partialUpdate } from './common.js';
 
 export const assetListQuerySchema = listQuerySchema.extend({
   status: csvString,
@@ -115,7 +115,21 @@ export const createAssetSchema = z.object({
   id: z.string().trim().regex(/^AST-\d+$/, 'Asset IDs look like AST-1042').optional(),
   name: z.string().trim().min(2).max(120),
   category: z.enum(ASSET_CATEGORIES),
-  serialNumber: z.string().trim().min(2).max(64),
+  /**
+   * Blank is a legitimate value, not a validation failure.
+   *
+   * An asset with no manufacturer serial is stored with an empty serial — the
+   * API does not invent one. `min(2)` still applies to anything actually typed,
+   * so a stray single character is still refused; the explicit `''` branch is
+   * what lets an untouched input through, and it is also how an existing serial
+   * gets cleared, since `updateAsset` only skips fields that are `undefined`.
+   */
+  serialNumber: z
+    .string()
+    .trim()
+    .max(64)
+    .refine((v) => v === '' || v.length >= 2, 'A serial number needs at least 2 characters')
+    .default(''),
   status: z.enum(ASSET_STATUSES).default('Active'),
   healthScore: z.number().int().min(0).max(100).default(100),
   healthStatus: z.enum(ASSET_HEALTHS).optional(), // derived server-side
@@ -165,9 +179,7 @@ export const createAssetSchema = z.object({
  * without recording why is the gap an auditor finds six months later, so the
  * dialog that does it can now pass the reason through.
  */
-export const updateAssetSchema = createAssetSchema
-  .omit({ id: true })
-  .partial()
+export const updateAssetSchema = partialUpdate(createAssetSchema.omit({ id: true }))
   .extend({ note: z.string().trim().max(300).optional() });
 
 /**

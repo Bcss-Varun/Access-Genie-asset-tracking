@@ -643,7 +643,7 @@ export default function AssetProfilePage() {
           { label: asset.id },
         ]}
         title={asset.name}
-        subtitle={`${asset.id} • ${asset.category} • SN ${asset.serialNumber}`}
+        subtitle={`${asset.id} • ${asset.category}${asset.serialNumber ? ` • SN ${asset.serialNumber}` : ''}`}
         actions={<div className="flex items-center gap-2">{actions}</div>}
       />
 

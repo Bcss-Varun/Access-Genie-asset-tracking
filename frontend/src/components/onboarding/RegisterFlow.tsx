@@ -177,7 +177,18 @@ export function RegisterFlow() {
       id,
       name: v.name,
       category,
-      serialNumber: v.serialNumber || `INT-${id}`,
+      /*
+       * No serial means no serial.
+       *
+       * This used to fall back to `INT-${id}`, which was wrong twice over: it
+       * fabricated an identifier that reads like a manufacturer serial, and it
+       * built it from the *provisional* id, which `register` discards before
+       * saving — so the value did not even match the asset that ended up
+       * holding it. Worse, `mintAssetId` floors at 1000, so every serial-less
+       * registration produced the identical string and the second one was
+       * refused by the unique index.
+       */
+      serialNumber: v.serialNumber,
       status: 'Staging',
       healthScore: 100,
       healthStatus: 'Good',

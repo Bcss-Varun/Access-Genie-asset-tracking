@@ -11,8 +11,17 @@ import { logger } from './logger.js';
  * explicit means the same URI can serve staging and production by changing one
  * variable.
  */
-/** Attempts to make before giving up on the first connection. */
-const CONNECT_ATTEMPTS = 5;
+/**
+ * Attempts to make before giving up on the first connection.
+ *
+ * Eight with exponential backoff spans about a minute, which is the difference
+ * between surviving a hosted cluster's bad patch and refusing to boot during
+ * one. Five attempts covered ~7 seconds — enough for a DNS blip, not enough for
+ * a shared-tier cluster that is refusing a good share of new connections.
+ */
+const CONNECT_ATTEMPTS = 8;
+/** Cap the backoff so the last waits stay useful rather than doubling forever. */
+const MAX_BACKOFF_MS = 15_000;
 
 export async function connectDb(): Promise<typeof mongoose> {
   // Reject unknown keys instead of silently dropping them, so a typo in a
@@ -33,6 +42,24 @@ export async function connectDb(): Promise<typeof mongoose> {
       await mongoose.connect(env.MONGODB_URI, {
         dbName: env.MONGODB_DB_NAME,
         maxPoolSize: env.MONGODB_MAX_POOL_SIZE,
+        /*
+         * Make as few TLS handshakes as possible, and keep the ones we make.
+         *
+         * A shared-tier Atlas cluster intermittently refuses a handshake with
+         * `tlsv1 alert internal error`. Each attempt is close to a coin flip, so
+         * what matters is how many the app needs: simple reads, which reuse one
+         * socket, stay reliable, while `/dashboard/summary` and `/dataset` fan
+         * out into ~20 parallel queries, want several sockets at once, and fail
+         * as soon as any one of those handshakes is refused.
+         *
+         * `maxIdleTimeMS: 0` is the lever that helps — sockets are never retired
+         * for being idle, so a connection that survives its handshake is reused
+         * all day instead of being renegotiated. Deliberately no `minPoolSize`:
+         * demanding N connections up front just moves the burst to boot, where
+         * one refusal clears the pool and fails startup outright. Let the pool
+         * grow as demand arrives, and keep what it gets.
+         */
+        maxIdleTimeMS: 0,
         serverSelectionTimeoutMS: env.MONGODB_SERVER_SELECTION_TIMEOUT_MS,
         // In production, indexes are built by a deliberate migration — not on
         // boot, where a large collection would stall startup.
@@ -48,7 +75,7 @@ export async function connectDb(): Promise<typeof mongoose> {
         throw err;
       }
 
-      const backoff = 500 * 2 ** (attempt - 1);
+      const backoff = Math.min(500 * 2 ** (attempt - 1), MAX_BACKOFF_MS);
       logger.warn(`MongoDB connection failed, retrying in ${backoff}ms`, {
         attempt: `${attempt}/${CONNECT_ATTEMPTS - 1}`,
         err: err instanceof Error ? err.message.split('\n')[0] : String(err),

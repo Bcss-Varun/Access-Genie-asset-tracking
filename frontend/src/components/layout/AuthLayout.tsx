@@ -1,53 +1,102 @@
 import { Link } from 'react-router-dom';
+import { AssetOpsArt } from './AssetOpsArt';
 
-/** Public, shell-less layout for the auth screens (login, MFA, recovery). */
+/**
+ * Public, shell-less layout for the auth screens (login, MFA, recovery).
+ *
+ * Two panels: what the product is, and the one thing you came here to do. The
+ * left is deliberately the taller-contrast surface so the form on the right is
+ * the brightest thing on screen — on a sign-in page the input should win.
+ *
+ * The illustration sits bottom-left, behind the copy in stacking order but
+ * masked so it fades out where the text sits. It is anchored rather than
+ * centred because the eye enters top-left at the logo and leaves bottom-right
+ * at the form; putting the drawing at the end of that diagonal fills the empty
+ * corner instead of competing with the headline.
+ */
 export function AuthLayout({ children }: { children: React.ReactNode }) {
   return (
-    <div className="min-h-screen grid lg:grid-cols-2 bg-background">
-      {/* Left: brand / value panel (hidden on small screens) */}
-      <div className="hidden lg:flex flex-col justify-between p-12 bg-slate-900 text-white relative overflow-hidden">
+    <div className="min-h-screen grid lg:grid-cols-[1.05fr_1fr] bg-background">
+      {/* ── Left: brand / value panel (hidden on small screens) ───────────── */}
+      <div className="relative hidden overflow-hidden bg-slate-900 p-10 text-white lg:flex lg:flex-col xl:p-14">
+        {/* Ambient depth. Behind everything, including the art. */}
+        <div className="pointer-events-none absolute -right-28 -top-28 h-96 w-96 rounded-full bg-primary-500/20 blur-3xl" />
+        <div className="pointer-events-none absolute -bottom-40 -left-24 h-[28rem] w-[28rem] rounded-full bg-primary-700/25 blur-3xl" />
+        {/* Faint grid — reads as engineering rather than marketing. */}
+        <div
+          className="pointer-events-none absolute inset-0 opacity-[0.07]"
+          style={{
+            backgroundImage:
+              'linear-gradient(to right, white 1px, transparent 1px), linear-gradient(to bottom, white 1px, transparent 1px)',
+            backgroundSize: '44px 44px',
+          }}
+        />
+
         <div className="relative z-10">
-          <img src="/access-genie-logo.png" alt="Access Genie" className="w-52 h-auto rounded-md" />
+          <img src="/access-genie-logo.png" alt="Access Genie" className="h-auto w-48 rounded-md" />
         </div>
-        <div className="relative z-10 max-w-md">
-          <h2 className="text-3xl font-heading font-bold leading-tight">
-            One asset graph. Record, location, condition, and prediction on every object.
-          </h2>
-          <p className="mt-4 text-slate-300 text-sm leading-relaxed">
-            EAM + RTLS/IoT + a live digital twin + native, explainable AI — for millions of assets across every
-            facility and industry.
+
+        <div className="relative z-10 mt-14 max-w-lg">
+          <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-primary-300">
+            Enterprise Asset Intelligence
           </p>
-          <div className="mt-8 flex flex-wrap gap-2">
+          <h2 className="mt-3 font-heading text-[2rem] font-bold leading-[1.15] xl:text-[2.35rem]">
+            One asset graph.
+            <span className="block text-primary-300">
+              Record, location, condition and prediction on every object.
+            </span>
+          </h2>
+          <p className="mt-5 max-w-md text-sm leading-relaxed text-slate-300">
+            EAM, RTLS and IoT tracking, a live digital twin, and native explainable AI — across every
+            facility, for millions of assets.
+          </p>
+
+          <div className="mt-7 flex flex-wrap gap-2">
             {['RFID', 'BLE', 'UWB', 'GPS', 'LoRaWAN', 'AI', 'Digital Twin'].map((t) => (
-              <span key={t} className="text-xs font-medium bg-white/10 border border-white/10 rounded-full px-3 py-1">
+              <span
+                key={t}
+                className="rounded-full border border-white/10 bg-white/10 px-3 py-1 text-xs font-medium text-slate-100"
+              >
                 {t}
               </span>
             ))}
           </div>
         </div>
-        <div className="relative z-10 space-y-1">
+
+        {/* The illustration owns the bottom-left. `mt-auto` pushes it down so it
+            sits on the footer rather than floating in the middle of the panel. */}
+        <div className="relative z-10 mt-auto -mb-1 w-full max-w-[31rem] xl:max-w-[35rem]">
+          <AssetOpsArt className="h-auto w-full" />
+        </div>
+
+        <div className="relative z-10 space-y-1 border-t border-white/10 pt-5">
           <p className="text-xs text-slate-400">
             Powered by <span className="font-semibold text-slate-300">Blue Cloud Softech Solutions Ltd.</span>
           </p>
-          <p className="text-xs text-slate-500">© 2026 Access Genie AI · ISO 27001 · SOC 2 · DPDP Act 2023</p>
+          <p className="text-xs text-slate-500">
+            © 2026 Access Genie AI · ISO 27001 · SOC 2 · DPDP Act 2023
+          </p>
         </div>
-        {/* subtle glow */}
-        <div className="absolute -top-24 -right-24 h-96 w-96 rounded-full bg-primary-500/20 blur-3xl" />
-        <div className="absolute -bottom-32 -left-16 h-96 w-96 rounded-full bg-primary-700/20 blur-3xl" />
       </div>
 
-      {/* Right: the auth card */}
-      <div className="flex flex-col items-center justify-center p-6 sm:p-10">
-        <div className="lg:hidden mb-8">
-          <img src="/access-genie-logo.png" alt="Access Genie" className="w-48 h-auto rounded-md mx-auto" />
+      {/* ── Right: the auth card ──────────────────────────────────────────── */}
+      <div className="flex flex-col items-center justify-center px-6 py-10 sm:px-10">
+        <div className="mb-8 lg:hidden">
+          <img src="/access-genie-logo.png" alt="Access Genie" className="mx-auto h-auto w-44 rounded-md" />
         </div>
+
         <div className="w-full max-w-sm">{children}</div>
-        <p className="mt-8 text-xs text-slate-400 text-center">
-          Need help? <Link to="/help" className="text-primary-600 hover:underline">Contact support</Link>
+
+        <p className="mt-8 text-center text-xs text-slate-400">
+          Need help?{' '}
+          <Link to="/help" className="font-medium text-primary-600 hover:underline">
+            Contact support
+          </Link>
         </p>
+
         <div className="mt-6 flex flex-col items-center gap-1.5">
-          <span className="text-[9px] uppercase tracking-wider text-slate-300 font-semibold">Powered by</span>
-          <img src="/bcss-logo.png" alt="Blue Cloud Softech Solutions Ltd." className="w-40 h-auto opacity-90" />
+          <span className="text-[9px] font-semibold uppercase tracking-wider text-slate-300">Powered by</span>
+          <img src="/bcss-logo.png" alt="Blue Cloud Softech Solutions Ltd." className="h-auto w-36 opacity-90" />
         </div>
       </div>
     </div>

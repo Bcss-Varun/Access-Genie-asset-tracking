@@ -79,7 +79,11 @@ const assetSchema = new Schema<AssetDoc>(
     _id: { type: String, required: true },
     name: { type: String, required: true, trim: true },
     category: { type: String, required: true, enum: ASSET_CATEGORIES, index: true },
-    serialNumber: { type: String, required: true, unique: true, trim: true },
+    // Always stored, empty when the asset has no serial. Uniqueness is
+    // enforced by the partial index at the foot of this file, not here: a
+    // plain `unique: true` would treat every empty serial as the same value
+    // and refuse all but the first asset that has none.
+    serialNumber: { type: String, trim: true, default: '' },
     status: { type: String, required: true, enum: ASSET_STATUSES, default: 'Active', index: true },
     healthScore: { type: Number, required: true, min: 0, max: 100, default: 100 },
     healthStatus: { type: String, required: true, enum: ASSET_HEALTHS, default: 'Good', index: true },
@@ -137,6 +141,26 @@ assetSchema.plugin(baseSchemaPlugin);
 assetSchema.index(
   { name: 'text', serialNumber: 'text', trackingId: 'text', manufacturer: 'text', model: 'text' },
   { name: 'asset_search', weights: { name: 10, serialNumber: 6, trackingId: 6, manufacturer: 2, model: 2 } },
+);
+/**
+ * Serial numbers are unique — among the assets that have one.
+ *
+ * `unique: true` on the field would treat every serial-less asset as holding
+ * the same value ('') and reject all but the first. This partial index covers
+ * only documents whose serial is a *non-empty* string — `$gt: ''` is how that
+ * is expressed, since every non-empty string sorts above the empty one — so any
+ * number of assets can have no serial while two still cannot share one.
+ *
+ * Changing this requires `npm run db:indexes` — `syncIndexes()` drops the old
+ * plain unique index and builds this one in its place.
+ */
+assetSchema.index(
+  { serialNumber: 1 },
+  {
+    name: 'serialNumber_present_unique',
+    unique: true,
+    partialFilterExpression: { serialNumber: { $type: 'string', $gt: '' } },
+  },
 );
 // Compound index for the registry's default view: filter by status/category,
 // sorted by health.

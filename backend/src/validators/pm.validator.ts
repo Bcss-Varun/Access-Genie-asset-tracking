@@ -1,6 +1,6 @@
 import { z } from 'zod';
 import { PM_FREQUENCIES, WORK_ORDER_TYPES } from '@access-genie/shared';
-import { isoDateString } from './common.js';
+import { isoDateString, partialUpdate } from './common.js';
 
 /**
  * A preventive schedule — the rule that says how often an asset needs work.
@@ -22,7 +22,7 @@ const pmFields = {
 
 export const createPmScheduleSchema = z.object(pmFields);
 /** `assetId` is omitted: moving a schedule between assets is a new schedule. */
-export const updatePmScheduleSchema = z.object(pmFields).omit({ assetId: true }).partial();
+export const updatePmScheduleSchema = partialUpdate(z.object(pmFields).omit({ assetId: true }));
 
 export type CreatePmScheduleInput = z.infer<typeof createPmScheduleSchema>;
 export type UpdatePmScheduleInput = z.infer<typeof updatePmScheduleSchema>;

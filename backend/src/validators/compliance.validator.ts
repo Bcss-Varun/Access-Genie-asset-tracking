@@ -5,7 +5,7 @@ import {
   INSPECTION_RESULTS,
   INSPECTION_STATUSES,
 } from '@access-genie/shared';
-import { isoDateString } from './common.js';
+import { isoDateString, partialUpdate } from './common.js';
 
 /**
  * Compliance records — inspections, certifications and cycle counts.
@@ -32,7 +32,7 @@ const inspectionFields = {
   items: z.array(inspectionItem).max(80).default([]),
 };
 export const createInspectionSchema = z.object(inspectionFields);
-export const updateInspectionSchema = z.object(inspectionFields).omit({ assetId: true }).partial();
+export const updateInspectionSchema = partialUpdate(z.object(inspectionFields).omit({ assetId: true }));
 
 const certificationFields = {
   assetId: z.string().trim().min(1),
@@ -44,7 +44,7 @@ const certificationFields = {
   status: z.enum(CERT_STATUSES).optional(),
 };
 export const createCertificationSchema = z.object(certificationFields);
-export const updateCertificationSchema = z.object(certificationFields).omit({ assetId: true }).partial();
+export const updateCertificationSchema = partialUpdate(z.object(certificationFields).omit({ assetId: true }));
 
 const cycleCountFields = {
   location: z.string().trim().min(2).max(120),
@@ -55,7 +55,7 @@ const cycleCountFields = {
   assignedTo: z.string().trim().min(2).max(120),
 };
 export const createCycleCountSchema = z.object(cycleCountFields);
-export const updateCycleCountSchema = z.object(cycleCountFields).partial();
+export const updateCycleCountSchema = partialUpdate(z.object(cycleCountFields));
 
 export type CreateInspectionInput = z.infer<typeof createInspectionSchema>;
 export type UpdateInspectionInput = z.infer<typeof updateInspectionSchema>;

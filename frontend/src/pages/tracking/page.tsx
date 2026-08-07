@@ -86,7 +86,23 @@ export default function LiveTrackingPage() {
   // ── Selection shared by the map, the list and the drawer ───────────────────
   const [selectedAsset, setSelectedAsset] = useState<string | null>(null);
   const [hovered, setHovered] = useState<string | null>(null);
-  const [mapSlug, setMapSlug] = useState(TRACKED_FACILITIES[0].slug);
+  /*
+   * Open on a facility that has something to show.
+   *
+   * This was `TRACKED_FACILITIES[0]`, which is simply the first one the API
+   * returns — alphabetical. Once sister-company sites joined the estate that
+   * became "Ahmedabad Depot", which carries no tracked assets, so the screen
+   * opened on an empty floor plan reading "0 of 0 on this plan" while 110
+   * assets sat in the three facilities further down the list. The busiest
+   * facility is the honest default: it is where someone watching a live map is
+   * most likely to be looking.
+   */
+  const [mapSlug, setMapSlug] = useState(() => {
+    const busiest = [...TRACKED_FACILITIES].sort(
+      (a, b) => presenceForFacility(b.slug).length - presenceForFacility(a.slug).length,
+    )[0];
+    return busiest?.slug ?? TRACKED_FACILITIES[0]?.slug ?? 'all';
+  });
   const rowRefs = useRef<Record<string, HTMLLIElement | null>>({});
 
   // ── Map view filters ───────────────────────────────────────────────────────

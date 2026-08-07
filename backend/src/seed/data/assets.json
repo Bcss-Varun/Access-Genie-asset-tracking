@@ -26,7 +26,7 @@
       "registeredAt": "2023-04-18T09:00:00.000Z",
       "registeredBy": "Priya Nair",
       "department": "Logistics",
-      "trackingIntent": "tagged",
+      "trackingIntent": "pending",
       "commercial": {
         "ownership": "Owned",
         "purchaseDate": "2023-04-18",
@@ -65,7 +65,7 @@
       "registeredAt": "2019-11-05T09:00:00.000Z",
       "registeredBy": "Priya Nair",
       "department": "Logistics",
-      "trackingIntent": "tagged",
+      "trackingIntent": "pending",
       "commercial": {
         "ownership": "Owned",
         "purchaseDate": "2019-11-05",
@@ -103,7 +103,7 @@
       "registeredAt": "2024-08-22T09:00:00.000Z",
       "registeredBy": "Priya Nair",
       "department": "Warehouse",
-      "trackingIntent": "tagged",
+      "trackingIntent": "pending",
       "commercial": {
         "ownership": "Owned",
         "purchaseDate": "2024-08-22",
@@ -140,7 +140,7 @@
       "registeredAt": "2018-02-14T09:00:00.000Z",
       "registeredBy": "Priya Nair",
       "department": "Facilities",
-      "trackingIntent": "none",
+      "trackingIntent": "not-tracked",
       "commercial": {
         "ownership": "Owned",
         "purchaseDate": "2018-02-14",
@@ -177,7 +177,7 @@
       "registeredAt": "2021-06-30T09:00:00.000Z",
       "registeredBy": "Arun Mehta",
       "department": "Projects",
-      "trackingIntent": "tagged",
+      "trackingIntent": "pending",
       "commercial": {
         "ownership": "Owned",
         "purchaseDate": "2021-06-30",
@@ -215,7 +215,7 @@
       "registeredAt": "2025-01-15T09:00:00.000Z",
       "registeredBy": "Arun Mehta",
       "department": "Projects",
-      "trackingIntent": "tagged",
+      "trackingIntent": "pending",
       "commercial": {
         "ownership": "Leased",
         "purchaseDate": "2025-01-15",

@@ -408,7 +408,7 @@ export default function AssetRegistryPage() {
                           {a.onboarding.state === 'Pending Approval' && <Badge tone="amber">Awaiting approval</Badge>}
                           {sessionIds.includes(a.id) && <Badge tone="emerald">New</Badge>}
                         </span>
-                        <div className="text-xs text-slate-400">{a.id} · SN {a.serialNumber}{a.trackingId ? ` · ${a.trackingId}` : ''}</div>
+                        <div className="text-xs text-slate-400">{a.id}{a.serialNumber ? ` · SN ${a.serialNumber}` : ''}{a.trackingId ? ` · ${a.trackingId}` : ''}</div>
                       </div>
                     </div>
                   </td>
