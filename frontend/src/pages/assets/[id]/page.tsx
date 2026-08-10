@@ -7,7 +7,7 @@ import {
   getInsightsForAsset,
   getDocsForAsset,
   getGroupsForAsset,
-  allAssetClasses,
+  getLifecycleHistoryForAsset,
 } from '@/lib/dataset';
 import type { Asset, ActivityEvent, AIInsight, AssetDoc } from '@access-genie/shared';
 import { PageHeader, Badge, EmptyState, Avatar } from '@/components/ui/primitives';
@@ -22,12 +22,14 @@ import { insightsApi } from '@/api/insights';
 import { documentsApi } from '@/api/documents';
 import { downloadCsv } from '@/api/configuration';
 import { UploadDocumentDialog } from '@/components/assets/UploadDocumentDialog';
-import { CustodyDialog, RetireDialog, TransferDialog } from '@/components/assets/AssetActionDialogs';
+import { CustodyDialog, TransferDialog } from '@/components/assets/AssetActionDialogs';
 import { ExplainDialog } from '@/components/assets/ExplainDialog';
+import { ChangeStageDialog } from '@/components/lifecycle/ChangeStageDialog';
+import { LifecycleTab } from '@/components/lifecycle/LifecycleTab';
 import { cn, formatMoney, formatDate, relTime, nowMs } from '@/lib/utils';
 
 /** Which modal is open. One key rather than five booleans that can disagree. */
-type DialogKey = 'custody' | 'transfer' | 'retire' | 'upload' | 'explain' | null;
+type DialogKey = 'custody' | 'transfer' | 'retire' | 'upload' | 'explain' | 'changeStage' | null;
 
 // ── token helpers ─────────────────────────────────────────────────────────────
 const healthHex = (score: number): string =>
@@ -90,7 +92,8 @@ const activityMeta = (t: string): { emoji: string; color: string } =>
           : t === 'Registration' ? { emoji: '🆕', color: '#10b981' }
             : t === 'Telemetry' ? { emoji: '📡', color: '#6366f1' }
               : t === 'Audit' ? { emoji: '🛡️', color: '#64748b' }
-                : { emoji: '🔍', color: '#94a3b8' };
+                : t === 'Lifecycle' ? { emoji: '🔀', color: '#0ea5e9' }
+                  : { emoji: '🔍', color: '#94a3b8' };
 
 const locationPath = (a: Asset): string =>
   [a.location.name, a.location.building, a.location.floor, a.location.zone]
@@ -269,6 +272,7 @@ function DimensionBar({ label, value }: { label: string; value: number }) {
 // ── tab registry ──────────────────────────────────────────────────────────────
 const TABS = [
   { k: 'overview', label: 'Overview' },
+  { k: 'lifecycle', label: 'Lifecycle' },
   { k: 'timeline', label: 'Timeline' },
   { k: 'tracking', label: 'Live Tracking' },
   { k: 'health', label: 'Health' },
@@ -437,8 +441,8 @@ export default function AssetProfilePage() {
   const activity = getActivityForAsset(id);
   const docs = getDocsForAsset(id);
   const groups = getGroupsForAsset(id);
+  const lifecycleHistory = getLifecycleHistoryForAsset(id);
   const trend = asset.healthTrend ?? [];
-  const taxonomyClass = allAssetClasses.find((c) => c.name === asset.category);
 
   const custodyEvents = activity.filter((e) => e.type === 'Custody' || e.type === 'Movement');
   const auditEvents = activity.filter((e) => e.type === 'Audit');
@@ -626,7 +630,7 @@ export default function AssetProfilePage() {
             <MenuItem onClick={() => { setDialog('transfer'); close(); }}>Transfer</MenuItem>
             <MenuItem onClick={() => { setDialog('custody'); close(); }}>Custody</MenuItem>
             <MenuItem onClick={() => { navigate(`/assets/labels?ids=${asset.id}`); close(); }}>Print Label</MenuItem>
-            <MenuItem onClick={() => { setDialog('retire'); close(); }}>Retire</MenuItem>
+            <MenuItem onClick={() => { setDialog('changeStage'); close(); }}>Change Stage</MenuItem>
           </>
         )}
       </Dropdown>
@@ -736,7 +740,6 @@ export default function AssetProfilePage() {
               <KV label="Tracking" value={asset.trackingTech} />
               <KV label="Tracking ID" value={asset.trackingId ? <span className="font-mono">{asset.trackingId}</span> : undefined} />
               <KV label="Lifecycle" value={asset.lifecycleStage} />
-              {taxonomyClass && <KV label="Class" value={`${taxonomyClass.icon} ${taxonomyClass.name}`} />}
             </dl>
             <div className="mt-4">
               <dt className="text-xs font-medium uppercase tracking-wide text-slate-500">Location</dt>
@@ -868,6 +871,9 @@ export default function AssetProfilePage() {
                   )}
                 </div>
               )}
+
+              {/* ── LIFECYCLE ──────────────────────────────────────────────── */}
+              {activeTab === 'lifecycle' && <LifecycleTab asset={asset} history={lifecycleHistory} />}
 
               {/* ── TIMELINE ───────────────────────────────────────────────── */}
               {activeTab === 'timeline' && (
@@ -1514,7 +1520,7 @@ export default function AssetProfilePage() {
 
       {dialog === 'custody' && <CustodyDialog asset={asset} onClose={closeDialog} />}
       {dialog === 'transfer' && <TransferDialog asset={asset} onClose={closeDialog} />}
-      {dialog === 'retire' && <RetireDialog asset={asset} onClose={closeDialog} />}
+      {dialog === 'changeStage' && <ChangeStageDialog mode="single" asset={asset} onClose={closeDialog} />}
       {dialog === 'upload' && <UploadDocumentDialog assetId={asset.id} onClose={closeDialog} />}
       {dialog === 'explain' && (
         <ExplainDialog

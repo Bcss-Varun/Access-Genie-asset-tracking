@@ -17,7 +17,6 @@ import {
   ApiKey,
   ApprovalWorkflow,
   Asset,
-  AssetClass,
   AssetDocument,
   AssetGroup,
   AssetJourney,
@@ -48,6 +47,7 @@ import {
   InventoryRoom,
   Invoice,
   LabelTemplate,
+  LifecycleTransition,
   MovementTrail,
   MovementTxn,
   Notification,
@@ -95,13 +95,13 @@ import {
 export type SeedModel = Model<any>;
 
 export const SEEDED_COLLECTIONS: SeedModel[] = [
-  Asset, AssetClass, AssetGroup, AssetDocument, MovementTrail,
+  Asset, AssetGroup, AssetDocument, MovementTrail,
   WorkOrder, PmSchedule, Inspection,
   Alert, AlertRule, Insight, AiModel, ForecastSeries, AnomalyEvent,
   Sensor, Gateway, Geofence, Zone,
   TrackedFacility, TrackedZone, CoverageCell,
   AssetPresence, AssetJourney, TrackingEvent,
-  TrackingAlert, Incident, AutomationRule,
+  TrackingAlert, Incident, AutomationRule, LifecycleTransition,
   InventoryRoom, Rack, AuditSession, InventoryException, UnknownDetection, MovementTxn,
   TrackingDevice, FirmwareCampaign,
   LabelTemplate, PrintDevice, PrintJob,

@@ -2,6 +2,7 @@ import type { CustodyAction } from '@access-genie/shared';
 import { Activity, Asset, CustodyRecord, type CustodyDoc } from '../models/index.js';
 import { nextId } from '../models/Counter.js';
 import { ApiError } from '../utils/ApiError.js';
+import { applyLifecycleTransition } from './lifecycle.service.js';
 
 /**
  * Check-in / check-out.
@@ -59,6 +60,17 @@ export async function recordCustody(input: CheckoutInput, actor: string): Promis
     actor,
     timestamp: at,
   });
+
+  // §6 Stage Automation: "Assigned to Employee → In Service". Only from the
+  // two stages that mean "nobody has it yet" — an asset already mid-repair or
+  // in transit is not yanked into service just because someone signed for it.
+  if (custodian !== 'Unassigned' && (asset.lifecycleStage === 'Available' || asset.lifecycleStage === 'Returned')) {
+    await applyLifecycleTransition(asset._id, 'Assigned / In Service', {
+      actor,
+      reason: `${input.action} — ${input.holder}`,
+      automated: true,
+    });
+  }
 
   return record.toJSON() as CustodyDoc;
 }

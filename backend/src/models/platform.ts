@@ -270,7 +270,7 @@ const poLineSchema = new Schema<ReceivedPoLineDoc>(
     description: { type: String, required: true },
     manufacturer: { type: String, default: '' },
     model: { type: String, default: '' },
-    classId: { type: String, required: true, ref: 'AssetClass' },
+    classId: { type: String, required: true },
     category: { type: String, required: true },
     unitCost: { type: Number, required: true, min: 0 },
     quantity: { type: Number, required: true, min: 1 },

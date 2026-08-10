@@ -1,16 +1,20 @@
 // ─────────────────────────────────────────────────────────────────────────────
 // Registry contract — the configuration and satellite records that hang off the
-// asset graph: classes, collections, documents, maintenance plans, model
-// metadata, reports, and the administration objects.
+// asset graph: collections, documents, maintenance plans, model metadata,
+// reports, and the administration objects.
+//
+// Asset classes used to live here. They were removed along with their
+// Administration screen and collection; asset *templates* (see registration.ts)
+// now carry the "what does this kind of asset need" decision.
 //
 // As with `domain.ts`, these are the *wire* shapes. The Mongoose models in
 // backend/src/models mirror them, exposing `id` (never `_id`) and ISO-8601 UTC
 // strings for every timestamp.
 // ─────────────────────────────────────────────────────────────────────────────
 
-import type { AssetCategory, Criticality, SensorKind, WorkOrderType } from './domain.js';
+import type { WorkOrderType } from './domain.js';
 
-// ── Asset classes & attribute schema ─────────────────────────────────────────
+// ── Attribute schema ─────────────────────────────────────────────────────────
 export const ATTRIBUTE_TYPES = ['text', 'number', 'select', 'date', 'boolean'] as const;
 export type AttributeType = (typeof ATTRIBUTE_TYPES)[number];
 
@@ -46,50 +50,6 @@ export const GATE_KEYS = [
   'monitored',
 ] as const;
 export type GateKey = (typeof GATE_KEYS)[number];
-
-/**
- * An asset class: the template that decides how every asset of that kind
- * behaves — which attributes it carries, whether it is expected to be tracked,
- * how it depreciates, and what must be true before it can be activated.
- *
- * `assetCount` is computed from the asset collection on read, never stored: a
- * denormalised count is a number that silently goes stale.
- */
-export interface AssetClass {
-  id: string;
-  name: string;
-  icon: string;
-  description: string;
-  /**
-   * Which of the five reporting categories assets of this class belong to.
-   *
-   * Declared rather than inferred from `name`. The registry filters, the
-   * dashboards and the charts all group by `Asset.category`, which is a closed
-   * enum; class names are free text. The seeded classes happened to be named
-   * exactly after the categories, so reading one off the other appeared to work
-   * — until someone created a class called "computer" and every registration in
-   * it was rejected as an invalid category.
-   */
-  category: AssetCategory;
-  parentId?: string;
-  attributes: AttributeDef[];
-  trackingExpected: boolean;
-  preferredTags: SensorKind[];
-  monitoringProfileId: string;
-  activationGates: GateKey[];
-  depreciationMethod: string;
-  usefulLifeYears: number;
-  pmPlan: string;
-  documentChecklist: DocType[];
-  defaultCriticality: Criticality;
-  /** Purchase price above which activation needs a second pair of eyes (INR). */
-  approvalThreshold: number;
-  /** Live count of assets in this class — derived, not persisted. */
-  assetCount?: number;
-}
-
-export type AssetClassCreateInput = Omit<AssetClass, 'id' | 'assetCount'>;
-export type AssetClassUpdateInput = Partial<AssetClassCreateInput>;
 
 // ── Collections ──────────────────────────────────────────────────────────────
 export const GROUP_TYPES = ['Group', 'Fleet', 'Kit'] as const;

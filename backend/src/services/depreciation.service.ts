@@ -1,12 +1,10 @@
 import {
-  DEFAULT_USEFUL_LIFE_YEARS,
   depreciationOn,
   portfolioValueSeries,
   type DepreciationInput,
   type DepreciationPoint,
   type DepreciationState,
 } from '@access-genie/shared';
-import { AssetClass } from '../models/index.js';
 
 /**
  * Depreciation, assembled from where this codebase actually keeps the inputs.
@@ -34,18 +32,20 @@ export interface ClassTerms {
   method: string;
 }
 
-/** Useful life and method per class, loaded once for a whole-estate pass. */
+/**
+ * Useful life and method per class.
+ *
+ * Asset classes were removed, so there are no class-level terms to load and this
+ * is always empty. It is kept rather than deleted because `depreciationFor` is
+ * built around the lookup missing: an asset falls back to its own
+ * `onboarding.commercial` terms, then to the module defaults. That fallback was
+ * always the common path — most assets never had class-level overrides — so
+ * removing the source changes which branch runs, not the arithmetic.
+ *
+ * If per-class financial terms return, this is the one function to reimplement.
+ */
 export async function loadClassTerms(): Promise<Map<string, ClassTerms>> {
-  const classes = await AssetClass.find().select('_id usefulLifeYears depreciationMethod').lean();
-  return new Map(
-    classes.map((c) => [
-      c._id,
-      {
-        usefulLifeYears: c.usefulLifeYears ?? DEFAULT_USEFUL_LIFE_YEARS,
-        method: c.depreciationMethod ?? 'Straight-line',
-      },
-    ]),
-  );
+  return new Map();
 }
 
 /** The embedded registration record, narrowed — it is stored loosely typed. */

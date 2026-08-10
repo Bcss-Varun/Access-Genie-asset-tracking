@@ -5,6 +5,7 @@ import { ApiError } from '../utils/ApiError.js';
 import { logger } from '../config/logger.js';
 import { consumeParts } from './inventory.service.js';
 import { markEstateChanged } from './derivation.scheduler.js';
+import { applyLifecycleTransition } from './lifecycle.service.js';
 import { csvFilter, escapeRegex, paginate, parsePagination } from '../utils/query.js';
 import type { CreateWorkOrderInput, UpdateWorkOrderInput, WorkOrderListQuery } from '../validators/workOrder.validator.js';
 
@@ -75,6 +76,17 @@ export async function createWorkOrder(input: CreateWorkOrderInput, actor: string
     actor,
     timestamp: new Date(),
   });
+
+  // §6 Stage Automation: "Maintenance Ticket Created → Maintenance". Only
+  // pulls an in-service asset out — one raised while the asset is still
+  // being received/commissioned doesn't jump the queue ahead of onboarding.
+  if (asset.lifecycleStage === 'Assigned / In Service') {
+    await applyLifecycleTransition(input.assetId, 'Maintenance', {
+      actor,
+      reason: `Work order ${id} raised: ${input.title}`,
+      automated: true,
+    });
+  }
 
   return workOrder.toObject();
 }
@@ -164,6 +176,26 @@ export async function changeWorkOrderStatus(
         workOrder: id,
         shortfalls: shortfalls.map((s) => `${s.sku} short by ${s.shortfall}`).join(', '),
       });
+    }
+  }
+
+  // §6 Stage Automation: "Maintenance Completed → In Service" — once this was
+  // the *last* open order against the asset. Closing one of three concurrent
+  // orders should not send the asset back into service still mid-repair.
+  if (status === 'Completed') {
+    const asset = await Asset.findById(workOrder.assetId).lean();
+    if (asset?.lifecycleStage === 'Maintenance') {
+      const stillOpen = await WorkOrder.countDocuments({
+        assetId: workOrder.assetId,
+        status: { $in: OPEN_WO_STATUSES },
+      });
+      if (stillOpen === 0) {
+        await applyLifecycleTransition(workOrder.assetId, 'Assigned / In Service', {
+          actor,
+          reason: `Work order ${id} completed`,
+          automated: true,
+        });
+      }
     }
   }
 

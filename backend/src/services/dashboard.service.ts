@@ -909,7 +909,10 @@ function buildLifecycle(assets: AssetRow[], classTerms: Map<string, ClassTerms>,
     const state = depreciationFor(a, classTerms, at);
     if (state?.fullyDepreciated) fullyDepreciated += 1;
     // Within a year of the end of its useful life, or already flagged for it.
-    if (a.lifecycleStage === 'EOL Planning' || (state && state.lifeUsed >= 1 - 1 / (state.usefulLifeYears || 1))) {
+    // `'EOL Planning'` was a pre-cutover board stage that no longer exists —
+    // see shared/src/domain.ts `LIFECYCLE_STAGES`; `Retired` is its nearest
+    // equivalent in the governed 10-stage vocabulary.
+    if (a.lifecycleStage === 'Retired' || (state && state.lifeUsed >= 1 - 1 / (state.usefulLifeYears || 1))) {
       endOfLife += 1;
     }
   }

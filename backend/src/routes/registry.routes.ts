@@ -1,6 +1,5 @@
 import { Router } from 'express';
 import { createResource } from '../controllers/resource.controller.js';
-import * as assetClassController from '../controllers/assetClass.controller.js';
 import {
   AnomalyEvent,
   AiModel,
@@ -46,7 +45,6 @@ import {
 } from '../validators/compliance.validator.js';
 import { createPmScheduleSchema, updatePmScheduleSchema } from '../validators/pm.validator.js';
 import { idParamSchema } from '../validators/common.js';
-import { createAssetClassSchema, updateAssetClassSchema } from '../validators/assetClass.validator.js';
 import { createReportSchema, updateReportSchema } from '../validators/platform.validator.js';
 
 /**
@@ -59,25 +57,6 @@ import { createReportSchema, updateReportSchema } from '../validators/platform.v
  * see a section cannot read its data either.
  */
 const router = Router();
-
-// ── Asset classes ────────────────────────────────────────────────────────────
-// Not a plain resource: reading one computes its live asset count, and writing
-// one is a configuration change that thousands of assets inherit.
-router.get('/asset-classes', requireModule('assets'), assetClassController.list);
-router.get('/asset-classes/:id', requireModule('assets'), validate({ params: idParamSchema }), assetClassController.getOne);
-router.post(
-  '/asset-classes',
-  requireModule('admin'),
-  validate({ body: createAssetClassSchema }),
-  assetClassController.create,
-);
-router.patch(
-  '/asset-classes/:id',
-  requireModule('admin'),
-  validate({ params: idParamSchema, body: updateAssetClassSchema }),
-  assetClassController.update,
-);
-router.delete('/asset-classes/:id', requireModule('admin'), validate({ params: idParamSchema }), assetClassController.remove);
 
 // ── Collections & documents ──────────────────────────────────────────────────
 const groups = createResource(AssetGroup, {

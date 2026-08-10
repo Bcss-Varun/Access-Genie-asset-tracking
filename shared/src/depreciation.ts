@@ -180,6 +180,49 @@ export function bookValueOn(input: DepreciationInput, at: Date | number = Date.n
 }
 
 /**
+ * Age bucket for the aging table — one place the boundaries live, so a
+ * dashboard and a register can't quietly draw the line between "1-3" and
+ * "3-5" years differently.
+ */
+export type AgeBucket = '<1' | '1-3' | '3-5' | '5-7' | '7+';
+
+export function ageBucket(years: number): AgeBucket {
+  if (years < 1) return '<1';
+  if (years < 3) return '1-3';
+  if (years < 5) return '3-5';
+  if (years < 7) return '5-7';
+  return '7+';
+}
+
+/**
+ * Estimated end-of-life date — `Asset` carries no such field, so this is
+ * arithmetic, not a stored value, on the same "no measurement needed" basis
+ * as `bookValueOn`: purchase (or commissioning) date plus the useful life
+ * that already governs the depreciation schedule. Callers must present this
+ * as an estimate — nothing in the model asserts an asset will actually be
+ * retired on this date.
+ */
+export function estimatedEolDate(input: DepreciationInput, at: Date | number = Date.now()): Date | null {
+  const state = depreciationOn(input, at);
+  if (!state) return null;
+
+  const start = toMs(input.commissionDate) ?? toMs(input.purchaseDate);
+  if (start === null) return null;
+
+  return new Date(start + state.usefulLifeYears * DAYS_PER_YEAR * DAY);
+}
+
+/**
+ * "Near EOL" — within the last year of useful life. The same threshold
+ * `dashboard.service.ts`'s lifecycle widget already uses
+ * (`lifeUsed >= 1 - 1/usefulLifeYears`), reproduced here so a second caller
+ * of this module can't drift onto a different definition of "near".
+ */
+export function isNearEol(state: Pick<DepreciationState, 'lifeUsed' | 'usefulLifeYears'>): boolean {
+  return state.lifeUsed >= 1 - 1 / (state.usefulLifeYears || 1);
+}
+
+/**
  * The year-by-year schedule, for the per-asset commercial panel.
  *
  * Each row closes where the next opens, so the column adds up — a schedule

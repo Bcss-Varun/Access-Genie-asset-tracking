@@ -29,7 +29,6 @@ import type {
   ReportSubscription,
   OrgSettings,
   Asset,
-  AssetClass,
   AssetDoc,
   AssetGroup,
   AuditRecord,
@@ -41,6 +40,7 @@ import type {
   Geofence,
   Inspection,
   Integration,
+  LifecycleTransition,
   MapZone,
   MovementTrail,
   Notification,
@@ -86,16 +86,15 @@ import type {
 } from '@access-genie/shared';
 
 import { hydrateDirectory } from './rbac';
-import { hydrateClassLibrary } from './class-library';
 
 /** The wire shape of `GET /dataset`. */
 export interface Dataset {
   assets: Asset[];
-  assetClasses: AssetClass[];
   groups: AssetGroup[];
   documents: AssetDoc[];
   activity: ActivityEvent[];
   custody: CustodyRecord[];
+  lifecycleTransitions: LifecycleTransition[];
   workOrders: WorkOrder[];
   pmSchedules: PmSchedule[];
   inspections: Inspection[];
@@ -156,11 +155,11 @@ export interface Dataset {
 
 // ── Collections ──────────────────────────────────────────────────────────────
 export let allAssets: Asset[] = [];
-export let allAssetClasses: AssetClass[] = [];
 export let allGroups: AssetGroup[] = [];
 export let allDocs: AssetDoc[] = [];
 export let allActivity: ActivityEvent[] = [];
 export let allCustody: CustodyRecord[] = [];
+export let allLifecycleTransitions: LifecycleTransition[] = [];
 export let allWorkOrders: WorkOrder[] = [];
 export let allPmSchedules: PmSchedule[] = [];
 export let allInspections: Inspection[] = [];
@@ -245,11 +244,11 @@ export let isHydrated = false;
 /** Replace the dataset. Called once per fetch, from the query function. */
 export function hydrate(next: Dataset): void {
   allAssets = next.assets ?? [];
-  allAssetClasses = next.assetClasses ?? [];
   allGroups = next.groups ?? [];
   allDocs = next.documents ?? [];
   allActivity = next.activity ?? [];
   allCustody = next.custody ?? [];
+  allLifecycleTransitions = next.lifecycleTransitions ?? [];
   allWorkOrders = next.workOrders ?? [];
   allPmSchedules = next.pmSchedules ?? [];
   allInspections = next.inspections ?? [];
@@ -303,7 +302,6 @@ export function hydrate(next: Dataset): void {
   // The directory lives in rbac.ts, next to the role matrix it is read with;
   // the class library keeps its own editable projection of the classes.
   hydrateDirectory(next.users ?? [], next.scopeTree ?? null);
-  hydrateClassLibrary();
   observedAt = next.observedAt ?? new Date().toISOString();
   isHydrated = true;
 }
@@ -322,7 +320,6 @@ export const getActivityForAsset = (assetId: string): ActivityEvent[] =>
 export const getInsightsForAsset = (assetId: string): AIInsight[] =>
   allInsights.filter((ins) => ins.assetId === assetId);
 
-export const getAssetClass = (id: string): AssetClass | undefined => allAssetClasses.find((c) => c.id === id);
 
 export const getGroupsForAsset = (assetId: string): AssetGroup[] =>
   allGroups.filter((g) => g.memberIds.includes(assetId));
@@ -333,6 +330,11 @@ export const getCustodyForAsset = (assetId: string): CustodyRecord[] =>
   allCustody
     .filter((c) => c.assetId === assetId)
     .sort((a, b) => Date.parse(b.at) - Date.parse(a.at));
+
+export const getLifecycleHistoryForAsset = (assetId: string): LifecycleTransition[] =>
+  allLifecycleTransitions
+    .filter((t) => t.assetId === assetId)
+    .sort((a, b) => Date.parse(b.requestedAt) - Date.parse(a.requestedAt));
 
 export const getGateway = (id: string): Gateway | undefined => allGateways.find((g) => g.id === id);
 export const getSensor = (id: string): Sensor | undefined => allSensors.find((s) => s.id === id);

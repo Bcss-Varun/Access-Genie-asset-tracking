@@ -1,0 +1,329 @@
+{
+  "ranAt": "2026-08-07T13:56:07.240Z",
+  "summary": {
+    "total": 29,
+    "pass": 27,
+    "fail": 2
+  },
+  "results": [
+    {
+      "id": "AM-UI-001",
+      "feature": "Login page renders with the sign-in form",
+      "type": "UI",
+      "priority": "P0",
+      "severity": "—",
+      "expected": "\"Sign in\" heading and email/password inputs visible",
+      "actual": "rendered=true",
+      "status": "PASS",
+      "evidence": "evidence/01-login.png"
+    },
+    {
+      "id": "AM-UI-002",
+      "feature": "Valid credentials sign in and land on the workspace",
+      "type": "Functional",
+      "priority": "P0",
+      "severity": "—",
+      "expected": "Navigates away from /auth/login into the app shell",
+      "actual": "url=/ loggedIn=true",
+      "status": "PASS",
+      "evidence": "evidence/02-after-login.png"
+    },
+    {
+      "id": "AM-UI-010",
+      "feature": "Asset Registry page renders its header and toolbar",
+      "type": "UI",
+      "priority": "P0",
+      "severity": "—",
+      "expected": "\"Asset Registry\" title, Export CSV and + Add Asset actions",
+      "actual": "title=true export=true add=true",
+      "status": "PASS",
+      "evidence": "evidence/03-registry-empty.png"
+    },
+    {
+      "id": "AM-UX-001",
+      "feature": "Registry shows triage lens chips with live queue counts",
+      "type": "UX",
+      "priority": "P1",
+      "severity": "—",
+      "expected": "All Assets + the exception queues rendered as filter chips",
+      "actual": "chips present: [\"All Assets\",\"Setup incomplete\",\"Untracked\",\"Unassigned\",\"Needs attention\"]",
+      "status": "PASS",
+      "evidence": "evidence/03-registry-empty.png"
+    },
+    {
+      "id": "AM-UI-011",
+      "feature": "Registry page loads with no console errors",
+      "type": "UI",
+      "priority": "P0",
+      "severity": "—",
+      "expected": "0 console errors / uncaught exceptions",
+      "actual": "0 errors",
+      "status": "PASS",
+      "evidence": null
+    },
+    {
+      "id": "AM-API-060",
+      "feature": "Registry page issues no failing API calls",
+      "type": "API",
+      "priority": "P0",
+      "severity": "—",
+      "expected": "no /api/ response with status >= 400",
+      "actual": "none",
+      "status": "PASS",
+      "evidence": null
+    },
+    {
+      "id": "AM-PERF-010",
+      "feature": "Workspace becomes interactive within 3 s on an empty estate",
+      "type": "Performance",
+      "priority": "P1",
+      "severity": "High",
+      "expected": "< 3000 ms from navigation to the registry being usable",
+      "actual": "4994 ms (blocked behind GET /dataset)",
+      "status": "FAIL",
+      "evidence": null
+    },
+    {
+      "id": "AM-UI-020",
+      "feature": "/assets/new renders the registration surface",
+      "type": "UI",
+      "priority": "P0",
+      "severity": "—",
+      "expected": "A form or source picker appears",
+      "actual": "Skip to content / 📊 / Dashboard / ▾ / 🗺️ / Asset Tracking / ▾ / ✨ / AI Asset Intelligence / ▾ / 🪪 / Asset Management / ▾ / IT Asset Registry / Add Asset / Asset Templates / Label ",
+      "status": "PASS",
+      "evidence": "evidence/04-add-asset.png"
+    },
+    {
+      "id": "AM-UI-021",
+      "feature": "/assets/new loads with no console errors",
+      "type": "UI",
+      "priority": "P0",
+      "severity": "—",
+      "expected": "0 console errors",
+      "actual": "0 errors",
+      "status": "PASS",
+      "evidence": null
+    },
+    {
+      "id": "AM-A11Y-001",
+      "feature": "Form inputs are programmatically labelled",
+      "type": "Accessibility",
+      "priority": "P1",
+      "severity": "—",
+      "expected": "every input has a <label for>, aria-label or wrapping label",
+      "actual": "0/0 labelled; unlabelled: []",
+      "status": "PASS",
+      "evidence": null
+    },
+    {
+      "id": "AM-UI-030",
+      "feature": "API-created asset with no onboarding record renders in the registry",
+      "type": "Functional",
+      "priority": "P0",
+      "severity": "—",
+      "expected": "Row appears; page does not crash on the optional onboarding field",
+      "actual": "visible=true errors=0",
+      "status": "PASS",
+      "evidence": "evidence/05-registry-with-assets.png"
+    },
+    {
+      "id": "AM-SEC-020",
+      "feature": "Script payload in an asset name does not execute (stored XSS)",
+      "type": "Security",
+      "priority": "P0",
+      "severity": "—",
+      "expected": "window.__xss undefined — React escapes the name as text",
+      "actual": "xssExecuted=false",
+      "status": "PASS",
+      "evidence": "evidence/05-registry-with-assets.png"
+    },
+    {
+      "id": "AM-UI-031",
+      "feature": "Registry with data loads with no console errors",
+      "type": "UI",
+      "priority": "P0",
+      "severity": "—",
+      "expected": "0 console errors",
+      "actual": "0 errors",
+      "status": "PASS",
+      "evidence": null
+    },
+    {
+      "id": "AM-UI-040",
+      "feature": "Registry search narrows the table to matching rows",
+      "type": "Functional",
+      "priority": "P1",
+      "severity": "—",
+      "expected": "Matching asset visible; non-matching hidden",
+      "actual": "minimalVisible=true",
+      "status": "PASS",
+      "evidence": "evidence/06-search-filter.png"
+    },
+    {
+      "id": "AM-UX-002",
+      "feature": "Search with no matches shows a no-results state with a way out",
+      "type": "UX",
+      "priority": "P1",
+      "severity": "—",
+      "expected": "\"No assets match your filters\" plus a Clear filters action",
+      "actual": "noResults=true clearAction=true",
+      "status": "PASS",
+      "evidence": "evidence/07-search-no-results.png"
+    },
+    {
+      "id": "AM-UX-003",
+      "feature": "Filter state is reflected in the URL (shareable view)",
+      "type": "UX",
+      "priority": "P2",
+      "severity": "—",
+      "expected": "?q=QA present in the query string",
+      "actual": "search=?q=QA",
+      "status": "PASS",
+      "evidence": null
+    },
+    {
+      "id": "AM-UI-050",
+      "feature": "Asset 360 detail page opens for a minimal asset",
+      "type": "Functional",
+      "priority": "P0",
+      "severity": "—",
+      "expected": "Asset name shown; no crash on absent onboarding/telemetry",
+      "actual": "nameShown=true errors=0 first=",
+      "status": "PASS",
+      "evidence": "evidence/08-asset-360.png"
+    },
+    {
+      "id": "AM-NEG-010",
+      "feature": "Unknown asset id shows a not-found state, not a blank page",
+      "type": "Negative",
+      "priority": "P1",
+      "severity": "—",
+      "expected": "A \"not found\" message with a way back",
+      "actual": "text=Skip to content / 📊 / Dashboard / ▾ / 🗺️ / Asset Tracking / ▾ / ✨ / AI Asset Intelligence / ▾ / 🪪 / Asset Management / ▾ / IT Asset Registry / Ad errors=0",
+      "status": "PASS",
+      "evidence": "evidence/09-asset-404.png"
+    },
+    {
+      "id": "AM-RSP-001",
+      "feature": "Registry at mobile 390×844 does not scroll horizontally",
+      "type": "Responsive",
+      "priority": "P2",
+      "severity": "—",
+      "expected": "document scrollWidth <= viewport width",
+      "actual": "scrollWidth=390 viewport=390",
+      "status": "PASS",
+      "evidence": "evidence/10-responsive-390.png"
+    },
+    {
+      "id": "AM-RSP-002",
+      "feature": "Registry at tablet 768×1024 does not scroll horizontally",
+      "type": "Responsive",
+      "priority": "P2",
+      "severity": "—",
+      "expected": "document scrollWidth <= viewport width",
+      "actual": "scrollWidth=768 viewport=768",
+      "status": "PASS",
+      "evidence": "evidence/10-responsive-768.png"
+    },
+    {
+      "id": "AM-RSP-003",
+      "feature": "Registry at desktop 1440×900 does not scroll horizontally",
+      "type": "Responsive",
+      "priority": "P2",
+      "severity": "—",
+      "expected": "document scrollWidth <= viewport width",
+      "actual": "scrollWidth=1440 viewport=1440",
+      "status": "PASS",
+      "evidence": "evidence/10-responsive-1440.png"
+    },
+    {
+      "id": "AM-A11Y-002",
+      "feature": "All images carry an alt attribute",
+      "type": "Accessibility",
+      "priority": "P2",
+      "severity": "—",
+      "expected": "0 images without alt",
+      "actual": "0 of 2 missing alt",
+      "status": "PASS",
+      "evidence": null
+    },
+    {
+      "id": "AM-A11Y-003",
+      "feature": "Icon-only buttons expose an accessible name",
+      "type": "Accessibility",
+      "priority": "P1",
+      "severity": "—",
+      "expected": "0 buttons without text, aria-label or title",
+      "actual": "0 of 33 buttons unnamed",
+      "status": "PASS",
+      "evidence": null
+    },
+    {
+      "id": "AM-A11Y-004",
+      "feature": "Row-selection checkboxes are labelled for screen readers",
+      "type": "Accessibility",
+      "priority": "P1",
+      "severity": "—",
+      "expected": "0 unlabelled checkboxes",
+      "actual": "0 of 5 checkboxes unlabelled",
+      "status": "PASS",
+      "evidence": null
+    },
+    {
+      "id": "AM-A11Y-005",
+      "feature": "Page exposes exactly one H1 landmark",
+      "type": "Accessibility",
+      "priority": "P2",
+      "severity": "—",
+      "expected": "exactly 1 <h1>",
+      "actual": "1 h1 elements",
+      "status": "PASS",
+      "evidence": null
+    },
+    {
+      "id": "AM-A11Y-006",
+      "feature": "Data table uses <th> header cells",
+      "type": "Accessibility",
+      "priority": "P2",
+      "severity": "—",
+      "expected": "every table has header cells",
+      "actual": "0 of 1 tables without <th>",
+      "status": "PASS",
+      "evidence": null
+    },
+    {
+      "id": "AM-A11Y-007",
+      "feature": "Registry exposes keyboard-focusable controls",
+      "type": "Accessibility",
+      "priority": "P2",
+      "severity": "—",
+      "expected": "> 5 focusable elements",
+      "actual": "68 focusable",
+      "status": "PASS",
+      "evidence": null
+    },
+    {
+      "id": "AM-A11Y-008",
+      "feature": "Sortable column headers are keyboard operable",
+      "type": "Accessibility",
+      "priority": "P2",
+      "severity": "Medium",
+      "expected": "every clickable header is focusable (tabindex/button/role)",
+      "actual": "0 of 4 sortable headers keyboard-reachable",
+      "status": "FAIL",
+      "evidence": null
+    },
+    {
+      "id": "AM-PERM-001",
+      "feature": "Assets route is guarded when the session is cleared",
+      "type": "Permission",
+      "priority": "P0",
+      "severity": "—",
+      "expected": "Redirect to /auth/login, or an explicit signed-out state — never the registry with data",
+      "actual": "path=/login showsRegistryRows=false",
+      "status": "PASS",
+      "evidence": "evidence/11-unauthenticated-assets.png"
+    }
+  ]
+}

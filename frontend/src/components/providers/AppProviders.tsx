@@ -2,7 +2,6 @@ import type { ReactNode } from 'react';
 import { ScopeProvider } from './ScopeProvider';
 import { CommandProvider } from './CommandProvider';
 import { MobileNavProvider } from './MobileNavProvider';
-import { ClassLibraryProvider } from './ClassLibraryProvider';
 import { RegistryProvider } from './RegistryProvider';
 import { SavedViewsProvider } from './SavedViewsProvider';
 
@@ -20,7 +19,6 @@ import { SavedViewsProvider } from './SavedViewsProvider';
 export function AppProviders({ children }: { children: ReactNode }) {
   return (
     <ScopeProvider>
-      <ClassLibraryProvider>
         <RegistryProvider>
           <SavedViewsProvider>
             <CommandProvider>
@@ -28,7 +26,6 @@ export function AppProviders({ children }: { children: ReactNode }) {
             </CommandProvider>
           </SavedViewsProvider>
         </RegistryProvider>
-      </ClassLibraryProvider>
     </ScopeProvider>
   );
 }
