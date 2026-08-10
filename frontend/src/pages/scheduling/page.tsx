@@ -1,15 +1,21 @@
 import { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { allWorkOrders } from '@/lib/dataset';
+import { allWorkOrders, getAssetById } from '@/lib/dataset';
 import { maintenanceApi } from '@/api/work-orders';
 import { useMutate } from '@/api/mutate';
-import { PageHeader, KpiCard, Avatar, Badge } from '@/components/ui/primitives';
+import { PageHeader, KpiCard, Avatar, Badge, EmptyState } from '@/components/ui/primitives';
+import { Select } from '@/components/ui/FormDialog';
 import { Dropdown, MenuItem } from '@/components/ui/Dropdown';
-import { cn } from '@/lib/utils';
+import { cn, relTime } from '@/lib/utils';
+import { techniciansWithLiveState, TECH_STATUS_TONE, SKILLS, ROSTER, type LiveTechnician, type TechnicianStatus } from '@/lib/technicians';
 import type { WorkOrder, WorkOrderPriority } from '@access-genie/shared';
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Static config (module scope → stable identity)
+// Scheduling & Dispatch — "which technician should do this work?" Unassigned
+// work on the left, the roster (skills, availability, current load) on the
+// right. Assigning a work order writes `assignedTo`, the same field My Work
+// and Workforce Overview already read, so the change shows up everywhere the
+// moment the dataset refreshes.
 // ─────────────────────────────────────────────────────────────────────────────
 
 const UNASSIGNED = 'Unassigned';
@@ -23,13 +29,6 @@ const PRIORITY_DOT: Record<WorkOrderPriority, string> = {
   Low: 'bg-slate-400',
 };
 
-/** Initials for the roster avatars (handles single-word team names too). */
-function initials(name: string): string {
-  const parts = name.replace(/[^A-Za-z ]/g, '').trim().split(/\s+/);
-  return ((parts[0]?.[0] ?? '') + (parts[1]?.[0] ?? '')).toUpperCase() || '—';
-}
-
-/** Load → traffic-light tone once summed hours are compared to capacity. */
 function loadTone(pct: number): { bar: string; text: string; label: string } {
   if (pct > 100) return { bar: 'bg-health-critical', text: 'text-health-critical', label: 'Overloaded' };
   if (pct >= 75) return { bar: 'bg-amber-500', text: 'text-amber-600', label: 'Near capacity' };
@@ -38,39 +37,24 @@ function loadTone(pct: number): { bar: string; text: string; label: string } {
 
 const isOpen = (w: WorkOrder) => w.status !== 'Completed';
 
-// ─────────────────────────────────────────────────────────────────────────────
-
 export default function SchedulingPage() {
   const { run } = useMutate();
+  const [workOrders, setWorkOrders] = useState<WorkOrder[]>(() => allWorkOrders.map((w) => ({ ...w })));
 
-  // Seeded from the dataset. Reassignment updates this copy immediately and
-  // persists behind it, so dragging through a morning's queue stays responsive.
-  const [workOrders, setWorkOrders] = useState<WorkOrder[]>(() =>
-    allWorkOrders.map((w) => ({ ...w })),
-  );
+  const [skillFilter, setSkillFilter] = useState('All');
+  const [facilityFilter, setFacilityFilter] = useState('All');
+  const [availabilityFilter, setAvailabilityFilter] = useState<'All' | TechnicianStatus>('All');
+  const [priorityFilter, setPriorityFilter] = useState('All');
 
-  // Stable technician roster = distinct assignees from the ORIGINAL data (so a
-  // column never disappears just because its last WO was reassigned away).
-  const roster = useMemo<string[]>(() => {
-    const set = new Set<string>();
-    for (const w of allWorkOrders) {
-      if (w.assignedTo && w.assignedTo !== UNASSIGNED) set.add(w.assignedTo);
-    }
-    return [...set].sort((a, b) => a.localeCompare(b));
-  }, []);
+  const facilities = useMemo(() => [...new Set(ROSTER.map((t) => t.homeFacility))].sort((a, b) => a.localeCompare(b)), []);
+  const technicians = useMemo(() => techniciansWithLiveState(workOrders), [workOrders]);
 
-  // ── Reassignment ────────────────────────────────────────────────────────────
-  // Assigning a new work order also moves it out of `New`: a job with a named
-  // technician is no longer unclaimed, and leaving the status behind is how the
-  // "unassigned" queue ends up disagreeing with the board.
   async function assign(woId: string, tech: string) {
     const previous = workOrders;
     const status = workOrders.find((w) => w.id === woId)?.status;
     const nextStatus = status === 'New' ? 'Assigned' : status;
 
-    setWorkOrders((prev) =>
-      prev.map((w) => (w.id === woId ? { ...w, assignedTo: tech, status: nextStatus ?? w.status } : w)),
-    );
+    setWorkOrders((prev) => prev.map((w) => (w.id === woId ? { ...w, assignedTo: tech, status: nextStatus ?? w.status } : w)));
 
     await run(maintenanceApi.update(woId, { assignedTo: tech, status: nextStatus }), {
       success: 'Work order assigned',
@@ -80,128 +64,101 @@ export default function SchedulingPage() {
     });
   }
 
-  // ── Derived data ─────────────────────────────────────────────────────────────
   const openWos = workOrders.filter(isOpen);
-  const unassigned = openWos.filter((w) => w.assignedTo === UNASSIGNED);
+  const unassigned = openWos
+    .filter((w) => w.assignedTo === UNASSIGNED)
+    .filter((w) => priorityFilter === 'All' || w.priority === priorityFilter)
+    .filter((w) => facilityFilter === 'All' || getAssetById(w.assetId)?.location?.name === facilityFilter)
+    .sort((a, b) => Date.parse(a.dueDate) - Date.parse(b.dueDate));
 
-  const perTech = roster.map((tech) => {
-    const wos = openWos.filter((w) => w.assignedTo === tech);
-    const hours = wos.reduce((sum, w) => sum + w.estimatedHours, 0);
-    const loadPct = Math.round((hours / DAY_CAPACITY) * 100);
-    return { tech, wos, hours, loadPct };
-  });
+  const filteredTechs = technicians
+    .filter((t) => skillFilter === 'All' || t.skills.includes(skillFilter as (typeof SKILLS)[number]))
+    .filter((t) => facilityFilter === 'All' || t.homeFacility === facilityFilter || t.currentFacility === facilityFilter)
+    .filter((t) => availabilityFilter === 'All' || t.status === availabilityFilter);
 
-  const avgLoad =
-    perTech.length === 0
-      ? 0
-      : Math.round(perTech.reduce((s, t) => s + t.loadPct, 0) / perTech.length);
+  const activeTechnicians = technicians.filter((t) => t.status !== 'Offline').length;
+  const avgLoad = technicians.length === 0 ? 0 : Math.round(technicians.reduce((s, t) => s + (t.workloadHours / DAY_CAPACITY) * 100, 0) / technicians.length);
 
-  const kpis = [
-    { label: 'Technicians', value: roster.length, sub: 'Active roster', tone: 'primary' as const, accent: true },
-    { label: 'Open Work Orders', value: openWos.length, sub: `${workOrders.length} total`, tone: 'slate' as const, accent: false },
-    {
-      label: 'Unassigned',
-      value: unassigned.length,
-      sub: unassigned.length > 0 ? 'Awaiting dispatch' : 'All dispatched',
-      tone: (unassigned.length > 0 ? 'amber' : 'emerald') as 'amber' | 'emerald',
-      accent: false,
-    },
-    {
-      label: 'Avg Load',
-      value: `${avgLoad}%`,
-      sub: 'Across roster',
-      tone: loadTone(avgLoad).text.includes('critical')
-        ? ('red' as const)
-        : avgLoad >= 75
-        ? ('amber' as const)
-        : ('emerald' as const),
-      accent: false,
-    },
-  ];
-
-  // ── Render ─────────────────────────────────────────────────────────────────
   return (
     <div className="h-full flex flex-col space-y-6">
       <PageHeader
-        title="Technician Scheduling"
-        subtitle="Dispatch board — balance open work orders across the technician roster."
-        breadcrumb={[
-          { label: 'Maintenance', href: '/maintenance' },
-          { label: 'Technician Scheduling' },
-        ]}
+        title="Scheduling & Dispatch"
+        subtitle="Assign open work to the right technician, balanced against skill, facility and current load."
+        breadcrumb={[{ label: 'Mobile Workforce', href: '/workforce' }, { label: 'Scheduling & Dispatch' }]}
       />
 
-      {/* KPI row */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        {kpis.map((k) => (
-          <KpiCard key={k.label} label={k.label} value={k.value} sub={k.sub} tone={k.tone} accent={k.accent} />
-        ))}
+        <KpiCard label="Active Technicians" value={activeTechnicians} sub={`${technicians.length} on roster`} accent />
+        <KpiCard label="Open Work Orders" value={openWos.length} sub={`${workOrders.length} total`} />
+        <KpiCard
+          label="Unassigned"
+          value={unassigned.length}
+          sub={unassigned.length > 0 ? 'Awaiting dispatch' : 'All dispatched'}
+          tone={unassigned.length > 0 ? 'amber' : 'emerald'}
+        />
+        <KpiCard label="Average Workload" value={`${avgLoad}%`} sub="Across roster" tone={avgLoad >= 100 ? 'red' : avgLoad >= 75 ? 'amber' : 'emerald'} />
       </div>
 
-      {/* Board */}
-      <div className="flex-1 min-h-0 overflow-x-auto pb-1">
-        <div className="flex gap-4 h-full items-stretch">
-          {/* Unassigned column */}
-          <section className="w-72 shrink-0 flex flex-col rounded-xl border border-dashed border-amber-300 bg-amber-50/40">
-            <header className="flex items-center justify-between px-4 py-3 border-b border-amber-200">
-              <div className="flex items-center gap-2">
-                <span className="text-sm font-semibold text-slate-800">Unassigned</span>
-              </div>
-              <span className="text-xs font-semibold text-amber-700 bg-amber-100 rounded-full px-2 py-0.5">
-                {unassigned.length}
-              </span>
-            </header>
-            <div className="flex-1 overflow-y-auto p-2.5 space-y-2.5">
-              {unassigned.length === 0 ? (
-                <div className="text-xs text-slate-400 text-center py-10">
-                  Everything is dispatched — no queue.
-                </div>
-              ) : (
-                unassigned.map((w) => (
-                  <div key={w.id} className="rounded-lg bg-white border border-slate-200 p-3 shadow-sm">
+      <div className="glass-panel rounded-xl p-3 flex flex-wrap items-center gap-2">
+        <span className="text-xs font-semibold uppercase tracking-wider text-slate-400 px-1">Filter</span>
+        <Select value={skillFilter} onChange={(e) => setSkillFilter(e.target.value)} className="!w-auto" options={[{ value: 'All', label: 'All skills' }, ...SKILLS.map((s) => ({ value: s, label: s }))]} />
+        <Select value={facilityFilter} onChange={(e) => setFacilityFilter(e.target.value)} className="!w-auto" options={[{ value: 'All', label: 'All facilities' }, ...facilities.map((f) => ({ value: f, label: f }))]} />
+        <Select
+          value={availabilityFilter}
+          onChange={(e) => setAvailabilityFilter(e.target.value as typeof availabilityFilter)}
+          className="!w-auto"
+          options={[{ value: 'All', label: 'Any availability' }, ...(['Available', 'Assigned', 'En Route', 'On Site', 'On Job', 'Waiting', 'Offline'] as TechnicianStatus[]).map((s) => ({ value: s, label: s }))]}
+        />
+        <Select value={priorityFilter} onChange={(e) => setPriorityFilter(e.target.value)} className="!w-auto" options={[{ value: 'All', label: 'All priorities' }, ...['Critical', 'High', 'Medium', 'Low'].map((p) => ({ value: p, label: p }))]} />
+      </div>
+
+      {/* Two-panel dispatch layout */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 flex-1 min-h-0">
+        {/* LEFT / MAIN — unassigned work orders */}
+        <div className="lg:col-span-2 glass-panel rounded-xl overflow-hidden flex flex-col">
+          <div className="px-6 py-4 border-b border-slate-200 flex items-center justify-between">
+            <h2 className="text-base font-heading font-semibold text-slate-900">Unassigned Work Orders</h2>
+            <Badge tone={unassigned.length > 0 ? 'amber' : 'emerald'}>{unassigned.length}</Badge>
+          </div>
+          <div className="flex-1 overflow-y-auto p-3 space-y-2.5">
+            {unassigned.length === 0 ? (
+              <EmptyState icon="✅" title="Everything is dispatched" description="No unassigned work matches these filters." />
+            ) : (
+              unassigned.map((w) => {
+                const asset = getAssetById(w.assetId);
+                return (
+                  <div key={w.id} className="rounded-lg bg-white border border-slate-200 p-3.5 shadow-sm">
                     <div className="flex items-center gap-2">
                       <span className={cn('h-2 w-2 rounded-full shrink-0', PRIORITY_DOT[w.priority])} />
-                      <Link
-                        to={`/maintenance/${w.id}`}
-                        className="font-mono text-[11px] text-slate-500 hover:text-primary-600 transition-colors"
-                      >
-                        {w.id}
-                      </Link>
+                      <Link to={`/maintenance/${w.id}`} className="font-mono text-[11px] text-slate-500 hover:text-primary-600 transition-colors">{w.id}</Link>
+                      <Badge tone={w.priority === 'Critical' ? 'red' : w.priority === 'High' ? 'amber' : 'slate'}>{w.priority}</Badge>
                       <span className="ml-auto text-[11px] text-slate-400">{w.estimatedHours}h</span>
                     </div>
-                    <h4 className="mt-1.5 text-sm font-medium text-slate-800 leading-snug line-clamp-2">
-                      {w.title}
-                    </h4>
-                    <p className="mt-1 text-xs text-slate-500 truncate">{w.assetName}</p>
+                    <h4 className="mt-1.5 text-sm font-medium text-slate-800 leading-snug">{w.title}</h4>
+                    <p className="mt-1 text-xs text-slate-500">{w.assetName} · {asset?.location?.name ?? 'Unassigned location'}</p>
                     <div className="mt-2.5 flex items-center justify-between">
-                      <Badge tone={w.priority === 'Critical' ? 'red' : w.priority === 'High' ? 'amber' : 'slate'}>
-                        {w.priority}
-                      </Badge>
+                      <span className="text-[11px] text-slate-400">due {relTime(w.dueDate)}</span>
                       <Dropdown
                         ariaLabel={`Assign ${w.id}`}
                         trigger={({ toggle }) => (
-                          <button
-                            onClick={toggle}
-                            className="text-xs font-semibold text-primary-600 hover:text-primary-700 transition-colors"
-                          >
+                          <button onClick={toggle} className="text-xs font-semibold text-primary-600 hover:text-primary-700 transition-colors">
                             Assign →
                           </button>
                         )}
                       >
                         {({ close }) => (
                           <>
-                            <div className="px-3 py-1.5 text-[11px] font-semibold uppercase tracking-wider text-slate-400">
-                              Assign to
-                            </div>
-                            {roster.map((tech) => (
+                            <div className="px-3 py-1.5 text-[11px] font-semibold uppercase tracking-wider text-slate-400">Assign to</div>
+                            {technicians.map((tech) => (
                               <MenuItem
-                                key={tech}
+                                key={tech.id}
                                 onClick={() => {
-                                  void assign(w.id, tech);
+                                  void assign(w.id, tech.name);
                                   close();
                                 }}
                               >
-                                {tech}
+                                <span className="flex-1">{tech.name}</span>
+                                <span className="text-[10px] text-slate-400">{tech.workloadHours}h · {tech.status}</span>
                               </MenuItem>
                             ))}
                           </>
@@ -209,73 +166,57 @@ export default function SchedulingPage() {
                       </Dropdown>
                     </div>
                   </div>
-                ))
-              )}
-            </div>
-          </section>
+                );
+              })
+            )}
+          </div>
+        </div>
 
-          {/* Technician columns */}
-          {perTech.map(({ tech, wos, hours, loadPct }) => {
-            const tone = loadTone(loadPct);
-            return (
-              <section
-                key={tech}
-                className="w-72 shrink-0 flex flex-col rounded-xl border border-slate-200 bg-white shadow-sm"
-              >
-                <header className="px-4 py-3 border-b border-slate-100">
-                  <div className="flex items-center gap-2.5">
-                    <Avatar initials={initials(tech)} className="w-9 h-9 text-xs shrink-0" />
-                    <div className="min-w-0">
-                      <div className="text-sm font-semibold text-slate-800 truncate">{tech}</div>
-                      <div className="text-[11px] text-slate-400">
-                        {wos.length} open · {hours}h load
+        {/* RIGHT — technician roster */}
+        <div className="glass-panel rounded-xl overflow-hidden flex flex-col">
+          <div className="px-5 py-4 border-b border-slate-200">
+            <h2 className="text-base font-heading font-semibold text-slate-900">Technician Roster</h2>
+          </div>
+          <div className="flex-1 overflow-y-auto p-3 space-y-2.5">
+            {filteredTechs.length === 0 ? (
+              <EmptyState variant="no-results" title="No technicians match" description="Try clearing a filter." />
+            ) : (
+              filteredTechs.map((tech: LiveTechnician) => {
+                const pct = Math.round((tech.workloadHours / DAY_CAPACITY) * 100);
+                const tone = loadTone(pct);
+                return (
+                  <div key={tech.id} className="rounded-lg border border-slate-200 bg-white p-3.5">
+                    <div className="flex items-start gap-2.5">
+                      <Avatar initials={tech.initials} className="w-9 h-9 text-xs shrink-0" />
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-center justify-between gap-2">
+                          <span className="text-sm font-semibold text-slate-800 truncate">{tech.name}</span>
+                          <Badge tone={TECH_STATUS_TONE[tech.status]}>{tech.status}</Badge>
+                        </div>
+                        <div className="text-[11px] text-slate-400">{tech.homeFacility} · {tech.shift.split(' ')[0]}</div>
+                      </div>
+                    </div>
+
+                    <div className="mt-2 flex flex-wrap gap-1">
+                      {tech.skills.map((s) => (
+                        <span key={s} className="rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-medium text-slate-600">{s}</span>
+                      ))}
+                    </div>
+
+                    <div className="mt-2.5">
+                      <div className="flex items-center justify-between text-[11px] mb-1">
+                        <span className={cn('font-semibold', tone.text)}>{tone.label}</span>
+                        <span className="font-semibold text-slate-600">{tech.workloadHours}/{DAY_CAPACITY}h · {tech.openWorkOrders.length} jobs</span>
+                      </div>
+                      <div className="h-1.5 w-full rounded-full bg-slate-200 overflow-hidden">
+                        <div className={cn('h-full rounded-full transition-all', tone.bar)} style={{ width: `${Math.min(100, pct)}%` }} />
                       </div>
                     </div>
                   </div>
-                  {/* Load bar */}
-                  <div className="mt-3">
-                    <div className="flex items-center justify-between text-[11px] mb-1">
-                      <span className={cn('font-semibold', tone.text)}>{tone.label}</span>
-                      <span className="font-semibold text-slate-600">
-                        {hours}/{DAY_CAPACITY}h · {loadPct}%
-                      </span>
-                    </div>
-                    <div className="h-2 w-full rounded-full bg-slate-200 overflow-hidden">
-                      <div
-                        className={cn('h-full rounded-full transition-all', tone.bar)}
-                        style={{ width: `${Math.min(100, loadPct)}%` }}
-                      />
-                    </div>
-                  </div>
-                </header>
-
-                <div className="flex-1 overflow-y-auto p-2.5 space-y-2">
-                  {wos.length === 0 ? (
-                    <div className="text-xs text-slate-400 text-center py-10 border border-dashed border-slate-200 rounded-lg">
-                      No open work orders
-                    </div>
-                  ) : (
-                    wos.map((w) => (
-                      <Link
-                        key={w.id}
-                        to={`/maintenance/${w.id}`}
-                        className="block rounded-lg bg-slate-50 border border-slate-200 p-2.5 hover:border-primary-400 hover:bg-white transition-colors"
-                      >
-                        <div className="flex items-center gap-2">
-                          <span className={cn('h-2 w-2 rounded-full shrink-0', PRIORITY_DOT[w.priority])} />
-                          <span className="font-mono text-[10px] text-slate-400">{w.id}</span>
-                          <span className="ml-auto text-[10px] font-medium text-slate-400">{w.estimatedHours}h</span>
-                        </div>
-                        <div className="mt-1 text-xs font-medium text-slate-700 leading-snug line-clamp-2">
-                          {w.title}
-                        </div>
-                      </Link>
-                    ))
-                  )}
-                </div>
-              </section>
-            );
-          })}
+                );
+              })
+            )}
+          </div>
         </div>
       </div>
     </div>

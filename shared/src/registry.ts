@@ -299,7 +299,7 @@ export interface ApprovalWorkflow {
  * A transfer moves an asset permanently and needs a second pair of eyes;
  * `Rejected` is a terminal state, not a pause.
  */
-export const TRANSFER_STATUSES = ['Pending', 'Approved', 'In Transit', 'Received', 'Rejected'] as const;
+export const TRANSFER_STATUSES = ['Pending', 'Approved', 'Picked Up', 'In Transit', 'Received', 'Rejected'] as const;
 export type TransferStatus = (typeof TRANSFER_STATUSES)[number];
 
 export interface Transfer {
@@ -314,8 +314,16 @@ export interface Transfer {
   status: TransferStatus;
   requestedAt: string;
   approvedAt?: string;
+  pickedUpAt?: string;
   receivedAt?: string;
   reason: string;
+  /** Who has it now, and who it is moving to — the custody half of the move. */
+  custodian?: string;
+  newCustodian?: string;
+  /** The technician physically carrying out the pickup/delivery. */
+  handler?: string;
+  /** The field job this movement supports, if any. */
+  workOrderId?: string;
 }
 
 export const RESERVATION_STATUSES = ['Pending', 'Confirmed', 'In Use', 'Returned', 'Cancelled'] as const;
@@ -332,6 +340,8 @@ export interface Reservation {
   startLabel: string;
   endLabel: string;
   status: ReservationStatus;
+  /** What the booking is for — shown on the calendar and the list. */
+  purpose?: string;
 }
 
 // ── Platform administration ──────────────────────────────────────────────────

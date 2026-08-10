@@ -49,7 +49,7 @@
     "manufacturer": "Toyota",
     "model": "BT Reflex RRE160",
     "location": { "id": "FAC-PUN", "name": "Pune Distribution Centre", "building": "Sorting Hall", "zone": "Aisle 7" },
-    "custodian": "Warehouse Ops",
+    "custodian": "Unassigned",
     "purchaseDate": "2019-11-05",
     "purchasePrice": 2850000,
     "depreciationMethod": "Written-down value",
@@ -124,7 +124,7 @@
     "manufacturer": "Kirloskar",
     "model": "KG1-125AS",
     "location": { "id": "FAC-AHM", "name": "Ahmedabad Depot", "zone": "Utility Yard" },
-    "custodian": "Facilities",
+    "custodian": "Suresh Pillai",
     "purchaseDate": "2018-02-14",
     "purchasePrice": 1450000,
     "depreciationMethod": "Straight-line (8yr)",
@@ -719,7 +719,7 @@
       "building": "Server Room Alpha",
       "zone": "Rack 1"
     },
-    "custodian": "Security Team",
+    "custodian": "Rahul Kumar",
     "purchaseDate": "2024-05-22",
     "purchasePrice": 450000,
     "bookValue": 410000,
@@ -856,7 +856,7 @@
       "building": "Floor 2",
       "zone": "IT Storeroom"
     },
-    "custodian": "IT Support",
+    "custodian": "Priya Nathan",
     "purchaseDate": "2023-07-19",
     "purchasePrice": 78000,
     "bookValue": 52000,
@@ -922,7 +922,7 @@
       "building": "Building A",
       "zone": "Picking Zone"
     },
-    "custodian": "Warehouse Team",
+    "custodian": "Lakshmi Narayan",
     "purchaseDate": "2020-10-11",
     "purchasePrice": 92000,
     "bookValue": 17000,
@@ -990,7 +990,7 @@
       "building": "Building A",
       "zone": "Loading Dock 4"
     },
-    "custodian": "IoT Platform",
+    "custodian": "Farhan Sheikh",
     "purchaseDate": "2024-01-30",
     "purchasePrice": 260000,
     "bookValue": 228000,

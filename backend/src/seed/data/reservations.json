@@ -64,5 +64,53 @@
     "startLabel": "Sat 08:00",
     "endLabel": "Sun 20:00",
     "status": "Pending"
+  },
+  {
+    "id": "RES-7007",
+    "assetId": "AST-3002",
+    "assetName": "Leica TS16 Total Station",
+    "reservedBy": "Vikram Shetty",
+    "startDay": 2,
+    "endDay": 3,
+    "startLabel": "Wed 08:00",
+    "endLabel": "Thu 17:00",
+    "status": "Confirmed",
+    "purpose": "Boundary survey — Plant Yard extension"
+  },
+  {
+    "id": "RES-7008",
+    "assetId": "AST-1013",
+    "assetName": "HP LaserJet Enterprise M507",
+    "reservedBy": "Farhan Sheikh",
+    "startDay": 0,
+    "endDay": 0,
+    "startLabel": "Mon 09:00",
+    "endLabel": "Mon 11:00",
+    "status": "Returned",
+    "purpose": "Print visitor badges for the security audit"
+  },
+  {
+    "id": "RES-7009",
+    "assetId": "AST-1011",
+    "assetName": "Zebra TC52 Mobile Computer",
+    "reservedBy": "Lakshmi Narayan",
+    "startDay": 4,
+    "endDay": 4,
+    "startLabel": "Fri 08:00",
+    "endLabel": "Fri 12:00",
+    "status": "Cancelled",
+    "purpose": "Cycle count support — cancelled, count rescheduled"
+  },
+  {
+    "id": "RES-7010",
+    "assetId": "AST-1014",
+    "assetName": "Fluke Networks DSX-8000",
+    "reservedBy": "Rahul Kumar",
+    "startDay": 4,
+    "endDay": 5,
+    "startLabel": "Fri 09:00",
+    "endLabel": "Sat 09:00",
+    "status": "Pending",
+    "purpose": "Cable certification — new Bengaluru HQ drops"
   }
 ]

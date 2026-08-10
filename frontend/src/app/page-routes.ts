@@ -65,7 +65,6 @@ export const pageRoutes: RouteObject[] = [
   { path: 'depreciation', lazy: async () => ({ Component: (await import('@/pages/depreciation/page')).default }) },
   { path: 'escalations', lazy: async () => ({ Component: (await import('@/pages/escalations/page')).default }) },
   { path: 'exports', lazy: async () => ({ Component: (await import('@/pages/exports/page')).default }) },
-  { path: 'field-ops', lazy: async () => ({ Component: (await import('@/pages/field-ops/page')).default }) },
   { path: 'financials', lazy: async () => ({ Component: (await import('@/pages/financials/page')).default }) },
   { path: 'groups', lazy: async () => ({ Component: (await import('@/pages/groups/page')).default }) },
   { path: 'groups/:id', lazy: async () => ({ Component: (await import('@/pages/groups/[id]/page')).default }) },
@@ -118,4 +117,6 @@ export const pageRoutes: RouteObject[] = [
   { path: 'warehouses', lazy: async () => ({ Component: (await import('@/pages/warehouses/page')).default }) },
   { path: 'warehouses/:id', lazy: async () => ({ Component: (await import('@/pages/warehouses/[id]/page')).default }) },
   { path: 'whats-new', lazy: async () => ({ Component: (await import('@/pages/whats-new/page')).default }) },
+  { path: 'work-orders', lazy: async () => ({ Component: (await import('@/pages/work-orders/page')).default }) },
+  { path: 'workforce', lazy: async () => ({ Component: (await import('@/pages/workforce/page')).default }) },
 ];

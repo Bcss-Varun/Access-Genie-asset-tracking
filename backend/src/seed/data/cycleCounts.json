@@ -61,5 +61,50 @@
     "expected": 410,
     "date": "2026-08-02T09:00:00.000Z",
     "assignedTo": "Storage Team"
+  },
+  {
+    "id": "CC-08",
+    "location": "Pune Distribution Centre · Sorting Hall",
+    "status": "In Progress",
+    "counted": 512,
+    "expected": 640,
+    "date": "2026-07-23T11:00:00.000Z",
+    "assignedTo": "Lakshmi Narayan"
+  },
+  {
+    "id": "CC-09",
+    "location": "Ahmedabad Depot · Inbound Bay",
+    "status": "Variance",
+    "counted": 168,
+    "expected": 175,
+    "date": "2026-07-21T09:00:00.000Z",
+    "assignedTo": "Kavya Iyer"
+  },
+  {
+    "id": "CC-10",
+    "location": "Noida Operations Centre · Survey Store",
+    "status": "Scheduled",
+    "counted": 0,
+    "expected": 96,
+    "date": "2026-07-28T09:00:00.000Z",
+    "assignedTo": "Vikram Shetty"
+  },
+  {
+    "id": "CC-11",
+    "location": "Mumbai Regional Hub · Utility Yard",
+    "status": "Reconciled",
+    "counted": 58,
+    "expected": 58,
+    "date": "2026-07-17T09:00:00.000Z",
+    "assignedTo": "Suresh Pillai"
+  },
+  {
+    "id": "CC-12",
+    "location": "Delhi NCR Office · IT Storeroom",
+    "status": "Variance",
+    "counted": 234,
+    "expected": 251,
+    "date": "2026-07-20T09:00:00.000Z",
+    "assignedTo": "Farhan Sheikh"
   }
 ]

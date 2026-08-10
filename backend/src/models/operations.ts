@@ -31,8 +31,13 @@ export interface TransferDoc {
   status: TransferStatus;
   requestedAt: Date;
   approvedAt?: Date;
+  pickedUpAt?: Date;
   receivedAt?: Date;
   reason: string;
+  custodian?: string;
+  newCustodian?: string;
+  handler?: string;
+  workOrderId?: string;
 }
 
 const transferSchema = new Schema<TransferDoc>(
@@ -47,8 +52,13 @@ const transferSchema = new Schema<TransferDoc>(
     status: { type: String, required: true, enum: TRANSFER_STATUSES, default: 'Pending', index: true },
     requestedAt: { type: Date, required: true, index: true },
     approvedAt: Date,
+    pickedUpAt: Date,
     receivedAt: Date,
     reason: { type: String, default: '' },
+    custodian: { type: String, default: '' },
+    newCustodian: { type: String, default: '' },
+    handler: { type: String, default: '' },
+    workOrderId: { type: String, ref: 'WorkOrder' },
   },
   { versionKey: false },
 );
@@ -59,7 +69,8 @@ transferSchema.index({ assetName: 'text', reason: 'text' }, { name: 'transfer_se
 /** Forward-only. A received transfer is history, not a record to reopen. */
 export const TRANSFER_FLOW: Record<TransferStatus, TransferStatus[]> = {
   Pending: ['Approved', 'Rejected'],
-  Approved: ['In Transit'],
+  Approved: ['Picked Up'],
+  'Picked Up': ['In Transit'],
   'In Transit': ['Received'],
   Received: [],
   Rejected: [],
@@ -80,6 +91,7 @@ export interface ReservationDoc {
   startLabel: string;
   endLabel: string;
   status: ReservationStatus;
+  purpose?: string;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -95,6 +107,7 @@ const reservationSchema = new Schema<ReservationDoc>(
     startLabel: { type: String, required: true },
     endLabel: { type: String, required: true },
     status: { type: String, required: true, enum: RESERVATION_STATUSES, default: 'Pending', index: true },
+    purpose: { type: String, default: '' },
   },
   { timestamps: true },
 );

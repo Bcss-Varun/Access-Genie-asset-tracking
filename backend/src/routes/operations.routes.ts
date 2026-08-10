@@ -18,6 +18,9 @@ const createTransferSchema = z.object({
   assetId: z.string().trim().min(1),
   to: z.string().trim().min(2).max(160),
   reason: z.string().trim().min(3).max(400),
+  newCustodian: z.string().trim().max(120).optional(),
+  handler: z.string().trim().max(120).optional(),
+  workOrderId: z.string().trim().max(40).optional(),
 });
 
 const advanceSchema = z.object({
@@ -41,6 +44,7 @@ const createReservationSchema = z.object({
   endDay: z.coerce.number().int().min(0).max(6),
   startLabel: z.string().trim().min(1).max(40),
   endLabel: z.string().trim().min(1).max(40),
+  purpose: z.string().trim().max(200).optional(),
 });
 
 router.get('/reservations', controller.listReservations);

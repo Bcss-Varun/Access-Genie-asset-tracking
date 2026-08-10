@@ -88,5 +88,59 @@
     "action": "Transferred",
     "at": "2026-07-09T09:00:00.000Z",
     "by": "Manoj Reddy"
+  },
+  {
+    "id": "CU-11",
+    "assetId": "AST-1010",
+    "assetName": "Dell UltraSharp 32\" Monitor",
+    "holder": "Priya Nathan",
+    "action": "Checked Out",
+    "at": "2026-07-22T12:00:00.000Z",
+    "by": "Kiosk HQ-1"
+  },
+  {
+    "id": "CU-12",
+    "assetId": "AST-1011",
+    "assetName": "Zebra TC52 Mobile Computer",
+    "holder": "Lakshmi Narayan",
+    "action": "Checked Out",
+    "at": "2026-07-19T08:30:00.000Z",
+    "by": "Kiosk WH-1"
+  },
+  {
+    "id": "CU-13",
+    "assetId": "AST-1012",
+    "assetName": "Zebra RFID Gateway G-4",
+    "holder": "Farhan Sheikh",
+    "action": "Checked Out",
+    "at": "2026-07-22T07:15:00.000Z",
+    "by": "QR Scan Station GW-08"
+  },
+  {
+    "id": "CU-14",
+    "assetId": "AST-2004",
+    "assetName": "Kirloskar 125 kVA Generator",
+    "holder": "Suresh Pillai",
+    "action": "Assigned",
+    "at": "2026-07-21T09:30:00.000Z",
+    "by": "Manoj Reddy"
+  },
+  {
+    "id": "CU-15",
+    "assetId": "AST-2002",
+    "assetName": "Toyota BT Reflex Forklift",
+    "holder": "Kavya Iyer",
+    "action": "Checked In",
+    "at": "2026-07-19T10:15:00.000Z",
+    "by": "Kiosk WH-1"
+  },
+  {
+    "id": "CU-16",
+    "assetId": "AST-1008",
+    "assetName": "Fortinet FortiGate 100F Firewall",
+    "holder": "Rahul Kumar",
+    "action": "Checked Out",
+    "at": "2026-07-22T10:35:00.000Z",
+    "by": "QR Scan Station GW-08"
   }
 ]

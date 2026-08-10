@@ -1,14 +1,17 @@
 import { useState } from 'react';
+import { Link } from 'react-router-dom';
 import type { CycleCount, CycleCountStatus } from '@access-genie/shared';
 import { allCycleCounts, allWarehouses } from '@/lib/dataset';
 import { PageHeader, KpiCard, Badge, EmptyState } from '@/components/ui/primitives';
 import { Button } from '@/components/ui/Button';
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
+import { Drawer, DrawerSection } from '@/components/ui/Drawer';
 import { FormDialog, Field, FieldRow, Select, TextInput, dateInDays } from '@/components/ui/FormDialog';
 import { useMutate } from '@/api/mutate';
 import { cycleCountsApi } from '@/api/maintenance';
 import { allUsers } from '@/lib/rbac';
 import { relTime } from '@/lib/utils';
+import { cycleCountVariance } from '@/lib/field-ops';
 
 /**
  * Rolling physical counts.
@@ -144,10 +147,70 @@ function RecordCountDialog({ count, onClose }: { count: CycleCount; onClose: () 
   );
 }
 
+function VarianceDrawer({ count, onClose }: { count: CycleCount; onClose: () => void }) {
+  const rows = cycleCountVariance(count);
+  const missing = rows.filter((r) => r.status === 'Missing').length;
+  const unexpected = rows.filter((r) => r.status === 'Unexpected').length;
+
+  return (
+    <Drawer icon="🔎" title={`Variance — ${count.location}`} subtitle={`${count.id} · ${rows.length} line items`} onClose={onClose} width="lg">
+      <div className="flex items-center gap-2">
+        <Badge tone={missing > 0 ? 'red' : 'emerald'}>{missing} missing</Badge>
+        <Badge tone={unexpected > 0 ? 'amber' : 'emerald'}>{unexpected} unexpected</Badge>
+      </div>
+
+      <DrawerSection title="Line Items">
+        {rows.length === 0 ? (
+          <p className="text-sm text-slate-400">No assets on file for this location yet.</p>
+        ) : (
+          <div className="overflow-x-auto rounded-lg border border-slate-200">
+            <table className="w-full text-left text-xs whitespace-nowrap">
+              <thead className="bg-slate-50 text-slate-500 font-semibold uppercase tracking-wider">
+                <tr>
+                  <th className="px-3 py-2">Asset</th>
+                  <th className="px-3 py-2">Expected</th>
+                  <th className="px-3 py-2">Found</th>
+                  <th className="px-3 py-2">Diff</th>
+                  <th className="px-3 py-2">Status</th>
+                  <th className="px-3 py-2">Last Location</th>
+                  <th className="px-3 py-2">Last Custodian</th>
+                  <th className="px-3 py-2 text-right">Action</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100">
+                {rows.map((r) => (
+                  <tr key={r.assetId}>
+                    <td className="px-3 py-2">
+                      <div className="font-medium text-slate-800">{r.assetName}</div>
+                      <div className="font-mono text-slate-400">{r.assetId}</div>
+                    </td>
+                    <td className="px-3 py-2">{r.expected}</td>
+                    <td className="px-3 py-2">{r.found}</td>
+                    <td className="px-3 py-2">{r.found - r.expected === 0 ? '0' : r.found - r.expected > 0 ? `+${r.found - r.expected}` : r.found - r.expected}</td>
+                    <td className="px-3 py-2">
+                      <Badge tone={r.status === 'Found' ? 'emerald' : r.status === 'Missing' ? 'red' : 'amber'}>{r.status}</Badge>
+                    </td>
+                    <td className="px-3 py-2 text-slate-500">{r.lastKnownLocation}</td>
+                    <td className="px-3 py-2 text-slate-500">{r.lastCustodian}</td>
+                    <td className="px-3 py-2 text-right">
+                      <Link to={`/assets/${r.assetId}`} className="text-primary-600 hover:text-primary-700 font-medium">Investigate →</Link>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </DrawerSection>
+    </Drawer>
+  );
+}
+
 export default function CycleCountsPage() {
   const { run, isPending } = useMutate();
   const [dialog, setDialog] = useState<{ mode: 'new' } | { mode: 'record'; count: CycleCount } | null>(null);
   const [deleting, setDeleting] = useState<CycleCount | null>(null);
+  const [viewingVariance, setViewingVariance] = useState<CycleCount | null>(null);
 
   const counts = allCycleCounts;
   const has = (s: CycleCountStatus) => counts.filter((c) => c.status === s).length;
@@ -162,8 +225,8 @@ export default function CycleCountsPage() {
     <div className="h-full flex flex-col space-y-6">
       <PageHeader
         title="Cycle Counts"
-        subtitle="Rolling physical inventory counts and reconciliation across locations."
-        breadcrumb={[{ label: 'Compliance' }, { label: 'Cycle Counts' }]}
+        subtitle="Physical inventory verification — expected vs. counted, with a full variance breakdown per location."
+        breadcrumb={[{ label: 'Mobile Workforce', href: '/workforce' }, { label: 'Cycle Counts' }]}
         actions={<Button onClick={() => setDialog({ mode: 'new' })}>+ New Cycle Count</Button>}
       />
 
@@ -232,6 +295,9 @@ export default function CycleCountsPage() {
                 </div>
 
                 <div className="mt-2 flex items-center justify-end gap-1">
+                  <Button size="sm" variant="outline" onClick={() => setViewingVariance(c)}>
+                    View variance
+                  </Button>
                   <Button size="sm" variant="outline" onClick={() => setDialog({ mode: 'record', count: c })}>
                     Record count
                   </Button>
@@ -247,6 +313,7 @@ export default function CycleCountsPage() {
 
       {dialog?.mode === 'new' && <ScheduleDialog onClose={() => setDialog(null)} />}
       {dialog?.mode === 'record' && <RecordCountDialog count={dialog.count} onClose={() => setDialog(null)} />}
+      {viewingVariance && <VarianceDrawer count={viewingVariance} onClose={() => setViewingVariance(null)} />}
       {deleting && (
         <ConfirmDialog
           title={`Remove the count at ${deleting.location}?`}

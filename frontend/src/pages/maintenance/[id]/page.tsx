@@ -15,6 +15,8 @@ import { Dropdown, MenuItem } from '@/components/ui/Dropdown';
 import { useToast } from '@/components/providers/ToastProvider';
 import { cn, formatMoney, relTime, nowMs } from '@/lib/utils';
 import { categoryEmoji } from '@/lib/asset-categories';
+import { FieldActionButtons, SlaChip } from '@/components/workforce/WorkOrderActions';
+import { fieldStageLabel, toolsForWorkOrder, STAGE_TONE } from '@/lib/field-ops';
 
 // ── token helpers ─────────────────────────────────────────────────────────────
 type Tone = 'slate' | 'primary' | 'emerald' | 'amber' | 'red';
@@ -208,6 +210,7 @@ export default function WorkOrderDetailPage() {
       {/* Chip row */}
       <div className="flex flex-wrap items-center gap-2 -mt-2">
         <Badge tone={statusTone(status)}>{status}</Badge>
+        {status !== 'Completed' && <Badge tone={STAGE_TONE[fieldStageLabel(base)]}>Field: {fieldStageLabel(base)}</Badge>}
         <Badge tone={priorityTone(wo.priority)}>{wo.priority} priority</Badge>
         <Badge tone="slate">
           {typeEmoji(wo.type)} {wo.type}
@@ -348,6 +351,26 @@ export default function WorkOrderDetailPage() {
 
         {/* RIGHT — details + comments */}
         <div className="space-y-6 lg:col-span-1">
+          {/* Field execution */}
+          {status !== 'Completed' && (
+            <div className="glass-panel p-6 rounded-xl">
+              <SectionTitle>Field Execution</SectionTitle>
+              <div className="flex items-center justify-between text-sm mb-3">
+                <span className="text-slate-500">SLA</span>
+                <SlaChip dueDate={wo.dueDate} status={status} />
+              </div>
+              <div className="mb-4">
+                <div className="text-xs font-medium uppercase tracking-wide text-slate-500 mb-1.5">Required tools</div>
+                <div className="flex flex-wrap gap-1.5">
+                  {toolsForWorkOrder(wo).map((t) => (
+                    <span key={t} className="rounded-full bg-slate-100 px-2 py-0.5 text-[11px] font-medium text-slate-600">{t}</span>
+                  ))}
+                </div>
+              </div>
+              <FieldActionButtons wo={base} size="md" />
+            </div>
+          )}
+
           {/* Details card */}
           <div className="glass-panel p-6 rounded-xl">
             <SectionTitle>Details</SectionTitle>

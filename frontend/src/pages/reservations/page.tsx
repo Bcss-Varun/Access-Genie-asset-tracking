@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { PageHeader, Badge } from '@/components/ui/primitives';
 import { Button } from '@/components/ui/Button';
-import { FormDialog, Field, FieldRow, Select } from '@/components/ui/FormDialog';
+import { FormDialog, Field, FieldRow, Select, TextInput } from '@/components/ui/FormDialog';
 import { AssetPicker } from '@/components/ui/AssetPicker';
 import { useMutate } from '@/api/mutate';
 import { operationsApi } from '@/api/operations';
@@ -12,7 +12,10 @@ import { useSession } from '@/components/providers/SessionProvider';
 import { allAssets } from '@/lib/dataset';
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Reservations & booking — shared-asset scheduling with a week-strip visual.
+// Reservations — shared/pooled assets (loaner laptops, projectors, test gear)
+// booked for a window, with a week-strip calendar and a list view. The server
+// refuses double-booking and anything under maintenance or already committed
+// to an active job — see operations.service.ts.
 // Day indices are 0=Mon … 6=Sun for the current demo week (deterministic).
 // ─────────────────────────────────────────────────────────────────────────────
 
@@ -25,6 +28,15 @@ const STATUS_TONE: Record<ReservationStatus, 'emerald' | 'amber' | 'primary' | '
   'In Use': 'primary',
   Returned: 'slate',
   Cancelled: 'slate',
+};
+
+/** Spec vocabulary (Requested/Active/Completed) mapped onto the stored statuses. */
+const STATUS_LABEL: Record<ReservationStatus, string> = {
+  Pending: 'Requested',
+  Confirmed: 'Confirmed',
+  'In Use': 'Active',
+  Returned: 'Completed',
+  Cancelled: 'Cancelled',
 };
 
 // Two reservations conflict when they share the same asset and their day windows overlap.
@@ -54,12 +66,14 @@ function BookDialog({ onClose }: { onClose: () => void }) {
   const [assetId, setAssetId] = useState('');
   const [startDay, setStartDay] = useState('0');
   const [endDay, setEndDay] = useState('0');
+  const [purpose, setPurpose] = useState('');
 
   const from = Number(startDay);
   const to = Number(endDay);
+  const asset = allAssets.find((a) => a.id === assetId);
+  const blocked = asset?.status === 'Maintenance';
 
   const submit = async () => {
-    const asset = allAssets.find((a) => a.id === assetId);
     if (!asset) return;
 
     const ok = await run(
@@ -70,6 +84,7 @@ function BookDialog({ onClose }: { onClose: () => void }) {
         endDay: to,
         startLabel: WEEK[from] as string,
         endLabel: WEEK[to] as string,
+        purpose: purpose.trim() || undefined,
       }),
       {
         success: 'Reserved',
@@ -84,14 +99,20 @@ function BookDialog({ onClose }: { onClose: () => void }) {
     <FormDialog
       icon="📅"
       title="Reserve an asset"
-      description="Bookings run in whole days across the current week. An overlapping booking is refused."
+      description="Bookings run in whole days across the current week. An overlapping booking, or one against an asset under maintenance or already on an active job, is refused."
       submitLabel="Reserve"
       busy={isPending}
-      disabled={!assetId || to < from}
+      disabled={!assetId || to < from || blocked}
       onSubmit={() => void submit()}
       onCancel={onClose}
     >
       <AssetPicker value={assetId} onChange={setAssetId} required label="Asset to reserve" />
+
+      {blocked && (
+        <p className="rounded-lg bg-amber-50 px-3 py-2 text-xs text-amber-700">
+          {asset?.name} is under maintenance and cannot be reserved right now.
+        </p>
+      )}
 
       <FieldRow>
         <Field label="From" required>
@@ -108,6 +129,10 @@ function BookDialog({ onClose }: { onClose: () => void }) {
           <Select value={endDay} onChange={(e) => setEndDay(e.target.value)} options={WEEK.map((d, i) => ({ value: String(i), label: d }))} />
         </Field>
       </FieldRow>
+
+      <Field label="Purpose" hint="What the booking is for.">
+        <TextInput value={purpose} onChange={(e) => setPurpose(e.target.value)} placeholder="Client demo, Tuesday morning" />
+      </Field>
     </FormDialog>
   );
 }
@@ -129,9 +154,9 @@ export default function ReservationsPage() {
   return (
     <div className="h-full flex flex-col space-y-6">
       <PageHeader
-        title="Reservations & Booking"
-        subtitle="Reserve shared assets across the week and resolve scheduling conflicts."
-        breadcrumb={[{ label: 'Operations', href: '/operations/transfers' }, { label: 'Reservations' }]}
+        title="Reservations"
+        subtitle="Book shared assets — loaner laptops, projectors, test equipment — and resolve scheduling conflicts."
+        breadcrumb={[{ label: 'Mobile Workforce', href: '/workforce' }, { label: 'Reservations' }]}
         actions={
           <Button onClick={() => setBooking(true)}>
             + New Reservation
@@ -182,33 +207,40 @@ export default function ReservationsPage() {
                 <th className="px-6 py-4">Reservation</th>
                 <th className="px-6 py-4">Asset</th>
                 <th className="px-6 py-4">Reserved By</th>
+                <th className="px-6 py-4">Purpose</th>
                 <th className="px-6 py-4">Window</th>
+                <th className="px-6 py-4">Location</th>
                 <th className="px-6 py-4">Status</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
-              {reservations.map((r) => (
-                <tr key={r.id} className="hover:bg-slate-50 transition-colors">
-                  <td className="px-6 py-4">
-                    <div className="font-mono text-xs text-slate-500">{r.id}</div>
-                    {conflictIds.has(r.id) && (
-                      <span className="text-[10px] font-medium text-amber-600">⚠️ Conflict</span>
-                    )}
-                  </td>
-                  <td className="px-6 py-4">
-                    <Link to={`/assets/${r.assetId}`} className="font-medium text-slate-800 hover:text-primary-600 transition-colors">
-                      {r.assetName}
-                    </Link>
-                  </td>
-                  <td className="px-6 py-4 text-slate-600">{r.reservedBy}</td>
-                  <td className="px-6 py-4 text-slate-600 text-xs">
-                    {r.startLabel} <span className="text-primary-500">→</span> {r.endLabel}
-                  </td>
-                  <td className="px-6 py-4">
-                    <Badge tone={STATUS_TONE[r.status]}>{r.status}</Badge>
-                  </td>
-                </tr>
-              ))}
+              {reservations.map((r) => {
+                const asset = allAssets.find((a) => a.id === r.assetId);
+                return (
+                  <tr key={r.id} className="hover:bg-slate-50 transition-colors">
+                    <td className="px-6 py-4">
+                      <div className="font-mono text-xs text-slate-500">{r.id}</div>
+                      {conflictIds.has(r.id) && (
+                        <span className="text-[10px] font-medium text-amber-600">⚠️ Conflict</span>
+                      )}
+                    </td>
+                    <td className="px-6 py-4">
+                      <Link to={`/assets/${r.assetId}`} className="font-medium text-slate-800 hover:text-primary-600 transition-colors">
+                        {r.assetName}
+                      </Link>
+                    </td>
+                    <td className="px-6 py-4 text-slate-600">{r.reservedBy}</td>
+                    <td className="px-6 py-4 text-slate-500 text-xs">{r.purpose || '—'}</td>
+                    <td className="px-6 py-4 text-slate-600 text-xs">
+                      {r.startLabel} <span className="text-primary-500">→</span> {r.endLabel}
+                    </td>
+                    <td className="px-6 py-4 text-slate-500 text-xs">{asset?.location?.name ?? '—'}</td>
+                    <td className="px-6 py-4">
+                      <Badge tone={STATUS_TONE[r.status]}>{STATUS_LABEL[r.status]}</Badge>
+                    </td>
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
         </div>

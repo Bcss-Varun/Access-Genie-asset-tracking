@@ -10,8 +10,14 @@ import { apiGet, apiPost } from '@/api/client';
  */
 export const operationsApi = {
   transfers: () => apiGet<Transfer[]>('/operations/transfers'),
-  requestTransfer: (input: { assetId: string; to: string; reason: string }) =>
-    apiPost<Transfer>('/operations/transfers', input),
+  requestTransfer: (input: {
+    assetId: string;
+    to: string;
+    reason: string;
+    newCustodian?: string;
+    handler?: string;
+    workOrderId?: string;
+  }) => apiPost<Transfer>('/operations/transfers', input),
   advanceTransfer: (id: string, status: TransferStatus) =>
     apiPost<Transfer>(`/operations/transfers/${id}/status`, { status }),
 
@@ -23,6 +29,7 @@ export const operationsApi = {
     endDay: number;
     startLabel: string;
     endLabel: string;
+    purpose?: string;
   }) => apiPost<Reservation>('/operations/reservations', input),
   cancelReservation: (id: string) => apiPost<Reservation>(`/operations/reservations/${id}/cancel`),
 };

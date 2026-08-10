@@ -68,6 +68,12 @@ export const router = createBrowserRouter([
               { path: 'dashboards', element: <Navigate to="/" replace /> },
               { path: 'dashboards/*', element: <Navigate to="/" replace /> },
 
+              // Mobile Workforce's old "Field Operations" screen is now
+              // "Workforce Overview" at a route of its own. Same reasoning as
+              // the dashboards redirect above: existing links must still land
+              // somewhere real.
+              { path: 'field-ops', element: <Navigate to="/workforce" replace /> },
+
               // Scan-to-open. Declared here rather than in the generated route
               // list because it is a contract with something physical — the URL
               // is printed on labels already in the field, so it must not move
