@@ -16,7 +16,7 @@
 
 import { createContext, useCallback, useContext, useMemo, useState } from 'react';
 import type { Asset, AssetOnboarding, RegisteredAsset, TagBinding } from '@access-genie/shared';
-import { allAssets, allDocs, allSensors, allAssetClasses } from '@/lib/dataset';
+import { allAssets, allDocs, allSensors } from '@/lib/dataset';
 import { getClassTemplate } from '@/lib/asset-classes';
 import { roleForKind } from '@/lib/onboarding';
 import { nowMs } from '@/lib/utils';
@@ -26,8 +26,12 @@ import { useToast } from './ToastProvider';
 
 // ── Seeding ──────────────────────────────────────────────────────────────────
 
-const classIdForCategory = (category: Asset['category']): string =>
-  allAssetClasses.find((c) => c.name === category)?.id ?? '';
+/**
+ * Asset classes were removed, so a category no longer implies a class. Kept as
+ * a named constant rather than deleted because `inferOnboarding` still has to
+ * put *something* in `classId` for assets that predate the registration flow.
+ */
+const classIdForCategory = (): string => '';
 
 /** Department implied by the custodian — asked once, derived thereafter. */
 function departmentFor(custodian: string): string {
@@ -48,7 +52,7 @@ function departmentFor(custodian: string): string {
  * registry's exception views.
  */
 function inferOnboarding(asset: Asset): AssetOnboarding {
-  const classId = classIdForCategory(asset.category);
+  const classId = classIdForCategory();
   const tpl = getClassTemplate(classId);
 
   const bindings: TagBinding[] = allSensors
@@ -303,7 +307,12 @@ export function RegistryProvider({ children }: { children: React.ReactNode }) {
           (a) => ({
             ...a,
             status: state === 'Active' ? 'Active' : a.status,
-            lifecycleStage: state === 'Active' ? 'In Service' : 'Registration',
+            // `lifecycleStage` is not set here — it is governed by the
+            // lifecycle workflow (`services/lifecycle.service.ts`), not by
+            // onboarding activation, and is silently ignored by the update
+            // API if sent. Activation still moves `status`; the asset's
+            // stage was already set to `Commissioning` on registration and
+            // advances from there through Change Stage / automations.
             onboarding: {
               ...a.onboarding,
               state,

@@ -27,7 +27,6 @@ import {
   ApiKey,
   ApprovalWorkflow,
   Asset,
-  AssetClass,
   AssetDocument,
   AssetGroup,
   AssetJourney,
@@ -119,7 +118,6 @@ import alertRules from './data/alertRules.json' with { type: 'json' };
 import alerts from './data/alerts.json' with { type: 'json' };
 import anomalies from './data/anomalies.json' with { type: 'json' };
 import approvalWorkflows from './data/approvalWorkflows.json' with { type: 'json' };
-import assetClasses from './data/assetClasses.json' with { type: 'json' };
 import assetDocs from './data/assetDocs.json' with { type: 'json' };
 import assetGroups from './data/assetGroups.json' with { type: 'json' };
 import assetPresence from './data/assetPresence.json' with { type: 'json' };
@@ -243,10 +241,13 @@ async function insertIfEmpty(model: SeedModel, build: () => Record<string, unkno
   logger.info(`  ${model.collection.name.padEnd(20)} ${docs.length}`);
 }
 
-async function seed(): Promise<void> {
-  await connectDb();
+export async function seedDemo(options: { fresh?: boolean; skipConnect?: boolean } = {}): Promise<void> {
+  if (!options.skipConnect) {
+    await connectDb();
+  }
 
-  if (FRESH) {
+  const isFresh = options.fresh ?? FRESH;
+  if (isFresh) {
     logger.warn('--fresh: dropping seeded collections');
     await Promise.all(SEEDED_COLLECTIONS.map((model) => model.deleteMany({})));
   }
@@ -284,7 +285,6 @@ async function seed(): Promise<void> {
   logger.info(`  users                ${users.length} (passwords reset to SEED_PASSWORD)`);
 
   // ── Asset graph ────────────────────────────────────────────────────────────
-  await upsert(AssetClass, assetClasses.map(withId));
 
   await upsert(
     Asset,
@@ -498,10 +498,14 @@ async function seed(): Promise<void> {
   logger.info(`  e.g. ${users[0]?.email ?? 'raj@bcss.in'}`);
 }
 
-seed()
-  .then(() => disconnectDb())
-  .then(() => process.exit(0))
-  .catch((err: unknown) => {
-    logger.error('Seed failed', { err: err instanceof Error ? err.stack : String(err) });
-    process.exit(1);
-  });
+import { fileURLToPath } from 'node:url';
+
+if (process.argv[1] && fileURLToPath(import.meta.url) === process.argv[1]) {
+  seedDemo()
+    .then(() => disconnectDb())
+    .then(() => process.exit(0))
+    .catch((err: unknown) => {
+      logger.error('Seed failed', { err: err instanceof Error ? err.stack : String(err) });
+      process.exit(1);
+    });
+}

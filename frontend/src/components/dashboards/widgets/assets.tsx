@@ -152,7 +152,7 @@ const daysTo = (iso?: string) => (iso ? Math.round((Date.parse(iso) - nowMs()) /
 export function EolWatch() {
   const rows = allAssets
     .map((a) => ({ a, days: daysTo(a.warrantyExpiry) }))
-    .filter(({ a, days }) => days <= 90 || a.lifecycleStage === 'EOL Planning')
+    .filter(({ a, days }) => days <= 90 || a.lifecycleStage === 'Retired')
     .sort((x, y) => x.days - y.days)
     .slice(0, 6);
 
@@ -180,7 +180,7 @@ export function EolWatch() {
                 <div className="text-xs text-slate-400">{a.id}</div>
               </td>
               <td className={TD}>
-                <Badge tone={a.lifecycleStage === 'EOL Planning' ? 'red' : 'slate'}>{a.lifecycleStage}</Badge>
+                <Badge tone={a.lifecycleStage === 'Retired' || a.lifecycleStage === 'Disposed' ? 'red' : 'slate'}>{a.lifecycleStage}</Badge>
               </td>
               <td className={cn(TD, 'text-xs font-medium', days < 0 ? 'text-health-critical' : 'text-amber-600')}>
                 {a.warrantyExpiry ? (days < 0 ? `lapsed ${relTime(a.warrantyExpiry)}` : `${days}d left`) : 'not recorded'}

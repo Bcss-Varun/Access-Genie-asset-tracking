@@ -1,10 +1,11 @@
 import type { FilterQuery } from 'mongoose';
 import type { ApiMeta } from '@access-genie/shared';
-import { Activity, Asset, CustodyRecord, Insight, WorkOrder, healthStatusFor, nextId, type AssetDoc } from '../models/index.js';
+import { Activity, Asset, CustodyRecord, Insight, LifecycleTransition, WorkOrder, healthStatusFor, nextId, type AssetDoc } from '../models/index.js';
 import { ApiError } from '../utils/ApiError.js';
 import { logger } from '../config/logger.js';
 import { csvFilter, escapeRegex, paginate, parsePagination } from '../utils/query.js';
 import { projectAssetUpdate, projectNewAsset, retireAssetFromGraph } from './assetGraph.service.js';
+import { applyLifecycleTransition } from './lifecycle.service.js';
 import type { AssetListQuery, CreateAssetInput, UpdateAssetInput } from '../validators/asset.validator.js';
 
 const SORTABLE = ['name', 'healthScore', 'riskScore', 'utilization', 'purchasePrice', 'purchaseDate', 'createdAt', 'updatedAt'];
@@ -61,14 +62,15 @@ export async function getAsset(id: string): Promise<AssetDoc> {
 export async function getAssetProfile(id: string) {
   const asset = await getAsset(id);
 
-  const [workOrders, activity, insights, custody] = await Promise.all([
+  const [workOrders, activity, insights, custody, lifecycleHistory] = await Promise.all([
     WorkOrder.find({ assetId: id }).sort({ dueDate: 1 }).limit(50).lean(),
     Activity.find({ assetId: id }).sort({ timestamp: -1 }).limit(50).lean(),
     Insight.find({ assetId: id, status: 'open' }).sort({ createdAt: -1 }).limit(20).lean(),
     CustodyRecord.find({ assetId: id }).sort({ at: -1 }).limit(20).lean(),
+    LifecycleTransition.find({ assetId: id }).sort({ requestedAt: -1 }).limit(50).lean(),
   ]);
 
-  return { asset, workOrders, activity, insights, custody };
+  return { asset, workOrders, activity, insights, custody, lifecycleHistory };
 }
 
 export async function createAsset(input: CreateAssetInput, actor: string): Promise<AssetDoc> {
@@ -100,6 +102,17 @@ export async function createAsset(input: CreateAssetInput, actor: string): Promi
     timestamp: new Date(),
   });
 
+  // §6 Stage Automation: "Asset Registered → Commissioning". The schema
+  // default is `Planning` (an asset someone is still budgeting for); one that
+  // has actually been created here — imported, form-entered or registered —
+  // physically exists, so it starts at Commissioning regardless of which of
+  // the three create paths brought it in.
+  await applyLifecycleTransition(id, 'Commissioning', {
+    actor,
+    reason: 'Asset registered',
+    automated: true,
+  });
+
   // The asset is committed; now make it visible everywhere it belongs — the
   // live map, the device estate, the chain of custody. See assetGraph.service.
   const { mapPosition } = await projectNewAsset(asset.toObject(), actor);
@@ -108,7 +121,7 @@ export async function createAsset(input: CreateAssetInput, actor: string): Promi
     await asset.save();
   }
 
-  return asset.toObject();
+  return Asset.findById(id).lean() as Promise<AssetDoc>;
 }
 
 export async function updateAsset(id: string, input: UpdateAssetInput, actor: string): Promise<AssetDoc> {

@@ -80,11 +80,41 @@ const commercialSchema = z.object({
 const onboardingInputSchema = z.object({
   state: z.enum(REGISTRATION_STATES),
   source: z.enum(SOURCE_KEYS),
-  classId: z.string().trim().min(1),
+  // Blank registrations have no class until someone classifies them; see the
+  // note on `classId` in models/onboarding.schema.ts.
+  classId: z.string().trim().max(64).default(''),
   registeredAt: isoDateString,
   registeredBy: z.string().trim().min(1).max(120),
   activatedAt: isoDateString.optional(),
-  attributes: z.record(z.string(), z.union([z.string(), z.boolean()])).default({}),
+  // Numbers join strings and booleans here because template custom fields may
+  // be numeric (RAM, storage) and land in the same attribute bag.
+  attributes: z.record(z.string(), z.union([z.string(), z.number(), z.boolean()])).default({}),
+
+  /**
+   * Registration provenance and the fields the rebuilt add-asset flow captures.
+   *
+   * These must be declared even though nothing outside that flow sets them:
+   * Zod strips unknown keys, so an undeclared field is not "passed through"
+   * but silently discarded — which is how an employee ID, an asset tag and a
+   * template reference all reached the model as blanks.
+   */
+  templateId: z.string().trim().max(64).optional(),
+  clonedFromId: z.string().trim().max(64).optional(),
+  assetTag: z
+    .string()
+    .trim()
+    .max(64)
+    .refine((v) => v === '' || v.length >= 2, 'An asset tag needs at least 2 characters')
+    .default(''),
+  custodianEmployeeId: z.string().trim().max(40).default(''),
+  maintenance: z
+    .object({
+      hasContract: z.boolean().default(false),
+      provider: z.string().trim().max(120).optional(),
+      reference: z.string().trim().max(80).optional(),
+    })
+    .optional(),
+
   department: z.string().trim().max(120).optional(),
   locationConfirmed: z.boolean().default(false),
   trackingIntent: z.enum(TRACKING_INTENTS),
@@ -165,7 +195,10 @@ export const createAssetSchema = z.object({
   warrantyExpiry: isoDateString.optional(),
   trackingTech: z.enum(TRACKING_TECHS).optional(),
   trackingId: z.string().trim().max(64).optional(),
-  lifecycleStage: z.string().trim().max(60).optional(),
+  // `lifecycleStage` is deliberately absent — it is never client-writable.
+  // The lifecycle workflow (`services/lifecycle.service.ts`) is the only path
+  // that changes it, so accepting it here would let `PATCH /assets/:id` open
+  // a second, ungoverned way to move an asset between stages.
   mapPosition: z.object({ x: z.number().min(0).max(100), y: z.number().min(0).max(100) }).optional(),
   healthTrend: z.array(z.object({ label: z.string(), value: z.number() })).max(24).optional(),
   onboarding: onboardingInputSchema.optional(),

@@ -15,7 +15,7 @@ export { Notification, type NotificationDoc } from './Notification.js';
 
 // ── Asset graph ──────────────────────────────────────────────────────────────
 export { Asset, healthStatusFor, type AssetDoc } from './Asset.js';
-export { AssetClass, type AssetClassDoc } from './AssetClass.js';
+export { AssetTemplate, type AssetTemplateDoc } from './AssetTemplate.js';
 export {
   AssetGroup,
   AssetDocument,
@@ -26,6 +26,11 @@ export {
 } from './assetGraph.js';
 export { Activity, type ActivityDoc } from './Activity.js';
 export { CustodyRecord, type CustodyDoc } from './CustodyRecord.js';
+export {
+  LifecycleTransition,
+  type LifecycleTransitionDoc,
+  type LifecycleApprovalSub,
+} from './LifecycleTransition.js';
 
 // ── Maintenance ──────────────────────────────────────────────────────────────
 export { WorkOrder, type WorkOrderDoc } from './WorkOrder.js';

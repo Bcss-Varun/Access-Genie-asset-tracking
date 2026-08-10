@@ -75,7 +75,15 @@ export const onboardingSchema = new Schema(
   {
     state: { type: String, required: true, enum: REGISTRATION_STATES, default: 'Draft' },
     source: { type: String, required: true, enum: SOURCE_KEYS, default: 'blank' },
-    classId: { type: String, required: true, ref: 'AssetClass' },
+    /**
+     * Optional, and stored as `''` when absent.
+     *
+     * A blank registration genuinely has no class — the whole premise of that
+     * source is that nobody has decided what the thing is yet. Requiring one
+     * here made "add the asset now, classify it later" impossible, which is the
+     * single most common way a legacy asset enters the register.
+     */
+    classId: { type: String, default: '' },
     registeredAt: { type: Date, required: true },
     registeredBy: { type: String, required: true },
     activatedAt: Date,
@@ -83,8 +91,29 @@ export const onboardingSchema = new Schema(
     /** Class-specific attribute values captured at Stage B. */
     attributes: { type: Map, of: Schema.Types.Mixed, default: {} },
 
+    /** The template this asset was registered from, when it came from one. */
+    templateId: { type: String, ref: 'AssetTemplate' },
+    /** The asset this one was cloned from — kept so provenance survives. */
+    clonedFromId: { type: String, ref: 'Asset' },
+
+    /**
+     * Your own inventory sticker, distinct from the manufacturer's serial and
+     * from a tracking tag. Uniqueness is enforced by a partial index on the
+     * asset (see models/Asset.ts) so any number of assets may have none.
+     */
+    assetTag: { type: String, trim: true, default: '' },
+
     // Place
     department: String,
+    /**
+     * Who holds it, as an employee number.
+     *
+     * The old flow could only assign to a registered platform user, which meant
+     * the majority of custodians — people who never sign in — could not be
+     * recorded at all. Custodian is now free text and this is the identifier
+     * that makes it resolvable; it is required whenever a custodian is named.
+     */
+    custodianEmployeeId: { type: String, trim: true, default: '' },
     locationConfirmed: { type: Boolean, default: false },
 
     // Track
@@ -99,6 +128,25 @@ export const onboardingSchema = new Schema(
 
     // Maintain
     maintenancePlan: { type: String, enum: ['class-default', 'run-to-failure', null], default: null },
+
+    /**
+     * Support contract, if there is one.
+     *
+     * Gated behind `hasContract` because most assets have no contract at all —
+     * asking every registration for a provider and an expiry produced a section
+     * that was empty on the majority of records.
+     */
+    maintenance: {
+      type: new Schema(
+        {
+          hasContract: { type: Boolean, default: false },
+          provider: String,
+          reference: String,
+        },
+        { _id: false },
+      ),
+      default: () => ({ hasContract: false }),
+    },
 
     // Commercial + documents
     commercial: { type: commercialSchema, default: () => ({ ownership: 'Owned' }) },

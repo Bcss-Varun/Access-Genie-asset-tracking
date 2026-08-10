@@ -4,7 +4,6 @@ import { FormDialog, Field, Select, TextArea, TextInput } from '@/components/ui/
 import { useMutate } from '@/api/mutate';
 import { custodyApi } from '@/api/catalog';
 import { operationsApi } from '@/api/operations';
-import { assetsApi } from '@/api/assets';
 import { allUsers, flattenScope } from '@/lib/rbac';
 
 /**
@@ -160,67 +159,6 @@ export function TransferDialog({ asset, onClose }: { asset: Asset; onClose: () =
   );
 }
 
-// ── Retire ───────────────────────────────────────────────────────────────────
-/**
- * Retiring is a status change, not a workflow.
- *
- * The menu promised a "retirement workflow" — an approval chain, a disposal
- * record, a book-value writedown. None of that exists, and building a fake one
- * would be worse than saying plainly what this does: it takes the asset out of
- * service so it stops counting toward availability and stops being scheduled
- * for maintenance.
- */
-export function RetireDialog({ asset, onClose }: { asset: Asset; onClose: () => void }) {
-  const { run, isPending } = useMutate();
-  const [reason, setReason] = useState('');
-
-  const submit = async () => {
-    const ok = await run(
-      assetsApi.update(asset.id, {
-        // `End_Of_Life` is the vocabulary's terminal status. Writing
-        // "Decommissioned" here is rejected by the API — the enum is the same
-        // one the registry filters and the dashboards count against.
-        status: 'End_Of_Life',
-        lifecycleStage: 'Retired',
-        // Lands on the timeline entry the status change produces.
-        note: reason.trim(),
-      }),
-      {
-        success: `${asset.id} retired`,
-        successDetail: 'It no longer counts toward availability and will not be scheduled for maintenance.',
-        describe: 'retire that asset',
-        // Its marker has to come off the live map.
-        refreshTracking: true,
-      },
-    );
-    if (ok) onClose();
-  };
-
-  return (
-    <FormDialog
-      icon="🗄️"
-      title={`Retire ${asset.id}`}
-      description={`${asset.name} will be marked End of Life. The record, its history and its documents are kept — nothing is deleted.`}
-      submitLabel="Retire asset"
-      busy={isPending}
-      disabled={reason.trim().length < 3}
-      onSubmit={() => void submit()}
-      onCancel={onClose}
-    >
-      <div className="rounded-lg bg-amber-50 px-3 py-2 text-xs text-amber-800">
-        Open work orders against this asset are <strong>not</strong> closed automatically — check the Maintenance tab
-        first if any are still outstanding.
-      </div>
-
-      <Field label="Reason" hint="Kept on the asset's timeline as the reason it left service.">
-        <TextArea
-          autoFocus
-          rows={3}
-          value={reason}
-          onChange={(e) => setReason(e.target.value)}
-          placeholder="End of useful life; replaced by AST-1120."
-        />
-      </Field>
-    </FormDialog>
-  );
-}
+// Retiring used to be a bare status write here — see git history. It is now
+// `ChangeStageDialog` targeting `Retired`, which is a real, approval-gated,
+// audited transition instead of a status field and a good intention.

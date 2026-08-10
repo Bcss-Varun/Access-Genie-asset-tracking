@@ -141,6 +141,9 @@ export const navSections: NavSection[] = [
     items: [
       { label: 'IT Asset Registry', to: '/assets', icon: '💻' },
       { label: 'Add Asset', to: '/assets/new', icon: '➕' },
+      // Sits next to Add Asset because that is where its value is felt: a
+      // template exists to make the row above it shorter.
+      { label: 'Asset Templates', to: '/assets/templates', icon: '📋' },
       // Labelling belongs to the registry, not to Tracking (where it used to
       // sit): the job is "make this asset scannable", and printing the label is
       // the same event as binding the tag it carries.
@@ -258,7 +261,6 @@ export const navSections: NavSection[] = [
     items: [
       // Configuration, not operations: a class decides how thousands of assets
       // behave, so it is edited deliberately from Administration (docs/22 §22.2).
-      { label: 'Asset Classes & Templates', to: '/admin/classes', icon: '🧬' },
       { label: 'Users & Roles', to: '/admin/users', icon: '👥' },
       { label: 'Roles & Permissions', to: '/admin/roles', icon: '🔐' },
       { label: 'Teams', to: '/admin/teams', icon: '🧑‍🤝‍🧑' },

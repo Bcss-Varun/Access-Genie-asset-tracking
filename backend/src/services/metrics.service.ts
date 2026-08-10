@@ -2,7 +2,6 @@ import type { AnyBulkWriteOperation } from 'mongoose';
 import type { AssetHealth, Criticality } from '@access-genie/shared';
 import {
   Asset,
-  AssetClass,
   AssetPresence,
   CustodyRecord,
   MetricSnapshot,
@@ -89,8 +88,7 @@ export async function loadMetricsContext(): Promise<MetricsContext> {
   const now = Date.now();
   const windowStart = new Date(now - UTILIZATION_WINDOW_DAYS * 86_400_000);
 
-  const [classes, openWork, pmSchedules, presence, custody, classTerms] = await Promise.all([
-    AssetClass.find().select('_id name usefulLifeYears').lean(),
+  const [openWork, pmSchedules, presence, custody, classTerms] = await Promise.all([
     WorkOrder.aggregate<{ _id: string; count: number }>([
       { $match: { status: { $ne: 'Completed' }, type: { $ne: 'Preventive' } } },
       { $group: { _id: '$assetId', count: { $sum: 1 } } },
@@ -123,7 +121,9 @@ export async function loadMetricsContext(): Promise<MetricsContext> {
   for (const p of presence) if (new Date(p.lastSeen) >= windowStart) addDay(p._id, new Date(p.lastSeen));
 
   return {
-    usefulLifeByClass: new Map(classes.map((c) => [c._id, c.usefulLifeYears ?? DEFAULT_USEFUL_LIFE_YEARS])),
+    // Empty since asset classes were removed; consumers fall back to the
+    // per-asset terms and then to DEFAULT_USEFUL_LIFE_YEARS.
+    usefulLifeByClass: new Map<string, number>(),
     classTerms,
     openCorrectiveByAsset: new Map(openWork.map((w) => [w._id, w.count])),
     overduePmByAsset,

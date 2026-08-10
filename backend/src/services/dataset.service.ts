@@ -36,6 +36,7 @@ import {
   Insight,
   Inspection,
   Integration,
+  LifecycleTransition,
   MovementTrail,
   Notification,
   Part,
@@ -55,7 +56,6 @@ import {
   ChecklistTemplate,
   ReportSubscription,
 } from '../models/index.js';
-import { listAssetClasses } from './assetClass.service.js';
 import { resolveScope, scopeTreeWithCounts } from './scopeFilter.service.js';
 import { getOrgSettings } from './configuration.service.js';
 import { getScopedAggregates } from './dashboard.service.js';
@@ -82,6 +82,7 @@ import { aliasId } from '../utils/response.js';
 /** Rolling windows for the append-only collections. */
 const ACTIVITY_LIMIT = 200;
 const AUDIT_LIMIT = 200;
+const LIFECYCLE_LIMIT = 200;
 const ALERT_LIMIT = 300;
 const NOTIFICATION_LIMIT = 100;
 
@@ -131,11 +132,11 @@ export async function getDataset(
 
   const [
     assets,
-    assetClasses,
     groups,
     documents,
     activity,
     custody,
+    lifecycleTransitions,
     workOrders,
     pmSchedules,
     inspections,
@@ -190,11 +191,11 @@ export async function getDataset(
     orgSettings,
   ] = await Promise.all([
     can('assets') ? Asset.find(assetFilter).sort({ _id: 1 }).lean() : empty,
-    can('assets') ? listAssetClasses() : empty,
     can('assets') ? AssetGroup.find().sort({ name: 1 }).lean() : empty,
     can('assets') ? AssetDocument.find(byAsset).sort({ uploadedAt: -1 }).lean() : empty,
     can('assets', 'workspace') ? Activity.find(byAsset).sort({ timestamp: -1 }).limit(ACTIVITY_LIMIT).lean() : empty,
     can('compliance', 'assets') ? CustodyRecord.find(byAsset).sort({ at: -1 }).lean() : empty,
+    can('assets') ? LifecycleTransition.find(byAsset).sort({ requestedAt: -1 }).limit(LIFECYCLE_LIMIT).lean() : empty,
 
     can('maintenance') ? WorkOrder.find(byAsset).sort({ _id: 1 }).lean() : empty,
     can('maintenance') ? PmSchedule.find(byAsset).sort({ nextDue: 1 }).lean() : empty,
@@ -292,11 +293,11 @@ export async function getDataset(
     utilizationDowntime: aggregates?.utilizationDowntime ?? [],
     categoryBreakdown: aggregates?.categoryBreakdown ?? [],
     assets,
-    assetClasses,
     groups,
     documents,
     activity,
     custody,
+    lifecycleTransitions,
     workOrders,
     pmSchedules,
     inspections,

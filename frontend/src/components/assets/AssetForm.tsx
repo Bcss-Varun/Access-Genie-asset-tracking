@@ -1,8 +1,7 @@
 import { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useNavigate } from 'react-router-dom';
-import { allAssetClasses } from '@/lib/dataset';
-import { ASSET_CATEGORIES, type Asset, type AssetCategory, type Criticality, type AttributeDef } from '@access-genie/shared';
+import { ASSET_CATEGORIES, type Asset, type AssetCategory, type Criticality } from '@access-genie/shared';
 import { Button } from '@/components/ui/Button';
 import { useToast } from '@/components/providers/ToastProvider';
 import { assetsApi } from '@/api/assets';
@@ -35,15 +34,13 @@ interface FormState {
 }
 
 function seedFromAsset(asset?: Asset): FormState {
-  // Pre-select the taxonomy class whose name matches the asset's category.
-  const cls = asset ? allAssetClasses.find((c) => c.name === asset.category) : undefined;
   return {
     name: asset?.name ?? '',
     category: asset?.category ?? '',
     manufacturer: asset?.manufacturer ?? '',
     model: asset?.model ?? '',
     serialNumber: asset?.serialNumber ?? '',
-    taxonomyClassId: cls?.id ?? '',
+    taxonomyClassId: '',
     attributes: {},
     custodian: asset?.custodian ?? '',
     locationName: asset?.location.name ?? '',
@@ -107,74 +104,6 @@ function Field({
   );
 }
 
-// ── Dynamic attribute field (driven by the taxonomy schema) ───────────────────
-function AttributeField({
-  attr,
-  value,
-  onChange,
-}: {
-  attr: AttributeDef;
-  value: string | boolean | undefined;
-  onChange: (v: string | boolean) => void;
-}) {
-  const id = `attr-${attr.key}`;
-
-  if (attr.type === 'boolean') {
-    const on = value === true;
-    return (
-      <Field label={attr.label} required={attr.required} htmlFor={id}>
-        <button
-          type="button"
-          id={id}
-          role="switch"
-          aria-checked={on}
-          onClick={() => onChange(!on)}
-          className={cn(
-            'relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:ring-offset-1',
-            on ? 'bg-primary-600' : 'bg-slate-300',
-          )}
-        >
-          <span
-            className={cn(
-              'inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform',
-              on ? 'translate-x-6' : 'translate-x-1',
-            )}
-          />
-        </button>
-      </Field>
-    );
-  }
-
-  if (attr.type === 'select') {
-    return (
-      <Field label={attr.label} required={attr.required} htmlFor={id}>
-        <select id={id} className={inputCls} value={(value as string) ?? ''} onChange={(e) => onChange(e.target.value)}>
-          <option value="">Select…</option>
-          {(attr.options ?? []).map((o) => (
-            <option key={o} value={o}>
-              {o}
-            </option>
-          ))}
-        </select>
-      </Field>
-    );
-  }
-
-  const inputType = attr.type === 'number' ? 'number' : attr.type === 'date' ? 'date' : 'text';
-  return (
-    <Field label={attr.unit ? `${attr.label} (${attr.unit})` : attr.label} required={attr.required} htmlFor={id}>
-      <input
-        id={id}
-        type={inputType}
-        className={inputCls}
-        value={(value as string) ?? ''}
-        onChange={(e) => onChange(e.target.value)}
-        placeholder={attr.type === 'number' ? '0' : undefined}
-      />
-    </Field>
-  );
-}
-
 // ── Main form ─────────────────────────────────────────────────────────────────
 export function AssetForm({ mode, asset }: { mode: 'create' | 'edit'; asset?: Asset }) {
   const navigate = useNavigate();
@@ -189,11 +118,6 @@ export function AssetForm({ mode, asset }: { mode: 'create' | 'edit'; asset?: As
 
   const set = <K extends keyof FormState>(key: K, value: FormState[K]) =>
     setForm((f) => ({ ...f, [key]: value }));
-
-  const selectedClass = useMemo(
-    () => allAssetClasses.find((c) => c.id === form.taxonomyClassId),
-    [form.taxonomyClassId],
-  );
 
   // ── Validation ──────────────────────────────────────────────────────────────
   const errors = useMemo(() => {
@@ -355,40 +279,6 @@ export function AssetForm({ mode, asset }: { mode: 'create' | 'edit'; asset?: As
             />
           </Field>
         </div>
-      </FormSection>
-
-      {/* Classification */}
-      <FormSection title="Classification" description="Pick an asset class to capture its class-specific attributes.">
-        <Field label="Asset Class" htmlFor="f-class">
-          <select
-            id="f-class"
-            className={inputCls}
-            value={form.taxonomyClassId}
-            onChange={(e) => set('taxonomyClassId', e.target.value)}
-          >
-            <option value="">No class selected</option>
-            {allAssetClasses.map((c) => (
-              <option key={c.id} value={c.id}>
-                {c.icon} {c.name}
-              </option>
-            ))}
-          </select>
-        </Field>
-
-        {selectedClass ? (
-          <div className="mt-5 grid grid-cols-1 sm:grid-cols-2 gap-x-5 gap-y-4 border-t border-slate-200 pt-5">
-            {selectedClass.attributes.map((attr) => (
-              <AttributeField
-                key={attr.key}
-                attr={attr}
-                value={form.attributes[attr.key]}
-                onChange={(v) => setForm((f) => ({ ...f, attributes: { ...f.attributes, [attr.key]: v } }))}
-              />
-            ))}
-          </div>
-        ) : (
-          <p className="mt-4 text-sm text-slate-400">Select a class above to reveal its attribute fields.</p>
-        )}
       </FormSection>
 
       {/* Assignment */}

@@ -2,6 +2,7 @@ import { logger } from '../config/logger.js';
 import { recomputeAllMetrics } from './metrics.service.js';
 import { regenerateInsights } from './insightEngine.service.js';
 import { raiseDueMaintenance } from './maintenanceAutomation.service.js';
+import { raiseLifecycleAlerts } from './lifecycle.service.js';
 
 /**
  * Keeping the derived layer current.
@@ -66,4 +67,26 @@ export function startDerivationScheduler(): void {
   const timer = setInterval(() => void runPass('periodic'), PERIODIC_MS);
   timer.unref?.();
   logger.info('Derivation scheduler started', { everyMinutes: PERIODIC_MS / 60_000 });
+}
+
+const DAY_MS = 24 * 60 * 60_000;
+
+/**
+ * §9 Notifications — the daily digest sweep (warranty/maintenance/idle/
+ * unassigned). A separate, slower clock from the metrics pass above: none of
+ * those conditions change meaningfully inside a ten-minute window, and a
+ * notification re-sent every ten minutes stops being one. Fires once shortly
+ * after boot and then every 24h.
+ */
+export function startLifecycleNotificationScheduler(): void {
+  const run = () =>
+    void raiseLifecycleAlerts().catch((err: unknown) => {
+      logger.error('Lifecycle notification sweep failed', { err: err instanceof Error ? err.message : String(err) });
+    });
+
+  const initial = setTimeout(run, 30_000);
+  initial.unref?.();
+  const timer = setInterval(run, DAY_MS);
+  timer.unref?.();
+  logger.info('Lifecycle notification scheduler started', { everyHours: DAY_MS / 3_600_000 });
 }

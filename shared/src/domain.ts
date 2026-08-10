@@ -53,6 +53,59 @@ export type AssetCategory = (typeof ASSET_CATEGORIES)[number];
 export const CRITICALITIES = ['Low', 'Medium', 'High', 'Critical'] as const;
 export type Criticality = (typeof CRITICALITIES)[number];
 
+/**
+ * The cradle-to-grave lifecycle stage — a governed workflow, not a status
+ * dropdown. Every asset holds exactly one of these; every change between them
+ * is a `LifecycleTransition` (see `./lifecycle`), never a bare field write.
+ *
+ * **Append-only**, same rule as `ASSET_CATEGORIES`: this is a Mongoose enum on
+ * `Asset`, so removing or renaming a value orphans any document holding it.
+ *
+ * The linear order below is the happy path (`Planning → … → Disposed`).
+ * Re-entrant edges (`Maintenance` back to `Assigned / In Service`, etc.) are
+ * `LIFECYCLE_FLOW`, not this list.
+ */
+export const LIFECYCLE_STAGES = [
+  'Planning',
+  'Procurement',
+  'Received',
+  'Commissioning',
+  'Available',
+  'Assigned / In Service',
+  'Maintenance',
+  'Returned',
+  'Retired',
+  'Disposed',
+] as const;
+export type LifecycleStage = (typeof LIFECYCLE_STAGES)[number];
+
+/**
+ * Legal next stages from each stage — the graph a `ChangeStageDialog` and
+ * `requestStageChange()` both enforce. Mirrors `TRANSFER_FLOW` in
+ * `./registry`: forward spine plus the re-entrant loops real fleets need
+ * (maintenance and returns don't dead-end).
+ */
+export const LIFECYCLE_FLOW: Record<LifecycleStage, LifecycleStage[]> = {
+  Planning: ['Procurement'],
+  Procurement: ['Received'],
+  Received: ['Commissioning'],
+  Commissioning: ['Available'],
+  Available: ['Assigned / In Service', 'Retired'],
+  'Assigned / In Service': ['Maintenance', 'Returned', 'Retired'],
+  Maintenance: ['Assigned / In Service', 'Retired'],
+  Returned: ['Assigned / In Service', 'Available', 'Retired'],
+  Retired: ['Disposed'],
+  Disposed: [],
+};
+
+/**
+ * Stages a *manual* transition into may not be applied outright — it opens a
+ * `Pending` `LifecycleTransition` instead, per `LIFECYCLE_ROLE_MATRIX`.
+ * Automated transitions (`applyLifecycleTransition(..., { automated: true })`)
+ * bypass this — a system-raised work order does not wait on itself.
+ */
+export const LIFECYCLE_APPROVAL_REQUIRED: LifecycleStage[] = ['Maintenance', 'Retired', 'Disposed'];
+
 export const TRACKING_TECHS = ['RFID', 'BLE', 'GPS', 'QR', 'UWB', 'LoRaWAN'] as const;
 export type TrackingTech = (typeof TRACKING_TECHS)[number];
 
@@ -120,7 +173,13 @@ export interface Asset {
   trackingTech?: TrackingTech;
   /** Physical tag identifier — RFID EPC / BLE MAC / QR payload / UWB anchor. */
   trackingId?: string;
-  lifecycleStage?: string;
+  /**
+   * Governed by the lifecycle workflow — never write this directly. It is set
+   * by `createAsset` on registration and thereafter only by
+   * `applyLifecycleTransition()` (see `./lifecycle`), so every value it has
+   * ever held is backed by a `LifecycleTransition` row.
+   */
+  lifecycleStage: LifecycleStage;
   /** Position on the facility floor-plan, as % (0-100) of the SVG box. */
   mapPosition?: { x: number; y: number };
   healthTrend?: TrendPoint[];
@@ -129,8 +188,12 @@ export interface Asset {
   updatedAt: string;
 }
 
-/** Fields a client may send when creating an asset. */
-export type AssetCreateInput = Omit<Asset, 'id' | 'createdAt' | 'updatedAt' | 'healthStatus'> & {
+/**
+ * Fields a client may send when creating an asset. `lifecycleStage` is
+ * excluded, not merely optional — the initial stage is `createAsset`'s call
+ * (see `./lifecycle`), not a value a form fills in.
+ */
+export type AssetCreateInput = Omit<Asset, 'id' | 'createdAt' | 'updatedAt' | 'healthStatus' | 'lifecycleStage'> & {
   id?: string;
   healthStatus?: AssetHealth;
 };
@@ -354,6 +417,7 @@ export const ACTIVITY_TYPES = [
   'Registration',
   'Telemetry',
   'Audit',
+  'Lifecycle',
 ] as const;
 export type ActivityType = (typeof ACTIVITY_TYPES)[number];
 

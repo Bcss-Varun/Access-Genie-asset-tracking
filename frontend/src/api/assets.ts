@@ -1,4 +1,13 @@
-import type { ActivityEvent, AIInsight, Asset, AssetCategory, AssetStatus, CustodyRecord, WorkOrder } from '@access-genie/shared';
+import type {
+  ActivityEvent,
+  AIInsight,
+  Asset,
+  AssetCategory,
+  AssetStatus,
+  CustodyRecord,
+  LifecycleTransition,
+  WorkOrder,
+} from '@access-genie/shared';
 import { apiDelete, apiGet, apiList, apiPatch, apiPost } from '@/api/client';
 
 export interface AssetFilters {
@@ -29,6 +38,7 @@ export interface AssetProfile {
   activity: ActivityEvent[];
   insights: AIInsight[];
   custody: CustodyRecord[];
+  lifecycleHistory: LifecycleTransition[];
 }
 
 export const assetsApi = {

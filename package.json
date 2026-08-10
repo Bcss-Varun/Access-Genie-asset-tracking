@@ -24,6 +24,7 @@
     "seed:demo": "npm run seed:demo -w @access-genie/backend",
     "seed:demo:fresh": "npm run seed:demo:fresh -w @access-genie/backend",
     "db:indexes": "npm run db:indexes -w @access-genie/backend",
+    "migrate:lifecycle": "npm run migrate:lifecycle -w @access-genie/backend",
     "typecheck": "npm run build:shared && npm run typecheck --workspaces --if-present",
     "lint": "eslint .",
     "clean": "rimraf shared/dist backend/dist frontend/dist"

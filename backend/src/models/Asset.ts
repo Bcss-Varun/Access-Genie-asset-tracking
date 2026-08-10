@@ -4,11 +4,13 @@ import {
   ASSET_HEALTHS,
   ASSET_STATUSES,
   CRITICALITIES,
+  LIFECYCLE_STAGES,
   TRACKING_TECHS,
   type AssetCategory,
   type AssetHealth,
   type AssetStatus,
   type Criticality,
+  type LifecycleStage,
   type TrackingTech,
 } from '@access-genie/shared';
 import { baseSchemaPlugin } from '../utils/mongoose.js';
@@ -57,7 +59,8 @@ export interface AssetDoc {
   warrantyExpiry?: Date;
   trackingTech?: TrackingTech;
   trackingId?: string;
-  lifecycleStage?: string;
+  /** Governed by the lifecycle workflow — see `services/lifecycle.service.ts`. Never written directly outside it. */
+  lifecycleStage: LifecycleStage;
   mapPosition?: { x: number; y: number };
   healthTrend?: { label: string; value: number }[];
   /**
@@ -126,7 +129,7 @@ const assetSchema = new Schema<AssetDoc>(
     warrantyExpiry: Date,
     trackingTech: { type: String, enum: TRACKING_TECHS, index: true },
     trackingId: { type: String, index: true, sparse: true },
-    lifecycleStage: String,
+    lifecycleStage: { type: String, required: true, enum: LIFECYCLE_STAGES, default: 'Planning', index: true },
     mapPosition: { type: { x: Number, y: Number }, required: false },
     healthTrend: { type: [trendPointSchema], default: undefined },
     onboarding: { type: onboardingSchema, required: false },
@@ -160,6 +163,21 @@ assetSchema.index(
     name: 'serialNumber_present_unique',
     unique: true,
     partialFilterExpression: { serialNumber: { $type: 'string', $gt: '' } },
+  },
+);
+/**
+ * Asset tags are unique among the assets that carry one.
+ *
+ * Same shape as the serial-number index above and for the same reason: an
+ * inventory sticker identifies one physical unit, but most assets do not have
+ * one yet, and every one of those stores `''`.
+ */
+assetSchema.index(
+  { 'onboarding.assetTag': 1 },
+  {
+    name: 'assetTag_present_unique',
+    unique: true,
+    partialFilterExpression: { 'onboarding.assetTag': { $type: 'string', $gt: '' } },
   },
 );
 // Compound index for the registry's default view: filter by status/category,

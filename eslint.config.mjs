@@ -69,4 +69,14 @@ export default tseslint.config(
     files: ['scripts/**/*.mjs', '*.config.{ts,mjs}'],
     languageOptions: { globals: globals.node },
   },
+
+  // ── QA harness ─────────────────────────────────────────────────────────────
+  // Node scripts, but they also drive a browser: `cdp.mjs` uses the WebSocket
+  // global that Node exposes under --experimental-websocket, and the runners
+  // evaluate strings inside the page. Linted like any other source — the point
+  // is to catch a typo in a test before it is mistaken for a product bug.
+  {
+    files: ['Testing/harness/**/*.mjs'],
+    languageOptions: { globals: { ...globals.node, WebSocket: 'readonly' } },
+  },
 );
