@@ -7,6 +7,7 @@
   "main": "dist/index.js",
   "scripts": {
     "dev": "tsx watch src/index.ts",
+    "prebuild": "tsc -p ../shared/tsconfig.json",
     "build": "tsc -p tsconfig.json",
     "start": "node dist/index.js",
     "seed": "tsx src/seed/index.ts",
@@ -15,6 +16,7 @@
     "seed:demo:fresh": "tsx src/seed/demo.ts --fresh",
     "db:indexes": "tsx src/scripts/syncIndexes.ts",
     "migrate:lifecycle": "tsx src/scripts/migrateLifecycleStage.ts",
+    "pretypecheck": "tsc -p ../shared/tsconfig.json",
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },
   "dependencies": {
