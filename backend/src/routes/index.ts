@@ -13,6 +13,7 @@ import registryRoutes from './registry.routes.js';
 import labellingRoutes from './labelling.routes.js';
 import operationsRoutes from './operations.routes.js';
 import platformRoutes from './platform.routes.js';
+import technicianRoutes from './technician.routes.js';
 
 import * as dashboardController from '../controllers/dashboard.controller.js';
 import * as insightController from '../controllers/insight.controller.js';
@@ -108,6 +109,7 @@ router.use('/tracking', trackingRoutes);
 router.use('/users', userRoutes);
 router.use('/labels', labellingRoutes);
 router.use('/operations', operationsRoutes);
+router.use(technicianRoutes);
 
 // Reference collections behind the registry, maintenance, AI, analytics,
 // compliance and administration screens. Mounted at the root because each

@@ -112,11 +112,12 @@ export async function updateWorkOrder(id: string, input: UpdateWorkOrderInput): 
  * data-entry mistake, and reopening should raise a fresh work order.
  */
 const ALLOWED_TRANSITIONS: Record<WorkOrderStatus, WorkOrderStatus[]> = {
-  New: ['Assigned', 'In Progress', 'On Hold'],
-  Assigned: ['In Progress', 'On Hold', 'New'],
-  'In Progress': ['On Hold', 'Completed'],
-  'On Hold': ['In Progress', 'Assigned'],
+  New: ['Assigned', 'In Progress', 'On Hold', 'Cancelled'],
+  Assigned: ['In Progress', 'On Hold', 'New', 'Cancelled'],
+  'In Progress': ['On Hold', 'Completed', 'Cancelled'],
+  'On Hold': ['In Progress', 'Assigned', 'Cancelled'],
   Completed: [],
+  Cancelled: [],
 };
 
 export async function changeWorkOrderStatus(

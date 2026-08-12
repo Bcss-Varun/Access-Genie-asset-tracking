@@ -22,6 +22,23 @@ import { allAssets } from './dataset';
 export const FIELD_STAGES = ['Assigned', 'Accepted', 'En Route', 'On Site', 'In Progress', 'Waiting', 'Completed'] as const;
 export type FieldStage = (typeof FIELD_STAGES)[number];
 
+// ── SLA ──────────────────────────────────────────────────────────────────────
+export const SLA_STATUSES = ['On Track', 'At Risk', 'Overdue', 'Met'] as const;
+export type SlaStatus = (typeof SLA_STATUSES)[number];
+
+/**
+ * Where a work order stands against its due date — the single rule both the
+ * `SlaChip` badge and the Work Orders SLA filter read, so "show me at-risk
+ * jobs" always matches what the chip on that row is actually showing.
+ */
+export function slaStatus(dueDate: string, status: WorkOrder['status']): SlaStatus {
+  if (status === 'Completed') return 'Met';
+  const hoursLeft = (Date.parse(dueDate) - Date.now()) / 3_600_000;
+  if (hoursLeft < 0) return 'Overdue';
+  if (hoursLeft <= 24) return 'At Risk';
+  return 'On Track';
+}
+
 const STAGE_RE = /^Stage:\s*(.+?)\s*(?:—.*)?$/;
 
 /** The comment text that records a stage change — parsed back by `currentFieldStage`. */
@@ -78,7 +95,7 @@ export interface FieldTransition {
 }
 
 export function nextFieldTransitions(wo: Pick<WorkOrder, 'status' | 'comments' | 'assignedTo'>): FieldTransition[] {
-  if (wo.status === 'Completed') return [];
+  if (wo.status === 'Completed' || wo.status === 'Cancelled') return [];
   const stage = currentFieldStage(wo);
 
   switch (stage) {

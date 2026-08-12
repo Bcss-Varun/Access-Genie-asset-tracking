@@ -32,6 +32,10 @@ export interface CreateTransferInput {
   handler?: string;
   /** The field job this movement supports, if any. */
   workOrderId?: string;
+  /** Ties this record to the other assets raised in the same multi-asset request. */
+  batchId?: string;
+  requiredDate?: string;
+  notes?: string;
 }
 
 export async function createTransfer(input: CreateTransferInput, requester: string): Promise<TransferDoc> {
@@ -43,7 +47,7 @@ export async function createTransfer(input: CreateTransferInput, requester: stri
 
   const open = await Transfer.countDocuments({
     assetId: input.assetId,
-    status: { $in: ['Pending', 'Approved', 'Picked Up', 'In Transit'] },
+    status: { $in: ['Pending', 'Approved', 'Picked Up', 'In Transit', 'Received'] },
   });
   if (open > 0) throw ApiError.conflict('This asset already has a transfer in progress.');
 
@@ -62,6 +66,9 @@ export async function createTransfer(input: CreateTransferInput, requester: stri
     newCustodian: input.newCustodian ?? '',
     handler: input.handler ?? '',
     workOrderId: input.workOrderId ?? undefined,
+    batchId: input.batchId ?? undefined,
+    requiredDate: input.requiredDate ? new Date(input.requiredDate) : undefined,
+    notes: input.notes ?? '',
   });
 
   return transfer.toObject();
@@ -99,6 +106,9 @@ export async function advanceTransfer(
   if (status === 'Approved' || status === 'Rejected') {
     transfer.approver = actor;
     transfer.approvedAt = new Date();
+  }
+  if (status === 'Completed') {
+    transfer.completedAt = new Date();
   }
   if (status === 'Picked Up') {
     transfer.pickedUpAt = new Date();

@@ -1,9 +1,7 @@
-import { useMemo, useState } from 'react';
+import { useMemo } from 'react';
 import { Link } from 'react-router-dom';
-import { PageHeader, Badge, EmptyState, KpiCard } from '@/components/ui/primitives';
-import { Button } from '@/components/ui/Button';
+import { PageHeader, Badge, EmptyState, MetricCard } from '@/components/ui/primitives';
 import { FieldActionButtons, SlaChip } from '@/components/workforce/WorkOrderActions';
-import { ScanAssetDialog } from '@/components/workforce/ScanAssetDialog';
 import { useSession } from '@/components/providers/SessionProvider';
 import { allWorkOrders, allTransfers, getAssetById } from '@/lib/dataset';
 import { fieldStageLabel } from '@/lib/field-ops';
@@ -24,15 +22,15 @@ const PRIORITY_TONE: Record<WorkOrderPriority, 'red' | 'amber' | 'primary' | 'sl
 export default function MyWorkPage() {
   const { session } = useSession();
   const { user } = session;
-  const [scanning, setScanning] = useState(false);
   const canMaintain = session.modules.includes('maintenance') || session.modules.includes('operations');
   const isApprover = ['super_admin', 'org_admin', 'facility_manager', 'maintenance_manager'].includes(session.role.id);
 
   // Work orders: match by name, else fall back to open ones for a role that
   // actually does field work — an executive with no personal queue sees none.
   const workOrders = useMemo<WorkOrder[]>(() => {
-    const mine = allWorkOrders.filter((w) => w.assignedTo === user.name && w.status !== 'Completed');
-    const base = mine.length > 0 ? mine : canMaintain ? allWorkOrders.filter((w) => w.status !== 'Completed') : [];
+    const isOpen = (w: WorkOrder) => w.status !== 'Completed' && w.status !== 'Cancelled';
+    const mine = allWorkOrders.filter((w) => w.assignedTo === user.name && isOpen(w));
+    const base = mine.length > 0 ? mine : canMaintain ? allWorkOrders.filter(isOpen) : [];
     return [...base].sort((a, b) => PRIORITY_RANK[b.priority] - PRIORITY_RANK[a.priority] || Date.parse(a.dueDate) - Date.parse(b.dueDate));
   }, [user.name, canMaintain]);
 
@@ -45,7 +43,7 @@ export default function MyWorkPage() {
   const dueToday = workOrders.filter((w) => w.dueDate.slice(0, 10) === today).length;
   const critical = workOrders.filter((w) => w.priority === 'Critical').length;
   const inProgress = workOrders.filter((w) => w.status === 'In Progress').length;
-  const pendingCompletion = workOrders.filter((w) => fieldStageLabel(w) === 'In Progress' || fieldStageLabel(w) === 'Waiting').length;
+  const overdue = workOrders.filter((w) => isOverdue(w.dueDate)).length;
 
   const totalItems = workOrders.length + approvals.length;
 
@@ -55,7 +53,6 @@ export default function MyWorkPage() {
         title={`Good morning, ${user.name.split(' ')[0]}`}
         subtitle={`${user.title} — here is your work for today.`}
         breadcrumb={[{ label: 'Mobile Workforce', href: '/workforce' }, { label: 'My Work' }]}
-        actions={<Button variant="outline" onClick={() => setScanning(true)}>🔍 Identify / Scan Asset</Button>}
       />
 
       {totalItems === 0 ? (
@@ -68,12 +65,12 @@ export default function MyWorkPage() {
         </div>
       ) : (
         <>
-          <div className="grid grid-cols-2 lg:grid-cols-5 gap-4">
-            <KpiCard label="Assigned" value={workOrders.length} sub="In your queue" accent />
-            <KpiCard label="Due Today" value={dueToday} sub="Before end of shift" tone={dueToday > 0 ? 'amber' : 'emerald'} />
-            <KpiCard label="Critical" value={critical} sub={critical > 0 ? 'Needs attention' : 'None open'} tone={critical > 0 ? 'red' : 'emerald'} />
-            <KpiCard label="In Progress" value={inProgress} sub="Being worked" tone="primary" />
-            <KpiCard label="Pending Completion" value={pendingCompletion} sub="Started, not closed" tone="amber" />
+          <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4">
+            <MetricCard label="Assigned" value={workOrders.length} sub="In your queue" tone="primary" />
+            <MetricCard label="Due Today" value={dueToday} sub="Before end of shift" tone={dueToday > 0 ? 'amber' : 'emerald'} />
+            <MetricCard label="Critical" value={critical} sub={critical > 0 ? 'Needs attention' : 'None open'} tone={critical > 0 ? 'red' : 'emerald'} />
+            <MetricCard label="In Progress" value={inProgress} sub="Being worked" tone="primary" />
+            <MetricCard label="Overdue" value={overdue} sub={overdue > 0 ? 'Past due date' : 'None overdue'} tone={overdue > 0 ? 'red' : 'emerald'} />
           </div>
 
           <div className="grid gap-6 lg:grid-cols-3 flex-1 min-h-0">
@@ -147,7 +144,7 @@ export default function MyWorkPage() {
                           Transfer: {a.assetName} → {a.to}
                         </div>
                         <div className="mt-1.5 flex items-center gap-2">
-                          <Link to="/operations/transfers" className="text-xs font-medium text-primary-600 hover:text-primary-700">Review →</Link>
+                          <Link to="/asset-movement" className="text-xs font-medium text-primary-600 hover:text-primary-700">Review →</Link>
                           <span className="text-[11px] text-slate-400">from {a.requester}</span>
                         </div>
                       </div>
@@ -159,7 +156,6 @@ export default function MyWorkPage() {
           </div>
         </>
       )}
-      {scanning && <ScanAssetDialog onClose={() => setScanning(false)} />}
     </div>
   );
 }

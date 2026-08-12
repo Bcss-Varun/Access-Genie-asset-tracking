@@ -17,6 +17,9 @@ export const operationsApi = {
     newCustodian?: string;
     handler?: string;
     workOrderId?: string;
+    batchId?: string;
+    requiredDate?: string;
+    notes?: string;
   }) => apiPost<Transfer>('/operations/transfers', input),
   advanceTransfer: (id: string, status: TransferStatus) =>
     apiPost<Transfer>(`/operations/transfers/${id}/status`, { status }),
