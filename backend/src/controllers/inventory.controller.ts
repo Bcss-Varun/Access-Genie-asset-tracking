@@ -92,7 +92,7 @@ export const updatePurchaseOrder = asyncHandler(async (req: Request, res: Respon
 });
 export const receivePurchaseOrder = asyncHandler(async (req: Request, res: Response) => {
   const id = req.params.id as string;
-  const result = await service.receivePurchaseOrder(id);
+  const result = await service.receivePurchaseOrder(id, req.auth?.user.name ?? '');
   audited(req, 'purchase_order.receive', id);
   sendData(res, result);
 });

@@ -304,7 +304,7 @@ export async function updatePurchaseOrder(id: string, patch: UpdatePurchaseOrder
  * twice would silently double the stock, and the count that follows would be
  * blamed on the warehouse rather than on the software.
  */
-export async function receivePurchaseOrder(id: string): Promise<{ po: PurchaseOrderDoc; received: ConsumptionResult[] }> {
+export async function receivePurchaseOrder(id: string, actor = ''): Promise<{ po: PurchaseOrderDoc; received: ConsumptionResult[] }> {
   const po = await PurchaseOrder.findById(id);
   if (!po) throw ApiError.notFound('Purchase order');
   if (po.status === 'Received') throw ApiError.conflict('This purchase order has already been received');
@@ -331,6 +331,7 @@ export async function receivePurchaseOrder(id: string): Promise<{ po: PurchaseOr
       delta: line.qty,
       reason: `Received from ${po.supplierName}`,
       reference: id,
+      actor,
     });
     received.push({ sku: line.sku, requested: line.qty, consumed: line.qty, onHand: part.onHand });
   }

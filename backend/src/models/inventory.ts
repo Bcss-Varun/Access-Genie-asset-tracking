@@ -82,9 +82,16 @@ const partSchema = new Schema<PartDoc>(
     reorderPoint: { type: Number, required: true, min: 0 },
     unitCost: { type: Number, required: true, min: 0 },
     warehouseId: { type: String, required: true, ref: 'Warehouse', index: true },
-    bin: { type: String, required: true },
+    // Blank is a legitimate value, not missing data — a part can be received
+    // before it has a shelf assigned. `required: true` would reject the empty
+    // string Mongoose's own required-check treats as "unset" for a String
+    // path, even though the validator (partFields.bin) defaults it to ''.
+    bin: { type: String, default: '' },
     abcClass: { type: String, required: true, enum: ['A', 'B', 'C'], index: true },
-    supplierId: { type: String, required: true, ref: 'Supplier' },
+    // Same reasoning as `bin`: "None" is a real, UI-selectable option (see
+    // partFields.supplierId's default('')) — a part with no supplier simply
+    // never gets auto-ordered, which is not a validation failure.
+    supplierId: { type: String, default: '', ref: 'Supplier' },
     leadTimeDays: { type: Number, required: true, min: 0 },
   },
   { versionKey: false },
