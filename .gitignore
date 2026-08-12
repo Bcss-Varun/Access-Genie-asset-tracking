@@ -16,7 +16,6 @@ dist/
 /coverage
 
 # Environment. Real values never get committed; the documented templates do.
-.env
 .env.*
 !.env.example
 
@@ -33,8 +32,7 @@ yarn-debug.log*
 yarn-error.log*
 .pnpm-debug.log*
 
-# Deploy
-.vercel
+
 
 # Legacy: the project-local mongod that development used before everything
 # moved to the hosted cluster. Kept ignored so an old working copy does not
