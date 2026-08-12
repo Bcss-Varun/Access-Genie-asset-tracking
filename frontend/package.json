@@ -6,8 +6,10 @@
   "description": "Access Genie AI — React + Vite single-page client",
   "scripts": {
     "dev": "vite",
+    "prebuild": "tsc -p ../shared/tsconfig.json",
     "build": "tsc -p tsconfig.json --noEmit && vite build",
     "preview": "vite preview",
+    "pretypecheck": "tsc -p ../shared/tsconfig.json",
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },
   "dependencies": {

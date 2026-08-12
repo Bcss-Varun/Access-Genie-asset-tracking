@@ -78,7 +78,7 @@ const lifecycleTransitionSchema = new Schema<LifecycleTransitionDoc>(
 lifecycleTransitionSchema.plugin(baseSchemaPlugin);
 // The asset's own lifecycle timeline — newest first, same access pattern as `Activity`.
 lifecycleTransitionSchema.index({ assetId: 1, requestedAt: -1 });
-// "Assets requiring approval" KPI + the approvals queue.
-lifecycleTransitionSchema.index({ status: 1 });
+// The "Assets requiring approval" KPI + the approvals queue already have their
+// index from `status: { ..., index: true }` above — nothing further to add here.
 
 export const LifecycleTransition = model<LifecycleTransitionDoc>('LifecycleTransition', lifecycleTransitionSchema);
