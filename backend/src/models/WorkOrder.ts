@@ -1,9 +1,11 @@
 import { model, Schema } from 'mongoose';
 import {
   WORK_ORDER_PRIORITIES,
+  WORK_ORDER_SOURCES,
   WORK_ORDER_STATUSES,
   WORK_ORDER_TYPES,
   type WorkOrderPriority,
+  type WorkOrderSource,
   type WorkOrderStatus,
   type WorkOrderType,
 } from '@access-genie/shared';
@@ -23,6 +25,8 @@ export interface WorkOrderDoc {
   description: string;
   estimatedHours: number;
   aiGenerated: boolean;
+  source?: WorkOrderSource;
+  requiredSkill?: string;
   checklist: { label: string; done: boolean }[];
   parts: { sku: string; name: string; qty: number; unitCost: number }[];
   laborLog: { tech: string; hours: number; note: string; at: Date }[];
@@ -80,6 +84,8 @@ const workOrderSchema = new Schema<WorkOrderDoc>(
     description: { type: String, default: '' },
     estimatedHours: { type: Number, required: true, min: 0, default: 1 },
     aiGenerated: { type: Boolean, default: false },
+    source: { type: String, enum: WORK_ORDER_SOURCES },
+    requiredSkill: { type: String, trim: true },
     checklist: { type: [checklistItemSchema], default: [] },
     parts: { type: [partSchema], default: [] },
     laborLog: { type: [laborSchema], default: [] },

@@ -1,6 +1,7 @@
 import { z } from 'zod';
 import {
   WORK_ORDER_PRIORITIES,
+  WORK_ORDER_SOURCES,
   WORK_ORDER_STATUSES,
   WORK_ORDER_TYPES,
 } from '@access-genie/shared';
@@ -24,11 +25,16 @@ export const createWorkOrderSchema = z.object({
   status: z.enum(WORK_ORDER_STATUSES).default('New'),
   priority: z.enum(WORK_ORDER_PRIORITIES).default('Medium'),
   type: z.enum(WORK_ORDER_TYPES).default('Corrective'),
-  assignedTo: z.string().trim().min(2).max(120),
+  // Technician assignment is optional at creation — an unassigned work order
+  // is a normal, expected state (it is what Scheduling & Dispatch exists to
+  // clear), not a validation failure.
+  assignedTo: z.string().trim().min(2).max(120).default('Unassigned'),
   dueDate: isoDateString,
   description: z.string().trim().max(4000).default(''),
   estimatedHours: z.number().min(0).max(1000).default(1),
   aiGenerated: z.boolean().default(false),
+  source: z.enum(WORK_ORDER_SOURCES).default('Manual'),
+  requiredSkill: z.string().trim().max(80).optional(),
   checklist: z.array(z.object({ label: z.string().trim().min(1), done: z.boolean().default(false) })).max(50).default([]),
   parts: z
     .array(

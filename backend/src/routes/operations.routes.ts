@@ -21,6 +21,9 @@ const createTransferSchema = z.object({
   newCustodian: z.string().trim().max(120).optional(),
   handler: z.string().trim().max(120).optional(),
   workOrderId: z.string().trim().max(40).optional(),
+  batchId: z.string().trim().max(40).optional(),
+  requiredDate: z.string().trim().optional(),
+  notes: z.string().trim().max(1000).optional(),
 });
 
 const advanceSchema = z.object({

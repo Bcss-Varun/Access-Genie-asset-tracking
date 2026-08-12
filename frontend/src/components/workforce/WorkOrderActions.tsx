@@ -28,6 +28,9 @@ export function FieldActionButtons({ wo, size = 'sm' }: { wo: WorkOrder; size?: 
   if (wo.status === 'Completed') {
     return <span className="text-xs font-medium text-emerald-600">Completed ✓</span>;
   }
+  if (wo.status === 'Cancelled') {
+    return <span className="text-xs font-medium text-slate-400">Cancelled</span>;
+  }
   if (transitions.length === 0) return null;
 
   async function apply(t: FieldTransition) {

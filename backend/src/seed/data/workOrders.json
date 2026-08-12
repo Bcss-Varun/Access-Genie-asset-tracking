@@ -41,7 +41,7 @@
         {
           "tech": "Unassigned",
           "hours": 0,
-          "note": "Awaiting assignment — AI-generated work order.",
+          "note": "Awaiting assignment \u2014 AI-generated work order.",
           "at": "2026-07-23T06:00:00.000Z"
         }
       ],
@@ -53,11 +53,12 @@
         },
         {
           "author": "Sneha Iyer",
-          "text": "Aditya Rao is travelling until Thursday — schedule the recall for Friday.",
+          "text": "Aditya Rao is travelling until Thursday \u2014 schedule the recall for Friday.",
           "at": "2026-07-23T07:00:00.000Z"
         }
       ]
-    }
+    },
+    "source": "Predictive Maintenance"
   },
   {
     "id": "WO-5002",
@@ -72,7 +73,7 @@
     "dueDate": "2026-07-24T09:00:00.000Z",
     "estimatedHours": 3,
     "aiGenerated": false,
-    "description": "Inlet temperature at 85°C. Replace failing fan module and reseat thermal sensors in Rack 42.",
+    "description": "Inlet temperature at 85\u00b0C. Replace failing fan module and reseat thermal sensors in Rack 42.",
     "detail": {
       "checklist": [
         {
@@ -96,7 +97,7 @@
           "done": false
         },
         {
-          "label": "Confirm inlet temp < 30°C for 2 hours",
+          "label": "Confirm inlet temp < 30\u00b0C for 2 hours",
           "done": false
         }
       ],
@@ -131,7 +132,7 @@
       "comments": [
         {
           "author": "Telemetry",
-          "text": "Inlet temperature crossed 85°C threshold — alert ALT-02 raised.",
+          "text": "Inlet temperature crossed 85\u00b0C threshold \u2014 alert ALT-02 raised.",
           "at": "2026-07-23T03:00:00.000Z"
         },
         {
@@ -141,15 +142,17 @@
         },
         {
           "author": "Manoj Reddy",
-          "text": "Approved emergency override — proceed outside the change window.",
+          "text": "Approved emergency override \u2014 proceed outside the change window.",
           "at": "2026-07-23T05:00:00.000Z"
         }
       ]
-    }
+    },
+    "source": "Incident",
+    "requiredSkill": "Server Hardware"
   },
   {
     "id": "WO-5003",
-    "title": "Quarterly PM — UPS Battery Check",
+    "title": "Quarterly PM \u2014 UPS Battery Check",
     "assetId": "AST-1005",
     "assetName": "APC Smart-UPS 3000",
     "status": "Assigned",
@@ -192,11 +195,13 @@
       "comments": [
         {
           "author": "Manoj Reddy",
-          "text": "Quarterly PM — pair this with the INSP-02 load bank test to avoid a second downtime window.",
+          "text": "Quarterly PM \u2014 pair this with the INSP-02 load bank test to avoid a second downtime window.",
           "at": "2026-07-22T09:00:00.000Z"
         }
       ]
-    }
+    },
+    "source": "Scheduled Maintenance",
+    "requiredSkill": "Electrical & Power"
   },
   {
     "id": "WO-5004",
@@ -263,7 +268,9 @@
           "at": "2026-07-22T14:00:00.000Z"
         }
       ]
-    }
+    },
+    "source": "Incident",
+    "requiredSkill": "Storage Systems"
   },
   {
     "id": "WO-5005",
@@ -303,18 +310,20 @@
         {
           "tech": "Network Team",
           "hours": 1,
-          "note": "RF survey data collected; density 2.3× peer median.",
+          "note": "RF survey data collected; density 2.3\u00d7 peer median.",
           "at": "2026-07-22T23:00:00.000Z"
         }
       ],
       "comments": [
         {
           "author": "AI Engine",
-          "text": "Utilization at 96% for 30 days with rising packet drops — an additional AP is likely cheaper than the support load.",
+          "text": "Utilization at 96% for 30 days with rising packet drops \u2014 an additional AP is likely cheaper than the support load.",
           "at": "2026-07-22T09:00:00.000Z"
         }
       ]
-    }
+    },
+    "source": "Predictive Maintenance",
+    "requiredSkill": "Networking"
   },
   {
     "id": "WO-5009",
@@ -374,11 +383,12 @@
           "at": "2026-07-23T06:00:00.000Z"
         }
       ]
-    }
+    },
+    "source": "Incident"
   },
   {
     "id": "WO-5010",
-    "title": "Firmware OTA — Switch",
+    "title": "Firmware OTA \u2014 Switch",
     "assetId": "AST-1002",
     "assetName": "Cisco Catalyst 9500 Switch",
     "status": "Completed",
@@ -431,11 +441,12 @@
           "at": "2026-07-22T09:00:00.000Z"
         }
       ]
-    }
+    },
+    "source": "Scheduled Maintenance"
   },
   {
     "id": "WO-5012",
-    "title": "Commissioning checklist — Cable Tester",
+    "title": "Commissioning checklist \u2014 Cable Tester",
     "assetId": "AST-1014",
     "assetName": "Fluke Networks DSX-8000",
     "status": "In Progress",
@@ -489,7 +500,8 @@
           "at": "2026-07-22T13:00:00.000Z"
         }
       ]
-    }
+    },
+    "source": "Transfer / Deployment"
   },
   {
     "id": "WO-5013",
@@ -533,7 +545,8 @@
           "at": "2026-07-22T22:00:00.000Z"
         }
       ]
-    }
+    },
+    "source": "Predictive Maintenance"
   },
   {
     "id": "WO-5014",
@@ -548,7 +561,7 @@
     "dueDate": "2026-07-23T09:00:00.000Z",
     "estimatedHours": 2,
     "aiGenerated": false,
-    "description": "Reader offline 14h — Secure Cage currently has no RFID coverage. Check PoE run and reader power state.",
+    "description": "Reader offline 14h \u2014 Secure Cage currently has no RFID coverage. Check PoE run and reader power state.",
     "detail": {
       "checklist": [
         {
@@ -577,11 +590,13 @@
           "at": "2026-07-22T19:00:00.000Z"
         }
       ]
-    }
+    },
+    "source": "Incident",
+    "requiredSkill": "Security Systems"
   },
   {
     "id": "WO-5015",
-    "title": "Toner replacement — LaserJet M507",
+    "title": "Toner replacement \u2014 LaserJet M507",
     "assetId": "AST-1013",
     "assetName": "HP LaserJet Enterprise M507",
     "status": "On Hold",
@@ -621,11 +636,12 @@
           "at": "2026-07-20T09:00:00.000Z"
         }
       ]
-    }
+    },
+    "source": "Scheduled Maintenance"
   },
   {
     "id": "WO-5016",
-    "title": "RF survey follow-up — HQ Floor 3 anchors",
+    "title": "RF survey follow-up \u2014 HQ Floor 3 anchors",
     "assetId": "AST-1007",
     "assetName": "Aruba AP-515 Access Point",
     "status": "New",
@@ -665,7 +681,8 @@
           "at": "2026-07-23T00:00:00.000Z"
         }
       ]
-    }
+    },
+    "source": "Manual"
   },
   {
     "id": "WO-5017",
@@ -683,18 +700,40 @@
     "description": "HA pair flapped 4 times overnight. Check heartbeat link and session-sync configuration before it drops a live failover.",
     "detail": {
       "checklist": [
-        { "label": "Pull HA event log for the last 24h", "done": true },
-        { "label": "Verify heartbeat interface link and duplex", "done": false },
-        { "label": "Check session-sync table for drift", "done": false },
-        { "label": "Confirm stable HA state for 2 hours", "done": false }
+        {
+          "label": "Pull HA event log for the last 24h",
+          "done": true
+        },
+        {
+          "label": "Verify heartbeat interface link and duplex",
+          "done": false
+        },
+        {
+          "label": "Check session-sync table for drift",
+          "done": false
+        },
+        {
+          "label": "Confirm stable HA state for 2 hours",
+          "done": false
+        }
       ],
       "parts": [],
       "laborLog": [],
       "comments": [
-        { "author": "System", "text": "Work order opened against Fortinet FortiGate 100F Firewall. No activity logged yet.", "at": "2026-07-22T10:00:00.000Z" },
-        { "author": "Rahul Kumar", "text": "Stage: Accepted", "at": "2026-07-22T10:30:00.000Z" }
+        {
+          "author": "System",
+          "text": "Work order opened against Fortinet FortiGate 100F Firewall. No activity logged yet.",
+          "at": "2026-07-22T10:00:00.000Z"
+        },
+        {
+          "author": "Rahul Kumar",
+          "text": "Stage: Accepted",
+          "at": "2026-07-22T10:30:00.000Z"
+        }
       ]
-    }
+    },
+    "source": "Incident",
+    "requiredSkill": "Networking"
   },
   {
     "id": "WO-5018",
@@ -712,22 +751,57 @@
     "description": "Original monitor in the Design Studio failed a backlight self-test. Swap in the IT Storeroom spare and retire the faulty unit.",
     "detail": {
       "checklist": [
-        { "label": "Confirm spare passes self-test", "done": true },
-        { "label": "Transport to Design Studio", "done": true },
-        { "label": "Swap and reconnect", "done": false },
-        { "label": "Tag faulty unit for RMA", "done": false }
+        {
+          "label": "Confirm spare passes self-test",
+          "done": true
+        },
+        {
+          "label": "Transport to Design Studio",
+          "done": true
+        },
+        {
+          "label": "Swap and reconnect",
+          "done": false
+        },
+        {
+          "label": "Tag faulty unit for RMA",
+          "done": false
+        }
       ],
       "parts": [],
       "laborLog": [
-        { "tech": "Priya Nathan", "hours": 0.5, "note": "Spare tested clean, en route to Design Studio.", "at": "2026-07-22T13:00:00.000Z" }
+        {
+          "tech": "Priya Nathan",
+          "hours": 0.5,
+          "note": "Spare tested clean, en route to Design Studio.",
+          "at": "2026-07-22T13:00:00.000Z"
+        }
       ],
       "comments": [
-        { "author": "System", "text": "Work order opened against Dell UltraSharp 32\" Monitor. No activity logged yet.", "at": "2026-07-22T08:00:00.000Z" },
-        { "author": "Priya Nathan", "text": "Stage: Accepted", "at": "2026-07-22T08:20:00.000Z" },
-        { "author": "Priya Nathan", "text": "Stage: En Route", "at": "2026-07-22T12:30:00.000Z" },
-        { "author": "Priya Nathan", "text": "Stage: In Progress", "at": "2026-07-22T13:00:00.000Z" }
+        {
+          "author": "System",
+          "text": "Work order opened against Dell UltraSharp 32\" Monitor. No activity logged yet.",
+          "at": "2026-07-22T08:00:00.000Z"
+        },
+        {
+          "author": "Priya Nathan",
+          "text": "Stage: Accepted",
+          "at": "2026-07-22T08:20:00.000Z"
+        },
+        {
+          "author": "Priya Nathan",
+          "text": "Stage: En Route",
+          "at": "2026-07-22T12:30:00.000Z"
+        },
+        {
+          "author": "Priya Nathan",
+          "text": "Stage: In Progress",
+          "at": "2026-07-22T13:00:00.000Z"
+        }
       ]
-    }
+    },
+    "source": "Service Request",
+    "requiredSkill": "Mobile Devices"
   },
   {
     "id": "WO-5019",
@@ -745,17 +819,35 @@
     "description": "Quarterly load-bank test at 75% rated capacity, plus coolant and belt inspection.",
     "detail": {
       "checklist": [
-        { "label": "Isolate generator from utility yard load", "done": false },
-        { "label": "Run load-bank test at 75% capacity", "done": false },
-        { "label": "Inspect coolant level and belts", "done": false },
-        { "label": "Log runtime and restore to standby", "done": false }
+        {
+          "label": "Isolate generator from utility yard load",
+          "done": false
+        },
+        {
+          "label": "Run load-bank test at 75% capacity",
+          "done": false
+        },
+        {
+          "label": "Inspect coolant level and belts",
+          "done": false
+        },
+        {
+          "label": "Log runtime and restore to standby",
+          "done": false
+        }
       ],
       "parts": [],
       "laborLog": [],
       "comments": [
-        { "author": "System", "text": "Work order opened against Kirloskar 125 kVA Generator. No activity logged yet.", "at": "2026-07-21T09:00:00.000Z" }
+        {
+          "author": "System",
+          "text": "Work order opened against Kirloskar 125 kVA Generator. No activity logged yet.",
+          "at": "2026-07-21T09:00:00.000Z"
+        }
       ]
-    }
+    },
+    "source": "Scheduled Maintenance",
+    "requiredSkill": "Electrical & Power"
   },
   {
     "id": "WO-5020",
@@ -773,23 +865,46 @@
     "description": "Confirm the RAID array finished rebuilding clean after last week's drive swap and no further reallocated sectors are reported.",
     "detail": {
       "checklist": [
-        { "label": "Confirm rebuild completed with no errors", "done": true },
-        { "label": "Check SMART status on all drives", "done": true },
-        { "label": "Close out cold-spare replacement ticket", "done": true }
+        {
+          "label": "Confirm rebuild completed with no errors",
+          "done": true
+        },
+        {
+          "label": "Check SMART status on all drives",
+          "done": true
+        },
+        {
+          "label": "Close out cold-spare replacement ticket",
+          "done": true
+        }
       ],
       "parts": [],
       "laborLog": [
-        { "tech": "Meera Krishnan", "hours": 0.5, "note": "Rebuild clean, all drives report healthy SMART status.", "at": "2026-07-20T10:00:00.000Z" }
+        {
+          "tech": "Meera Krishnan",
+          "hours": 0.5,
+          "note": "Rebuild clean, all drives report healthy SMART status.",
+          "at": "2026-07-20T10:00:00.000Z"
+        }
       ],
       "comments": [
-        { "author": "System", "text": "Work order opened against Synology RS2418+ NAS. No activity logged yet.", "at": "2026-07-19T09:00:00.000Z" },
-        { "author": "Meera Krishnan", "text": "Stage: Completed — Rebuild verified clean, array healthy. Closing out.", "at": "2026-07-20T10:00:00.000Z" }
+        {
+          "author": "System",
+          "text": "Work order opened against Synology RS2418+ NAS. No activity logged yet.",
+          "at": "2026-07-19T09:00:00.000Z"
+        },
+        {
+          "author": "Meera Krishnan",
+          "text": "Stage: Completed \u2014 Rebuild verified clean, array healthy. Closing out.",
+          "at": "2026-07-20T10:00:00.000Z"
+        }
       ]
-    }
+    },
+    "source": "Manual"
   },
   {
     "id": "WO-5021",
-    "title": "Audit RFID gateway access logs — Secure Cage",
+    "title": "Audit RFID gateway access logs \u2014 Secure Cage",
     "assetId": "AST-1012",
     "assetName": "Zebra RFID Gateway G-4",
     "status": "In Progress",
@@ -800,25 +915,60 @@
     "dueDate": "2026-07-24T09:00:00.000Z",
     "estimatedHours": 1.5,
     "aiGenerated": false,
-    "description": "Quarterly access-log audit for the Secure Cage reader — reconcile reads against the authorised-personnel list.",
+    "description": "Quarterly access-log audit for the Secure Cage reader \u2014 reconcile reads against the authorised-personnel list.",
     "detail": {
       "checklist": [
-        { "label": "Export 30-day read log", "done": true },
-        { "label": "Reconcile against authorised-personnel list", "done": false },
-        { "label": "Flag any unrecognised badge IDs", "done": false },
-        { "label": "File audit summary", "done": false }
+        {
+          "label": "Export 30-day read log",
+          "done": true
+        },
+        {
+          "label": "Reconcile against authorised-personnel list",
+          "done": false
+        },
+        {
+          "label": "Flag any unrecognised badge IDs",
+          "done": false
+        },
+        {
+          "label": "File audit summary",
+          "done": false
+        }
       ],
       "parts": [],
       "laborLog": [
-        { "tech": "Farhan Sheikh", "hours": 0.5, "note": "Log exported, cross-check in progress.", "at": "2026-07-22T11:00:00.000Z" }
+        {
+          "tech": "Farhan Sheikh",
+          "hours": 0.5,
+          "note": "Log exported, cross-check in progress.",
+          "at": "2026-07-22T11:00:00.000Z"
+        }
       ],
       "comments": [
-        { "author": "System", "text": "Work order opened against Zebra RFID Gateway G-4. No activity logged yet.", "at": "2026-07-22T07:00:00.000Z" },
-        { "author": "Farhan Sheikh", "text": "Stage: Accepted", "at": "2026-07-22T07:15:00.000Z" },
-        { "author": "Farhan Sheikh", "text": "Stage: On Site", "at": "2026-07-22T10:45:00.000Z" },
-        { "author": "Farhan Sheikh", "text": "Stage: In Progress", "at": "2026-07-22T11:00:00.000Z" }
+        {
+          "author": "System",
+          "text": "Work order opened against Zebra RFID Gateway G-4. No activity logged yet.",
+          "at": "2026-07-22T07:00:00.000Z"
+        },
+        {
+          "author": "Farhan Sheikh",
+          "text": "Stage: Accepted",
+          "at": "2026-07-22T07:15:00.000Z"
+        },
+        {
+          "author": "Farhan Sheikh",
+          "text": "Stage: On Site",
+          "at": "2026-07-22T10:45:00.000Z"
+        },
+        {
+          "author": "Farhan Sheikh",
+          "text": "Stage: In Progress",
+          "at": "2026-07-22T11:00:00.000Z"
+        }
       ]
-    }
+    },
+    "source": "Scheduled Maintenance",
+    "requiredSkill": "Security Systems"
   },
   {
     "id": "WO-5022",
@@ -836,17 +986,35 @@
     "description": "Vendor firmware recall on batch TC52-2024-Q2. Re-flash to the patched build before returning units to the picking floor.",
     "detail": {
       "checklist": [
-        { "label": "Pull affected units from the picking floor", "done": true },
-        { "label": "Re-flash to patched firmware build", "done": false },
-        { "label": "Re-pair with the warehouse MDM profile", "done": false },
-        { "label": "Return units to service", "done": false }
+        {
+          "label": "Pull affected units from the picking floor",
+          "done": true
+        },
+        {
+          "label": "Re-flash to patched firmware build",
+          "done": false
+        },
+        {
+          "label": "Re-pair with the warehouse MDM profile",
+          "done": false
+        },
+        {
+          "label": "Return units to service",
+          "done": false
+        }
       ],
       "parts": [],
       "laborLog": [],
       "comments": [
-        { "author": "AI Engine", "text": "Vendor recall notice matched against 6 units on this floor — batch TC52-2024-Q2.", "at": "2026-07-19T09:00:00.000Z" }
+        {
+          "author": "AI Engine",
+          "text": "Vendor recall notice matched against 6 units on this floor \u2014 batch TC52-2024-Q2.",
+          "at": "2026-07-19T09:00:00.000Z"
+        }
       ]
-    }
+    },
+    "source": "Predictive Maintenance",
+    "requiredSkill": "Mobile Devices"
   },
   {
     "id": "WO-5023",
@@ -864,22 +1032,44 @@
     "description": "Apply iDRAC and BIOS firmware updates recommended after last week's thermal incident. On hold pending the next approved change window.",
     "detail": {
       "checklist": [
-        { "label": "Stage iDRAC and BIOS firmware packages", "done": true },
-        { "label": "Confirm next change window", "done": false },
-        { "label": "Apply updates and reboot", "done": false },
-        { "label": "Verify post-update health", "done": false }
+        {
+          "label": "Stage iDRAC and BIOS firmware packages",
+          "done": true
+        },
+        {
+          "label": "Confirm next change window",
+          "done": false
+        },
+        {
+          "label": "Apply updates and reboot",
+          "done": false
+        },
+        {
+          "label": "Verify post-update health",
+          "done": false
+        }
       ],
       "parts": [],
       "laborLog": [],
       "comments": [
-        { "author": "System", "text": "Work order opened against Dell PowerEdge R740 Server. No activity logged yet.", "at": "2026-07-20T09:00:00.000Z" },
-        { "author": "Vikram Shetty", "text": "Stage: Waiting — On hold until the next approved change window.", "at": "2026-07-20T15:00:00.000Z" }
+        {
+          "author": "System",
+          "text": "Work order opened against Dell PowerEdge R740 Server. No activity logged yet.",
+          "at": "2026-07-20T09:00:00.000Z"
+        },
+        {
+          "author": "Vikram Shetty",
+          "text": "Stage: Waiting \u2014 On hold until the next approved change window.",
+          "at": "2026-07-20T15:00:00.000Z"
+        }
       ]
-    }
+    },
+    "source": "Scheduled Maintenance",
+    "requiredSkill": "Server Hardware"
   },
   {
     "id": "WO-5024",
-    "title": "Hydraulic service — forklift BT Reflex",
+    "title": "Hydraulic service \u2014 forklift BT Reflex",
     "assetId": "AST-2002",
     "assetName": "Toyota BT Reflex Forklift",
     "status": "Completed",
@@ -893,23 +1083,47 @@
     "description": "Scheduled hydraulic fluid change and mast chain inspection.",
     "detail": {
       "checklist": [
-        { "label": "Drain and replace hydraulic fluid", "done": true },
-        { "label": "Inspect mast chains and lubricate", "done": true },
-        { "label": "Test lift to full height", "done": true }
+        {
+          "label": "Drain and replace hydraulic fluid",
+          "done": true
+        },
+        {
+          "label": "Inspect mast chains and lubricate",
+          "done": true
+        },
+        {
+          "label": "Test lift to full height",
+          "done": true
+        }
       ],
       "parts": [],
       "laborLog": [
-        { "tech": "Kavya Iyer", "hours": 2, "note": "Service completed, full-height lift test clean.", "at": "2026-07-19T10:00:00.000Z" }
+        {
+          "tech": "Kavya Iyer",
+          "hours": 2,
+          "note": "Service completed, full-height lift test clean.",
+          "at": "2026-07-19T10:00:00.000Z"
+        }
       ],
       "comments": [
-        { "author": "System", "text": "Work order opened against Toyota BT Reflex Forklift. No activity logged yet.", "at": "2026-07-18T09:00:00.000Z" },
-        { "author": "Kavya Iyer", "text": "Stage: Completed — Hydraulic service done, tested clean.", "at": "2026-07-19T10:00:00.000Z" }
+        {
+          "author": "System",
+          "text": "Work order opened against Toyota BT Reflex Forklift. No activity logged yet.",
+          "at": "2026-07-18T09:00:00.000Z"
+        },
+        {
+          "author": "Kavya Iyer",
+          "text": "Stage: Completed \u2014 Hydraulic service done, tested clean.",
+          "at": "2026-07-19T10:00:00.000Z"
+        }
       ]
-    }
+    },
+    "source": "Scheduled Maintenance",
+    "requiredSkill": "HVAC"
   },
   {
     "id": "WO-5025",
-    "title": "Calibration check — Total Station",
+    "title": "Calibration check \u2014 Total Station",
     "assetId": "AST-3002",
     "assetName": "Leica TS16 Total Station",
     "status": "New",
@@ -923,21 +1137,39 @@
     "description": "Annual calibration check due before the next survey job goes out.",
     "detail": {
       "checklist": [
-        { "label": "Triage and reproduce the reported fault", "done": false },
-        { "label": "Identify parts and labour required", "done": false },
-        { "label": "Carry out the fix", "done": false },
-        { "label": "Verify and close out", "done": false }
+        {
+          "label": "Triage and reproduce the reported fault",
+          "done": false
+        },
+        {
+          "label": "Identify parts and labour required",
+          "done": false
+        },
+        {
+          "label": "Carry out the fix",
+          "done": false
+        },
+        {
+          "label": "Verify and close out",
+          "done": false
+        }
       ],
       "parts": [],
       "laborLog": [],
       "comments": [
-        { "author": "System", "text": "Work order opened against Leica TS16 Total Station. No activity logged yet.", "at": "2026-07-23T04:00:00.000Z" }
+        {
+          "author": "System",
+          "text": "Work order opened against Leica TS16 Total Station. No activity logged yet.",
+          "at": "2026-07-23T04:00:00.000Z"
+        }
       ]
-    }
+    },
+    "source": "Manual",
+    "requiredSkill": "Networking"
   },
   {
     "id": "WO-5026",
-    "title": "Battery swelling reported — CT45 scanner",
+    "title": "Battery swelling reported \u2014 CT45 scanner",
     "assetId": "AST-2003",
     "assetName": "Honeywell CT45 Scanner",
     "status": "New",
@@ -951,15 +1183,66 @@
     "description": "Inbound-bay operator reported a swollen battery pack. Pull from service immediately and dispose of per battery-handling procedure.",
     "detail": {
       "checklist": [
-        { "label": "Pull unit from service immediately", "done": false },
-        { "label": "Isolate battery per handling procedure", "done": false },
-        { "label": "Issue loaner scanner", "done": false },
-        { "label": "Log incident and dispose of battery", "done": false }
+        {
+          "label": "Pull unit from service immediately",
+          "done": false
+        },
+        {
+          "label": "Isolate battery per handling procedure",
+          "done": false
+        },
+        {
+          "label": "Issue loaner scanner",
+          "done": false
+        },
+        {
+          "label": "Log incident and dispose of battery",
+          "done": false
+        }
       ],
       "parts": [],
       "laborLog": [],
       "comments": [
-        { "author": "AI Engine", "text": "Image classifier flagged battery deformation from the last inspection photo — high confidence (91%).", "at": "2026-07-23T07:30:00.000Z" }
+        {
+          "author": "AI Engine",
+          "text": "Image classifier flagged battery deformation from the last inspection photo \u2014 high confidence (91%).",
+          "at": "2026-07-23T07:30:00.000Z"
+        }
+      ]
+    },
+    "source": "Predictive Maintenance",
+    "requiredSkill": "Mobile Devices"
+  },
+  {
+    "id": "WO-5027",
+    "title": "Relocate desk phones \u2014 Floor 2 refit (cancelled)",
+    "assetId": "AST-1007",
+    "assetName": "Aruba AP-515 Access Point",
+    "status": "Cancelled",
+    "priority": "Low",
+    "type": "Corrective",
+    "assignedTo": "Unassigned",
+    "createdAt": "2026-07-15T09:00:00.000Z",
+    "dueDate": "2026-07-20T09:00:00.000Z",
+    "estimatedHours": 1,
+    "aiGenerated": false,
+    "source": "Service Request",
+    "description": "Floor 2 refit was postponed indefinitely \u2014 work order cancelled at the requester's instruction.",
+    "detail": {
+      "checklist": [],
+      "parts": [],
+      "laborLog": [],
+      "comments": [
+        {
+          "author": "System",
+          "text": "Work order opened against Aruba AP-515 Access Point. No activity logged yet.",
+          "at": "2026-07-15T09:00:00.000Z"
+        },
+        {
+          "author": "Sneha Iyer",
+          "text": "Floor 2 refit postponed indefinitely \u2014 cancelling.",
+          "at": "2026-07-16T10:00:00.000Z"
+        }
       ]
     }
   }

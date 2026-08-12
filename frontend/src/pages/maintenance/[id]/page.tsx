@@ -26,7 +26,8 @@ const statusTone = (s: WorkOrderStatus): Tone =>
     : s === 'In Progress' ? 'primary'
       : s === 'On Hold' ? 'amber'
         : s === 'Assigned' ? 'primary'
-          : 'slate';
+          : s === 'Cancelled' ? 'red'
+            : 'slate';
 
 const priorityTone = (p: WorkOrderPriority): Tone =>
   p === 'Critical' ? 'red' : p === 'High' ? 'amber' : p === 'Medium' ? 'primary' : 'slate';
@@ -166,7 +167,7 @@ export default function WorkOrderDetailPage() {
             >
               {({ close }) => (
                 <>
-                  {(['New', 'Assigned', 'In Progress', 'On Hold', 'Completed'] as WorkOrderStatus[]).map((s) => (
+                  {(['New', 'Assigned', 'In Progress', 'On Hold', 'Completed', 'Cancelled'] as WorkOrderStatus[]).map((s) => (
                     <MenuItem
                       key={s}
                       icon={s === status ? '✓' : ''}
@@ -388,6 +389,8 @@ export default function WorkOrderDetailPage() {
               <KV label="Est. hours" value={`${wo.estimatedHours}h`} />
               <KV label="Created" value={relTime(wo.createdAt)} />
               <KV label="Due" value={relTime(wo.dueDate)} />
+              <KV label="Source" value={wo.source ?? 'Manual'} />
+              {wo.requiredSkill && <KV label="Required skill" value={wo.requiredSkill} />}
             </dl>
             <div className="mt-5 pt-4 border-t border-slate-200">
               <Link

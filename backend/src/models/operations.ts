@@ -33,11 +33,15 @@ export interface TransferDoc {
   approvedAt?: Date;
   pickedUpAt?: Date;
   receivedAt?: Date;
+  completedAt?: Date;
   reason: string;
   custodian?: string;
   newCustodian?: string;
   handler?: string;
   workOrderId?: string;
+  batchId?: string;
+  requiredDate?: Date;
+  notes?: string;
 }
 
 const transferSchema = new Schema<TransferDoc>(
@@ -54,11 +58,15 @@ const transferSchema = new Schema<TransferDoc>(
     approvedAt: Date,
     pickedUpAt: Date,
     receivedAt: Date,
+    completedAt: Date,
     reason: { type: String, default: '' },
     custodian: { type: String, default: '' },
     newCustodian: { type: String, default: '' },
     handler: { type: String, default: '' },
     workOrderId: { type: String, ref: 'WorkOrder' },
+    batchId: { type: String, index: true },
+    requiredDate: Date,
+    notes: { type: String, default: '' },
   },
   { versionKey: false },
 );
@@ -68,11 +76,13 @@ transferSchema.index({ assetName: 'text', reason: 'text' }, { name: 'transfer_se
 
 /** Forward-only. A received transfer is history, not a record to reopen. */
 export const TRANSFER_FLOW: Record<TransferStatus, TransferStatus[]> = {
-  Pending: ['Approved', 'Rejected'],
-  Approved: ['Picked Up'],
+  Pending: ['Approved', 'Rejected', 'Cancelled'],
+  Approved: ['Picked Up', 'Cancelled'],
   'Picked Up': ['In Transit'],
   'In Transit': ['Received'],
-  Received: [],
+  Received: ['Completed'],
+  Completed: [],
+  Cancelled: [],
   Rejected: [],
 };
 

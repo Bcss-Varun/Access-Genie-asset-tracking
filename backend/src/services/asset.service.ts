@@ -1,6 +1,6 @@
 import type { FilterQuery } from 'mongoose';
 import type { ApiMeta } from '@access-genie/shared';
-import { Activity, Asset, CustodyRecord, Insight, LifecycleTransition, WorkOrder, healthStatusFor, nextId, type AssetDoc } from '../models/index.js';
+import { Activity, Asset, CustodyRecord, Insight, LifecycleTransition, Transfer, WorkOrder, healthStatusFor, nextId, type AssetDoc } from '../models/index.js';
 import { ApiError } from '../utils/ApiError.js';
 import { logger } from '../config/logger.js';
 import { csvFilter, escapeRegex, paginate, parsePagination } from '../utils/query.js';
@@ -130,6 +130,7 @@ export async function updateAsset(id: string, input: UpdateAssetInput, actor: st
 
   const previousStatus = asset.status;
   const previousLocation = asset.location?.name;
+  const previousName = asset.name;
   const previous = {
     custodian: asset.custodian,
     trackingId: asset.trackingId,
@@ -151,6 +152,24 @@ export async function updateAsset(id: string, input: UpdateAssetInput, actor: st
   });
 
   await asset.save();
+
+  // A rename must not leave every open work order and in-flight transfer
+  // showing the old name — those are current state, not history, so they
+  // carry the asset's name forward the same way the asset record itself just
+  // did. Closed/cancelled records are left alone: they are a log of what the
+  // asset was called at the time, which is the correct thing for a log to say.
+  if (asset.name !== previousName) {
+    await Promise.all([
+      WorkOrder.updateMany(
+        { assetId: id, status: { $nin: ['Completed', 'Cancelled'] } },
+        { $set: { assetName: asset.name } },
+      ),
+      Transfer.updateMany(
+        { assetId: id, status: { $nin: ['Completed', 'Rejected', 'Cancelled'] } },
+        { $set: { assetName: asset.name } },
+      ),
+    ]);
+  }
 
   // Timeline entries for the two changes an auditor cares about.
   if (input.status && input.status !== previousStatus) {
