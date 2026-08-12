@@ -88,16 +88,35 @@ if (!parsed.success) {
 const raw = parsed.data;
 const isProd = raw.NODE_ENV === 'production';
 
+/**
+ * One `CORS_ORIGIN` entry against one request `Origin` header, with `*`
+ * matching any run of characters within that one entry — enough to write
+ * `https://my-app-*.vercel.app` for a project whose preview deployments each
+ * get their own hostname, without opening the door to every origin the way a
+ * bare `*` would (still refused outright below, since that combined with
+ * credentialed requests is a real hole, not just a convenience trade-off).
+ */
+function originMatches(origin: string, pattern: string): boolean {
+  if (!pattern.includes('*')) return origin === pattern;
+  const re = new RegExp(`^${pattern.split('*').map((s) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('.*')}$`);
+  return re.test(origin);
+}
+
 export const env = {
   ...raw,
   isProd,
   isDev: raw.NODE_ENV === 'development',
   isTest: raw.NODE_ENV === 'test',
 
-  /** Origins allowed to send credentialed requests. */
+  /** Origins allowed to send credentialed requests — each entry may use `*` as a wildcard segment. */
   corsOrigins: raw.CORS_ORIGIN.split(',')
     .map((o) => o.trim())
     .filter(Boolean),
+
+  /** Whether a request's `Origin` header matches any configured entry, wildcard or exact. */
+  isOriginAllowed(origin: string): boolean {
+    return this.corsOrigins.some((pattern) => originMatches(origin, pattern));
+  },
 
   /** Debug-level logs in development, info and above in production. */
   logLevel: raw.LOG_LEVEL ?? (isProd ? 'info' : 'debug'),

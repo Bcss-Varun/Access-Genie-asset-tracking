@@ -29,7 +29,14 @@ export function createApp(): Express {
 
   app.use(
     cors({
-      origin: env.corsOrigins,
+      // A function rather than the plain `corsOrigins` array so a configured
+      // entry can use `*` as a wildcard (e.g. `https://my-app-*.vercel.app`
+      // for a host whose preview deployments each mint their own hostname).
+      // No `Origin` header at all — same-origin requests, curl, server-to-
+      // server — is let through the same way an array-based config would.
+      origin: (origin, callback) => {
+        callback(null, !origin || env.isOriginAllowed(origin));
+      },
       credentials: true, // required for the refresh cookie
       exposedHeaders: ['x-request-id'],
     }),
