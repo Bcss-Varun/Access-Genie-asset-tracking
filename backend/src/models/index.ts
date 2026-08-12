@@ -140,6 +140,9 @@ export {
   type ReservationDoc,
 } from './operations.js';
 
+// ── Mobile Workforce ─────────────────────────────────────────────────────────
+export { Technician, type TechnicianDoc } from './Technician.js';
+
 // ── Reporting, compliance & administration ───────────────────────────────────
 export {
   Report,

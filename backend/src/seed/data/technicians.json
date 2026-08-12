@@ -1,0 +1,709 @@
+[
+  {
+    "id": "TECH-01",
+    "name": "Arjun Menon",
+    "title": "Senior Field Technician — Data Center Ops",
+    "department": "Data Center Operations",
+    "skills": [
+      "Server Hardware",
+      "Networking",
+      "Electrical & Power"
+    ],
+    "location": {
+      "id": "FAC-DC",
+      "name": "Chennai Data Center"
+    },
+    "shift": {
+      "label": "Morning",
+      "start": 9,
+      "end": 18
+    },
+    "workingDays": [
+      "Mon",
+      "Tue",
+      "Wed",
+      "Thu",
+      "Fri"
+    ],
+    "email": "arjun.menon@accessgenie.in",
+    "phone": "+91 98410 22317",
+    "active": true
+  },
+  {
+    "id": "TECH-02",
+    "name": "Deepak Nair",
+    "title": "Field Technician",
+    "department": "Warehouse Operations",
+    "skills": [
+      "Mobile Devices",
+      "Electrical & Power",
+      "Storage Systems"
+    ],
+    "location": {
+      "id": "FAC-WH1",
+      "name": "Hyderabad Central Warehouse"
+    },
+    "shift": {
+      "label": "Morning",
+      "start": 9,
+      "end": 18
+    },
+    "workingDays": [
+      "Mon",
+      "Tue",
+      "Wed",
+      "Thu",
+      "Fri",
+      "Sat"
+    ],
+    "email": "deepak.nair@accessgenie.in",
+    "phone": "+91 90080 41156",
+    "active": true
+  },
+  {
+    "id": "TECH-03",
+    "name": "Rahul Kumar",
+    "title": "Field Technician — Networking",
+    "department": "Network & Security",
+    "skills": [
+      "Networking",
+      "Security Systems"
+    ],
+    "location": {
+      "id": "FAC-HQ",
+      "name": "Bengaluru HQ"
+    },
+    "shift": {
+      "label": "Morning",
+      "start": 9,
+      "end": 18
+    },
+    "workingDays": [
+      "Mon",
+      "Tue",
+      "Wed",
+      "Thu",
+      "Fri"
+    ],
+    "email": "rahul.kumar@accessgenie.in",
+    "phone": "+91 98867 30291",
+    "active": true
+  },
+  {
+    "id": "TECH-04",
+    "name": "Priya Nathan",
+    "title": "Field Technician — End-User Devices",
+    "department": "IT Support",
+    "skills": [
+      "Mobile Devices",
+      "AV Equipment"
+    ],
+    "location": {
+      "id": "FAC-HQ",
+      "name": "Bengaluru HQ"
+    },
+    "shift": {
+      "label": "Evening",
+      "start": 14,
+      "end": 23
+    },
+    "workingDays": [
+      "Mon",
+      "Tue",
+      "Wed",
+      "Thu",
+      "Fri"
+    ],
+    "email": "priya.nathan@accessgenie.in",
+    "phone": "+91 99001 87732",
+    "active": true
+  },
+  {
+    "id": "TECH-05",
+    "name": "Suresh Pillai",
+    "title": "Field Technician — Facilities",
+    "department": "Facilities & Power",
+    "skills": [
+      "Electrical & Power",
+      "HVAC"
+    ],
+    "location": {
+      "id": "FAC-MUM",
+      "name": "Mumbai Regional Hub"
+    },
+    "shift": {
+      "label": "Morning",
+      "start": 9,
+      "end": 18
+    },
+    "workingDays": [
+      "Mon",
+      "Tue",
+      "Wed",
+      "Thu",
+      "Fri"
+    ],
+    "email": "suresh.pillai@accessgenie.in",
+    "phone": "+91 98200 55461",
+    "active": true
+  },
+  {
+    "id": "TECH-06",
+    "name": "Meera Krishnan",
+    "title": "Field Technician — Storage & Servers",
+    "department": "Data Center Operations",
+    "skills": [
+      "Storage Systems",
+      "Server Hardware"
+    ],
+    "location": {
+      "id": "FAC-DC",
+      "name": "Chennai Data Center"
+    },
+    "shift": {
+      "label": "Evening",
+      "start": 14,
+      "end": 23
+    },
+    "workingDays": [
+      "Mon",
+      "Tue",
+      "Wed",
+      "Thu",
+      "Fri"
+    ],
+    "email": "meera.krishnan@accessgenie.in",
+    "phone": "+91 97400 12988",
+    "active": true
+  },
+  {
+    "id": "TECH-07",
+    "name": "Farhan Sheikh",
+    "title": "Field Technician — Security",
+    "department": "Network & Security",
+    "skills": [
+      "Security Systems",
+      "Networking"
+    ],
+    "location": {
+      "id": "FAC-NCR",
+      "name": "Delhi NCR Office"
+    },
+    "shift": {
+      "label": "Morning",
+      "start": 9,
+      "end": 18
+    },
+    "workingDays": [
+      "Mon",
+      "Tue",
+      "Wed",
+      "Thu",
+      "Fri"
+    ],
+    "email": "farhan.sheikh@accessgenie.in",
+    "phone": "+91 98111 67723",
+    "active": true
+  },
+  {
+    "id": "TECH-08",
+    "name": "Lakshmi Narayan",
+    "title": "Field Technician — End-User Devices",
+    "department": "IT Support",
+    "skills": [
+      "Mobile Devices",
+      "AV Equipment"
+    ],
+    "location": {
+      "id": "FAC-PUN",
+      "name": "Pune Distribution Centre"
+    },
+    "shift": {
+      "label": "Night",
+      "start": 22,
+      "end": 7
+    },
+    "workingDays": [
+      "Mon",
+      "Tue",
+      "Wed",
+      "Thu",
+      "Fri",
+      "Sat"
+    ],
+    "email": "lakshmi.narayan@accessgenie.in",
+    "phone": "+91 98221 40976",
+    "active": true
+  },
+  {
+    "id": "TECH-09",
+    "name": "Vikram Shetty",
+    "title": "Field Technician — Infrastructure",
+    "department": "Data Center Operations",
+    "skills": [
+      "Server Hardware",
+      "Electrical & Power"
+    ],
+    "location": {
+      "id": "FAC-NOI",
+      "name": "Noida Operations Centre"
+    },
+    "shift": {
+      "label": "Evening",
+      "start": 14,
+      "end": 23
+    },
+    "workingDays": [
+      "Mon",
+      "Tue",
+      "Wed",
+      "Thu",
+      "Fri"
+    ],
+    "email": "vikram.shetty@accessgenie.in",
+    "phone": "+91 99580 23814",
+    "active": true
+  },
+  {
+    "id": "TECH-10",
+    "name": "Kavya Iyer",
+    "title": "Field Technician — Facilities",
+    "department": "Facilities & Power",
+    "skills": [
+      "HVAC",
+      "Storage Systems"
+    ],
+    "location": {
+      "id": "FAC-AHM",
+      "name": "Ahmedabad Depot"
+    },
+    "shift": {
+      "label": "Morning",
+      "start": 9,
+      "end": 18
+    },
+    "workingDays": [
+      "Mon",
+      "Tue",
+      "Wed",
+      "Thu",
+      "Fri"
+    ],
+    "email": "kavya.iyer@accessgenie.in",
+    "phone": "+91 90040 66215",
+    "active": true
+  },
+  {
+    "id": "TECH-11",
+    "name": "Sanjay Verma",
+    "title": "Field Technician — Warehouse Systems",
+    "department": "Warehouse Operations",
+    "skills": [
+      "Mobile Devices",
+      "Networking"
+    ],
+    "location": {
+      "id": "FAC-WH1",
+      "name": "Hyderabad Central Warehouse"
+    },
+    "shift": {
+      "label": "Evening",
+      "start": 14,
+      "end": 23
+    },
+    "workingDays": [
+      "Mon",
+      "Tue",
+      "Wed",
+      "Thu",
+      "Fri",
+      "Sat"
+    ],
+    "email": "sanjay.verma@accessgenie.in",
+    "phone": "+91 98480 11223",
+    "active": true
+  },
+  {
+    "id": "TECH-12",
+    "name": "Ritu Desai",
+    "title": "Field Technician — Facilities",
+    "department": "Facilities & Power",
+    "skills": [
+      "Electrical & Power",
+      "HVAC"
+    ],
+    "location": {
+      "id": "FAC-WH1",
+      "name": "Hyderabad Central Warehouse"
+    },
+    "shift": {
+      "label": "Morning",
+      "start": 9,
+      "end": 18
+    },
+    "workingDays": [
+      "Mon",
+      "Tue",
+      "Wed",
+      "Thu",
+      "Fri",
+      "Sat"
+    ],
+    "email": "ritu.desai@accessgenie.in",
+    "phone": "+91 90520 66741",
+    "active": true
+  },
+  {
+    "id": "TECH-13",
+    "name": "Ananya Bhatt",
+    "title": "Field Technician — AV & Devices",
+    "department": "IT Support",
+    "skills": [
+      "AV Equipment",
+      "Mobile Devices"
+    ],
+    "location": {
+      "id": "FAC-HQ",
+      "name": "Bengaluru HQ"
+    },
+    "shift": {
+      "label": "Morning",
+      "start": 9,
+      "end": 18
+    },
+    "workingDays": [
+      "Mon",
+      "Tue",
+      "Wed",
+      "Thu",
+      "Fri"
+    ],
+    "email": "ananya.bhatt@accessgenie.in",
+    "phone": "+91 99860 34452",
+    "active": true
+  },
+  {
+    "id": "TECH-14",
+    "name": "Karthik Subramaniam",
+    "title": "Field Technician — Data Center Ops",
+    "department": "Data Center Operations",
+    "skills": [
+      "Server Hardware",
+      "Storage Systems"
+    ],
+    "location": {
+      "id": "FAC-DC",
+      "name": "Chennai Data Center"
+    },
+    "shift": {
+      "label": "Morning",
+      "start": 9,
+      "end": 18
+    },
+    "workingDays": [
+      "Mon",
+      "Tue",
+      "Wed",
+      "Thu",
+      "Fri"
+    ],
+    "email": "karthik.subramaniam@accessgenie.in",
+    "phone": "+91 94440 78821",
+    "active": true
+  },
+  {
+    "id": "TECH-15",
+    "name": "Neha Kulkarni",
+    "title": "Field Technician — Networking",
+    "department": "Network & Security",
+    "skills": [
+      "Networking",
+      "Security Systems"
+    ],
+    "location": {
+      "id": "FAC-MUM",
+      "name": "Mumbai Regional Hub"
+    },
+    "shift": {
+      "label": "Evening",
+      "start": 14,
+      "end": 23
+    },
+    "workingDays": [
+      "Mon",
+      "Tue",
+      "Wed",
+      "Thu",
+      "Fri"
+    ],
+    "email": "neha.kulkarni@accessgenie.in",
+    "phone": "+91 98190 22765",
+    "active": true
+  },
+  {
+    "id": "TECH-16",
+    "name": "Rohan Joshi",
+    "title": "Field Technician — Facilities",
+    "department": "Facilities & Power",
+    "skills": [
+      "Electrical & Power",
+      "HVAC"
+    ],
+    "location": {
+      "id": "FAC-MUM",
+      "name": "Mumbai Regional Hub"
+    },
+    "shift": {
+      "label": "Morning",
+      "start": 9,
+      "end": 18
+    },
+    "workingDays": [
+      "Mon",
+      "Tue",
+      "Wed",
+      "Thu",
+      "Fri"
+    ],
+    "email": "rohan.joshi@accessgenie.in",
+    "phone": "+91 90210 55678",
+    "active": true,
+    "onLeaveUntil": "2026-07-26"
+  },
+  {
+    "id": "TECH-17",
+    "name": "Simran Kaur",
+    "title": "Field Technician — Security",
+    "department": "Network & Security",
+    "skills": [
+      "Security Systems",
+      "Networking"
+    ],
+    "location": {
+      "id": "FAC-NCR",
+      "name": "Delhi NCR Office"
+    },
+    "shift": {
+      "label": "Evening",
+      "start": 14,
+      "end": 23
+    },
+    "workingDays": [
+      "Mon",
+      "Tue",
+      "Wed",
+      "Thu",
+      "Fri"
+    ],
+    "email": "simran.kaur@accessgenie.in",
+    "phone": "+91 98111 44992",
+    "active": true
+  },
+  {
+    "id": "TECH-18",
+    "name": "Aman Tripathi",
+    "title": "Field Technician — End-User Devices",
+    "department": "IT Support",
+    "skills": [
+      "Mobile Devices",
+      "AV Equipment"
+    ],
+    "location": {
+      "id": "FAC-NCR",
+      "name": "Delhi NCR Office"
+    },
+    "shift": {
+      "label": "Morning",
+      "start": 9,
+      "end": 18
+    },
+    "workingDays": [
+      "Mon",
+      "Tue",
+      "Wed",
+      "Thu",
+      "Fri"
+    ],
+    "email": "aman.tripathi@accessgenie.in",
+    "phone": "+91 99997 60213",
+    "active": true
+  },
+  {
+    "id": "TECH-19",
+    "name": "Om Deshmukh",
+    "title": "Field Technician — Warehouse Systems",
+    "department": "Warehouse Operations",
+    "skills": [
+      "Mobile Devices",
+      "Storage Systems"
+    ],
+    "location": {
+      "id": "FAC-PUN",
+      "name": "Pune Distribution Centre"
+    },
+    "shift": {
+      "label": "Morning",
+      "start": 9,
+      "end": 18
+    },
+    "workingDays": [
+      "Mon",
+      "Tue",
+      "Wed",
+      "Thu",
+      "Fri",
+      "Sat"
+    ],
+    "email": "om.deshmukh@accessgenie.in",
+    "phone": "+91 98220 33119",
+    "active": true
+  },
+  {
+    "id": "TECH-20",
+    "name": "Pooja Salunkhe",
+    "title": "Field Technician — Facilities",
+    "department": "Facilities & Power",
+    "skills": [
+      "Electrical & Power",
+      "HVAC"
+    ],
+    "location": {
+      "id": "FAC-PUN",
+      "name": "Pune Distribution Centre"
+    },
+    "shift": {
+      "label": "Evening",
+      "start": 14,
+      "end": 23
+    },
+    "workingDays": [
+      "Mon",
+      "Tue",
+      "Wed",
+      "Thu",
+      "Fri",
+      "Sat"
+    ],
+    "email": "pooja.salunkhe@accessgenie.in",
+    "phone": "+91 90284 77123",
+    "active": true
+  },
+  {
+    "id": "TECH-21",
+    "name": "Manish Yadav",
+    "title": "Field Technician — Infrastructure",
+    "department": "Data Center Operations",
+    "skills": [
+      "Server Hardware",
+      "Networking"
+    ],
+    "location": {
+      "id": "FAC-NOI",
+      "name": "Noida Operations Centre"
+    },
+    "shift": {
+      "label": "Morning",
+      "start": 9,
+      "end": 18
+    },
+    "workingDays": [
+      "Mon",
+      "Tue",
+      "Wed",
+      "Thu",
+      "Fri"
+    ],
+    "email": "manish.yadav@accessgenie.in",
+    "phone": "+91 98111 90087",
+    "active": true
+  },
+  {
+    "id": "TECH-22",
+    "name": "Divya Chauhan",
+    "title": "Field Technician — Security",
+    "department": "Network & Security",
+    "skills": [
+      "Security Systems",
+      "AV Equipment"
+    ],
+    "location": {
+      "id": "FAC-NOI",
+      "name": "Noida Operations Centre"
+    },
+    "shift": {
+      "label": "Evening",
+      "start": 14,
+      "end": 23
+    },
+    "workingDays": [
+      "Mon",
+      "Tue",
+      "Wed",
+      "Thu",
+      "Fri"
+    ],
+    "email": "divya.chauhan@accessgenie.in",
+    "phone": "+91 99586 41230",
+    "active": false
+  },
+  {
+    "id": "TECH-23",
+    "name": "Hardik Patel",
+    "title": "Field Technician — Facilities",
+    "department": "Facilities & Power",
+    "skills": [
+      "Electrical & Power",
+      "HVAC"
+    ],
+    "location": {
+      "id": "FAC-AHM",
+      "name": "Ahmedabad Depot"
+    },
+    "shift": {
+      "label": "Morning",
+      "start": 9,
+      "end": 18
+    },
+    "workingDays": [
+      "Mon",
+      "Tue",
+      "Wed",
+      "Thu",
+      "Fri",
+      "Sat"
+    ],
+    "email": "hardik.patel@accessgenie.in",
+    "phone": "+91 90999 12384",
+    "active": true
+  },
+  {
+    "id": "TECH-24",
+    "name": "Nisha Shah",
+    "title": "Field Technician — Warehouse Systems",
+    "department": "Warehouse Operations",
+    "skills": [
+      "Mobile Devices",
+      "Storage Systems"
+    ],
+    "location": {
+      "id": "FAC-AHM",
+      "name": "Ahmedabad Depot"
+    },
+    "shift": {
+      "label": "Evening",
+      "start": 14,
+      "end": 23
+    },
+    "workingDays": [
+      "Mon",
+      "Tue",
+      "Wed",
+      "Thu",
+      "Fri",
+      "Sat"
+    ],
+    "email": "nisha.shah@accessgenie.in",
+    "phone": "+91 98795 60214",
+    "active": true
+  }
+]

@@ -40,6 +40,35 @@ export function Avatar({ initials, className }: { initials: string; className?: 
   );
 }
 
+// ── FilterBar ────────────────────────────────────────────────────────────────
+// The filter strip beneath a page header. A grid, not a left-packed flex row:
+// every field gets an equal share of the full card width and stretches to
+// fill it (a `Select`/`TextInput` is `w-full` by default — this is what lets
+// that width actually mean something instead of being capped per-field with
+// `!w-24`, `!w-32`, and the like, which is what used to leave the row bunched
+// on the left with truncated option text). Columns count scales with the
+// viewport and wraps a spillover field onto its own full-width row rather
+// than shrinking everyone to fit — see `min` below.
+export function FilterBar({
+  children,
+  className,
+  min = 170,
+}: {
+  children: ReactNode;
+  className?: string;
+  /** Minimum column width in px before the grid wraps to fewer columns. */
+  min?: number;
+}) {
+  return (
+    <div
+      className={cn('glass-panel grid items-end gap-x-4 gap-y-3 p-4', className)}
+      style={{ gridTemplateColumns: `repeat(auto-fit, minmax(${min}px, 1fr))` }}
+    >
+      {children}
+    </div>
+  );
+}
+
 // ── Kbd ──────────────────────────────────────────────────────────────────────
 export function Kbd({ children }: { children: ReactNode }) {
   return (
@@ -98,6 +127,67 @@ export function KpiCard({
         {value}
       </div>
       {sub && <div className={cn('mt-1.5 text-xs font-medium', subTone[tone])}>{sub}</div>}
+    </div>
+  );
+}
+
+// ── MetricCard ───────────────────────────────────────────────────────────────
+// A more deliberate KPI tile than KpiCard: an icon and a coloured left rail
+// instead of a flat card. Reserved for a module's headline numbers — the four
+// or five that earn a first glance, not every count a screen happens to have;
+// everything else belongs in the section it actually describes. Built for
+// Mobile Workforce; use it (not KpiCard) for a new module's top strip too, so
+// the product keeps one considered look rather than every screen inventing
+// its own.
+const RAIL_TONE: Record<Tone, string> = {
+  slate: 'bg-slate-300',
+  primary: 'bg-primary-500',
+  emerald: 'bg-emerald-500',
+  amber: 'bg-amber-500',
+  red: 'bg-health-critical',
+};
+
+export function MetricCard({
+  icon,
+  label,
+  value,
+  sub,
+  tone = 'slate',
+  onClick,
+}: {
+  icon?: ReactNode;
+  label: string;
+  value: ReactNode;
+  sub?: ReactNode;
+  tone?: Tone;
+  onClick?: () => void;
+}) {
+  const subTone: Record<Tone, string> = {
+    slate: 'text-slate-400',
+    emerald: 'text-emerald-600',
+    amber: 'text-amber-600',
+    red: 'text-health-critical',
+    primary: 'text-primary-600',
+  };
+
+  return (
+    <div
+      role={onClick ? 'button' : undefined}
+      tabIndex={onClick ? 0 : undefined}
+      onClick={onClick}
+      onKeyDown={onClick ? (e) => (e.key === 'Enter' || e.key === ' ') && onClick() : undefined}
+      className={cn(
+        'glass-panel relative flex items-start gap-3 overflow-hidden p-4 pl-5',
+        onClick && 'cursor-pointer transition-shadow hover:shadow-md hover:border-slate-300',
+      )}
+    >
+      <span className={cn('absolute inset-y-0 left-0 w-1', RAIL_TONE[tone])} />
+      <div className="min-w-0 flex-1">
+        <div className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">{label}</div>
+        <div className="mt-1 text-2xl font-heading font-bold text-slate-900 tabular-nums leading-tight">{value}</div>
+        {sub && <div className={cn('mt-1 text-xs font-medium', subTone[tone])}>{sub}</div>}
+      </div>
+      {icon && <span className="shrink-0 text-xl leading-none opacity-70">{icon}</span>}
     </div>
   );
 }

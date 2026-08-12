@@ -65,6 +65,7 @@ import type {
   ScopeNode,
   Transfer,
   Reservation,
+  Technician,
   Team,
   ApiKey,
   Webhook,
@@ -146,6 +147,7 @@ export interface Dataset {
   unknownTagReads: UnknownDetection[];
   checklistTemplates: ChecklistTemplate[];
   reportSubscriptions: ReportSubscription[];
+  technicians: Technician[];
   /** A singleton, not a list — the tenant's own identity and formatting. */
   orgSettings: OrgSettings;
   users: PublicUser[];
@@ -187,6 +189,7 @@ export let allIntegrations: Integration[] = [];
 export let allWorkflows: ApprovalWorkflow[] = [];
 export let allTransfers: Transfer[] = [];
 export let allReservations: Reservation[] = [];
+export let allTechnicians: Technician[] = [];
 export let allTeams: Team[] = [];
 export let allApiKeys: ApiKey[] = [];
 export let allWebhooks: Webhook[] = [];
@@ -276,6 +279,7 @@ export function hydrate(next: Dataset): void {
   allWorkflows = next.workflows ?? [];
   allTransfers = next.transfers ?? [];
   allReservations = next.reservations ?? [];
+  allTechnicians = next.technicians ?? [];
   allTeams = next.teams ?? [];
   allApiKeys = next.apiKeys ?? [];
   allWebhooks = next.webhooks ?? [];

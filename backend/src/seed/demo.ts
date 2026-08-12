@@ -78,6 +78,7 @@ import {
   Supplier,
   SupportTicket,
   Team,
+  Technician,
   TrackedFacility,
   TrackedZone,
   TrackingAlert,
@@ -111,6 +112,7 @@ import reportPacks from './data/reportPacks.json' with { type: 'json' };
 import retentionPolicies from './data/retentionPolicies.json' with { type: 'json' };
 import supportTickets from './data/supportTickets.json' with { type: 'json' };
 import teams from './data/teams.json' with { type: 'json' };
+import technicians from './data/technicians.json' with { type: 'json' };
 import webhooks from './data/webhooks.json' with { type: 'json' };
 import activity from './data/activity.json' with { type: 'json' };
 import aiModels from './data/aiModels.json' with { type: 'json' };
@@ -419,6 +421,9 @@ export async function seedDemo(options: { fresh?: boolean; skipConnect?: boolean
   await upsert(Transfer, datesOn(transfers, ['requestedAt', 'approvedAt', 'receivedAt']).map(withId));
   await upsert(Reservation, reservations.map(withId));
 
+  // ── Mobile Workforce ───────────────────────────────────────────────────────
+  await upsert(Technician, datesOn(technicians, ['onLeaveUntil']).map(withId));
+
   // ── Platform administration ────────────────────────────────────────────────
   await upsert(Team, teams.map(withId));
   await upsert(ApiKey, datesOn(apiKeys, ['createdAt', 'lastUsed']).map(withId));
@@ -461,6 +466,7 @@ export async function seedDemo(options: { fresh?: boolean; skipConnect?: boolean
     ['custody', custody.map((c) => c.id)],
     ['transfer', transfers.map((t) => t.id)],
     ['reservation', reservations.map((r) => r.id)],
+    ['technician', technicians.map((t) => t.id)],
     // Collections whose screens used to mutate React state and now write to the
     // database. Each mints IDs at runtime, so each needs to clear its fixtures
     // the same way — a support ticket numbered SUP-1 next to a seeded SUP-4821

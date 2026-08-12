@@ -47,6 +47,7 @@ import {
   ScopeNodeModel,
   Sensor,
   Supplier,
+  Technician,
   Transfer,
   UnknownDetection,
   User,
@@ -116,6 +117,11 @@ export async function getDataset(
   // Which assets are in view. Everything below keys off this set, so an asset
   // and the work orders against it can never disagree about being in scope.
   const assetFilter = scoped ? { 'location.id': { $in: [...scope.ids] } } : {};
+  // Technicians are homed at a facility the same way an asset sits at one —
+  // same field shape, same filter — so the roster narrows with everything
+  // else the moment the org switcher changes, rather than needing its own
+  // client-side approximation of the scope tree.
+  const technicianFilter = scoped ? { 'location.id': { $in: [...scope.ids] } } : {};
   const inScopeAssetIds = scoped
     ? (await Asset.find(assetFilter).select('_id').lean<{ _id: string }[]>()).map((a) => a._id)
     : null;
@@ -168,6 +174,7 @@ export async function getDataset(
     _scopeNodes,
     transfers,
     reservations,
+    technicians,
     teams,
     apiKeys,
     webhooks,
@@ -246,6 +253,7 @@ export async function getDataset(
 
     can('operations', 'assets') ? Transfer.find(byAsset).sort({ requestedAt: -1 }).lean() : empty,
     can('operations', 'assets') ? Reservation.find(byAsset).sort({ startDay: 1 }).lean() : empty,
+    can('operations', 'maintenance') ? Technician.find(technicianFilter).sort({ name: 1 }).lean() : empty,
 
     // Platform administration and governance.
     can('admin') ? Team.find().sort({ name: 1 }).lean() : empty,
@@ -330,6 +338,7 @@ export async function getDataset(
     }),
     transfers,
     reservations,
+    technicians,
     teams,
     apiKeys,
     webhooks,

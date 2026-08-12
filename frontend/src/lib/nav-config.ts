@@ -212,14 +212,12 @@ export const navSections: NavSection[] = [
     to: '/workforce',
     icon: '📱',
     items: [
-      { label: 'Workforce Overview', to: '/workforce', icon: '📱' },
+      { label: 'Workforce Dashboard', to: '/workforce', icon: '📊' },
       { label: 'My Work', to: '/my-work', icon: '🧰' },
       { label: 'Work Orders', to: '/work-orders', icon: '🧾' },
       { label: 'Scheduling & Dispatch', to: '/scheduling', icon: '👷' },
-      { label: 'Asset Check-in / Check-out', to: '/checkinout', icon: '🎫' },
-      { label: 'Asset Transfers', to: '/operations/transfers', icon: '🚚' },
-      { label: 'Cycle Counts', to: '/cycle-counts', icon: '🔢' },
-      { label: 'Reservations', to: '/reservations', icon: '📆' },
+      { label: 'Asset Movement & Custody', to: '/asset-movement', icon: '🚚' },
+      { label: 'Workforce Reports', to: '/workforce-reports', icon: '📈' },
     ],
   },
 

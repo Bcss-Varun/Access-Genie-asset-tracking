@@ -36,6 +36,7 @@ export const workOrderStatusTone: Record<WorkOrderStatus, Tone> = {
   'In Progress': 'amber',
   'On Hold': 'slate',
   Completed: 'emerald',
+  Cancelled: 'slate',
 };
 
 export const priorityTone: Record<WorkOrderPriority, Tone> = {

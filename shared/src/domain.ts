@@ -201,7 +201,8 @@ export type AssetCreateInput = Omit<Asset, 'id' | 'createdAt' | 'updatedAt' | 'h
 export type AssetUpdateInput = Partial<AssetCreateInput>;
 
 // ── Maintenance / Work Orders ────────────────────────────────────────────────
-export const WORK_ORDER_STATUSES = ['New', 'Assigned', 'In Progress', 'On Hold', 'Completed'] as const;
+/** `Cancelled` is reachable from every open state — see `ALLOWED_TRANSITIONS` in workOrder.service.ts. */
+export const WORK_ORDER_STATUSES = ['New', 'Assigned', 'In Progress', 'On Hold', 'Completed', 'Cancelled'] as const;
 export type WorkOrderStatus = (typeof WORK_ORDER_STATUSES)[number];
 
 export const WORK_ORDER_PRIORITIES = ['Low', 'Medium', 'High', 'Critical'] as const;
@@ -209,6 +210,26 @@ export type WorkOrderPriority = (typeof WORK_ORDER_PRIORITIES)[number];
 
 export const WORK_ORDER_TYPES = ['Preventive', 'Corrective', 'Predictive', 'Inspection'] as const;
 export type WorkOrderType = (typeof WORK_ORDER_TYPES)[number];
+
+/**
+ * Where a work order came from.
+ *
+ * One model, many origins — a predictive alert, a scheduled PM run, an
+ * incident report and a hand-raised ticket are all the same `WorkOrder`
+ * document with a different `source`, not four separate datasets that happen
+ * to look alike. `aiGenerated` predates this field and still drives the "✨
+ * AI" badge; `source` is the fuller, human-readable answer to "why does this
+ * job exist".
+ */
+export const WORK_ORDER_SOURCES = [
+  'Manual',
+  'Scheduled Maintenance',
+  'Predictive Maintenance',
+  'Incident',
+  'Service Request',
+  'Transfer / Deployment',
+] as const;
+export type WorkOrderSource = (typeof WORK_ORDER_SOURCES)[number];
 
 export interface WoChecklistItem {
   label: string;
@@ -246,6 +267,10 @@ export interface WorkOrder {
   estimatedHours: number;
   /** True when the predictive engine raised this work order, not a human. */
   aiGenerated?: boolean;
+  /** Where the job came from — see `WORK_ORDER_SOURCES`. Absent on older records; treated as `Manual`. */
+  source?: WorkOrderSource;
+  /** The skill Scheduling & Dispatch matches technicians against. Free text so it is not blocked on a fixed taxonomy. */
+  requiredSkill?: string;
   checklist: WoChecklistItem[];
   parts: WoPart[];
   laborLog: WoLabor[];

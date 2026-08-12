@@ -257,9 +257,20 @@ export interface ApprovalWorkflow {
 // ── Operations: transfers & reservations ─────────────────────────────────────
 /**
  * A transfer moves an asset permanently and needs a second pair of eyes;
- * `Rejected` is a terminal state, not a pause.
+ * `Rejected` and `Cancelled` are terminal states, not a pause. `Received` is
+ * the physical handover; `Completed` is the movement being closed out
+ * (paperwork/verification done) once it has been received.
  */
-export const TRANSFER_STATUSES = ['Pending', 'Approved', 'Picked Up', 'In Transit', 'Received', 'Rejected'] as const;
+export const TRANSFER_STATUSES = [
+  'Pending',
+  'Approved',
+  'Picked Up',
+  'In Transit',
+  'Received',
+  'Completed',
+  'Rejected',
+  'Cancelled',
+] as const;
 export type TransferStatus = (typeof TRANSFER_STATUSES)[number];
 
 export interface Transfer {
@@ -276,6 +287,7 @@ export interface Transfer {
   approvedAt?: string;
   pickedUpAt?: string;
   receivedAt?: string;
+  completedAt?: string;
   reason: string;
   /** Who has it now, and who it is moving to — the custody half of the move. */
   custodian?: string;
@@ -284,6 +296,16 @@ export interface Transfer {
   handler?: string;
   /** The field job this movement supports, if any. */
   workOrderId?: string;
+  /**
+   * Groups transfers raised together from a single multi-asset request — one
+   * `Transfer` document per asset (the model every rule here already enforces
+   * — one mover, one approver, one flow), tied together for display by a
+   * shared batch id rather than a second "batch" collection.
+   */
+  batchId?: string;
+  /** When the requester needs the asset to have arrived by. */
+  requiredDate?: string;
+  notes?: string;
 }
 
 export const RESERVATION_STATUSES = ['Pending', 'Confirmed', 'In Use', 'Returned', 'Cancelled'] as const;
@@ -302,6 +324,45 @@ export interface Reservation {
   status: ReservationStatus;
   /** What the booking is for — shown on the calendar and the list. */
   purpose?: string;
+}
+
+// ── Mobile Workforce: field technicians ────────────────────────────────────
+export const TECHNICIAN_SKILLS = [
+  'Networking', 'Server Hardware', 'Storage Systems', 'Electrical & Power',
+  'Mobile Devices', 'Security Systems', 'AV Equipment', 'HVAC',
+] as const;
+export type TechnicianSkill = (typeof TECHNICIAN_SKILLS)[number];
+
+export const SHIFT_LABELS = ['Morning', 'Evening', 'Night'] as const;
+export type ShiftLabel = (typeof SHIFT_LABELS)[number];
+
+export const WEEKDAY_LABELS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'] as const;
+export type WeekdayLabel = (typeof WEEKDAY_LABELS)[number];
+
+/**
+ * A field technician — the roster Scheduling & Dispatch assigns work orders
+ * against. Real record, real backend, same as everything else: `assignedTo`
+ * on a work order is still a plain name (see WorkOrder), so assigning one of
+ * these is an ordinary write, not a foreign key the rest of the system has to
+ * know about.
+ */
+export interface Technician {
+  id: string;
+  name: string;
+  title: string;
+  department: string;
+  skills: TechnicianSkill[];
+  location: { id: string; name: string };
+  shift: { label: ShiftLabel; start: number; end: number };
+  workingDays: WeekdayLabel[];
+  email: string;
+  phone: string;
+  /** False for a technician who has left / is deactivated — always shows as Unavailable. */
+  active: boolean;
+  /** Set for someone on leave through this date — Unavailable until then regardless of shift. */
+  onLeaveUntil?: string;
+  createdAt?: string;
+  updatedAt?: string;
 }
 
 // ── Platform administration ──────────────────────────────────────────────────
