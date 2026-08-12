@@ -14,14 +14,14 @@
 // after each write so every other screen sees the same asset.
 // ─────────────────────────────────────────────────────────────────────────────
 
-import { createContext, useCallback, useContext, useMemo, useState } from 'react';
+import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import type { Asset, AssetOnboarding, RegisteredAsset, TagBinding } from '@access-genie/shared';
 import { allAssets, allDocs, allSensors } from '@/lib/dataset';
 import { getClassTemplate } from '@/lib/asset-classes';
 import { roleForKind } from '@/lib/onboarding';
 import { nowMs } from '@/lib/utils';
 import { assetsApi } from '@/api/assets';
-import { useRefreshDataset } from '@/api/dataset';
+import { useDataset, useRefreshDataset } from '@/api/dataset';
 import { useToast } from './ToastProvider';
 
 // ── Seeding ──────────────────────────────────────────────────────────────────
@@ -156,6 +156,28 @@ export function RegistryProvider({ children }: { children: React.ReactNode }) {
   const [sessionIds, setSessionIds] = useState<string[]>([]);
   const refreshDataset = useRefreshDataset();
   const { toast } = useToast();
+
+  /**
+   * Re-seed from `@/lib/dataset` whenever the dataset query resolves with new
+   * data — not just once at mount.
+   *
+   * Registration (`RegistrationForm`), the plain asset form and bulk import all
+   * create assets by calling the API directly and then invalidating the
+   * dataset query, rather than through `register()` below. Without this, this
+   * provider's `assets` never learns about them: it was seeded once from
+   * `allAssets` at mount and, being ordinary `useState`, does not notice that
+   * the module-level binding was reassigned later — so a just-created asset's
+   * own detail page (which reads `getAsset` from here) says "not found" until
+   * a hard reload remounts the provider.
+   */
+  const { dataUpdatedAt } = useDataset();
+  const syncedAt = useRef(dataUpdatedAt);
+  useEffect(() => {
+    if (dataUpdatedAt !== syncedAt.current) {
+      syncedAt.current = dataUpdatedAt;
+      setAssets(fromDataset());
+    }
+  }, [dataUpdatedAt]);
 
   /**
    * Apply an edit locally, then persist it.

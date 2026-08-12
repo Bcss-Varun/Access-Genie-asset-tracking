@@ -236,7 +236,10 @@ export function RegistrationForm({
     setSubmitting(true);
     try {
       const asset = await registrationApi.register({ source, templateId, cloneOfId, values });
-      refreshDataset();
+      // Awaited: the Asset 360 page this navigates to next reads the registry
+      // provider, which re-seeds itself from the dataset — landing there before
+      // the refetch resolves is how a just-created asset reads as "not found".
+      await refreshDataset();
       toast({ title: `${asset.name} registered`, description: `Filed as ${asset.id}.`, tone: 'success' });
       navigate(`/assets/${asset.id}`);
     } catch (err) {

@@ -130,15 +130,18 @@ export function RequireTrackingWorkspace() {
 /**
  * Gate for Label & Tag Printing — templates, printers and the job queue.
  *
- * Gated on emptiness for the same reason as the tracking workspace: the screen
- * forks a working spec off a default template and targets a default device, and
- * both of those are `collection[0]` when nothing has been configured. A label
- * run needs something to print and something to print it on, so neither being
- * present is a genuine precondition rather than an empty list to render.
+ * Only a loading/error boundary, like every other gate here — it used to also
+ * block the whole route when there were no templates or devices yet, on the
+ * reasoning that a print run needs both. But Tag coverage (the module's other
+ * tab) needs neither: it is a read-only view of assets and the identity tags
+ * already bound to them, real data an operator legitimately wants to see
+ * before anyone has registered a printer. Hiding the entire route behind
+ * "not set up yet" hid that too. The page itself now falls back safely when
+ * there is no template/device to default to (see LabelPrintingPage), so this
+ * no longer needs to prevent it from rendering at all.
  */
 export function RequireLabelWorkspace() {
-  const { data, isPending, isError, error, refetch } = useLabelWorkspace();
-  const unconfigured = data && (data.templates.length === 0 || data.devices.length === 0);
+  const { isPending, isError, error, refetch } = useLabelWorkspace();
 
   return (
     <Gate
@@ -148,23 +151,7 @@ export function RequireLabelWorkspace() {
       retry={() => void refetch()}
       label="label templates and printers"
     >
-      {unconfigured ? (
-        <div className="h-full flex items-center justify-center">
-          <div className="glass-panel rounded-xl w-full max-w-lg">
-            <EmptyState
-              icon="🏷️"
-              title="Label printing is not set up yet"
-              description={
-                data.templates.length === 0
-                  ? 'A label template defines what gets printed — the size, the stock and which asset fields appear on it. Add one, and register a printer or encoder to run it on.'
-                  : 'There are templates, but no printer or encoder is registered. Add a device that can produce them before queueing a run.'
-              }
-            />
-          </div>
-        </div>
-      ) : (
-        <Outlet />
-      )}
+      <Outlet />
     </Gate>
   );
 }

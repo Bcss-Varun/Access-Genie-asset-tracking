@@ -267,19 +267,26 @@ export default function LabelPrintingPage() {
   const template = templateById(DEFAULT_TEMPLATE_ID) ?? labelTemplates[0];
 
   const [draft, setDraft] = useState<LabelSpec | null>(null);
-  const spec: LabelSpec = draft ?? {
-    medium: template.medium,
-    size: template.size,
-    fields: template.fields,
-    showLogo: template.showLogo,
-    showBorder: template.showBorder,
-  };
+  // Nobody has registered a template yet in a brand-new org — this route no
+  // longer requires one to render (see RequireLabelWorkspace), so fall back to
+  // a plain default rather than reading fields off `undefined`.
+  const spec: LabelSpec = draft ?? (template
+    ? {
+      medium: template.medium,
+      size: template.size,
+      fields: template.fields,
+      showLogo: template.showLogo,
+      showBorder: template.showBorder,
+    }
+    : { medium: 'QR', size: 'md', fields: ['name', 'serial', 'tagId'], showLogo: true, showBorder: false });
 
   const editSpec = (patch: Partial<LabelSpec>) => setDraft({ ...spec, ...patch });
   const [search, setSearch] = useState('');
 
   // No device picker on this screen: a printed label goes through the browser
   // print dialog, and silicon has to go to something that can actually write it.
+  // `device` is undefined until one has been registered — same reasoning as
+  // `template` above.
   const device = deviceById(encodesTag(spec.medium) ? 'ENC-BLR-02' : 'PRN-DESK-01') ?? printDevices[0];
 
   const filtered = useMemo(() => {
@@ -291,7 +298,7 @@ export default function LabelPrintingPage() {
 
   /** How the sheet preview draws — falls back to Medium for template-only stocks. */
   const drawSpec = STOCK_SIZES.find((s) => s.key === spec.size) ?? STOCK_SIZES[1];
-  const compatible = deviceCanRun(device, spec.medium);
+  const compatible = device ? deviceCanRun(device, spec.medium) : false;
 
   // ── Printing ───────────────────────────────────────────────────────────────
 
@@ -305,6 +312,14 @@ export default function LabelPrintingPage() {
    */
   const runPrint = () => {
     if (!selectedAssets.length) return;
+    if (!device) {
+      toast({
+        title: 'No print device registered',
+        description: 'Ask an admin to add one under Administration before printing labels.',
+        tone: 'error',
+      });
+      return;
+    }
     if (!compatible) {
       toast({
         title: `${device.name} cannot run this job`,
