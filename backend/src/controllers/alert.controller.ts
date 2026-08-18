@@ -1,23 +1,24 @@
 import type { Request, Response } from 'express';
 import { validatedQuery } from '../middleware/validate.js';
 import { asyncHandler } from '../utils/asyncHandler.js';
+import { requireScope } from '../middleware/scope.js';
 import { sendData, sendList } from '../utils/response.js';
 import * as alertService from '../services/alert.service.js';
 import { recordAudit } from '../services/audit.service.js';
 import type { AlertListQuery, CreateAlertInput } from '../validators/alert.validator.js';
 
-export const list = asyncHandler(async (_req: Request, res: Response) => {
+export const list = asyncHandler(async (req: Request, res: Response) => {
   const query = validatedQuery<AlertListQuery>(res);
-  const { items, meta } = await alertService.listAlerts(query);
+  const { items, meta } = await alertService.listAlerts(requireScope(req), query);
   sendList(res, items, meta);
 });
 
-export const stats = asyncHandler(async (_req: Request, res: Response) => {
+export const stats = asyncHandler(async (req: Request, res: Response) => {
   sendData(res, await alertService.getAlertStats());
 });
 
 export const getOne = asyncHandler(async (req: Request, res: Response) => {
-  sendData(res, await alertService.getAlert(req.params.id as string));
+  sendData(res, await alertService.getAlert(requireScope(req), req.params.id as string));
 });
 
 export const create = asyncHandler(async (req: Request, res: Response) => {

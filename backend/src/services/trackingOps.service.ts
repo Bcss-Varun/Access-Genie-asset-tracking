@@ -12,6 +12,7 @@ import {
   type TrackingAlertDoc,
   type TrackingDeviceDoc,
 } from '../models/index.js';
+import { TrackedZone } from '../models/index.js';
 import { nextId } from '../models/Counter.js';
 import { ApiError } from '../utils/ApiError.js';
 
@@ -286,4 +287,20 @@ export async function updateAudit(id: string, patch: Record<string, unknown>): P
   const audit = await AuditSession.findByIdAndUpdate(id, { $set: patch }, { new: true, runValidators: true }).lean();
   if (!audit) throw ApiError.notFound('Audit session');
   return audit;
+}
+
+
+/**
+ * Arm or disarm a tracked zone.
+ *
+ * Arming decides whether movements in a zone raise alerts or are merely
+ * recorded, which is an operational control — not a display preference. The
+ * geofence screen used to hold it in React state next to a toast that said the
+ * zone had been armed, so the setting was gone on the next reload and the
+ * alerting engine never saw it.
+ */
+export async function setZoneArmed(id: string, armed: boolean): Promise<{ id: string; name: string; armed: boolean }> {
+  const zone = await TrackedZone.findByIdAndUpdate(id, { $set: { armed } }, { new: true }).lean();
+  if (!zone) throw ApiError.notFound('Zone');
+  return { id: zone._id, name: zone.name, armed: zone.armed };
 }

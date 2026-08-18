@@ -26,14 +26,12 @@ import {
   Insight,
   MetricSnapshot,
   OPEN_ALERT_STATUSES,
-  Part,
   PmSchedule,
   Transfer,
-  Warehouse,
   WorkOrder,
 } from '../models/index.js';
 import { OPEN_WO_STATUSES } from './workOrder.service.js';
-import { resolveScope } from './scopeFilter.service.js';
+import type { VisibleScope } from './tenancy.service.js';
 import { depreciationFor, loadClassTerms, portfolioSeries, type ClassTerms } from './depreciation.service.js';
 import { getOrgSettings } from './configuration.service.js';
 
@@ -192,7 +190,8 @@ export interface DashboardRequest {
    * rather than computed against nobody.
    */
   userName?: string;
-  scopeId?: string;
+  /** The caller's authorised estate — resolved by `attachScope`, never a raw id. */
+  scope: VisibleScope;
   period?: DashboardPeriod;
   /** A custom range. When both are present they win over `period`. */
   from?: Date;
@@ -205,7 +204,7 @@ export interface DashboardRequest {
 export async function getDashboardSummary({
   modules,
   userName,
-  scopeId,
+  scope,
   period = '30d',
   from,
   to,
@@ -215,8 +214,8 @@ export async function getDashboardSummary({
   const can = (...required: ModuleKey[]) => required.some((m) => modules.includes(m));
   const w = windowFor(period, from, to);
 
-  const scope = await resolveScope(scopeId);
-  const scoped = scope !== null && !scope.isRoot;
+  // Already resolved and already authorised — see `middleware/scope.ts`.
+  const scoped = !scope.coversAll;
 
   // Which assets are in view. Everything below keys off this one set, so an
   // asset and the work orders against it can never disagree about being in
@@ -244,23 +243,26 @@ export async function getDashboardSummary({
 
   const [orgSettings, classTerms] = await Promise.all([getOrgSettings(), loadClassTerms()]);
 
-  const [kpis, triage, charts, lists] = await Promise.all([
+  const [kpis, triage, charts, lists, departments] = await Promise.all([
     buildKpis(can, w, assets, byAsset, userName, classTerms, orgSettings.laborRatePerHour),
     buildTriage(can, w, assets, byAsset),
     buildCharts(can, w, assets, byAsset, classTerms, orgSettings.laborRatePerHour),
     buildLists(can, assets, byAsset, userName),
+    // Was awaited inside the response literal below, which made it a fifth
+    // round trip strictly after these four rather than alongside them.
+    departmentsInScope(scoped ? { 'location.id': { $in: [...scope.ids] } } : {}),
   ]);
 
   return {
     meta: {
-      scopeId: scope?.scopeId ?? null,
-      scopeName: scope?.name ?? 'All locations',
+      scopeId: scope.coversAll ? null : scope.id,
+      scopeName: scope.coversAll ? 'All locations' : scope.name,
       period,
       from: w.start.toISOString(),
       to: w.now.toISOString(),
       department: department ?? null,
       category: category ?? null,
-      departments: await departmentsInScope(scoped ? { 'location.id': { $in: [...scope.ids] } } : {}),
+      departments,
       generatedAt: new Date().toISOString(),
     },
     triage,
@@ -584,24 +586,6 @@ async function buildKpis(
     );
   }
 
-  // ── Inventory (stock) ─────────────────────────────────────────────────────
-  if (can('inventory')) {
-    const [parts, warehouses] = await Promise.all([
-      Part.find().select('onHand reorderPoint unitCost abcClass').lean(),
-      Warehouse.find().select('valueInr').lean(),
-    ]);
-    const below = parts.filter((p) => p.onHand <= p.reorderPoint);
-
-    kpis.stockValue = stock(Math.round(warehouses.reduce((s, x) => s + (x.valueInr ?? 0), 0)), 'inr');
-    kpis.stockouts = stock(parts.filter((p) => p.onHand < p.reorderPoint).length, 'count', {
-      higherIsBetter: false,
-    });
-    kpis.belowReorder = stock(below.length, 'count', { higherIsBetter: false });
-    kpis.fillRate = stock(pct(parts.length - below.length, parts.length), 'pct', {
-      caption: `${parts.length} SKUs tracked`,
-    });
-  }
-
   // ── Mine (the field roles' whole dashboard) ───────────────────────────────
   if (userName && can('maintenance', 'operations')) {
     const mine = await WorkOrder.find({ ...byAsset, assignedTo: userName })
@@ -652,7 +636,7 @@ async function buildTriage(
 ): Promise<DashboardSummary['triage']> {
   const soon = new Date(w.now.getTime() + 30 * DAY);
 
-  const [criticalAlerts, overdueWorkOrders, unassignedWork, expiringCerts, stockouts] = await Promise.all([
+  const [criticalAlerts, overdueWorkOrders, unassignedWork, expiringCerts] = await Promise.all([
     can('alerts', 'compliance', 'tracking')
       ? Alert.countDocuments({ ...byAsset, severity: 'Critical', status: { $in: OPEN_ALERT_STATUSES } })
       : 0,
@@ -663,9 +647,6 @@ async function buildTriage(
     can('compliance')
       ? Certification.countDocuments({ ...byAsset, expiresAt: { $lte: soon }, status: { $ne: 'Expired' } })
       : 0,
-    can('inventory')
-      ? Part.find().select('onHand reorderPoint').lean().then((p) => p.filter((x) => x.onHand < x.reorderPoint).length)
-      : 0,
   ]);
 
   return {
@@ -673,7 +654,6 @@ async function buildTriage(
     overdueWorkOrders,
     unassignedWork,
     missingAssets: assets.filter((a) => a.status === 'Missing').length,
-    stockouts,
     expiringCerts,
   };
 }
@@ -801,18 +781,6 @@ async function buildCharts(
       { $sort: { count: -1 } },
     ]);
     charts.alertsByType = byType.map((t) => ({ label: t._id, value: t.count }));
-  }
-
-  if (can('inventory')) {
-    const parts = await Part.find().select('onHand unitCost abcClass').lean();
-    charts.abcAnalysis = (['A', 'B', 'C'] as const).map((cls) => {
-      const rows = parts.filter((p) => p.abcClass === cls);
-      return {
-        label: `Class ${cls}`,
-        value: Math.round(rows.reduce((s, p) => s + p.onHand * p.unitCost, 0)),
-        caption: `${rows.length} SKUs`,
-      };
-    });
   }
 
   return charts;

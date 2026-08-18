@@ -1,196 +1,261 @@
-import { useMemo, useState } from 'react';
-import { Link, useParams } from 'react-router-dom';
-import { getReport, allAssets } from '@/lib/dataset';
-import { UtilizationDowntimeChart, ValueByCategoryDonut } from '@/components/charts/DashboardCharts';
-import { PageHeader, Badge, EmptyState } from '@/components/ui/primitives';
-import { Button } from '@/components/ui/Button';
-import { useToast } from '@/components/providers/ToastProvider';
+import { useEffect, useMemo, useState } from 'react';
+import { Link, useNavigate, useParams } from 'react-router-dom';
+import type { ReportExportFormat, ReportResult, ScheduleFrequency } from '@access-genie/shared';
+import {
+  exportApi,
+  reportsApi,
+  schedulesApi,
+  useAnalyticsDashboard,
+  useRefreshAnalytics,
+  useReport,
+  useReports,
+  EMPTY_ANALYTICS_FILTERS,
+} from '@/api/analytics';
 import { useMutate } from '@/api/mutate';
-import { reportRunApi } from '@/api/configuration';
-import { reportsApi } from '@/api/platform';
-import { resolveMetric } from '@/lib/report-metrics';
-import { formatMoney, relTime } from '@/lib/utils';
+import { ApiRequestError } from '@/api/client';
+import { Badge, ErrorState, PageHeader, Skeleton } from '@/components/ui/primitives';
+import { Button } from '@/components/ui/Button';
+import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
+import { ExportMenu } from '@/components/analytics/ExportMenu';
+import { ReportResultView } from '@/components/analytics/ReportResultView';
+import { ScheduleDialog } from '@/components/analytics/ScheduleDialog';
+import { formatDateTime, relTime } from '@/lib/utils';
 
-const wantsUtilChart = (category: string) => ['Utilization', 'Maintenance', 'AI'].includes(category);
+/**
+ * One report: what it asks, and what the answer is right now.
+ *
+ * The result is fetched by *running* the report rather than by reading a stored
+ * one, so opening this page is always a fresh query. The facility selector at
+ * the top re-runs it against a different slice — the same report, a different
+ * scope, which is the question a Super Admin actually has ("and what does this
+ * look like at Hyderabad?").
+ */
+export default function ReportDetailPage() {
+  const { id } = useParams<{ id: string }>();
+  const navigate = useNavigate();
 
-export default function ReportViewerPage() {
-  const { id = '' } = useParams();
-  const { toast } = useToast();
-  const { run, isPending } = useMutate();
+  const report = useReport(id);
+  const allReports = useReports();
+  const refresh = useRefreshAnalytics();
+  const { run: mutate, isPending } = useMutate();
+
+  // Borrowed from the dashboard read purely for its facility list, which the
+  // server has already narrowed to what this session may see.
+  const scopes = useAnalyticsDashboard(EMPTY_ANALYTICS_FILTERS);
+
+  const [facility, setFacility] = useState<string | undefined>(undefined);
+  /* Bumped to force a re-run. Setting the scope to the value it already holds
+     would not change state, so "Re-run" needs something that actually does. */
+  const [nonce, setNonce] = useState(0);
+  const rerun = () => setNonce((n) => n + 1);
+  const [result, setResult] = useState<ReportResult | null>(null);
+  const [error, setError] = useState<string | null>(null);
   const [running, setRunning] = useState(false);
-  const report = getReport(id);
+  const [deleting, setDeleting] = useState(false);
+  const [scheduling, setScheduling] = useState(false);
 
-  const rows = useMemo(() => {
-    const map = new Map<string, { count: number; value: number; util: number; health: number }>();
-    for (const a of allAssets) {
-      const cur = map.get(a.category) ?? { count: 0, value: 0, util: 0, health: 0 };
-      cur.count += 1;
-      cur.value += a.bookValue ?? 0;
-      cur.util += a.utilization ?? 0;
-      cur.health += a.healthScore;
-      map.set(a.category, cur);
-    }
-    return Array.from(map.entries())
-      .map(([category, v]) => ({
-        category,
-        count: v.count,
-        value: v.value,
-        util: Math.round(v.util / v.count),
-        health: Math.round(v.health / v.count),
-      }))
-      .sort((a, b) => b.value - a.value);
-  }, []);
+  /*
+   * Run on open, and again whenever the scope changes.
+   *
+   * Deliberately not a React Query hook: running a report is a POST that stamps
+   * `lastRun` on the record, so it is an action with an effect, not a cacheable
+   * read that may be replayed whenever a window regains focus.
+   */
+  useEffect(() => {
+    if (!id) return;
+    let cancelled = false;
 
-  if (!report) {
+    setRunning(true);
+    setError(null);
+    reportsApi
+      .run(id, facility)
+      .then((response) => {
+        if (!cancelled) setResult(response.result);
+      })
+      .catch((err: unknown) => {
+        if (!cancelled) setError(err instanceof ApiRequestError ? err.message : 'The report could not be run.');
+      })
+      .finally(() => {
+        if (!cancelled) setRunning(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [id, facility, nonce]);
+
+  const definition = report.data?.definition;
+  const summary = useMemo(() => {
+    if (!definition) return '';
+    const parts = [
+      `Source: ${definition.source}`,
+      definition.dimensions.length > 0 ? `grouped by ${definition.dimensions.join(', ')}` : 'no grouping',
+      `measuring ${definition.measures.join(', ')}`,
+    ];
+    if (definition.filters.length > 0) parts.push(`${definition.filters.length} filter(s)`);
+    return parts.join(' · ');
+  }, [definition]);
+
+  const remove = async () => {
+    if (!id) return;
+    const done = await mutate(reportsApi.remove(id), {
+      success: 'Report deleted',
+      describe: 'delete that report',
+      refresh,
+    });
+    if (done) navigate('/reports');
+  };
+
+  const createSchedule = (values: {
+    reportId: string;
+    frequency: ScheduleFrequency;
+    format: ReportExportFormat;
+    recipients: string[];
+    startDate: string;
+    endDate?: string;
+    enabled: boolean;
+  }) =>
+    void mutate(schedulesApi.create(values), {
+      success: 'Schedule created',
+      describe: 'create that schedule',
+      refresh,
+    }).then((created) => {
+      if (created) setScheduling(false);
+    });
+
+  if (report.isError) {
     return (
-      <div className="h-full flex flex-col space-y-6">
-        <EmptyState
-          icon="📄"
+      <div className="space-y-6">
+        <PageHeader title="Report" breadcrumb={[{ label: 'Reports', href: '/reports' }]} />
+        <ErrorState
           title="Report not found"
-          description={`No report with id “${id}” exists in this session.`}
-          action={<Link to="/reports"><Button variant="outline">← Back to Report Library</Button></Link>}
+          description={report.error instanceof ApiRequestError ? report.error.message : undefined}
+          onRetry={() => void report.refetch()}
         />
       </div>
     );
   }
 
-  /** Run it and hand the file over — the same path the library's Run button uses. */
-  const runReport = async () => {
-    setRunning(true);
-    try {
-      const result = await run(reportRunApi.run(report.id), { describe: `run “${report.name}”` });
-      if (!result) return;
-
-      if (result.rowCount === 0) {
-        toast({
-          title: 'Nothing to report',
-          description: 'It ran against an empty result set — there is no data in this category yet.',
-          tone: 'info',
-        });
-        return;
-      }
-
-      await reportRunApi.download(result.job.id);
-      toast({
-        title: `${report.name} downloaded`,
-        description: `${result.rowCount} row${result.rowCount === 1 ? '' : 's'} · ${result.job.format}`,
-        tone: 'success',
-      });
-    } finally {
-      setRunning(false);
-    }
-  };
-
-  const toggleSchedule = () =>
-    void run(reportsApi.update(report.id, { scheduled: !report.scheduled }), {
-      success: report.scheduled ? 'Schedule removed' : 'Marked as scheduled',
-      successDetail: report.scheduled ? undefined : 'Add recipients under Analytics ▸ Subscriptions to have it delivered.',
-      describe: 'change that schedule',
-    });
-
-  const th = 'px-4 py-3 text-left font-semibold uppercase tracking-wider text-[11px] text-slate-500';
-  const td = 'px-4 py-3.5';
+  const data = report.data;
 
   return (
-    <div className="h-full flex flex-col space-y-6">
+    <div className="space-y-5">
       <PageHeader
-        title={report.name}
-        subtitle={`${report.description}`}
+        title={data?.name ?? 'Report'}
+        subtitle={data?.description || 'A saved question, executed against live data every time it is opened.'}
         breadcrumb={[
-          { label: 'Analytics', href: '/reports' },
+          { label: 'Analytics', href: '/analytics' },
           { label: 'Reports', href: '/reports' },
-          { label: report.name },
+          { label: data?.name ?? 'Report' },
         ]}
         actions={
-          <>
-            <Button variant="outline" disabled={isPending} onClick={() => toggleSchedule()}>
-              {report.scheduled ? 'Unschedule' : 'Schedule'}
+          <div className="flex items-center gap-2">
+            <Button variant="ghost" onClick={() => setScheduling(true)} disabled={!data}>
+              Schedule
             </Button>
-            <Link to="/subscriptions">
-              <Button variant="outline">Subscribe</Button>
+            <ExportMenu
+              disabled={!result || result.rows.length === 0}
+              onExport={(format) => exportApi.saved(id as string, format, facility)}
+            />
+            <Link to={`/reports/builder?report=${id}`}>
+              <Button variant="outline">Edit</Button>
             </Link>
-            <Button disabled={running} onClick={() => void runReport()}>
-              {running ? 'Running…' : 'Run & download'}
+            <Button
+              variant="ghost"
+              onClick={() => setDeleting(true)}
+              disabled={isPending}
+              className="text-health-critical"
+            >
+              Delete
             </Button>
-          </>
+          </div>
         }
       />
 
-      <div className="glass-panel rounded-xl p-4 flex flex-wrap items-center gap-3 text-sm">
-        <Badge tone="primary">{report.category}</Badge>
-        <span className="text-slate-500">{report.format}</span>
-        <span className="text-slate-300">·</span>
-        <span className="text-slate-500">{report.persona}</span>
-        <span className="text-slate-300">·</span>
-        <span className="text-slate-500">Last run {relTime(report.lastRun)}</span>
-        {report.scheduled && <Badge tone="emerald" className="ml-auto">Scheduled</Badge>}
-      </div>
-
-      {/*
-        Each tile is a real query over the estate. A metric this platform does
-        not measure says so rather than showing a number — see lib/report-metrics.
-      */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        {report.metrics.slice(0, 4).map((m) => {
-          const resolved = resolveMetric(m);
-          return (
-            <div key={m} className="glass-panel rounded-xl p-5">
-              <div className="mb-1 text-sm font-medium text-slate-500">{m}</div>
-              {resolved ? (
-                <>
-                  <div className="font-heading text-2xl font-bold text-slate-900">{resolved.value}</div>
-                  <div className="mt-1 text-[11px] text-slate-400">{resolved.basis}</div>
-                </>
-              ) : (
-                <>
-                  <div className="font-heading text-2xl font-bold text-slate-300">—</div>
-                  <div className="mt-1 text-[11px] text-slate-400">Not measured by this platform</div>
-                </>
-              )}
-            </div>
-          );
-        })}
-      </div>
-
-      {/* Rendered chart body */}
-      <div className="glass-panel rounded-xl p-5">
-        <h2 className="text-base font-semibold text-slate-800 mb-4">
-          {wantsUtilChart(report.category) ? 'Utilization & Downtime Trend' : 'Portfolio Value by Category'}
-        </h2>
-        {wantsUtilChart(report.category) ? <UtilizationDowntimeChart /> : <ValueByCategoryDonut />}
-      </div>
-
-      {/* Data table */}
-      <div className="glass-panel rounded-xl overflow-hidden">
-        <div className="px-4 py-3 border-b border-slate-200 flex items-center justify-between">
-          <h2 className="text-base font-semibold text-slate-800">Breakdown by Category</h2>
-          <span className="text-xs text-slate-400">{rows.length} categories · {allAssets.length} assets</span>
+      {data?.legacy && (
+        <div className="glass-panel border-l-4 border-l-amber-400 p-4">
+          <p className="text-sm font-medium text-slate-800">This report predates the report builder.</p>
+          <p className="mt-1 text-xs text-slate-500">
+            Its shape was inferred from the "{data.category}" category it was filed under, because no definition was
+            recorded. The figures below are real, but the grouping is a guess —{' '}
+            <Link to={`/reports/builder?report=${id}`} className="font-medium text-primary-600 hover:text-primary-700">
+              open it in the builder
+            </Link>{' '}
+            to confirm or change it.
+          </p>
         </div>
-        <div className="overflow-x-auto">
-          <table className="w-full text-left text-sm whitespace-nowrap">
-            <thead className="bg-slate-50 border-b border-slate-200">
-              <tr>
-                <th className={th}>Category</th>
-                <th className={th}>Assets</th>
-                <th className={th}>Book Value</th>
-                <th className={th}>Avg Utilization</th>
-                <th className={th}>Avg Health</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-100">
-              {rows.map((r) => (
-                <tr key={r.category} className="hover:bg-slate-50 transition-colors">
-                  <td className={td}><span className="font-medium text-slate-900">{r.category}</span></td>
-                  <td className={td}>{r.count}</td>
-                  <td className={td}>{formatMoney(r.value)}</td>
-                  <td className={td}>{r.util}%</td>
-                  <td className={td}>{r.health}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+      )}
+
+      <div className="glass-panel flex flex-wrap items-center gap-3 p-3">
+        <label className="text-xs font-medium text-slate-500" htmlFor="report-scope">
+          Run against
+        </label>
+        <select
+          id="report-scope"
+          className="rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 text-xs font-medium text-slate-700 focus:border-primary-400 focus:outline-none focus:ring-1 focus:ring-primary-200"
+          value={facility ?? ''}
+          onChange={(e) => setFacility(e.target.value || undefined)}
+        >
+          <option value="">
+            {scopes.data?.filterOptions.facilities[0]?.name
+              ? `${scopes.data.filterOptions.facilities[0].name} — everything`
+              : 'Everything'}
+          </option>
+          {(scopes.data?.filterOptions.facilities ?? []).slice(1).map((node) => (
+            <option key={node.id} value={node.id}>
+              {node.name} ({node.assetCount})
+            </option>
+          ))}
+        </select>
+
+        <Button variant="outline" size="sm" onClick={rerun} disabled={running}>
+          {running ? 'Running…' : 'Re-run'}
+        </Button>
+
+        <div className="ml-auto flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-slate-500">
+          {data && <span>Created by {data.createdBy}</span>}
+          {data?.lastRun && <span title={formatDateTime(data.lastRun)}>Last run {relTime(data.lastRun)}</span>}
+          {data?.scheduled ? (
+            <Badge tone="emerald">Scheduled</Badge>
+          ) : data?.scheduleId ? (
+            <Badge tone="slate">Schedule paused</Badge>
+          ) : null}
         </div>
       </div>
+
+      {summary && <p className="px-1 text-xs text-slate-400">{summary}</p>}
+
+      <section className="glass-panel p-5">
+        {error ? (
+          <ErrorState title="This report could not be run" description={error} onRetry={rerun} />
+        ) : running && !result ? (
+          <Skeleton className="h-64 rounded-lg" />
+        ) : result ? (
+          <ReportResultView result={result} />
+        ) : (
+          <Skeleton className="h-64 rounded-lg" />
+        )}
+      </section>
+
+      {deleting && (
+        <ConfirmDialog
+          title={`Delete "${data?.name ?? 'this report'}"?`}
+          description="The report definition is removed permanently, along with any scheduled deliveries of it."
+          busy={isPending}
+          onConfirm={() => void remove()}
+          onCancel={() => setDeleting(false)}
+        />
+      )}
+
+      {scheduling && data && (
+        <ScheduleDialog
+          reports={allReports.data ?? [data]}
+          presetReportId={data.id}
+          busy={isPending}
+          onSubmit={createSchedule}
+          onCancel={() => setScheduling(false)}
+        />
+      )}
     </div>
   );
 }

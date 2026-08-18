@@ -29,3 +29,39 @@ export function RouteError() {
     </div>
   );
 }
+
+
+/**
+ * The same boundary, sized for a screen *inside* the shell.
+ *
+ * `RouteError` fills the viewport, which is right for a failure above the
+ * chrome — a dead session, a router misconfiguration. It is wrong for one
+ * screen throwing: that used to bubble to the outermost boundary and replace
+ * the whole application, sidebar included, so a single broken page looked like
+ * a broken product and left no way to navigate out of it.
+ *
+ * Mounted per page route (see `router.tsx`), so the failure is contained to the
+ * outlet and every other route stays reachable.
+ */
+export function PageError() {
+  const error = useRouteError();
+
+  const description = isRouteErrorResponse(error)
+    ? `${error.status} — ${error.statusText}`
+    : error instanceof Error
+      ? error.message
+      : 'Try again, or pick another screen from the menu.';
+
+  return (
+    <div className="glass-panel">
+      <ErrorState
+        title="This screen could not be displayed"
+        description={description}
+        requestId={error instanceof ApiRequestError ? error.requestId : undefined}
+        // Re-running the route is enough for a transient failure and keeps the
+        // session; a full reload would throw away every other warm query.
+        onRetry={() => window.location.reload()}
+      />
+    </div>
+  );
+}

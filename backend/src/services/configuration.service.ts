@@ -3,24 +3,15 @@ import {
   Backup,
   OrgSettings,
   Passkey,
-  Report,
   Webhook,
-  ReportSubscription,
   nextId,
   type BackupDoc,
   type OrgSettingsDoc,
   type PasskeyDoc,
-  type ReportSubscriptionDoc,
   type WebhookDoc,
-  type SubscriptionCadence,
 } from '../models/index.js';
 import { ApiError } from '../utils/ApiError.js';
-import type {
-  CreatePasskeyInput,
-  CreateReportSubscriptionInput,
-  UpdateOrgSettingsInput,
-  UpdateReportSubscriptionInput,
-} from '../validators/configuration.validator.js';
+import type { CreatePasskeyInput, UpdateOrgSettingsInput } from '../validators/configuration.validator.js';
 
 /**
  * The configuration screens' write side.
@@ -33,66 +24,10 @@ import type {
  */
 
 // ── Report subscriptions ─────────────────────────────────────────────────────
-const CADENCE_DAYS: Record<SubscriptionCadence, number> = {
-  Daily: 1,
-  Weekly: 7,
-  Monthly: 30,
-  Quarterly: 91,
-};
-
-/** When a subscription on this cadence should next deliver. */
-function nextRunFrom(from: Date, cadence: SubscriptionCadence): Date {
-  const next = new Date(from);
-  next.setDate(next.getDate() + CADENCE_DAYS[cadence]);
-  return next;
-}
-
-export async function createSubscription(
-  input: CreateReportSubscriptionInput,
-  actor: string,
-): Promise<ReportSubscriptionDoc> {
-  const report = await Report.findById(input.reportId).lean();
-  if (!report) throw ApiError.badRequest(`Report ${input.reportId} does not exist`);
-
-  // One standing instruction per report per person. A second subscription to
-  // the same report only means the same file arrives twice.
-  const existing = await ReportSubscription.findOne({ reportId: input.reportId, createdBy: actor }).lean();
-  if (existing) throw ApiError.conflict(`You already have a subscription to ${report.name}`);
-
-  const now = new Date();
-  const created = await ReportSubscription.create({
-    ...input,
-    _id: await nextId('reportSubscription', 'SUB'),
-    reportName: report.name,
-    nextRun: nextRunFrom(now, input.cadence),
-    createdBy: actor,
-    createdAt: now,
-  });
-
-  return created.toObject();
-}
-
-export async function updateSubscription(
-  id: string,
-  patch: UpdateReportSubscriptionInput,
-): Promise<ReportSubscriptionDoc> {
-  const sub = await ReportSubscription.findById(id);
-  if (!sub) throw ApiError.notFound('Subscription');
-
-  Object.assign(sub, patch);
-
-  // Changing cadence re-bases the schedule from now; pausing and resuming does
-  // not, so a subscription keeps its place in the calendar.
-  if (patch.cadence) sub.nextRun = nextRunFrom(new Date(), patch.cadence);
-
-  await sub.save();
-  return sub.toObject();
-}
-
-export async function deleteSubscription(id: string): Promise<void> {
-  const removed = await ReportSubscription.findByIdAndDelete(id).lean();
-  if (!removed) throw ApiError.notFound('Subscription');
-}
+// Removed. Scheduled deliveries live in `reportSchedule.service.ts` now, where
+// a schedule carries a start and end date and `nextRun` is walked forward in
+// whole periods from the start rather than by adding one period to "now" — so
+// a weekly schedule nobody looked at for a month stays on its original day.
 
 // ── Organisation settings ────────────────────────────────────────────────────
 /**

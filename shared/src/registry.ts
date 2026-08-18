@@ -175,7 +175,8 @@ export interface Report {
   description: string;
   /** PDF / Excel / Dashboard. */
   format: string;
-  lastRun: string;
+  /** Absent until the report has actually been run at least once. */
+  lastRun?: string;
   metrics: string[];
   scheduled?: boolean;
 }

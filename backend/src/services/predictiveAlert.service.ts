@@ -27,6 +27,7 @@ import {
   type ScopeNodeDoc,
 } from '../models/index.js';
 import { ApiError } from '../utils/ApiError.js';
+import type { VisibleScope } from './tenancy.service.js';
 import { logger } from '../config/logger.js';
 import { markEstateChanged } from './derivation.scheduler.js';
 import { descendantIds } from './scopeFilter.service.js';
@@ -167,7 +168,7 @@ async function facilitySubtree(facilityId: string): Promise<string[] | null> {
  * "Open alerts" and the list disagree about what the filter means, the cards
  * stop being read at all.
  */
-async function matchStages(query: Partial<PredictiveAlertListQuery>): Promise<PipelineStage[]> {
+async function matchStages(scope: VisibleScope, query: Partial<PredictiveAlertListQuery>): Promise<PipelineStage[]> {
   const stages: PipelineStage[] = [];
   const match: Record<string, unknown> = {};
 
@@ -214,6 +215,16 @@ async function matchStages(query: Partial<PredictiveAlertListQuery>): Promise<Pi
     { $unwind: { path: '$__asset', preserveNullAndEmptyArrays: true } },
   );
 
+  /*
+   * Tenant isolation, applied straight after the asset join — the first stage
+   * at which the estate can be known, because these records carry no location
+   * of their own. ANDed on top of the caller's own filters, so no query
+   * parameter can widen past it.
+   */
+  if (!scope.coversAll) {
+    stages.push({ $match: { '__asset.location.id': { $in: [...scope.ids] } } });
+  }
+
   if (query.facility) {
     const ids = await facilitySubtree(query.facility);
     if (ids) stages.push({ $match: { '__asset.location.id': { $in: ids } } });
@@ -259,10 +270,11 @@ function sortStage(sort: Record<string, unknown>): Record<string, 1 | -1> {
 // ─────────────────────────────────────────────────────────────────────────────
 
 export async function listPredictiveAlerts(
+  scope: VisibleScope,
   query: PredictiveAlertListQuery,
 ): Promise<{ items: PredictiveAlertDoc[]; meta: ApiMeta }> {
   const pagination = parsePagination(query, SORTABLE, '-detectedAt');
-  const stages = await matchStages(query);
+  const stages = await matchStages(scope, query);
 
   const [rows, hierarchy] = await Promise.all([
     PredictiveAlert.aggregate<{ items: JoinedAlert[]; total: { count: number }[] }>([
@@ -309,9 +321,10 @@ export async function getPredictiveAlert(id: string): Promise<PredictiveAlertDoc
  * it raised.
  */
 export async function getPredictiveAlertStats(
+  scope: VisibleScope,
   query: Partial<PredictiveAlertListQuery> = {},
 ): Promise<PredictiveAlertStats> {
-  const stages = await matchStages(query);
+  const stages = await matchStages(scope, query);
   const threshold = query.minConfidence ?? HIGH_CONFIDENCE_THRESHOLD;
 
   const [rows] = await PredictiveAlert.aggregate<{
@@ -699,6 +712,7 @@ export const resolvePredictiveAlert = (id: string, actor: string, note?: string)
  * the only route a manual work order that loses the link.
  */
 export async function raiseWorkOrderFromAlert(
+  scope: VisibleScope,
   id: string,
   input: RaisePredictiveWorkOrderInput,
   actor: string,
@@ -726,6 +740,7 @@ export async function raiseWorkOrderFromAlert(
   const dueDate = new Date(Date.now() + dueInDays * 86_400_000);
 
   const workOrder = await createWorkOrder(
+    scope,
     {
       title: input.title?.trim() || `${alert.title} — ${alert.assetName}`,
       assetId: alert.assetId,

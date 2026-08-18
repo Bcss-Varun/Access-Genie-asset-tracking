@@ -692,64 +692,6 @@ export interface Notification {
   at: string;
 }
 
-// ── Inventory & parts ────────────────────────────────────────────────────────
-export type AbcClass = 'A' | 'B' | 'C';
-
-export interface Part {
-  id: string;
-  sku: string;
-  name: string;
-  category: string;
-  onHand: number;
-  reorderPoint: number;
-  unitCost: number;
-  warehouseId: string;
-  bin: string;
-  abcClass: AbcClass;
-  supplierId: string;
-  leadTimeDays: number;
-}
-
-export interface Warehouse {
-  id: string;
-  name: string;
-  location: string;
-  binCount: number;
-  skuCount: number;
-  valueInr: number;
-}
-
-export interface Supplier {
-  id: string;
-  name: string;
-  category: string;
-  leadTimeDays: number;
-  rating: number; // 0-5
-  contact: string;
-  onTimePct: number;
-}
-
-export const PO_STATUSES = ['Draft', 'Approved', 'Sent', 'Received', 'Cancelled'] as const;
-export type PoStatus = (typeof PO_STATUSES)[number];
-
-export interface PoLine {
-  sku: string;
-  name: string;
-  qty: number;
-  unitCost: number;
-}
-
-export interface PurchaseOrder {
-  id: string;
-  supplierId: string;
-  supplierName: string;
-  status: PoStatus;
-  expectedAt: string;
-  total: number;
-  lines: PoLine[];
-  createdAt: string;
-}
-
 // ── Compliance & audit ───────────────────────────────────────────────────────
 export interface AuditRecord {
   id: string;
@@ -825,7 +767,6 @@ export const KPI_IDS = [
   'openWorkOrders', 'overdueWorkOrders', 'completedWorkOrders', 'mttrHours', 'mtbfDays', 'maintenanceCost', 'pmCompliance',
   'openAlerts', 'criticalAlerts', 'alertResponseMins', 'geofenceBreaches', 'custodyExceptions',
   'assetsAtRisk', 'predictedFailures', 'anomalies24h', 'aiSavings',
-  'stockValue', 'stockouts', 'belowReorder', 'fillRate',
   'myOpenWork', 'myDueToday', 'myOverdue', 'myClosedThisPeriod',
 ] as const;
 export type KpiId = (typeof KPI_IDS)[number];
@@ -836,7 +777,6 @@ export interface DashboardTriage {
   overdueWorkOrders: number;
   unassignedWork: number;
   missingAssets: number;
-  stockouts: number;
   expiringCerts: number;
 }
 
@@ -865,7 +805,6 @@ export interface DashboardCharts {
   riskDistribution?: { label: string; value: number }[];
   woPipeline?: { label: string; value: number }[];
   alertsByType?: { label: string; value: number }[];
-  abcAnalysis?: { label: string; value: number; caption: string }[];
   valueByCategory?: { label: string; purchase: number; book: number }[];
   /** Purchase / book / accumulated by month — computed, not stored. See `./depreciation`. */
   valueTrend?: import('./depreciation.js').DepreciationPoint[];

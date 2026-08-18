@@ -50,6 +50,24 @@ h1, h2, h3, h4, h5, h6 {
   letter-spacing: -0.011em;
 }
 
+/*
+ * Keyboard focus, always visible.
+ *
+ * There was no focus style in this file at all, and a good number of controls
+ * set `focus:outline-none` for the sake of a custom ring they then only applied
+ * on `:focus` for inputs — leaving buttons, links and menu items with nothing a
+ * keyboard user could see. This is the floor: anything focused *by keyboard*
+ * gets a ring, and a component that wants a nicer one still overrides it.
+ *
+ * `:focus-visible` rather than `:focus`, so a mouse click does not leave a ring
+ * behind on the thing that was clicked.
+ */
+:focus-visible {
+  outline: 2px solid var(--color-primary-500);
+  outline-offset: 2px;
+  border-radius: 0.25rem;
+}
+
 /* Primary surface: a clean white card, hairline border, soft shadow. */
 @utility glass-panel {
   background: var(--color-surface);

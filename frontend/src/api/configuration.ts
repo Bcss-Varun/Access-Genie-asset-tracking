@@ -5,14 +5,12 @@ import type {
   Integration,
   OrgSettings,
   Passkey,
-  ReportSubscription,
   RetentionPolicy,
   Session,
-  SubscriptionCadence,
   WorkflowStep,
 } from '@access-genie/shared';
-import { apiDelete, apiGet, apiPatch, apiPost, http } from '@/api/client';
-import { filenameFromDisposition, saveBlob } from '@/api/download';
+import { apiDelete, apiGet, apiPatch, apiPost } from '@/api/client';
+import { saveBlob } from '@/api/download';
 
 /**
  * The configuration write side.
@@ -46,15 +44,8 @@ export const workflowsApi = {
 
 // Checklist templates are inspection templates now — see api/inspections.ts.
 
-export const subscriptionsApi = {
-  create: (body: { reportId: string; cadence: SubscriptionCadence; format?: string; recipients: string[] }) =>
-    apiPost<ReportSubscription>('/report-subscriptions', body),
-  update: (
-    id: string,
-    body: Partial<{ cadence: SubscriptionCadence; format: string; recipients: string[]; enabled: boolean }>,
-  ) => apiPatch<ReportSubscription>(`/report-subscriptions/${id}`, body),
-  remove: (id: string) => apiDelete(`/report-subscriptions/${id}`),
-};
+// Report subscriptions moved to `api/analytics.ts` as schedules, which carry a
+// start date, an end date and a real "never run yet" state.
 
 export const orgSettingsApi = {
   get: () => apiGet<OrgSettings>('/org-settings'),
@@ -87,27 +78,11 @@ export const profileApi = {
     apiPatch<Session>('/auth/me', body),
 };
 
-// ── Reports: running and downloading ─────────────────────────────────────────
-export interface RunResult {
-  job: { id: string; report: string; format: string; status: string; sizeKb: number };
-  rowCount: number;
-}
-
-export const reportRunApi = {
-  run: (id: string, format?: string) => apiPost<RunResult>(`/reports/${id}/run`, format ? { format } : {}),
-
-  /**
-   * Fetch a produced file and hand it to the browser.
-   *
-   * Done with a blob rather than by pointing the browser at the URL, because
-   * the download endpoint needs the bearer token that only the axios client
-   * carries — a plain `<a href>` would arrive unauthenticated.
-   */
-  download: async (exportId: string): Promise<void> => {
-    const res = await http.get(`/exports/${exportId}/download`, { responseType: 'blob' });
-    saveBlob(res.data as Blob, filenameFromDisposition(res.headers['content-disposition'], `${exportId}.csv`));
-  },
-};
+// ── Reports: running and downloading ────────────────────────────────────────
+// Removed. Running and exporting a report now live in `api/analytics.ts`, where
+// one request produces the numbers *and* the file. The version here queued a
+// job and fetched the artifact separately, which is what let an export appear
+// in a list with nothing behind it.
 
 // ── Client-side CSV ──────────────────────────────────────────────────────────
 /**

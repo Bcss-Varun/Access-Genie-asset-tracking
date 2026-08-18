@@ -85,7 +85,6 @@ function tables(): { key: string; label: string; rows: () => Record<string, unkn
           createdAt: a.createdAt,
         })),
     },
-    { key: 'parts', label: 'Parts & stock', rows: () => data.allParts.map((p) => ({ ...p })) },
     { key: 'certifications', label: 'Certifications', rows: () => data.allCertifications.map((c) => ({ ...c })) },
     { key: 'audit-log', label: 'Audit log', rows: () => data.allAuditLog.map((a) => ({ ...a })) },
   ];

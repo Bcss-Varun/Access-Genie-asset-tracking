@@ -1,6 +1,7 @@
-import { useQuery, type UseQueryResult } from '@tanstack/react-query';
+import { useQuery, type QueryClient, type UseQueryResult } from '@tanstack/react-query';
 import type { AssetCategory, DashboardPeriod, DashboardSummary, ScopeNode } from '@access-genie/shared';
 import { apiGet } from '@/api/client';
+import { getActiveScope } from '@/api/dataset';
 import { useScope } from '@/components/providers/ScopeProvider';
 
 /**
@@ -42,6 +43,50 @@ export const dashboardApi = {
   scopeTree: () => apiGet<ScopeNode | null>('/scope/tree'),
 };
 
+/**
+ * The cache key for one cut of the dashboard.
+ *
+ * Shared by the hook and the prefetch below rather than written out twice: a
+ * prefetch whose key differs from the hook's by one element is a request that
+ * costs a round trip and warms nothing.
+ */
+export function dashboardQueryKey(filters: DashboardFilters, scopeId: string | null) {
+  return [
+    ...DASHBOARD_KEY,
+    scopeId,
+    filters.period,
+    filters.from ?? null,
+    filters.to ?? null,
+    filters.department ?? null,
+    filters.category ?? null,
+  ] as const;
+}
+
+/** The cut the dashboard opens on, before anybody has touched a filter. */
+export const DEFAULT_DASHBOARD_FILTERS: DashboardFilters = { period: '30d' };
+
+/**
+ * Start the dashboard's own read *alongside* the reference dataset.
+ *
+ * Without this the two are strictly sequential, and not because either depends
+ * on the other: `RequireDataset` holds the route subtree until `/dataset`
+ * resolves, so `<DashboardPage>` — and therefore its `useQuery` — does not exist
+ * to fire until then. On a cold connection that put a ~3s aggregation *after* a
+ * ~4s payload for no reason at all.
+ *
+ * Fired from the gate with the scope read from storage, which is the same value
+ * `<ScopeProvider>` seeds itself from, so the key this warms is the key the hook
+ * then asks for.
+ */
+export function prefetchDashboardSummary(client: QueryClient): void {
+  const scopeId = getActiveScope();
+  void client.prefetchQuery({
+    queryKey: dashboardQueryKey(DEFAULT_DASHBOARD_FILTERS, scopeId),
+    queryFn: () => dashboardApi.summary(DEFAULT_DASHBOARD_FILTERS, scopeId),
+    staleTime: 60_000,
+  });
+}
+
 export function useDashboardSummary(filters: DashboardFilters): UseQueryResult<DashboardSummary> {
   // Read from the provider rather than the module binding in `api/dataset`, so
   // a scope change re-renders this hook and changes the key. "Everything" is
@@ -51,15 +96,7 @@ export function useDashboardSummary(filters: DashboardFilters): UseQueryResult<D
   const effectiveScope = scopeId === tree.id ? null : scopeId;
 
   return useQuery({
-    queryKey: [
-      ...DASHBOARD_KEY,
-      effectiveScope,
-      filters.period,
-      filters.from ?? null,
-      filters.to ?? null,
-      filters.department ?? null,
-      filters.category ?? null,
-    ],
+    queryKey: dashboardQueryKey(filters, effectiveScope),
     queryFn: () => dashboardApi.summary(filters, effectiveScope),
     // A dashboard that is a minute stale is fine; one that refetches on every
     // window focus is a flicker. The header shows how old the figures are and

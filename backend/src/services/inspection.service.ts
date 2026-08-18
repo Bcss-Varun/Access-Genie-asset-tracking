@@ -32,6 +32,7 @@ import {
   type ScopeNodeDoc,
 } from '../models/index.js';
 import { ApiError } from '../utils/ApiError.js';
+import type { VisibleScope } from './tenancy.service.js';
 import { logger } from '../config/logger.js';
 import { markEstateChanged } from './derivation.scheduler.js';
 import { descendantIds } from './scopeFilter.service.js';
@@ -229,7 +230,7 @@ async function facilitySubtree(facilityId: string): Promise<string[] | null> {
 }
 
 /** The stages every inspection read shares. Mirrors the work-order builder. */
-async function matchStages(query: Partial<InspectionListQuery>): Promise<PipelineStage[]> {
+async function matchStages(scope: VisibleScope, query: Partial<InspectionListQuery>): Promise<PipelineStage[]> {
   const stages: PipelineStage[] = [];
   const match: Record<string, unknown> = {};
 
@@ -268,6 +269,16 @@ async function matchStages(query: Partial<InspectionListQuery>): Promise<Pipelin
     { $lookup: { from: ASSET_COLLECTION, localField: 'assetId', foreignField: '_id', as: '__asset' } },
     { $unwind: { path: '$__asset', preserveNullAndEmptyArrays: true } },
   );
+
+  /*
+   * Tenant isolation, applied straight after the asset join — the first stage
+   * at which the estate can be known, because these records carry no location
+   * of their own. ANDed on top of the caller's own filters, so no query
+   * parameter can widen past it.
+   */
+  if (!scope.coversAll) {
+    stages.push({ $match: { '__asset.location.id': { $in: [...scope.ids] } } });
+  }
 
   const assetMatch: Record<string, unknown> = {};
   if (query.facility) {
@@ -533,9 +544,12 @@ export async function templateAssets(id: string): Promise<{ id: string; name: st
 // Inspections — reads
 // ─────────────────────────────────────────────────────────────────────────────
 
-export async function listInspections(query: InspectionListQuery): Promise<{ items: InspectionDoc[]; meta: ApiMeta }> {
+export async function listInspections(
+  scope: VisibleScope,
+  query: InspectionListQuery,
+): Promise<{ items: InspectionDoc[]; meta: ApiMeta }> {
   const pagination = parsePagination(query, SORTABLE, 'scheduledFor');
-  const stages = await matchStages(query);
+  const stages = await matchStages(scope, query);
 
   const [rows, hierarchy] = await Promise.all([
     Inspection.aggregate<{ items: JoinedInspection[]; total: { count: number }[] }>([
@@ -566,9 +580,12 @@ export async function getInspection(id: string): Promise<InspectionDoc> {
 }
 
 /** The five summary cards. Takes the same filters as the list. */
-export async function getInspectionStats(query: Partial<InspectionListQuery> = {}): Promise<InspectionStats> {
+export async function getInspectionStats(
+  scope: VisibleScope,
+  query: Partial<InspectionListQuery> = {},
+): Promise<InspectionStats> {
   const now = new Date();
-  const stages = await matchStages(query);
+  const stages = await matchStages(scope, query);
 
   const [rows] = await Inspection.aggregate<{
     byStatus: { _id: InspectionStatus; count: number }[];

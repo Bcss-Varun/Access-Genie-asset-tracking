@@ -3,7 +3,7 @@ import { AppShell } from '@/components/layout/AppShell';
 import { AppProviders } from '@/components/providers/AppProviders';
 import { RequireAuth } from './RequireAuth';
 import { RequireDataset, RequireLabelWorkspace, RequireTrackingWorkspace } from './DataGate';
-import { RouteError } from './RouteError';
+import { PageError, RouteError } from './RouteError';
 import { LABELS_PATH, pageRoutes, TRACKING_PREFIX } from './page-routes';
 
 import LoginPage from '@/pages/auth/login/page';
@@ -11,6 +11,7 @@ import ForgotPasswordPage from '@/pages/auth/forgot-password/page';
 import MfaPage from '@/pages/auth/mfa/page';
 import DashboardPage from '@/pages/page';
 import ComingSoonPage from '@/pages/coming-soon/page';
+import RemovedPage from '@/pages/removed/page';
 
 /**
  * The route tree.
@@ -32,9 +33,21 @@ import ComingSoonPage from '@/pages/coming-soon/page';
 const isTracking = (r: { path?: string }) => String(r.path).startsWith(TRACKING_PREFIX);
 const isLabels = (r: { path?: string }) => String(r.path) === LABELS_PATH;
 
-const trackingRoutes = pageRoutes.filter(isTracking);
-const labelRoutes = pageRoutes.filter(isLabels);
-const generalRoutes = pageRoutes.filter((r) => !isTracking(r) && !isLabels(r));
+/**
+ * Every screen gets its own error boundary.
+ *
+ * Without one, a render error in a single page bubbles to the nearest ancestor
+ * `errorElement` — which was the one wrapping the whole authenticated tree — and
+ * replaced the entire application, chrome and navigation included. Attaching a
+ * boundary per route means a broken screen is a panel inside the shell and the
+ * other hundred-odd routes stay reachable.
+ */
+const withBoundary = (routes: typeof pageRoutes) =>
+  routes.map((route) => ({ ...route, errorElement: <PageError /> }));
+
+const trackingRoutes = withBoundary(pageRoutes.filter(isTracking));
+const labelRoutes = withBoundary(pageRoutes.filter(isLabels));
+const generalRoutes = withBoundary(pageRoutes.filter((r) => !isTracking(r) && !isLabels(r)));
 
 export const router = createBrowserRouter([
   // ── Public ─────────────────────────────────────────────────────────────────
@@ -91,7 +104,15 @@ export const router = createBrowserRouter([
               // would tell anyone holding an old link that the feature is "on
               // the roadmap" — the opposite of what was decided.
               { path: 'maintenance/calendar', element: <Navigate to="/maintenance" replace /> },
-              { path: 'consumption', element: <Navigate to="/inventory" replace /> },
+
+              // Inventory & Parts, withdrawn along with its collections. These
+              // resolve to a page that says so rather than falling through to
+              // the catch-all, which would advertise a removed module as
+              // "scheduled" — the same reasoning as the forwards above, but
+              // there is no successor screen to forward *to*.
+              ...['inventory', 'inventory/:sku', 'warehouses', 'warehouses/:id', 'reorder', 'procurement', 'procurement/:id', 'suppliers', 'consumption'].map(
+                (path) => ({ path, element: <RemovedPage /> }),
+              ),
 
               // Checklists merged into Inspections & Checklists — a checklist is
               // the template an inspection runs from, so the library now lives

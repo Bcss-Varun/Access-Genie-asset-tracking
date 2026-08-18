@@ -3,6 +3,7 @@ import { recomputeAllMetrics } from './metrics.service.js';
 import { regenerateInsights } from './insightEngine.service.js';
 import { raiseDueMaintenance } from './maintenanceAutomation.service.js';
 import { raiseLifecycleAlerts } from './lifecycle.service.js';
+import { sweepCertificationExpiry } from './complianceSweep.service.js';
 
 /**
  * Keeping the derived layer current.
@@ -89,4 +90,34 @@ export function startLifecycleNotificationScheduler(): void {
   const timer = setInterval(run, DAY_MS);
   timer.unref?.();
   logger.info('Lifecycle notification scheduler started', { everyHours: DAY_MS / 3_600_000 });
+}
+
+
+/**
+ * §Compliance — the certificate expiry sweep.
+ *
+ * On the same daily clock as the lifecycle digest, and for the same reason: a
+ * certificate lapsing is a change in the *date*, not an event anything emits,
+ * so no request will ever notice it. Without this pass a lapsed certificate
+ * reads "Valid" indefinitely — which is the one thing a compliance register
+ * must never do.
+ *
+ * Runs shortly after boot so a deployment that has been down over a weekend
+ * catches up immediately rather than at the next midnight.
+ */
+export function startComplianceScheduler(): void {
+  const run = () =>
+    void sweepCertificationExpiry()
+      .then((result) => {
+        if (result.expired || result.expiring) logger.info('Certificate expiry swept', { ...result });
+      })
+      .catch((err: unknown) => {
+        logger.error('Certificate expiry sweep failed', { err: err instanceof Error ? err.message : String(err) });
+      });
+
+  const initial = setTimeout(run, 20_000);
+  initial.unref?.();
+  const timer = setInterval(run, DAY_MS);
+  timer.unref?.();
+  logger.info('Compliance scheduler started', { everyHours: DAY_MS / 3_600_000 });
 }

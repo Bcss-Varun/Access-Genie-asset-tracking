@@ -1,4 +1,5 @@
 import { Router } from 'express';
+import { z } from 'zod';
 import * as controller from '../controllers/tracking.controller.js';
 import * as observation from '../controllers/observation.controller.js';
 import { observationBatchSchema, observationSchema } from '../validators/observation.validator.js';
@@ -127,6 +128,14 @@ router.patch(
 );
 
 // Audits
+// Arming a zone is an operational control, not a view preference — see
+// `setZoneArmed`. It lived only in the browser until this existed.
+router.patch(
+  '/zones/:id/armed',
+  validate({ params: idParamSchema, body: z.object({ armed: z.boolean() }) }),
+  ops.setZoneArmed,
+);
+
 router.post('/audits', validate({ body: startAuditSchema }), ops.startAudit);
 router.patch('/audits/:id', validate({ params: idParamSchema, body: updateAuditSchema }), ops.updateAudit);
 

@@ -65,6 +65,14 @@ const envSchema = z.object({
   // The default seeder creates one administrator and nothing else. These are
   // that account, as variables so a deployment can own its own credentials
   // rather than inherit the ones checked in here.
+  /**
+   * Mail transport for external notification delivery.
+   *
+   * Absent in this deployment. `notificationDelivery.service.ts` reports the
+   * email channel as `skipped` while it is unset rather than logging a success
+   * nobody can verify — see the note on `emailProvider`.
+   */
+  SMTP_URL: z.string().url().optional(),
   ADMIN_EMAIL: z.string().regex(/^\S+@\S+\.\S+$/, 'ADMIN_EMAIL must be an email address').default('raj@bcss.in'),
   ADMIN_PASSWORD: z.string().min(8, 'ADMIN_PASSWORD must be at least 8 characters').default('raj@bcss'),
   ADMIN_NAME: z.string().min(1).default('Raj'),

@@ -6,12 +6,19 @@ import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import type { Report } from '@access-genie/shared';
 import type { ReportPack } from '@access-genie/shared';
-import { allReports, allReportPacks, allCertifications, allInspections, allAuditLog } from '@/lib/dataset';
+import {
+  allReports,
+  allReportPacks,
+  allCertifications,
+  allInspections,
+  allAuditLog,
+  allComplianceFrameworks,
+} from '@/lib/dataset';
 import { PageHeader, Badge, KpiCard, EmptyState } from '@/components/ui/primitives';
 import { Button } from '@/components/ui/Button';
 import { useToast } from '@/components/providers/ToastProvider';
-import { useMutate } from '@/api/mutate';
-import { downloadCsv, reportRunApi } from '@/api/configuration';
+import { downloadCsv } from '@/api/configuration';
+import { exportApi } from '@/api/analytics';
 import { relTime } from '@/lib/utils';
 
 export default function ComplianceReportsPage() {
@@ -20,8 +27,21 @@ export default function ComplianceReportsPage() {
   const standardPacks = allReportPacks;
   const complianceReports = allReports.filter((r) => r.category.toLowerCase().includes('compliance'));
 
+  /*
+   * The two figures on the right of the strip were hardcoded: a literal `5`
+   * captioned with a fixed list of framework names, and a flat "98% audit
+   * readiness" that no record anywhere produced. Both are real data — the
+   * `ComplianceFramework` collection carries the frameworks and a `coverage`
+   * percentage for each — so they are read from it, and an estate with no
+   * frameworks registered says so rather than quoting a number.
+   */
+  const frameworks = allComplianceFrameworks;
+  const readiness =
+    frameworks.length === 0
+      ? null
+      : Math.round(frameworks.reduce((sum, f) => sum + (f.coverage ?? 0), 0) / frameworks.length);
+
   const { toast } = useToast();
-  const { run } = useMutate();
   const [running, setRunning] = useState<string | null>(null);
 
   /**
@@ -83,29 +103,25 @@ export default function ComplianceReportsPage() {
   /**
    * Generate the evidence and hand it over.
    *
-   * Both buttons on a card did the same nothing before. There is only one
-   * action here — produce the file — so there is now one button.
+   * Goes through the analytics export endpoint, which runs the report's
+   * definition against the live compliance records and streams the file back in
+   * one request. It replaced a two-step "queue a job, then fetch the artifact"
+   * flow that could leave a row in an export list with no file behind it.
    */
   const generate = async (r: Report) => {
     setRunning(r.id);
     try {
-      const result = await run(reportRunApi.run(r.id), { describe: `generate “${r.name}”` });
-      if (!result) return;
-
-      if (result.rowCount === 0) {
-        toast({
-          title: 'No evidence to pack',
-          description: `“${r.name}” found nothing to report — there are no compliance records yet.`,
-          tone: 'info',
-        });
-        return;
-      }
-
-      await reportRunApi.download(result.job.id);
+      await exportApi.saved(r.id, 'csv');
       toast({
         title: `${r.name} downloaded`,
-        description: `${result.rowCount} record${result.rowCount === 1 ? '' : 's'} · audit-ready ${result.job.format}`,
+        description: 'Audit-ready CSV, generated from current certification and inspection records.',
         tone: 'success',
+      });
+    } catch {
+      toast({
+        title: 'Could not generate that pack',
+        description: `“${r.name}” could not be run. Open it in Reports to see why.`,
+        tone: 'error',
       });
     } finally {
       setRunning(null);
@@ -117,7 +133,7 @@ export default function ComplianceReportsPage() {
       <PageHeader
         title="Compliance Reports"
         subtitle="Audit-ready evidence packs and compliance report library."
-        breadcrumb={[{ label: 'Analytics', href: '/reports' }, { label: 'Compliance Reports' }]}
+        breadcrumb={[{ label: 'Analytics', href: '/analytics' }, { label: 'Compliance Reports' }]}
         actions={
           <Link to="/reports/builder">
             <Button>+ New Report</Button>
@@ -128,13 +144,23 @@ export default function ComplianceReportsPage() {
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         <KpiCard label="Compliance Reports" value={complianceReports.length} sub="In library" tone="primary" accent />
         <KpiCard label="Standard Packs" value={standardPacks.length} sub="Framework templates" tone="slate" />
-        <KpiCard label="Frameworks" value={5} sub="ISO 27001 · SOC 2 · DPDP · CERT-In · BIS" tone="slate" />
-        <KpiCard label="Audit Readiness" value="98%" sub="Evidence coverage" tone="emerald" />
+        <KpiCard
+          label="Frameworks"
+          value={frameworks.length}
+          sub={frameworks.length === 0 ? 'None registered yet' : frameworks.map((f) => f.name).join(' · ')}
+          tone="slate"
+        />
+        <KpiCard
+          label="Audit Readiness"
+          value={readiness === null ? '—' : `${readiness}%`}
+          sub={readiness === null ? 'No frameworks assessed' : `Mean control coverage across ${frameworks.length}`}
+          tone={readiness !== null && readiness >= 80 ? 'emerald' : 'amber'}
+        />
       </div>
 
       {/* Library reports */}
       <div>
-        <h2 className="text-base font-semibold text-slate-800 mb-3">Report Library</h2>
+        <h2 className="text-base font-semibold text-slate-800 mb-3">Compliance reports</h2>
 
         {complianceReports.length === 0 && (
           <div className="glass-panel rounded-xl">

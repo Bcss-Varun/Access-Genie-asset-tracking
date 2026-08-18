@@ -18,6 +18,8 @@ import { Link } from 'react-router-dom';
 import { EmptyState, PageHeader } from '@/components/ui/primitives';
 import { Button } from '@/components/ui/Button';
 import { useToast } from '@/components/providers/ToastProvider';
+import { useMutate } from '@/api/mutate';
+import { zonesApi } from '@/api/tracking-ops';
 import { FacilityMap, MapLegend } from '@/components/tracking/FacilityMap';
 import { Drawer, Field, LiveStamp, ScopePicker, useFacilityScope } from '@/components/tracking/shell';
 import {
@@ -40,6 +42,7 @@ type View = 'all' | 'armed' | 'violations' | 'weak';
 
 export default function GeofenceMonitoringPage() {
   const { toast } = useToast();
+  const { run: mutate } = useMutate();
   const [scope, setScope] = useFacilityScope();
 
   const [armedOverrides, setArmedOverrides] = useState<Record<string, boolean>>({});
@@ -80,13 +83,23 @@ export default function GeofenceMonitoringPage() {
     }
   }, []);
 
+  /**
+   * Arm or disarm a zone.
+   *
+   * The local override is applied first so the switch responds immediately, and
+   * rolled back by `useMutate` if the write fails — the toast is raised by the
+   * mutation, so it can no longer announce a change the server rejected.
+   */
   const toggleArmed = (z: TrackedZone) => {
     const next = !isArmed(z);
     setArmedOverrides((prev) => ({ ...prev, [z.id]: next }));
-    toast({
-      title: next ? `${z.name} armed` : `${z.name} disarmed`,
-      description: next ? POLICY_TEXT[z.policy] : 'Movements are recorded but no longer raise alerts',
-      tone: next ? 'success' : 'info',
+
+    void mutate(zonesApi.setArmed(z.id, next), {
+      success: next ? `${z.name} armed` : `${z.name} disarmed`,
+      successDetail: next ? POLICY_TEXT[z.policy] : 'Movements are recorded but no longer raise alerts',
+      describe: next ? `arm ${z.name}` : `disarm ${z.name}`,
+      rollback: () => setArmedOverrides((prev) => ({ ...prev, [z.id]: !next })),
+      refreshTracking: true,
     });
   };
 

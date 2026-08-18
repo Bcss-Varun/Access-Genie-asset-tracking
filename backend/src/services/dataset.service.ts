@@ -39,25 +39,22 @@ import {
   LifecycleTransition,
   MovementTrail,
   Notification,
-  Part,
   PmSchedule,
-  PurchaseOrder,
   Report,
   Reservation,
   ScopeNodeModel,
   Sensor,
-  Supplier,
   Technician,
   Transfer,
   UnknownDetection,
   User,
-  Warehouse,
   WorkOrder,
   Zone,
   InspectionTemplate,
   ReportSubscription,
 } from '../models/index.js';
-import { resolveScope, scopeTreeWithCounts } from './scopeFilter.service.js';
+import { scopeTreeWithCounts } from './scopeFilter.service.js';
+import type { VisibleScope } from './tenancy.service.js';
 import { getOrgSettings } from './configuration.service.js';
 import { getScopedAggregates } from './dashboard.service.js';
 import { aliasId } from '../utils/response.js';
@@ -94,7 +91,7 @@ export interface DatasetPayload {
 export async function getDataset(
   modules: ModuleKey[],
   userId: string,
-  scopeId?: string,
+  scope: VisibleScope,
 ): Promise<DatasetPayload> {
   const can = (...required: ModuleKey[]) => required.some((m) => modules.includes(m));
 
@@ -107,12 +104,19 @@ export async function getDataset(
    * them that forgot to filter would quietly show the whole organisation while
    * the switcher in the chrome claimed otherwise.
    *
-   * Only asset-derived data is narrowed. Suppliers, report definitions, roles
+   * Only asset-derived data is narrowed. Report definitions, roles
    * and the checklist library belong to the organisation, not to a site, and
    * hiding them inside a facility would break the screens that configure them.
    */
-  const scope = await resolveScope(scopeId);
-  const scoped = scope !== null && !scope.isRoot;
+  /*
+   * `scope` arrives already resolved *and already authorised* — see
+   * `middleware/scope.ts`. It used to be a raw `?scope=` id turned into a filter
+   * with no check that the caller was entitled to the node they named, which
+   * meant any session could ask for any facility's payload by editing a query
+   * string. `coversAll` is false for every non-platform session, so the filters
+   * below are always applied for them.
+   */
+  const scoped = !scope.coversAll;
 
   // Which assets are in view. Everything below keys off this set, so an asset
   // and the work orders against it can never disagree about being in scope.
@@ -159,10 +163,6 @@ export async function getDataset(
     gateways,
     geofences,
     trails,
-    parts,
-    warehouses,
-    suppliers,
-    purchaseOrders,
     reports,
     cycleCounts,
     certifications,
@@ -232,13 +232,8 @@ export async function getDataset(
     can('tracking') ? Geofence.find().sort({ name: 1 }).lean() : empty,
     can('tracking') ? MovementTrail.find(byAssetKey).lean() : empty,
 
-    can('inventory') ? Part.find().sort({ name: 1 }).lean() : empty,
-    can('inventory') ? Warehouse.find().sort({ name: 1 }).lean() : empty,
-    can('inventory') ? Supplier.find().sort({ name: 1 }).lean() : empty,
-    can('inventory') ? PurchaseOrder.find().sort({ createdAt: -1 }).lean() : empty,
-
     can('analytics') ? Report.find().sort({ name: 1 }).lean() : empty,
-    can('operations', 'inventory') ? CycleCount.find().sort({ date: -1 }).lean() : empty,
+    can('operations', 'compliance') ? CycleCount.find().sort({ date: -1 }).lean() : empty,
     can('compliance') ? Certification.find(byAsset).sort({ expiresAt: 1 }).lean() : empty,
     can('admin') ? Integration.find().sort({ name: 1 }).lean() : empty,
     can('admin') ? ApprovalWorkflow.find().sort({ name: 1 }).lean() : empty,
@@ -322,10 +317,6 @@ export async function getDataset(
     gateways,
     geofences,
     trails,
-    parts,
-    warehouses,
-    suppliers,
-    purchaseOrders,
     reports,
     cycleCounts,
     certifications,
@@ -364,9 +355,9 @@ export async function getDataset(
     // of which one is selected, or you could narrow to a facility and have no
     // way back out. Counts are computed rather than read from the stored
     // `assetCount`, which nothing maintains; see scopeFilter.service.ts.
-    scopeTree: await scopeTreeWithCounts(),
+    scopeTree: await scopeTreeWithCounts(scope),
     /** Which node the payload was narrowed to, so the client can confirm it. */
-    scopeId: scope?.scopeId ?? null,
+    scopeId: scope.coversAll ? null : scope.id,
     observedAt: new Date().toISOString(),
   };
 }

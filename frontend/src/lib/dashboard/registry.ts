@@ -14,7 +14,6 @@ import {
   ScoreHistory,
   UtilizationPanel,
 } from '@/components/dashboards/widgets/analytics';
-import { AbcAnalysis, ReorderAlerts } from '@/components/dashboards/widgets/inventory';
 import { RecentActivity } from '@/components/dashboards/widgets/activity';
 
 /**
@@ -252,7 +251,7 @@ export const WIDGETS: WidgetDef[] = [
     Component: ScoreHistory,
   },
 
-  // ── Money & parts ─────────────────────────────────────────────────────────
+  // ── Money ─────────────────────────────────────────────────────────────────
   {
     id: 'finance.value',
     title: 'Purchase vs book value',
@@ -262,24 +261,6 @@ export const WIDGETS: WidgetDef[] = [
     wide: true,
     Component: ValueByCategory,
   },
-  {
-    id: 'inventory.abc',
-    title: 'ABC analysis',
-    description: 'Where the tied-up spare-parts capital sits.',
-    module: 'inventory',
-    column: 'main',
-    Component: AbcAnalysis,
-  },
-  {
-    id: 'inventory.reorder',
-    title: 'Reorder alerts',
-    description: 'SKUs at or below their reorder point.',
-    module: 'inventory',
-    column: 'main',
-    wide: true,
-    Component: ReorderAlerts,
-  },
-
   // ── Everything else ───────────────────────────────────────────────────────
   {
     id: 'activity.recent',
@@ -323,10 +304,6 @@ export const KPI_META: Record<KpiId, { label: string; href?: string; module: Mod
   predictedFailures: { label: 'Predicted failures', href: '/predictive', module: 'ai' },
   anomalies24h: { label: 'Anomalies (24h)', href: '/ai/anomaly', module: 'ai' },
   aiSavings: { label: 'AI savings', href: '/ai-insights', module: 'ai' },
-  stockValue: { label: 'Stock value', href: '/inventory', module: 'inventory' },
-  stockouts: { label: 'Stockouts', href: '/reorder', module: 'inventory' },
-  belowReorder: { label: 'Below reorder', href: '/reorder', module: 'inventory' },
-  fillRate: { label: 'Fill rate', href: '/inventory', module: 'inventory' },
   myOpenWork: { label: 'My open work', href: '/my-work', module: 'maintenance' },
   myDueToday: { label: 'Due today', href: '/my-work', module: 'maintenance' },
   myOverdue: { label: 'My overdue', href: '/my-work', module: 'maintenance' },

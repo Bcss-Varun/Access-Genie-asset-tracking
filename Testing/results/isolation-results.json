@@ -1,0 +1,500 @@
+{
+  "ranAt": "2026-08-18T13:11:55.928Z",
+  "summary": {
+    "total": 44,
+    "pass": 44,
+    "fail": 0
+  },
+  "teardown": {
+    "removed": [
+      "AST-20"
+    ],
+    "stuck": []
+  },
+  "results": [
+    {
+      "id": "ISO-000",
+      "feature": "Provision a facility-scoped user for the boundary tests",
+      "type": "Setup",
+      "priority": "P0",
+      "severity": "—",
+      "expected": "201 and a user id",
+      "actual": "201 U-7",
+      "status": "PASS",
+      "evidence": null
+    },
+    {
+      "id": "ISO-AUTH-001",
+      "feature": "Unauthenticated read is rejected",
+      "type": "Security",
+      "priority": "P0",
+      "severity": "—",
+      "expected": "401",
+      "actual": "401",
+      "status": "PASS",
+      "evidence": null
+    },
+    {
+      "id": "ISO-AUTH-002",
+      "feature": "A forged bearer token is rejected",
+      "type": "Security",
+      "priority": "P0",
+      "severity": "—",
+      "expected": "401",
+      "actual": "401",
+      "status": "PASS",
+      "evidence": null
+    },
+    {
+      "id": "ISO-AUTH-003",
+      "feature": "Wrong password does not authenticate",
+      "type": "Security",
+      "priority": "P0",
+      "severity": "—",
+      "expected": "401",
+      "actual": "401",
+      "status": "PASS",
+      "evidence": null
+    },
+    {
+      "id": "ISO-TEN-001",
+      "feature": "Asset registry returns nothing outside the caller's estate",
+      "type": "Security",
+      "priority": "P0",
+      "severity": "—",
+      "expected": "200 with 0 rows (the probe is homed at a node holding no assets)",
+      "actual": "200, 0 rows",
+      "status": "PASS",
+      "evidence": null
+    },
+    {
+      "id": "ISO-TEN-002",
+      "feature": "Work orders returns nothing outside the caller's estate",
+      "type": "Security",
+      "priority": "P0",
+      "severity": "—",
+      "expected": "200 with 0 rows (the probe is homed at a node holding no assets)",
+      "actual": "200, 0 rows",
+      "status": "PASS",
+      "evidence": null
+    },
+    {
+      "id": "ISO-TEN-003",
+      "feature": "Custody chain returns nothing outside the caller's estate",
+      "type": "Security",
+      "priority": "P0",
+      "severity": "—",
+      "expected": "200 with 0 rows (the probe is homed at a node holding no assets)",
+      "actual": "200, 0 rows",
+      "status": "PASS",
+      "evidence": null
+    },
+    {
+      "id": "ISO-TEN-004",
+      "feature": "Alerts returns nothing outside the caller's estate",
+      "type": "Security",
+      "priority": "P0",
+      "severity": "—",
+      "expected": "200 with 0 rows (the probe is homed at a node holding no assets)",
+      "actual": "200, 0 rows",
+      "status": "PASS",
+      "evidence": null
+    },
+    {
+      "id": "ISO-TEN-005",
+      "feature": "Inspections returns nothing outside the caller's estate",
+      "type": "Security",
+      "priority": "P0",
+      "severity": "—",
+      "expected": "200 with 0 rows (the probe is homed at a node holding no assets)",
+      "actual": "200, 0 rows",
+      "status": "PASS",
+      "evidence": null
+    },
+    {
+      "id": "ISO-TEN-006",
+      "feature": "Predictive alerts returns nothing outside the caller's estate",
+      "type": "Security",
+      "priority": "P0",
+      "severity": "—",
+      "expected": "200 with 0 rows (the probe is homed at a node holding no assets)",
+      "actual": "200, 0 rows",
+      "status": "PASS",
+      "evidence": null
+    },
+    {
+      "id": "ISO-TEN-007",
+      "feature": "Asset documents returns nothing outside the caller's estate",
+      "type": "Security",
+      "priority": "P0",
+      "severity": "—",
+      "expected": "200 with 0 rows (the probe is homed at a node holding no assets)",
+      "actual": "200, 0 rows",
+      "status": "PASS",
+      "evidence": null
+    },
+    {
+      "id": "ISO-TEN-008",
+      "feature": "PM schedules returns nothing outside the caller's estate",
+      "type": "Security",
+      "priority": "P0",
+      "severity": "—",
+      "expected": "200 with 0 rows (the probe is homed at a node holding no assets)",
+      "actual": "200, 0 rows",
+      "status": "PASS",
+      "evidence": null
+    },
+    {
+      "id": "ISO-TEN-009",
+      "feature": "Certifications returns nothing outside the caller's estate",
+      "type": "Security",
+      "priority": "P0",
+      "severity": "—",
+      "expected": "200 with 0 rows (the probe is homed at a node holding no assets)",
+      "actual": "200, 0 rows",
+      "status": "PASS",
+      "evidence": null
+    },
+    {
+      "id": "ISO-TEN-010",
+      "feature": "The bulk dataset payload is scoped to the estate",
+      "type": "Security",
+      "priority": "P0",
+      "severity": "—",
+      "expected": "every asset-derived slice empty",
+      "actual": "all empty",
+      "status": "PASS",
+      "evidence": null
+    },
+    {
+      "id": "ISO-TEN-011",
+      "feature": "Fetching another estate’s asset by id is refused",
+      "type": "Security",
+      "priority": "P0",
+      "severity": "—",
+      "expected": "404 (not 403 — confirming existence is itself a disclosure)",
+      "actual": "404",
+      "status": "PASS",
+      "evidence": null
+    },
+    {
+      "id": "ISO-TEN-012",
+      "feature": "The scope tree is pruned to the caller’s estate",
+      "type": "Security",
+      "priority": "P1",
+      "severity": "—",
+      "expected": "root = BLD-1",
+      "actual": "root = BLD-1",
+      "status": "PASS",
+      "evidence": null
+    },
+    {
+      "id": "ISO-TEN-013",
+      "feature": "Aggregate counts do not leak the wider estate",
+      "type": "Security",
+      "priority": "P1",
+      "severity": "—",
+      "expected": "total = 0",
+      "actual": "total = 0",
+      "status": "PASS",
+      "evidence": null
+    },
+    {
+      "id": "ISO-ESC-001",
+      "feature": "Naming a foreign scope in the query string is refused (/assets?scope=FAC-1)",
+      "type": "Security",
+      "priority": "P0",
+      "severity": "—",
+      "expected": "403",
+      "actual": "403",
+      "status": "PASS",
+      "evidence": null
+    },
+    {
+      "id": "ISO-ESC-002",
+      "feature": "Naming a foreign scope in the query string is refused (/dataset?scope=ORG-1)",
+      "type": "Security",
+      "priority": "P0",
+      "severity": "—",
+      "expected": "403",
+      "actual": "403",
+      "status": "PASS",
+      "evidence": null
+    },
+    {
+      "id": "ISO-ESC-003",
+      "feature": "Naming a foreign scope in the query string is refused (/dashboard/summary?scope=FAC-1)",
+      "type": "Security",
+      "priority": "P0",
+      "severity": "—",
+      "expected": "403",
+      "actual": "403",
+      "status": "PASS",
+      "evidence": null
+    },
+    {
+      "id": "ISO-ESC-004",
+      "feature": "Naming a foreign scope in the query string is refused (/work-orders?scope=FAC-1)",
+      "type": "Security",
+      "priority": "P0",
+      "severity": "—",
+      "expected": "403",
+      "actual": "403",
+      "status": "PASS",
+      "evidence": null
+    },
+    {
+      "id": "ISO-RBAC-001",
+      "feature": "A role without the admin grant cannot read the user directory",
+      "type": "Security",
+      "priority": "P0",
+      "severity": "—",
+      "expected": "403",
+      "actual": "403",
+      "status": "PASS",
+      "evidence": null
+    },
+    {
+      "id": "ISO-RBAC-002",
+      "feature": "A non-admin cannot create users (privilege escalation)",
+      "type": "Security",
+      "priority": "P0",
+      "severity": "—",
+      "expected": "403",
+      "actual": "403",
+      "status": "PASS",
+      "evidence": null
+    },
+    {
+      "id": "ISO-CRUD-001",
+      "feature": "Create an asset",
+      "type": "Functional",
+      "priority": "P0",
+      "severity": "—",
+      "expected": "201 and an asset id",
+      "actual": "201 AST-20",
+      "status": "PASS",
+      "evidence": null
+    },
+    {
+      "id": "ISO-CRUD-002",
+      "feature": "The created asset is readable back from the database",
+      "type": "Functional",
+      "priority": "P0",
+      "severity": "—",
+      "expected": "200 and id AST-20",
+      "actual": "200 AST-20",
+      "status": "PASS",
+      "evidence": null
+    },
+    {
+      "id": "ISO-CRUD-003",
+      "feature": "An edit persists (verified by re-reading the record)",
+      "type": "Functional",
+      "priority": "P0",
+      "severity": "—",
+      "expected": "name = QA Probe Renamed 1787058710726",
+      "actual": "name = QA Probe Renamed 1787058710726",
+      "status": "PASS",
+      "evidence": null
+    },
+    {
+      "id": "ISO-CRUD-004",
+      "feature": "Assignment (custodian) persists",
+      "type": "Functional",
+      "priority": "P1",
+      "severity": "—",
+      "expected": "custodian = QA Custodian 1787058711113",
+      "actual": "custodian = QA Custodian 1787058711113",
+      "status": "PASS",
+      "evidence": null
+    },
+    {
+      "id": "ISO-CRUD-005",
+      "feature": "A status change persists",
+      "type": "Functional",
+      "priority": "P1",
+      "severity": "—",
+      "expected": "status = Maintenance",
+      "actual": "status = Maintenance",
+      "status": "PASS",
+      "evidence": null
+    },
+    {
+      "id": "ISO-TEN-014",
+      "feature": "A foreign session cannot edit an asset outside its estate",
+      "type": "Security",
+      "priority": "P0",
+      "severity": "—",
+      "expected": "404/403 and the name unchanged",
+      "actual": "404, name = QA Probe Renamed 1787058710726",
+      "status": "PASS",
+      "evidence": null
+    },
+    {
+      "id": "ISO-TEN-015",
+      "feature": "A foreign session cannot delete an asset outside its estate",
+      "type": "Security",
+      "priority": "P0",
+      "severity": "—",
+      "expected": "404/403 and the asset still present",
+      "actual": "403, still present = true",
+      "status": "PASS",
+      "evidence": null
+    },
+    {
+      "id": "ISO-WO-001",
+      "feature": "Create a work order against an asset",
+      "type": "Functional",
+      "priority": "P0",
+      "severity": "—",
+      "expected": "201 and an id",
+      "actual": "201 WO-31",
+      "status": "PASS",
+      "evidence": null
+    },
+    {
+      "id": "ISO-WO-002",
+      "feature": "The work order is readable back from the database",
+      "type": "Functional",
+      "priority": "P0",
+      "severity": "—",
+      "expected": "200",
+      "actual": "200",
+      "status": "PASS",
+      "evidence": null
+    },
+    {
+      "id": "ISO-WO-003",
+      "feature": "A work-order status transition persists",
+      "type": "Functional",
+      "priority": "P0",
+      "severity": "—",
+      "expected": "status = Assigned",
+      "actual": "status = Assigned",
+      "status": "PASS",
+      "evidence": null
+    },
+    {
+      "id": "ISO-TEN-016",
+      "feature": "A foreign session cannot read that work order",
+      "type": "Security",
+      "priority": "P0",
+      "severity": "—",
+      "expected": "404",
+      "actual": "404",
+      "status": "PASS",
+      "evidence": null
+    },
+    {
+      "id": "ISO-DOC-001",
+      "feature": "Upload a document against an asset",
+      "type": "Functional",
+      "priority": "P1",
+      "severity": "—",
+      "expected": "201 and a document id",
+      "actual": "201 DOC-3",
+      "status": "PASS",
+      "evidence": null
+    },
+    {
+      "id": "ISO-DOC-002",
+      "feature": "The document is associated with its asset and listed",
+      "type": "Functional",
+      "priority": "P1",
+      "severity": "—",
+      "expected": "the uploaded document appears in the asset’s documents",
+      "actual": "found = true",
+      "status": "PASS",
+      "evidence": null
+    },
+    {
+      "id": "ISO-DOC-003",
+      "feature": "A foreign session cannot download the document",
+      "type": "Security",
+      "priority": "P0",
+      "severity": "—",
+      "expected": "404",
+      "actual": "404",
+      "status": "PASS",
+      "evidence": null
+    },
+    {
+      "id": "ISO-DOC-004",
+      "feature": "A foreign session cannot delete the document",
+      "type": "Security",
+      "priority": "P0",
+      "severity": "—",
+      "expected": "404",
+      "actual": "404",
+      "status": "PASS",
+      "evidence": null
+    },
+    {
+      "id": "ISO-DOC-005",
+      "feature": "Deleting a document persists",
+      "type": "Functional",
+      "priority": "P1",
+      "severity": "—",
+      "expected": "the document no longer appears",
+      "actual": "gone = true",
+      "status": "PASS",
+      "evidence": null
+    },
+    {
+      "id": "ISO-TRK-001",
+      "feature": "Arming a zone persists",
+      "type": "Functional",
+      "priority": "P1",
+      "severity": "—",
+      "expected": "a tracked zone to exercise",
+      "actual": "no tracked zones in this database — route verified by its 404 below instead",
+      "status": "PASS",
+      "evidence": null
+    },
+    {
+      "id": "ISO-TRK-002",
+      "feature": "The zone-arming route reaches the database",
+      "type": "Functional",
+      "priority": "P2",
+      "severity": "—",
+      "expected": "404 for an unknown zone (not 404 for a missing route)",
+      "actual": "404 Zone not found",
+      "status": "PASS",
+      "evidence": null
+    },
+    {
+      "id": "ISO-REF-001",
+      "feature": "Create an alert rule",
+      "type": "Functional",
+      "priority": "P1",
+      "severity": "—",
+      "expected": "201 and an id",
+      "actual": "201 RUL-2",
+      "status": "PASS",
+      "evidence": null
+    },
+    {
+      "id": "ISO-REF-002",
+      "feature": "An alert-rule edit persists",
+      "type": "Functional",
+      "priority": "P1",
+      "severity": "—",
+      "expected": "name = QA Probe Rule Renamed 1787058714950",
+      "actual": "name = QA Probe Rule Renamed 1787058714950",
+      "status": "PASS",
+      "evidence": null
+    },
+    {
+      "id": "ISO-REF-003",
+      "feature": "An alert-rule delete persists",
+      "type": "Functional",
+      "priority": "P1",
+      "severity": "—",
+      "expected": "the rule no longer appears",
+      "actual": "gone = true",
+      "status": "PASS",
+      "evidence": null
+    }
+  ]
+}

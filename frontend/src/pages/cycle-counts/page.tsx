@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import type { CycleCount, CycleCountStatus } from '@access-genie/shared';
-import { allCycleCounts, allWarehouses } from '@/lib/dataset';
+import { allCycleCounts } from '@/lib/dataset';
 import { PageHeader, KpiCard, Badge, EmptyState } from '@/components/ui/primitives';
 import { Button } from '@/components/ui/Button';
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
@@ -9,7 +9,7 @@ import { Drawer, DrawerSection } from '@/components/ui/Drawer';
 import { FormDialog, Field, FieldRow, Select, TextInput, dateInDays } from '@/components/ui/FormDialog';
 import { useMutate } from '@/api/mutate';
 import { cycleCountsApi } from '@/api/maintenance';
-import { allUsers } from '@/lib/rbac';
+import { allUsers, switchableScopes } from '@/lib/rbac';
 import { relTime } from '@/lib/utils';
 import { cycleCountVariance } from '@/lib/field-ops';
 
@@ -29,7 +29,11 @@ const statusTone = (s: CycleCountStatus): 'emerald' | 'amber' | 'red' | 'slate' 
 function ScheduleDialog({ onClose }: { onClose: () => void }) {
   const { run, isPending } = useMutate();
 
-  const places = allWarehouses.map((w) => ({ value: w.name, label: w.name }));
+  // Counted places come from the location tree. They used to come from the
+  // spare-parts warehouse list, which was the wrong register even before that
+  // module was withdrawn: a cycle count counts *assets*, and an asset's place
+  // is a node of the scope tree, not a shelf in a stores building.
+  const places = switchableScopes().map(({ node }) => ({ value: node.name, label: node.name }));
   const [location, setLocation] = useState(places[0]?.value ?? '');
   const [expected, setExpected] = useState('0');
   const [date, setDate] = useState(dateInDays(7));

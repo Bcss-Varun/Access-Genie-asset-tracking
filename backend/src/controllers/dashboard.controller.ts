@@ -6,6 +6,7 @@ import { asyncHandler } from '../utils/asyncHandler.js';
 import { sendData } from '../utils/response.js';
 import { getDashboardSummary } from '../services/dashboard.service.js';
 import { scopeTreeWithCounts } from '../services/scopeFilter.service.js';
+import { requireScope } from '../middleware/scope.js';
 
 /**
  * The dashboard, narrowed the same two ways the screen offers.
@@ -46,7 +47,7 @@ export const summary = asyncHandler(async (req: Request, res: Response) => {
     await getDashboardSummary({
       modules: req.auth.modules,
       userName: req.auth.user.name,
-      scopeId: str('scope'),
+      scope: requireScope(req),
       period,
       from: parseDate(str('from')),
       to: parseDate(str('to')),
@@ -57,10 +58,10 @@ export const summary = asyncHandler(async (req: Request, res: Response) => {
 });
 
 /** The Org ▸ Region ▸ Facility ▸ … tree behind the scope switcher. */
-export const scopeTree = asyncHandler(async (_req: Request, res: Response) => {
+export const scopeTree = asyncHandler(async (req: Request, res: Response) => {
   // Same tree, same counts as the dataset carries — the switcher must not show
   // one number here and a different one after a refresh.
-  sendData(res, await scopeTreeWithCounts());
+  sendData(res, await scopeTreeWithCounts(requireScope(req)));
 });
 
 /**
@@ -69,8 +70,8 @@ export const scopeTree = asyncHandler(async (_req: Request, res: Response) => {
  */
 export const dataset = asyncHandler(async (req: Request, res: Response) => {
   if (!req.auth) throw ApiError.unauthorized();
-  // `?scope=` narrows the payload to one site and everything under it. Absent
-  // means the whole organisation, which is what the root selection sends.
-  const scopeId = typeof req.query.scope === 'string' ? req.query.scope : undefined;
-  sendData(res, await getDataset(req.auth.modules, req.auth.user.id, scopeId));
+  // `?scope=` narrows the payload to one site and everything under it — and is
+  // validated against the caller's estate by `attachScope`, not here, so an id
+  // outside it is already a 403 by the time this runs.
+  sendData(res, await getDataset(req.auth.modules, req.auth.user.id, requireScope(req)));
 });

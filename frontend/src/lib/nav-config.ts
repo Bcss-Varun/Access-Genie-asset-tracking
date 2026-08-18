@@ -227,31 +227,23 @@ export const navSections: NavSection[] = [
 
   // ── Supporting sections ────────────────────────────────────────────────────
   {
+    // Four sections, down from five. `BI & Warehouse Sync`, `Export Center` and
+    // `Scheduled Subscriptions` are gone as destinations — not as capability.
+    // Export is now an action wherever a report is shown, because a file you
+    // request in one place and collect in another is two screens for one job;
+    // scheduling moved to `Scheduled Reports`, which is the same idea with a
+    // start date and an end date; and the BI page described a warehouse sync
+    // this deployment does not run.
     id: 'analytics',
     label: 'Analytics & Reporting',
     module: 'analytics',
-    to: '/reports',
-    icon: '📄',
+    to: '/analytics',
+    icon: '📊',
     items: [
-      { label: 'Report Library', to: '/reports', icon: '📄' },
+      { label: 'Analytics Dashboard', to: '/analytics', icon: '📊' },
+      { label: 'Reports', to: '/reports', icon: '📄' },
       { label: 'Report Builder', to: '/reports/builder', icon: '🛠️' },
-      { label: 'BI & Warehouse Sync', to: '/bi', icon: '🧮' },
-      { label: 'Scheduled Subscriptions', to: '/subscriptions', icon: '📮' },
-      { label: 'Export Center', to: '/exports', icon: '📤' },
-    ],
-  },
-  {
-    id: 'inventory',
-    label: 'Inventory & Parts',
-    module: 'inventory',
-    to: '/inventory',
-    icon: '📦',
-    items: [
-      { label: 'IT Spares Overview', to: '/inventory', icon: '📦' },
-      { label: 'Warehouses & Bins', to: '/warehouses', icon: '🏬' },
-      { label: 'Reorder Planning', to: '/reorder', icon: '🛒' },
-      { label: 'Purchase Orders', to: '/procurement', icon: '🧾' },
-      { label: 'Suppliers', to: '/suppliers', icon: '🤝' },
+      { label: 'Scheduled Reports', to: '/reports/schedules', icon: '📮' },
     ],
   },
   {

@@ -1,5 +1,7 @@
 import type { Request, Response } from 'express';
 import { asyncHandler } from '../utils/asyncHandler.js';
+import { requireScope } from '../middleware/scope.js';
+import { assetClause } from '../services/tenancy.service.js';
 import { sendData, sendList } from '../utils/response.js';
 import { validatedQuery } from '../middleware/validate.js';
 import { parsePagination, paginate } from '../utils/query.js';
@@ -9,10 +11,6 @@ import {
   AuditLog,
   CustodyRecord,
   Notification,
-  Part,
-  PurchaseOrder,
-  Supplier,
-  Warehouse,
 } from '../models/index.js';
 import { nextId } from '../models/Counter.js';
 import type { ListQueryInput } from '../validators/common.js';
@@ -21,40 +19,11 @@ import { recordAudit } from '../services/audit.service.js';
 import type { CustodyAction } from '@access-genie/shared';
 
 /**
- * Read endpoints for the supporting collections — inventory, notifications,
- * audit, custody and alert rules. They share a controller because each is a
+ * Read endpoints for the supporting collections — notifications, audit,
+ * custody and alert rules. They share a controller because each is a
  * straight paginated read with no domain rules of its own; the moment one grows
  * real behaviour it earns its own service and file.
  */
-
-// ── Inventory ────────────────────────────────────────────────────────────────
-export const listParts = asyncHandler(async (_req: Request, res: Response) => {
-  const query = validatedQuery<ListQueryInput & { warehouseId?: string; abcClass?: string; reorder?: string }>(res);
-  const filter: Record<string, unknown> = {};
-
-  if (query.warehouseId) filter.warehouseId = query.warehouseId;
-  if (query.abcClass) filter.abcClass = query.abcClass;
-  // `?reorder=true` → at or below the reorder point. `$expr` compares two
-  // fields of the same document, which a plain filter cannot do.
-  if (query.reorder === 'true') filter.$expr = { $lte: ['$onHand', '$reorderPoint'] };
-  if (query.q) filter.$text = { $search: query.q };
-
-  const pagination = parsePagination(query, ['name', 'sku', 'onHand', 'unitCost'], 'name');
-  const { items, meta } = await paginate(Part, filter, pagination);
-  sendList(res, items, meta);
-});
-
-export const listWarehouses = asyncHandler(async (_req: Request, res: Response) => {
-  sendData(res, await Warehouse.find().sort({ name: 1 }).lean());
-});
-
-export const listSuppliers = asyncHandler(async (_req: Request, res: Response) => {
-  sendData(res, await Supplier.find().sort({ name: 1 }).lean());
-});
-
-export const listPurchaseOrders = asyncHandler(async (_req: Request, res: Response) => {
-  sendData(res, await PurchaseOrder.find().sort({ createdAt: -1 }).limit(100).lean());
-});
 
 // ── Notifications ────────────────────────────────────────────────────────────
 export const listNotifications = asyncHandler(async (req: Request, res: Response) => {
@@ -104,9 +73,13 @@ export const listAudit = asyncHandler(async (_req: Request, res: Response) => {
   sendList(res, items, meta);
 });
 
-export const listCustody = asyncHandler(async (_req: Request, res: Response) => {
+export const listCustody = asyncHandler(async (req: Request, res: Response) => {
   const query = validatedQuery<ListQueryInput & { assetId?: string }>(res);
-  const filter: Record<string, unknown> = {};
+  // The custody chain records who held which asset. It carries no location of
+  // its own, so it is narrowed by the assets inside the caller's estate —
+  // otherwise a facility manager reads the movement history of the whole
+  // organisation, which is exactly what this used to do.
+  const filter: Record<string, unknown> = { ...(await assetClause(requireScope(req))) };
   if (query.assetId) filter.assetId = query.assetId;
 
   const pagination = parsePagination(query, ['at', 'holder'], '-at');

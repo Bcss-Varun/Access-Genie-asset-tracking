@@ -3,6 +3,7 @@ import { nextId } from '../models/Counter.js';
 import { ApiError } from '../utils/ApiError.js';
 import { logger } from '../config/logger.js';
 import type { UploadDocumentInput } from '../validators/document.validator.js';
+import { assertAssetVisible, assertLocationVisible, type VisibleScope } from './tenancy.service.js';
 
 /**
  * Documents attached to an asset.
@@ -16,9 +17,16 @@ import type { UploadDocumentInput } from '../validators/document.validator.js';
 /** Everything but the bytes — what a list or the dataset should ever return. */
 const METADATA = '-content';
 
-export async function uploadDocument(input: UploadDocumentInput, actor: string): Promise<AssetDocDoc> {
+export async function uploadDocument(
+  scope: VisibleScope,
+  input: UploadDocumentInput,
+  actor: string,
+): Promise<AssetDocDoc> {
   const asset = await Asset.findById(input.assetId).lean();
   if (!asset) throw ApiError.notFound('Asset');
+  // Attaching a file to an asset in somebody else's estate would both write
+  // across the boundary and hand the uploader a document they could then read.
+  assertLocationVisible(scope, asset.location?.id, 'Asset');
 
   const bytes = Buffer.from(input.content, 'base64');
   if (bytes.length === 0) throw ApiError.badRequest('That file is empty');
@@ -74,10 +82,21 @@ export async function uploadDocument(input: UploadDocumentInput, actor: string):
 
 /** The bytes, for a download. Separate from the metadata read on purpose. */
 export async function documentContent(
+  scope: VisibleScope,
   id: string,
 ): Promise<{ name: string; mimeType: string; body: Buffer }> {
   const doc = await AssetDocument.findById(id).select('+content').lean();
   if (!doc) throw ApiError.notFound('Document');
+  /*
+   * A document is readable exactly when its asset is.
+   *
+   * The list endpoint was already narrowed, but the download was keyed on the
+   * document id alone — so an id guessed or kept from an earlier role handed
+   * back the bytes of an invoice belonging to another facility. A download is
+   * the most sensitive read in this module; it is the one that most needed the
+   * check.
+   */
+  await assertAssetVisible(scope, doc.assetId, 'Document');
   if (!doc.content) {
     // A row seeded before uploads stored bytes. Saying so is better than
     // returning an empty file that looks like a corrupt download.
@@ -90,9 +109,10 @@ export async function documentContent(
   };
 }
 
-export async function deleteDocument(id: string, actor: string): Promise<void> {
+export async function deleteDocument(scope: VisibleScope, id: string, actor: string): Promise<void> {
   const doc = await AssetDocument.findById(id).select(METADATA).lean();
   if (!doc) throw ApiError.notFound('Document');
+  await assertAssetVisible(scope, doc.assetId, 'Document');
 
   await AssetDocument.deleteOne({ _id: id });
 

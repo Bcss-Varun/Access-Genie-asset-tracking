@@ -2,6 +2,7 @@ import type { FilterQuery } from 'mongoose';
 import type { AlertStatus, ApiMeta } from '@access-genie/shared';
 import { Activity, Alert, Asset, OPEN_ALERT_STATUSES, nextId, type AlertDoc } from '../models/index.js';
 import { ApiError } from '../utils/ApiError.js';
+import { assertAssetVisible, assetClause, type VisibleScope } from './tenancy.service.js';
 import { csvFilter, escapeRegex, paginate, parsePagination } from '../utils/query.js';
 import type { AlertListQuery, CreateAlertInput } from '../validators/alert.validator.js';
 
@@ -29,14 +30,19 @@ function buildFilter(query: AlertListQuery): FilterQuery<AlertDoc> {
   return filter;
 }
 
-export async function listAlerts(query: AlertListQuery): Promise<{ items: AlertDoc[]; meta: ApiMeta }> {
+export async function listAlerts(
+  scope: VisibleScope,
+  query: AlertListQuery,
+): Promise<{ items: AlertDoc[]; meta: ApiMeta }> {
   const pagination = parsePagination(query, SORTABLE, '-createdAt');
-  return paginate(Alert, buildFilter(query), pagination);
+  // An alert belongs to the asset it was raised against.
+  return paginate(Alert, { ...buildFilter(query), ...(await assetClause(scope)) }, pagination);
 }
 
-export async function getAlert(id: string): Promise<AlertDoc> {
+export async function getAlert(scope: VisibleScope, id: string): Promise<AlertDoc> {
   const alert = await Alert.findById(id).lean<AlertDoc>();
   if (!alert) throw ApiError.notFound('Alert');
+  await assertAssetVisible(scope, alert.assetId, 'Alert');
   return alert;
 }
 

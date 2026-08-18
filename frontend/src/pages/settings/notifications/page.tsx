@@ -18,7 +18,6 @@ interface Category {
 const CATEGORIES: Category[] = [
   { id: 'alerts', label: 'Critical alerts', description: 'Theft, tamper and geofence breaches.', defaults: { email: true, push: true, inApp: true } },
   { id: 'maintenance', label: 'Maintenance', description: 'Work orders, PM due dates and overdue tasks.', defaults: { email: true, push: false, inApp: true } },
-  { id: 'inventory', label: 'Inventory', description: 'Low stock and reorder thresholds.', defaults: { email: true, push: false, inApp: true } },
   { id: 'ai', label: 'AI insights', description: 'Anomalies, forecasts and predictive findings.', defaults: { email: false, push: false, inApp: true } },
   { id: 'reports', label: 'Reports & digests', description: 'Scheduled report deliveries.', defaults: { email: true, push: false, inApp: false } },
   { id: 'mentions', label: 'Mentions & assignments', description: 'When someone @mentions or assigns you.', defaults: { email: true, push: true, inApp: true } },

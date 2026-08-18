@@ -19,7 +19,9 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { EmptyState, PageHeader } from '@/components/ui/primitives';
 import { Button } from '@/components/ui/Button';
-import { useToast } from '@/components/providers/ToastProvider';
+import { useMutate } from '@/api/mutate';
+import { auditsApi } from '@/api/tracking-ops';
+import { maintenanceApi } from '@/api/work-orders';
 import { FacilityMap, MapLegend, type MapMode } from '@/components/tracking/FacilityMap';
 import { Drawer, Field, LiveStamp } from '@/components/tracking/shell';
 import {
@@ -91,7 +93,7 @@ export default function DigitalTwinPage() {
 }
 
 function TwinWorkspace({ facility }: { facility: TrackedFacility }) {
-  const { toast } = useToast();
+  const { run: mutate, isPending } = useMutate();
 
   const [mode, setMode] = useState<MapMode>('presence');
   const [zoneId, setZoneId] = useState<string | null>(null);
@@ -438,16 +440,40 @@ function TwinWorkspace({ facility }: { facility: TrackedFacility }) {
                     <Button size="sm" variant="outline">Open the room record</Button>
                   </Link>
                 )}
+                {/*
+                  * Starts a real audit session.
+                  *
+                  * This used to push the zone id into a local array and raise a
+                  * toast claiming the zone would "verify itself on the next
+                  * pass and post the variance to Inventory Control" — a
+                  * description of a workflow that did not exist. There is an
+                  * audit-session API already, so the button now opens one
+                  * against this zone and the record survives the reload.
+                  */}
                 <Button
                   size="sm"
                   variant="outline"
+                  disabled={isPending || recounted.includes(selected.zone.id)}
                   onClick={() => {
-                    setRecounted((prev) => (prev.includes(selected.zone.id) ? prev : [...prev, selected.zone.id]));
-                    toast({
-                      title: `Re-count queued for ${selected.zone.name}`,
-                      description: 'The zone will verify itself on the next pass and post the variance to Inventory Control.',
-                      tone: 'success',
-                    });
+                    const zone = selected.zone;
+                    setRecounted((prev) => (prev.includes(zone.id) ? prev : [...prev, zone.id]));
+                    void mutate(
+                      auditsApi.start({
+                        name: `Re-count — ${zone.name}`,
+                        scope: zone.name,
+                        facility: zone.facility,
+                        method: 'Assisted',
+                        expected: zone.expected,
+                        dueInDays: 1,
+                      }),
+                      {
+                        success: `Re-count started for ${zone.name}`,
+                        successDetail: 'Tracked as an audit session — open Inventory Control to record the count.',
+                        describe: `start a re-count for ${zone.name}`,
+                        rollback: () => setRecounted((prev) => prev.filter((id) => id !== zone.id)),
+                        refreshTracking: true,
+                      },
+                    );
                   }}
                 >
                   Re-count this zone
@@ -627,16 +653,39 @@ function TwinWorkspace({ facility }: { facility: TrackedFacility }) {
                   <Button size="sm" variant="outline">See the open alert</Button>
                 </Link>
               )}
+              {/*
+                * Raises a real work order.
+                *
+                * The toast already claimed "a search task has been raised
+                * against this asset for the facility team" — it just was not
+                * true. A search task *is* a corrective work order, and there is
+                * an API for those, so this creates one rather than describing
+                * one.
+                */}
               <Button
                 size="sm"
                 variant="outline"
+                disabled={isPending || flagged.includes(asset.assetId)}
                 onClick={() => {
                   setFlagged((prev) => (prev.includes(asset.assetId) ? prev : [...prev, asset.assetId]));
-                  toast({
-                    title: `${asset.assetName} flagged for recovery`,
-                    description: 'A search task has been raised against this asset for the facility team.',
-                    tone: 'success',
-                  });
+                  void mutate(
+                    maintenanceApi.create({
+                      title: `Locate ${asset.assetName}`,
+                      assetId: asset.assetId,
+                      type: 'Corrective',
+                      priority: 'High',
+                      source: 'Manual',
+                      description: `Flagged for recovery from the digital twin. Last seen in ${asset.zone || 'an unknown zone'} at ${asset.facility}.`,
+                      dueDate: new Date(Date.now() + 2 * 86_400_000).toISOString(),
+                    }),
+                    {
+                      success: `${asset.assetName} flagged for recovery`,
+                      successDetail: 'A search work order has been raised for the facility team.',
+                      describe: `flag ${asset.assetName} for recovery`,
+                      rollback: () => setFlagged((prev) => prev.filter((id) => id !== asset.assetId)),
+                      refreshTracking: true,
+                    },
+                  );
                 }}
               >
                 Flag for recovery

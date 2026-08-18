@@ -29,8 +29,7 @@ import {
   type WorkOrderDoc,
 } from '../models/index.js';
 import { ApiError } from '../utils/ApiError.js';
-import { logger } from '../config/logger.js';
-import { consumeParts } from './inventory.service.js';
+import { assertLocationVisible, type VisibleScope } from './tenancy.service.js';
 import { markEstateChanged } from './derivation.scheduler.js';
 import { applyLifecycleTransition } from './lifecycle.service.js';
 import { descendantIds } from './scopeFilter.service.js';
@@ -55,7 +54,7 @@ import type {
  * **Placement is derived, never stored.** A work order has no facility of its
  * own; it has an asset, and the asset records where it is. Copying the facility
  * onto the order would freeze it — move the asset and every historic order
- * would still name the old warehouse, with nothing to detect the drift. The
+ * would still name the old facility, with nothing to detect the drift. The
  * asset is joined on read and the scope tree resolves the facility above it.
  *
  * **Predictive raising is parked.** Nothing in this file writes `Predictive` or
@@ -128,7 +127,7 @@ async function facilitySubtree(facilityId: string): Promise<string[] | null> {
  * as few documents as possible; the facility filter has to come after it,
  * because the facility lives on the asset.
  */
-async function matchStages(query: Partial<WorkOrderListQuery>): Promise<PipelineStage[]> {
+async function matchStages(scope: VisibleScope, query: Partial<WorkOrderListQuery>): Promise<PipelineStage[]> {
   const stages: PipelineStage[] = [];
   const match: Record<string, unknown> = {};
 
@@ -196,6 +195,18 @@ async function matchStages(query: Partial<WorkOrderListQuery>): Promise<Pipeline
     // still outstanding work, and hiding it would make the backlog read low.
     { $unwind: { path: '$__asset', preserveNullAndEmptyArrays: true } },
   );
+
+  /*
+   * Tenant isolation, applied immediately after the join.
+   *
+   * A work order carries no location of its own — it has an asset, and the
+   * asset sits somewhere in the tree — so this is the first stage at which the
+   * estate can be enforced. It is ANDed on top of whatever the caller filtered
+   * by, so no query parameter can widen past it.
+   */
+  if (!scope.coversAll) {
+    stages.push({ $match: { '__asset.location.id': { $in: [...scope.ids] } } });
+  }
 
   if (query.facility) {
     const ids = await facilitySubtree(query.facility);
@@ -320,9 +331,12 @@ function present(rows: JoinedWorkOrder[], hierarchy: Hierarchy): WorkOrderDoc[] 
 // Reads
 // ─────────────────────────────────────────────────────────────────────────────
 
-export async function listWorkOrders(query: WorkOrderListQuery): Promise<{ items: WorkOrderDoc[]; meta: ApiMeta }> {
+export async function listWorkOrders(
+  scope: VisibleScope,
+  query: WorkOrderListQuery,
+): Promise<{ items: WorkOrderDoc[]; meta: ApiMeta }> {
   const pagination = parsePagination(query, SORTABLE, 'dueDate');
-  const stages = await matchStages(query);
+  const stages = await matchStages(scope, query);
 
   const [rows, hierarchy] = await Promise.all([
     WorkOrder.aggregate<{ items: JoinedWorkOrder[]; total: { count: number }[] }>([
@@ -371,9 +385,9 @@ type BoardResult = Omit<WorkOrderBoard, 'columns'> & {
  * shipped under-reports the backlog, which is the failure mode that makes a
  * board untrustworthy.
  */
-export async function getWorkOrderBoard(query: WorkOrderBoardQuery): Promise<BoardResult> {
+export async function getWorkOrderBoard(scope: VisibleScope, query: WorkOrderBoardQuery): Promise<BoardResult> {
   const limitPerColumn = query.limitPerColumn;
-  const stages = await matchStages(query);
+  const stages = await matchStages(scope, query);
   const pagination = parsePagination(query, SORTABLE, 'dueDate');
 
   const [rows, hierarchy] = await Promise.all([
@@ -415,7 +429,7 @@ export async function getWorkOrderBoard(query: WorkOrderBoardQuery): Promise<Boa
   };
 }
 
-export async function getWorkOrder(id: string): Promise<WorkOrderDoc> {
+export async function getWorkOrder(scope: VisibleScope, id: string): Promise<WorkOrderDoc> {
   const [workOrder, hierarchy] = await Promise.all([
     WorkOrder.findById(id).lean<WorkOrderDoc>(),
     loadHierarchy(),
@@ -423,6 +437,9 @@ export async function getWorkOrder(id: string): Promise<WorkOrderDoc> {
   if (!workOrder) throw ApiError.notFound('Work order');
 
   const asset = await Asset.findById(workOrder.assetId).select('location').lean<{ location?: { id?: string; name?: string } }>();
+  // A work order is visible exactly when its asset is. 404 rather than 403 —
+  // see `assertLocationVisible` for why.
+  assertLocationVisible(scope, asset?.location?.id, 'Work order');
   return { ...workOrder, placement: placementFor(hierarchy, asset?.location) } as WorkOrderDoc;
 }
 
@@ -434,10 +451,14 @@ export async function getWorkOrder(id: string): Promise<WorkOrderDoc> {
  * ever return nothing, and the surest way to make people distrust a filter bar
  * is to let them pick something that yields an empty screen.
  *
- * Counts are unfiltered on purpose — they answer "how many are there
- * altogether", so the options do not vanish as soon as one of them is picked.
+ * Counts are unfiltered by the caller's *own* filters on purpose — they answer
+ * "how many are there altogether", so the options do not vanish as soon as one
+ * of them is picked. They are still bounded by the estate: a facet listing
+ * every facility and its work-order volume is a map of the organisation, and
+ * handing that to somebody who can open one site is the same disclosure the
+ * list endpoint was fixed for.
  */
-export async function getWorkOrderFacets(): Promise<WorkOrderFacets> {
+export async function getWorkOrderFacets(scope: VisibleScope): Promise<WorkOrderFacets> {
   const [rows, hierarchy, roster, users] = await Promise.all([
     WorkOrder.aggregate<{
       byFacility: { _id: string | null; count: number }[];
@@ -449,6 +470,9 @@ export async function getWorkOrderFacets(): Promise<WorkOrderFacets> {
     }>([
       { $lookup: { from: ASSET_COLLECTION, localField: 'assetId', foreignField: '_id', as: '__asset' } },
       { $unwind: { path: '$__asset', preserveNullAndEmptyArrays: true } },
+      ...(scope.coversAll
+        ? []
+        : [{ $match: { '__asset.location.id': { $in: [...scope.ids] } } } as PipelineStage]),
       {
         $facet: {
           byFacility: [{ $group: { _id: '$__asset.location.id', count: { $sum: 1 } } }],
@@ -546,9 +570,9 @@ export async function getWorkOrderFacets(): Promise<WorkOrderFacets> {
 }
 
 /** Board counters: the numbers on the maintenance page header. */
-export async function getWorkOrderStats(query: Partial<WorkOrderListQuery> = {}) {
+export async function getWorkOrderStats(scope: VisibleScope, query: Partial<WorkOrderListQuery> = {}) {
   const now = new Date();
-  const stages = await matchStages(query);
+  const stages = await matchStages(scope, query);
 
   const [rows] = await WorkOrder.aggregate<{
     byStatus: { _id: WorkOrderStatus; count: number }[];
@@ -605,7 +629,11 @@ function normalizeAssignee(value: string | undefined | null): string {
   return trimmed;
 }
 
-export async function createWorkOrder(input: CreateWorkOrderInput, actor: string): Promise<WorkOrderDoc> {
+export async function createWorkOrder(
+  scope: VisibleScope,
+  input: CreateWorkOrderInput,
+  actor: string,
+): Promise<WorkOrderDoc> {
   // The asset must exist: a work order against a non-existent asset is a
   // dangling record nobody will ever action.
   const asset = await Asset.findById(input.assetId).lean();
@@ -659,10 +687,18 @@ export async function createWorkOrder(input: CreateWorkOrderInput, actor: string
   }
 
   markEstateChanged('work-order-create');
-  return getWorkOrder(id);
+  return getWorkOrder(scope, id);
 }
 
-export async function updateWorkOrder(id: string, input: UpdateWorkOrderInput, actor: string): Promise<WorkOrderDoc> {
+export async function updateWorkOrder(
+  scope: VisibleScope,
+  id: string,
+  input: UpdateWorkOrderInput,
+  actor: string,
+): Promise<WorkOrderDoc> {
+  // Refuses a record outside the estate before any write happens.
+  await getWorkOrder(scope, id);
+
   const workOrder = await WorkOrder.findById(id);
   if (!workOrder) throw ApiError.notFound('Work order');
 
@@ -695,7 +731,7 @@ export async function updateWorkOrder(id: string, input: UpdateWorkOrderInput, a
     timestamp: new Date(),
   });
 
-  return getWorkOrder(id);
+  return getWorkOrder(scope, id);
 }
 
 /**
@@ -706,6 +742,7 @@ export async function updateWorkOrder(id: string, input: UpdateWorkOrderInput, a
  * rather than keeping a second copy that drifts the first time a state changes.
  */
 export async function changeWorkOrderStatus(
+  scope: VisibleScope,
   id: string,
   status: WorkOrderStatus,
   actor: string,
@@ -714,7 +751,7 @@ export async function changeWorkOrderStatus(
   const workOrder = await WorkOrder.findById(id);
   if (!workOrder) throw ApiError.notFound('Work order');
 
-  if (workOrder.status === status) return getWorkOrder(id);
+  if (workOrder.status === status) return getWorkOrder(scope, id);
 
   const allowed = WORK_ORDER_TRANSITIONS[workOrder.status];
   if (!allowed.includes(status)) {
@@ -745,33 +782,6 @@ export async function changeWorkOrderStatus(
     timestamp: new Date(),
   });
 
-  /*
-   * Completing the work is what takes the parts off the shelf.
-   *
-   * Not when they are added to the order — a planner listing what a job will
-   * need has not used anything yet, and decrementing then would make stock
-   * wrong for every job that gets planned and cancelled. Completion is the
-   * point at which the parts are known to be physically gone.
-   *
-   * Short stock is reported, not enforced: see consumeParts for why a
-   * technician must always be able to close the job.
-   */
-  if (status === 'Completed' && workOrder.parts.length > 0) {
-    const shortfalls = (
-      await consumeParts(
-        workOrder.parts.map((p) => ({ sku: p.sku, qty: p.qty })),
-        `work order ${id}`,
-      )
-    ).filter((r) => r.shortfall);
-
-    if (shortfalls.length > 0) {
-      logger.warn('Work order consumed more stock than was recorded', {
-        workOrder: id,
-        shortfalls: shortfalls.map((s) => `${s.sku} short by ${s.shortfall}`).join(', '),
-      });
-    }
-  }
-
   // §6 Stage Automation: "Maintenance Completed → In Service" — once this was
   // the *last* open order against the asset. Closing one of three concurrent
   // orders should not send the asset back into service still mid-repair.
@@ -796,7 +806,7 @@ export async function changeWorkOrderStatus(
   // clears an overdue finding.
   markEstateChanged('work-order-status');
 
-  return getWorkOrder(id);
+  return getWorkOrder(scope, id);
 }
 
 /**
@@ -808,6 +818,7 @@ export async function changeWorkOrderStatus(
  * that no filter can reconcile.
  */
 export async function assignWorkOrder(
+  scope: VisibleScope,
   id: string,
   assignedTo: string,
   actor: string,
@@ -835,7 +846,7 @@ export async function assignWorkOrder(
     }
   }
 
-  if (workOrder.assignedTo === next) return getWorkOrder(id);
+  if (workOrder.assignedTo === next) return getWorkOrder(scope, id);
 
   const previousAssignee = workOrder.assignedTo;
   workOrder.assignedTo = next;
@@ -867,10 +878,12 @@ export async function assignWorkOrder(
     timestamp: new Date(),
   });
 
-  return getWorkOrder(id);
+  return getWorkOrder(scope, id);
 }
 
-export async function addComment(id: string, author: string, text: string): Promise<WorkOrderDoc> {
+export async function addComment(scope: VisibleScope, id: string, author: string, text: string): Promise<WorkOrderDoc> {
+  await getWorkOrder(scope, id);
+
   const workOrder = await WorkOrder.findByIdAndUpdate(
     id,
     { $push: { comments: { author, text, at: new Date() } } },
@@ -878,10 +891,18 @@ export async function addComment(id: string, author: string, text: string): Prom
   ).lean<WorkOrderDoc>();
 
   if (!workOrder) throw ApiError.notFound('Work order');
-  return getWorkOrder(id);
+  return getWorkOrder(scope, id);
 }
 
-export async function logLabor(id: string, tech: string, hours: number, note: string): Promise<WorkOrderDoc> {
+export async function logLabor(
+  scope: VisibleScope,
+  id: string,
+  tech: string,
+  hours: number,
+  note: string,
+): Promise<WorkOrderDoc> {
+  await getWorkOrder(scope, id);
+
   const workOrder = await WorkOrder.findByIdAndUpdate(
     id,
     { $push: { laborLog: { tech, hours, note, at: new Date() } } },
@@ -889,10 +910,17 @@ export async function logLabor(id: string, tech: string, hours: number, note: st
   ).lean<WorkOrderDoc>();
 
   if (!workOrder) throw ApiError.notFound('Work order');
-  return getWorkOrder(id);
+  return getWorkOrder(scope, id);
 }
 
-export async function toggleChecklistItem(id: string, index: number, done: boolean): Promise<WorkOrderDoc> {
+export async function toggleChecklistItem(
+  scope: VisibleScope,
+  id: string,
+  index: number,
+  done: boolean,
+): Promise<WorkOrderDoc> {
+  await getWorkOrder(scope, id);
+
   const workOrder = await WorkOrder.findById(id);
   if (!workOrder) throw ApiError.notFound('Work order');
 
@@ -901,10 +929,12 @@ export async function toggleChecklistItem(id: string, index: number, done: boole
 
   item.done = done;
   await workOrder.save();
-  return getWorkOrder(id);
+  return getWorkOrder(scope, id);
 }
 
-export async function deleteWorkOrder(id: string): Promise<void> {
+export async function deleteWorkOrder(scope: VisibleScope, id: string): Promise<void> {
+  await getWorkOrder(scope, id);
+
   const result = await WorkOrder.findByIdAndDelete(id);
   if (!result) throw ApiError.notFound('Work order');
   markEstateChanged('work-order-delete');

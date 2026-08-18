@@ -160,3 +160,17 @@ export const updateAudit = asyncHandler(async (req: Request, res: Response) => {
   recordAudit(req, { action: 'audit.update', target: id, category: 'Compliance', metadata: { fields: Object.keys(patch) } });
   sendData(res, audit);
 });
+
+
+export const setZoneArmed = asyncHandler(async (req: Request, res: Response) => {
+  const id = req.params.id as string;
+  const { armed } = req.body as { armed: boolean };
+  const zone = await ops.setZoneArmed(id, armed);
+
+  recordAudit(req, {
+    action: armed ? 'zone.arm' : 'zone.disarm',
+    target: id,
+    category: 'Tracking',
+  });
+  sendData(res, zone);
+});

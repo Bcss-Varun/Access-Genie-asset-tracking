@@ -1,4 +1,5 @@
 import { Asset, ScopeNodeModel, buildScopeTree, type ScopeNodeDoc } from '../models/index.js';
+import type { VisibleScope } from './tenancy.service.js';
 import type { ScopeNode } from '@access-genie/shared';
 import { ApiError } from '../utils/ApiError.js';
 
@@ -50,10 +51,21 @@ export function descendantIds(rows: ScopeNodeDoc[], scopeId: string): Set<string
  * Counts roll **up**: a facility reports every asset beneath it, so the number
  * next to a node matches what selecting that node will show you.
  */
-export async function scopeTreeWithCounts(): Promise<ScopeNode | null> {
+export async function scopeTreeWithCounts(scope: VisibleScope): Promise<ScopeNode | null> {
+  /*
+   * Pruned to the caller's estate.
+   *
+   * The switcher used to receive the entire hierarchy with an asset count on
+   * every node, whoever asked. That is a disclosure in itself — a facility
+   * manager could read off the shape of the organisation and how much kit sits
+   * in each of the sites they cannot open. The tree is now rooted at the node
+   * they are entitled to, and the counts only cover assets inside it.
+   */
   const [rows, assets] = await Promise.all([
-    ScopeNodeModel.find().lean<ScopeNodeDoc[]>(),
-    Asset.find().select('location.id').lean<{ location?: { id?: string } }[]>(),
+    ScopeNodeModel.find(scope.coversAll ? {} : { _id: { $in: [...scope.permitted] } }).lean<ScopeNodeDoc[]>(),
+    Asset.find(scope.coversAll ? {} : { 'location.id': { $in: [...scope.permitted] } })
+      .select('location.id')
+      .lean<{ location?: { id?: string } }[]>(),
   ]);
 
   const direct = new Map<string, number>();

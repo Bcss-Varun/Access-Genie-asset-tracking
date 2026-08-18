@@ -9,6 +9,8 @@ import { csvFilter, paginate, parsePagination } from '../utils/query.js';
 import { aliasId, sendData, sendList } from '../utils/response.js';
 import { nextId } from '../models/Counter.js';
 import { recordAudit } from '../services/audit.service.js';
+import { requireScope } from '../middleware/scope.js';
+import { assetClause, locationClause } from '../services/tenancy.service.js';
 
 /**
  * A read endpoint for a reference collection.
@@ -53,6 +55,19 @@ export interface ResourceOptions {
    * identifier the contract also names (e.g. a movement trail by `assetId`).
    */
   idAlias?: string;
+  /**
+   * How this collection sits inside the tenant boundary.
+   *
+   * Reference data that belongs to the organisation rather than to a site —
+   * help articles, role definitions, taxonomy — declares nothing and is
+   * returned whole. Anything asset-derived must declare how it joins, or a
+   * facility manager reads the whole estate's rows through it:
+   *
+   *   `location`  — the record carries a scope-node id (default `location.id`)
+   *   `asset`     — the record references an asset (default `assetId`)
+   *   `assetKey`  — the record is *keyed by* the asset id (`_id`)
+   */
+  scope?: { by: 'location' | 'asset' | 'assetKey'; field?: string };
   /**
    * Makes the collection writable.
    *
@@ -131,9 +146,24 @@ function buildFilter<T>(query: Record<string, unknown>, options: ResourceOptions
 export function createResource<T>(model: Model<T>, options: ResourceOptions): ResourceHandlers {
   const paginated = options.paginated ?? true;
 
-  const list = asyncHandler(async (_req: Request, res: Response) => {
+  /**
+   * The tenant clause for this collection, or `{}` when it holds org-level data.
+   *
+   * Built per request because the asset-id variant depends on which assets the
+   * caller can see, which is a query — memoised on the scope object so a
+   * request touching several such collections still resolves it once.
+   */
+  const tenantClause = async (req: Request): Promise<Record<string, unknown>> => {
+    if (!options.scope) return {};
+    const scope = requireScope(req);
+    if (options.scope.by === 'location') return locationClause(scope, options.scope.field ?? 'location.id');
+    if (options.scope.by === 'assetKey') return assetClause(scope, options.scope.field ?? '_id');
+    return assetClause(scope, options.scope.field ?? 'assetId');
+  };
+
+  const list = asyncHandler(async (req: Request, res: Response) => {
     const query = validatedQuery<ListQueryInput & Record<string, string | undefined>>(res);
-    const filter = buildFilter<T>(query, options);
+    const filter = { ...buildFilter<T>(query, options), ...(await tenantClause(req)) } as FilterQuery<T>;
     const pagination = parsePagination(query, options.sortable, options.defaultSort);
 
     const alias = <R extends { _id: unknown }>(rows: R[]) =>
@@ -150,7 +180,12 @@ export function createResource<T>(model: Model<T>, options: ResourceOptions): Re
   });
 
   const getOne = asyncHandler(async (req: Request, res: Response) => {
-    const record = await model.findById(req.params.id as string).lean();
+    // The tenant clause is ANDed onto the id lookup rather than checked after
+    // it, so a record outside the estate is a plain 404 — telling the caller a
+    // record exists that they may not read is itself a cross-tenant disclosure.
+    const record = await model
+      .findOne({ _id: req.params.id as string, ...(await tenantClause(req)) } as FilterQuery<T>)
+      .lean();
     if (!record) throw ApiError.notFound(options.label);
     sendData(res, options.idAlias ? aliasId([record as { _id: unknown }], options.idAlias)[0] : record);
   });

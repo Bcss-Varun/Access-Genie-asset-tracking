@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import { z } from 'zod';
-import { requireAuth, requireModule, validate } from '../middleware/index.js';
+import { attachScope, requireAuth, requireModule, validate } from '../middleware/index.js';
 import { listQuerySchema } from '../validators/common.js';
 
 import authRoutes from './auth.routes.js';
@@ -16,6 +16,7 @@ import labellingRoutes from './labelling.routes.js';
 import operationsRoutes from './operations.routes.js';
 import platformRoutes from './platform.routes.js';
 import technicianRoutes from './technician.routes.js';
+import analyticsRoutes from './analytics.routes.js';
 
 import * as dashboardController from '../controllers/dashboard.controller.js';
 import * as maintenanceDashboardController from '../controllers/maintenanceDashboard.controller.js';
@@ -24,18 +25,6 @@ import * as catalogController from '../controllers/catalog.controller.js';
 import * as preferenceController from '../controllers/preference.controller.js';
 import * as scopeController from '../controllers/scope.controller.js';
 import * as intelligenceController from '../controllers/intelligence.controller.js';
-import * as inventoryController from '../controllers/inventory.controller.js';
-import {
-  createPartSchema,
-  createPurchaseOrderSchema,
-  createSupplierSchema,
-  createWarehouseSchema,
-  stockAdjustmentSchema,
-  updatePartSchema,
-  updatePurchaseOrderSchema,
-  updateSupplierSchema,
-  updateWarehouseSchema,
-} from '../validators/inventory.validator.js';
 import { createScopeSchema, updateScopeSchema } from '../validators/scope.validator.js';
 import { maintenanceDashboardQuerySchema } from '../validators/maintenanceDashboard.validator.js';
 import {
@@ -62,6 +51,14 @@ const router = Router();
 router.use('/auth', authRoutes);
 
 router.use(requireAuth);
+/*
+ * Tenant isolation, applied positionally for the same reason `requireAuth` is.
+ *
+ * This resolves the estate the session may see — its home scope and everything
+ * beneath it — and refuses a `?scope=` naming anything outside it. Every route
+ * below therefore has `req.scope`, and a new one cannot ship without it.
+ */
+router.use(attachScope);
 
 // ── Workspace ────────────────────────────────────────────────────────────────
 router.get('/dashboard/summary', requireModule('workspace'), dashboardController.summary);
@@ -136,6 +133,13 @@ router.use(technicianRoutes);
 router.use(registryRoutes);
 router.use(platformRoutes);
 
+// ── Analytics & Reporting ────────────────────────────────────────────────────
+// The org-wide dashboard, saved reports, the report builder and scheduled
+// deliveries. Mounted at the root because it declares its own `/analytics/…`
+// paths, and gated as one module: a role that cannot open the dashboard must
+// not be able to reach the same figures through a report or an export.
+router.use(analyticsRoutes);
+
 // ── AI insights ──────────────────────────────────────────────────────────────
 const insightQuerySchema = listQuerySchema.extend({
   type: z.string().optional(),
@@ -149,47 +153,6 @@ router.get('/insights/stats', requireModule('ai'), insightController.stats);
 router.get('/insights/:id', requireModule('ai'), insightController.getOne);
 router.post('/insights/:id/action', requireModule('ai'), insightController.action);
 router.post('/insights/:id/dismiss', requireModule('ai'), insightController.dismiss);
-
-// ── Inventory ────────────────────────────────────────────────────────────────
-const partQuerySchema = listQuerySchema.extend({
-  warehouseId: z.string().optional(),
-  abcClass: z.string().optional(),
-  reorder: z.string().optional(),
-});
-
-router.get('/inventory/parts', requireModule('inventory'), validate({ query: partQuerySchema }), catalogController.listParts);
-router.get('/inventory/warehouses', requireModule('inventory'), catalogController.listWarehouses);
-router.get('/inventory/suppliers', requireModule('inventory'), catalogController.listSuppliers);
-router.get('/inventory/purchase-orders', requireModule('inventory'), catalogController.listPurchaseOrders);
-
-// Writes. All four collections were read-only, which made the supply side a
-// display of the seed file — see inventory.service.ts.
-const inv = requireModule('inventory');
-router.post('/inventory/warehouses', inv, validate({ body: createWarehouseSchema }), inventoryController.createWarehouse);
-router.patch('/inventory/warehouses/:id', inv, validate({ params: idParamSchema, body: updateWarehouseSchema }), inventoryController.updateWarehouse);
-router.delete('/inventory/warehouses/:id', inv, validate({ params: idParamSchema }), inventoryController.removeWarehouse);
-
-router.post('/inventory/suppliers', inv, validate({ body: createSupplierSchema }), inventoryController.createSupplier);
-router.patch('/inventory/suppliers/:id', inv, validate({ params: idParamSchema, body: updateSupplierSchema }), inventoryController.updateSupplier);
-router.delete('/inventory/suppliers/:id', inv, validate({ params: idParamSchema }), inventoryController.removeSupplier);
-
-router.post('/inventory/parts', inv, validate({ body: createPartSchema }), inventoryController.createPart);
-router.patch('/inventory/parts/:id', inv, validate({ params: idParamSchema, body: updatePartSchema }), inventoryController.updatePart);
-router.delete('/inventory/parts/:id', inv, validate({ params: idParamSchema }), inventoryController.removePart);
-// Stock moves through here, not through the part form: a movement has a reason.
-router.post('/inventory/parts/:id/adjust', inv, validate({ params: idParamSchema, body: stockAdjustmentSchema }), inventoryController.adjustStock);
-
-// The ledger behind a part's quantity. Keyed by SKU because that is what the
-// detail screen is routed by, and what a movement is recorded against.
-router.get('/inventory/parts/:sku/movements', inv, inventoryController.partMovements);
-
-router.get('/inventory/reorder', inv, inventoryController.reorderList);
-router.post('/inventory/reorder/draft', inv, inventoryController.draftReorders);
-
-router.post('/inventory/purchase-orders', inv, validate({ body: createPurchaseOrderSchema }), inventoryController.createPurchaseOrder);
-router.patch('/inventory/purchase-orders/:id', inv, validate({ params: idParamSchema, body: updatePurchaseOrderSchema }), inventoryController.updatePurchaseOrder);
-// Receiving raises stock for every line — the other half of the loop.
-router.post('/inventory/purchase-orders/:id/receive', inv, validate({ params: idParamSchema }), inventoryController.receivePurchaseOrder);
 
 // ── Notifications (no module gate — every session has an inbox) ───────────────
 router.get('/notifications', catalogController.listNotifications);

@@ -26,6 +26,15 @@ export type SubscriptionCadence = (typeof SUBSCRIPTION_CADENCES)[number];
  * `nextRun` is stored rather than computed on read so a paused subscription
  * keeps its place in the calendar: re-enabling it should resume the schedule,
  * not restart it from today.
+ *
+ * `startDate` and `endDate` bound the standing instruction. A schedule that has
+ * not started yet and one that has finished are both legitimate states, and
+ * neither is the same as paused — so they are stored rather than inferred from
+ * `enabled`, and `nextRun` is clamped to the window.
+ *
+ * `lastRunRows` is absent until the schedule has actually delivered something.
+ * That absence is the honest answer to "when did this last run", and the screen
+ * shows it as "Never" rather than inventing a history.
  */
 export interface ReportSubscriptionDoc {
   _id: string; // SUB-1
@@ -35,8 +44,11 @@ export interface ReportSubscriptionDoc {
   format: string;
   recipients: string[];
   enabled: boolean;
+  startDate: Date;
+  endDate?: Date;
   nextRun: Date;
   lastRun?: Date;
+  lastRunRows?: number;
   createdBy: string;
   createdAt: Date;
 }
@@ -50,8 +62,11 @@ const reportSubscriptionSchema = new Schema<ReportSubscriptionDoc>(
     format: { type: String, default: 'PDF' },
     recipients: { type: [String], default: [] },
     enabled: { type: Boolean, default: true, index: true },
+    startDate: { type: Date, required: true },
+    endDate: Date,
     nextRun: { type: Date, required: true },
     lastRun: Date,
+    lastRunRows: { type: Number, min: 0 },
     createdBy: { type: String, default: '' },
     createdAt: { type: Date, required: true },
   },

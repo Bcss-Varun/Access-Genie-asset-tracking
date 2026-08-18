@@ -24,7 +24,6 @@ const moduleLabel: Record<ModuleKey, string> = {
   tracking: 'Tracking',
   ai: 'AI Intelligence',
   maintenance: 'Maintenance',
-  inventory: 'Inventory',
   operations: 'Operations',
   analytics: 'Analytics',
   alerts: 'Alerts',

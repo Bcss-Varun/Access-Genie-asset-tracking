@@ -60,14 +60,12 @@ import {
   Invoice,
   Notification,
   OnCallShift,
-  Part,
   Passkey,
   PendingScan,
   ReceivedPoLine,
   PmSchedule,
   PrintDevice,
   PrintJob,
-  PurchaseOrder,
   Rack,
   Report,
   ReportPack,
@@ -75,7 +73,6 @@ import {
   RetentionPolicy,
   ScopeNodeModel,
   Sensor,
-  Supplier,
   SupportTicket,
   Team,
   Technician,
@@ -88,7 +85,6 @@ import {
   UnknownDetection,
   User,
   Webhook,
-  Warehouse,
   WorkOrder,
   Zone,
   syncCounter,
@@ -146,18 +142,15 @@ import labelTemplates from './data/labelTemplates.json' with { type: 'json' };
 import movementTrails from './data/movementTrails.json' with { type: 'json' };
 import movementTxns from './data/movementTxns.json' with { type: 'json' };
 import notifications from './data/notifications.json' with { type: 'json' };
-import parts from './data/parts.json' with { type: 'json' };
 import pmSchedules from './data/pmSchedules.json' with { type: 'json' };
 import printDevices from './data/printDevices.json' with { type: 'json' };
 import printJobs from './data/printJobs.json' with { type: 'json' };
-import purchaseOrders from './data/purchaseOrders.json' with { type: 'json' };
 import racks from './data/racks.json' with { type: 'json' };
 import reports from './data/reports.json' with { type: 'json' };
 import reservations from './data/reservations.json' with { type: 'json' };
 import transfers from './data/transfers.json' with { type: 'json' };
 import scope from './data/scope.json' with { type: 'json' };
 import sensors from './data/sensors.json' with { type: 'json' };
-import suppliers from './data/suppliers.json' with { type: 'json' };
 import trackedFacilities from './data/trackedFacilities.json' with { type: 'json' };
 import trackedZones from './data/trackedZones.json' with { type: 'json' };
 import trackingAlerts from './data/trackingAlerts.json' with { type: 'json' };
@@ -165,7 +158,6 @@ import trackingDevices from './data/trackingDevices.json' with { type: 'json' };
 import trackingEvents from './data/trackingEvents.json' with { type: 'json' };
 import unknownDetections from './data/unknownDetections.json' with { type: 'json' };
 import users from './data/users.json' with { type: 'json' };
-import warehouses from './data/warehouses.json' with { type: 'json' };
 import workOrders from './data/workOrders.json' with { type: 'json' };
 import zones from './data/zones.json' with { type: 'json' };
 
@@ -401,15 +393,6 @@ export async function seedDemo(options: { fresh?: boolean; skipConnect?: boolean
       ip: a.ip,
       timestamp: a.timestamp,
     })),
-  );
-
-  // ── Inventory & procurement ────────────────────────────────────────────────
-  await upsert(Warehouse, warehouses.map(withId));
-  await upsert(Supplier, suppliers.map(withId));
-  await upsert(Part, parts.map(withId));
-  await upsert(
-    PurchaseOrder,
-    datesOn(purchaseOrders, ['createdAt', 'expectedAt']).map(withId),
   );
 
   // ── Analytics & administration ─────────────────────────────────────────────

@@ -7,6 +7,7 @@ import { csvFilter, escapeRegex, paginate, parsePagination } from '../utils/quer
 import { projectAssetUpdate, projectNewAsset, retireAssetFromGraph } from './assetGraph.service.js';
 import { applyLifecycleTransition } from './lifecycle.service.js';
 import type { AssetListQuery, CreateAssetInput, UpdateAssetInput } from '../validators/asset.validator.js';
+import { assertLocationVisible, locationClause, type VisibleScope } from './tenancy.service.js';
 
 const SORTABLE = ['name', 'healthScore', 'riskScore', 'utilization', 'purchasePrice', 'purchaseDate', 'createdAt', 'updatedAt'];
 
@@ -43,14 +44,28 @@ function buildFilter(query: AssetListQuery): FilterQuery<AssetDoc> {
   return filter;
 }
 
-export async function listAssets(query: AssetListQuery): Promise<{ items: AssetDoc[]; meta: ApiMeta }> {
+/**
+ * The registry, narrowed to the caller's estate.
+ *
+ * `scope` is required rather than optional: this used to return every asset in
+ * the database to anyone holding the `assets` grant, and an optional parameter
+ * is one a call site can forget. Making it part of the signature means a caller
+ * that has no scope cannot compile.
+ */
+export async function listAssets(
+  scope: VisibleScope,
+  query: AssetListQuery,
+): Promise<{ items: AssetDoc[]; meta: ApiMeta }> {
   const pagination = parsePagination(query, SORTABLE, '-createdAt');
-  return paginate(Asset, buildFilter(query), pagination);
+  return paginate(Asset, { ...buildFilter(query), ...locationClause(scope) }, pagination);
 }
 
-export async function getAsset(id: string): Promise<AssetDoc> {
+export async function getAsset(scope: VisibleScope, id: string): Promise<AssetDoc> {
   const asset = await Asset.findById(id).lean<AssetDoc>();
   if (!asset) throw ApiError.notFound('Asset');
+  // 404 rather than 403 — see `assertLocationVisible`. Confirming that an id
+  // exists in another tenant is itself a disclosure.
+  assertLocationVisible(scope, asset.location?.id, 'Asset');
   return asset;
 }
 
@@ -59,8 +74,8 @@ export async function getAsset(id: string): Promise<AssetDoc> {
  * round-trip. Fetched concurrently — they are independent collections and the
  * page renders them side by side.
  */
-export async function getAssetProfile(id: string) {
-  const asset = await getAsset(id);
+export async function getAssetProfile(scope: VisibleScope, id: string) {
+  const asset = await getAsset(scope, id);
 
   const [workOrders, activity, insights, custody, lifecycleHistory] = await Promise.all([
     WorkOrder.find({ assetId: id }).sort({ dueDate: 1 }).limit(50).lean(),
@@ -73,7 +88,11 @@ export async function getAssetProfile(id: string) {
   return { asset, workOrders, activity, insights, custody, lifecycleHistory };
 }
 
-export async function createAsset(input: CreateAssetInput, actor: string): Promise<AssetDoc> {
+export async function createAsset(scope: VisibleScope, input: CreateAssetInput, actor: string): Promise<AssetDoc> {
+  // Placing an asset somewhere you cannot see would create a record you could
+  // not then read back — and is the write-side half of the same leak.
+  assertLocationVisible(scope, input.location?.id, 'Location');
+
   const id = input.id ?? (await nextId('asset', 'AST'));
 
   const existing = await Asset.findById(id).lean();
@@ -124,7 +143,17 @@ export async function createAsset(input: CreateAssetInput, actor: string): Promi
   return Asset.findById(id).lean() as Promise<AssetDoc>;
 }
 
-export async function updateAsset(id: string, input: UpdateAssetInput, actor: string): Promise<AssetDoc> {
+export async function updateAsset(
+  scope: VisibleScope,
+  id: string,
+  input: UpdateAssetInput,
+  actor: string,
+): Promise<AssetDoc> {
+  // Reads the record and refuses it when out of estate, before any write.
+  await getAsset(scope, id);
+  // Moving an asset out of the estate would be a write you could not undo.
+  if (input.location?.id) assertLocationVisible(scope, input.location.id, 'Location');
+
   const asset = await Asset.findById(id);
   if (!asset) throw ApiError.notFound('Asset');
 
@@ -203,7 +232,9 @@ export async function updateAsset(id: string, input: UpdateAssetInput, actor: st
   return asset.toObject();
 }
 
-export async function deleteAsset(id: string): Promise<void> {
+export async function deleteAsset(scope: VisibleScope, id: string): Promise<void> {
+  await getAsset(scope, id);
+
   const asset = await Asset.findById(id);
   if (!asset) throw ApiError.notFound('Asset');
 
@@ -220,14 +251,21 @@ export async function deleteAsset(id: string): Promise<void> {
 }
 
 /** Registry-wide counters for the assets page header. */
-export async function getAssetStats() {
+export async function getAssetStats(scope: VisibleScope) {
+  // Counts are a disclosure too: "your facility holds 4 assets, the estate
+  // holds 900" tells a facility manager the size of an estate they cannot see.
+  const inScope = locationClause(scope);
+  const match = Object.keys(inScope).length > 0 ? [{ $match: inScope }] : [];
+
   const [byStatus, byCategory, totals] = await Promise.all([
-    Asset.aggregate<{ _id: string; count: number }>([{ $group: { _id: '$status', count: { $sum: 1 } } }]),
+    Asset.aggregate<{ _id: string; count: number }>([...match, { $group: { _id: '$status', count: { $sum: 1 } } }]),
     Asset.aggregate<{ _id: string; count: number; value: number }>([
+      ...match,
       { $group: { _id: '$category', count: { $sum: 1 }, value: { $sum: '$purchasePrice' } } },
       { $sort: { count: -1 } },
     ]),
     Asset.aggregate<{ _id: null; total: number; value: number; avgHealth: number; avgUtilization: number }>([
+      ...match,
       {
         $group: {
           _id: null,
@@ -266,6 +304,7 @@ export async function getAssetStats() {
  * another tab — the response says which ones did not apply and why.
  */
 export async function bulkUpdateAssets(
+  scope: VisibleScope,
   ids: string[],
   patch: UpdateAssetInput,
   actor: string,
@@ -275,7 +314,7 @@ export async function bulkUpdateAssets(
 
   for (const id of ids) {
     try {
-      await updateAsset(id, patch, actor);
+      await updateAsset(scope, id, patch, actor);
       updated.push(id);
     } catch (err) {
       failed.push({ id, reason: err instanceof ApiError ? err.message : 'Update failed' });

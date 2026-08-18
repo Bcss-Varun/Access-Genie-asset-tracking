@@ -123,20 +123,6 @@ const RESOLVERS: { match: (name: string) => boolean; compute: () => MetricValue 
     },
   },
   {
-    match: (n) => n.includes('stock') || n.includes('inventory') || n.includes('parts'),
-    compute: () => {
-      const value = data.allParts.reduce((sum, p) => sum + p.onHand * p.unitCost, 0);
-      return { value: formatMoney(value), basis: `${data.allParts.length} SKUs on hand` };
-    },
-  },
-  {
-    match: (n) => n.includes('reorder') || n.includes('stockout'),
-    compute: () => {
-      const low = data.allParts.filter((p) => p.onHand <= p.reorderPoint).length;
-      return { value: String(low), basis: 'At or below reorder point' };
-    },
-  },
-  {
     match: (n) => n.includes('downtime') || n.includes('availability') || n.includes('uptime'),
     compute: () => {
       // "Available" means in service. Staging, missing and end-of-life all

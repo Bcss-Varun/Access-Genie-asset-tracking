@@ -94,3 +94,16 @@ export const auditsApi = {
 
   update: (id: string, patch: Record<string, unknown>) => apiPatch<AuditSession>(`/tracking/audits/${id}`, patch),
 };
+
+
+/**
+ * Zones.
+ *
+ * Arming decides whether movement in a zone raises an alert. It used to be a
+ * React state override behind a toast that said the zone had been armed — so
+ * the setting never reached the alerting engine and was gone on reload.
+ */
+export const zonesApi = {
+  setArmed: (id: string, armed: boolean) =>
+    apiPatch<{ id: string; name: string; armed: boolean }>(`/tracking/zones/${id}/armed`, { armed }),
+};

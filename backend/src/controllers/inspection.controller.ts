@@ -2,6 +2,7 @@ import type { Request, Response } from 'express';
 import type { InspectionType } from '@access-genie/shared';
 import { validatedQuery } from '../middleware/validate.js';
 import { asyncHandler } from '../utils/asyncHandler.js';
+import { requireScope } from '../middleware/scope.js';
 import { sendData, sendList } from '../utils/response.js';
 import { recordAudit } from '../services/audit.service.js';
 import * as service from '../services/inspection.service.js';
@@ -19,7 +20,7 @@ const actorOf = (req: Request): string => req.auth?.user.name ?? 'system';
 
 // ── Templates ────────────────────────────────────────────────────────────────
 
-export const listTemplates = asyncHandler(async (_req: Request, res: Response) => {
+export const listTemplates = asyncHandler(async (req: Request, res: Response) => {
   const query = validatedQuery<TemplateListQuery>(res);
   const { items, meta } = await service.listTemplates(query);
   sendList(res, items, meta);
@@ -67,20 +68,20 @@ export const removeTemplate = asyncHandler(async (req: Request, res: Response) =
 
 // ── Records ──────────────────────────────────────────────────────────────────
 
-export const list = asyncHandler(async (_req: Request, res: Response) => {
+export const list = asyncHandler(async (req: Request, res: Response) => {
   const query = validatedQuery<InspectionListQuery>(res);
-  const { items, meta } = await service.listInspections(query);
+  const { items, meta } = await service.listInspections(requireScope(req), query);
   sendList(res, items, meta);
 });
 
-export const stats = asyncHandler(async (_req: Request, res: Response) => {
+export const stats = asyncHandler(async (req: Request, res: Response) => {
   // Same filters as the list, so the summary cards describe the cut on screen
   // rather than the whole estate.
   const query = validatedQuery<InspectionListQuery>(res);
-  sendData(res, await service.getInspectionStats(query));
+  sendData(res, await service.getInspectionStats(requireScope(req), query));
 });
 
-export const facets = asyncHandler(async (_req: Request, res: Response) => {
+export const facets = asyncHandler(async (req: Request, res: Response) => {
   sendData(res, await service.getInspectionFacets());
 });
 

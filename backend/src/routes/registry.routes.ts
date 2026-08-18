@@ -12,23 +12,19 @@ import {
   Integration,
   MovementTrail,
   PmSchedule,
-  Report,
 } from '../models/index.js';
 import { requireModule, validate } from '../middleware/index.js';
 import * as pmController from '../controllers/pm.controller.js';
 import * as complianceController from '../controllers/compliance.controller.js';
 import * as fieldworkController from '../controllers/fieldwork.controller.js';
-import * as configurationController from '../controllers/configuration.controller.js';
 import * as documentController from '../controllers/document.controller.js';
 import { uploadDocumentSchema } from '../validators/document.validator.js';
 import {
   createApprovalWorkflowSchema,
   createAiModelSchema,
   createIntegrationSchema,
-  createReportSubscriptionSchema,
   updateAiModelSchema,
   updateApprovalWorkflowSchema,
-  updateReportSubscriptionSchema,
   updateIntegrationSchema,
 } from '../validators/configuration.validator.js';
 import {
@@ -39,7 +35,6 @@ import {
 } from '../validators/compliance.validator.js';
 import { createPmScheduleSchema, updatePmScheduleSchema } from '../validators/pm.validator.js';
 import { idParamSchema } from '../validators/common.js';
-import { createReportSchema, updateReportSchema } from '../validators/platform.validator.js';
 
 /**
  * The reference collections behind the registry, maintenance, AI, analytics and
@@ -66,6 +61,7 @@ router.get('/asset-groups/:id', requireModule('assets'), groups.getOne);
 
 const documents = createResource(AssetDocument, {
   label: 'Document',
+  scope: { by: 'asset' },
   filters: ['assetId', 'type'],
   sortable: ['uploadedAt', 'name', 'sizeKb'],
   defaultSort: '-uploadedAt',
@@ -94,6 +90,8 @@ router.delete(
 
 const trails = createResource(MovementTrail, {
   label: 'Movement trail',
+  // Keyed *by* the asset id rather than carrying it as a field.
+  scope: { by: 'assetKey' },
   idAlias: 'assetId',
   sortable: ['distanceM'],
   defaultSort: '-distanceM',
@@ -105,6 +103,7 @@ router.get('/movement-trails/:id', requireModule('tracking'), trails.getOne);
 // ── Preventive maintenance & inspections ─────────────────────────────────────
 const pm = createResource(PmSchedule, {
   label: 'PM schedule',
+  scope: { by: 'asset' },
   filters: ['assetId', 'frequency', 'type'],
   sortable: ['nextDue', 'title', 'compliancePct', 'estHours'],
   defaultSort: 'nextDue',
@@ -177,6 +176,7 @@ router.get('/ai/forecasts/:id', requireModule('ai'), forecasts.getOne);
 
 const anomalies = createResource(AnomalyEvent, {
   label: 'Anomaly',
+  scope: { by: 'asset' },
   filters: ['assetId', 'severity', 'metric'],
   sortable: ['detectedAt', 'zScore', 'confidence'],
   defaultSort: '-detectedAt',
@@ -184,62 +184,13 @@ const anomalies = createResource(AnomalyEvent, {
 router.get('/ai/anomalies', requireModule('ai'), anomalies.validateQuery, anomalies.list);
 
 // ── Analytics ────────────────────────────────────────────────────────────────
-// Writable: the report builder's "Save" used to raise a toast and keep the
-// definition in component state, so the report it claimed to have saved was
-// gone as soon as you left the page.
-const reports = createResource(Report, {
-  label: 'Report',
-  filters: ['category', 'persona'],
-  sortable: ['name', 'category', 'lastRun'],
-  defaultSort: 'name',
-  text: true,
-  paginated: false,
-  writable: {
-    create: createReportSchema,
-    update: updateReportSchema,
-    idSequence: ['report', 'RPT'],
-    timestamps: { createdAt: 'lastRun' },
-    audit: { action: 'report', category: 'Analytics' },
-  },
-});
-router.get('/reports', requireModule('analytics'), reports.validateQuery, reports.list);
-router.get('/reports/:id', requireModule('analytics'), reports.getOne);
-router.post('/reports', requireModule('analytics'), reports.validateCreate, reports.create);
-router.patch(
-  '/reports/:id',
-  requireModule('analytics'),
-  validate({ params: idParamSchema }),
-  reports.validateUpdate,
-  reports.update,
-);
-router.delete('/reports/:id', requireModule('analytics'), validate({ params: idParamSchema }), reports.remove);
-
-// Running a report queries the live estate and writes a file the browser can
-// download — see reportRun.service.ts. `/exports/:id/download` is mounted here
-// rather than beside the export list because it is the other half of this.
-const analytics = requireModule('analytics');
-router.post('/reports/:id/run', analytics, validate({ params: idParamSchema }), configurationController.runReport);
-router.get('/exports/:id/download', analytics, validate({ params: idParamSchema }), configurationController.downloadExport);
-
-router.get('/report-subscriptions', analytics, configurationController.listSubscriptions);
-router.post(
-  '/report-subscriptions',
-  analytics,
-  validate({ body: createReportSubscriptionSchema }),
-  configurationController.createSubscription,
-);
-router.patch(
-  '/report-subscriptions/:id',
-  analytics,
-  validate({ params: idParamSchema, body: updateReportSubscriptionSchema }),
-  configurationController.updateSubscription,
-);
-router.delete(
-  '/report-subscriptions/:id',
-  analytics,
-  validate({ params: idParamSchema }),
-  configurationController.removeSubscription,
-);
+// Moved out. Reports, the report builder, scheduled reports and exports now
+// live in `analytics.routes.ts`, behind one engine that executes a saved
+// *definition* against live collections. The versions that used to sit here
+// were a `createResource` mount over the report records plus a runner keyed on
+// a category string, which meant the shape of a report's output was decided by
+// which of eight words it had been filed under rather than by anything its
+// author chose.
 
 // ── Compliance ───────────────────────────────────────────────────────────────
 const cycleCounts = createResource(CycleCount, {
@@ -249,10 +200,11 @@ const cycleCounts = createResource(CycleCount, {
   defaultSort: '-date',
   paginated: false,
 });
-router.get('/cycle-counts', requireModule('operations', 'inventory'), cycleCounts.validateQuery, cycleCounts.list);
+router.get('/cycle-counts', requireModule('operations', 'compliance'), cycleCounts.validateQuery, cycleCounts.list);
 
 const certifications = createResource(Certification, {
   label: 'Certification',
+  scope: { by: 'asset' },
   filters: ['assetId', 'status', 'authority'],
   sortable: ['expiresAt', 'name', 'status'],
   defaultSort: 'expiresAt',

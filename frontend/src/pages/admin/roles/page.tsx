@@ -43,7 +43,6 @@ const MODULES: { key: ModuleKey; label: string; blurb: string }[] = [
   { key: 'tracking', label: 'Tracking', blurb: 'Live map, journeys, geofences, devices' },
   { key: 'ai', label: 'AI', blurb: 'Insights, forecasting, anomaly detection' },
   { key: 'maintenance', label: 'Maint.', blurb: 'Work orders, PM schedules, inspections' },
-  { key: 'inventory', label: 'Inventory', blurb: 'Parts, stock, purchase orders' },
   { key: 'operations', label: 'Ops', blurb: 'Transfers, reservations, cycle counts' },
   { key: 'analytics', label: 'Analytics', blurb: 'Reports, exports, BI' },
   { key: 'alerts', label: 'Alerts', blurb: 'Alert queue, rules, escalation' },

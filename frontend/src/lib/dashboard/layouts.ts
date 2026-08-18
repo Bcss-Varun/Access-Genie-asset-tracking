@@ -61,7 +61,7 @@ export const ROLE_LAYOUTS: Record<RoleId, DashboardLayout> = {
   // Runs the maintenance programme: pipeline, compliance, cost, and what fails next.
   maintenance_manager: {
     kpis: ['pmCompliance', 'openWorkOrders', 'overdueWorkOrders', 'mttrHours', 'mtbfDays', 'maintenanceCost'],
-    main: ['maintenance.analytics', 'work.pipeline', 'ai.utilization', 'work.queue', 'inventory.reorder'],
+    main: ['maintenance.analytics', 'work.pipeline', 'ai.utilization', 'work.queue'],
     rail: ['work.mine', 'assets.lifecycle', 'ai.insights', 'assets.topRisks', 'activity.recent'],
   },
 

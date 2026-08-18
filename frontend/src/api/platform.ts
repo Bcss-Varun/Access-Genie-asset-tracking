@@ -1,5 +1,5 @@
 import { apiDelete, apiGet, apiPatch, apiPost } from '@/api/client';
-import type { ApiKey, EscalationPolicy, Report, RetentionPolicy, SupportTicket, Team, Webhook } from '@access-genie/shared';
+import type { ApiKey, EscalationPolicy, RetentionPolicy, SupportTicket, Team, Webhook } from '@access-genie/shared';
 
 /**
  * The platform-administration collections.
@@ -32,25 +32,10 @@ export const supportApi = {
   update: (id: string, body: Record<string, unknown>) => apiPatch<SupportTicket>(`/support-tickets/${id}`, body),
 };
 
-export const exportsApi = {
-  create: (body: { report: string; format: string; requestedBy: string }) =>
-    apiPost<{ id: string }>('/exports', body),
-};
-
-export const reportsApi = {
-  list: () => apiGet<Report[]>('/reports'),
-  create: (body: {
-    name: string;
-    category: string;
-    persona: string;
-    format: string;
-    description?: string;
-    metrics?: string[];
-    scheduled?: boolean;
-  }) => apiPost<Report>('/reports', body),
-  update: (id: string, body: Record<string, unknown>) => apiPatch<Report>(`/reports/${id}`, body),
-  remove: (id: string) => apiDelete(`/reports/${id}`),
-};
+// `exportsApi` and `reportsApi` moved to `api/analytics.ts`. The versions here
+// wrote a report as a name, a category and a free-text list of metric strings
+// nobody validated; a report is a definition now, and the client that saves one
+// is the one that can also run it.
 
 export const teamsApi = {
   create: (body: { name: string; department: string; emoji?: string; description?: string; memberIds?: string[] }) =>

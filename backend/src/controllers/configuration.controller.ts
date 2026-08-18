@@ -1,14 +1,9 @@
 import type { Request, Response } from 'express';
 import { asyncHandler } from '../utils/asyncHandler.js';
-import { buildMeta, sendData, sendList } from '../utils/response.js';
+import { sendData } from '../utils/response.js';
 import { ApiError } from '../utils/ApiError.js';
 import { recordAudit } from '../services/audit.service.js';
 import * as service from '../services/configuration.service.js';
-import * as reportRun from '../services/reportRun.service.js';
-import { ReportSubscription } from '../models/index.js';
-
-/** These collections are small and bounded, so they are returned whole. */
-const whole = <T>(res: Response, items: T[]) => sendList(res, items, buildMeta(1, items.length || 1, items.length));
 
 /** The signed-in user. Records that belong to a person are keyed by this, not by role. */
 function actorOf(req: Request): { id: string; name: string } {
@@ -17,51 +12,12 @@ function actorOf(req: Request): { id: string; name: string } {
   return { id: user.id, name: user.name };
 }
 
-// ── Report subscriptions ─────────────────────────────────────────────────────
-export const listSubscriptions = asyncHandler(async (_req: Request, res: Response) => {
-  whole(res, await ReportSubscription.find().sort({ reportName: 1 }).lean());
-});
-
-export const createSubscription = asyncHandler(async (req: Request, res: Response) => {
-  const created = await service.createSubscription(req.body, actorOf(req).name);
-  recordAudit(req, { action: 'report_subscription.create', category: 'Analytics', target: created._id });
-  sendData(res, created, 201);
-});
-
-export const updateSubscription = asyncHandler(async (req: Request, res: Response) => {
-  const id = req.params.id as string;
-  const updated = await service.updateSubscription(id, req.body);
-  recordAudit(req, { action: 'report_subscription.update', category: 'Analytics', target: id });
-  sendData(res, updated);
-});
-
-export const removeSubscription = asyncHandler(async (req: Request, res: Response) => {
-  const id = req.params.id as string;
-  await service.deleteSubscription(id);
-  recordAudit(req, { action: 'report_subscription.delete', category: 'Analytics', target: id });
-  res.status(204).end();
-});
-
-// ── Report runs and downloads ────────────────────────────────────────────────
-export const runReport = asyncHandler(async (req: Request, res: Response) => {
-  const format = typeof req.body?.format === 'string' ? req.body.format : undefined;
-  const result = await reportRun.runReport(req.params.id as string, actorOf(req).name, format);
-  recordAudit(req, { action: 'report.run', category: 'Analytics', target: result.job._id });
-  sendData(res, result, 201);
-});
-
-/**
- * Stream a produced export.
- *
- * Sent as an attachment with its real filename, so the browser saves a file
- * rather than rendering CSV as a wall of text in a tab.
- */
-export const downloadExport = asyncHandler(async (req: Request, res: Response) => {
-  const artifact = await reportRun.readArtifact(req.params.id as string);
-  res.setHeader('Content-Type', `${artifact.mime}; charset=utf-8`);
-  res.setHeader('Content-Disposition', `attachment; filename="${artifact.filename}"`);
-  res.send(artifact.body);
-});
+// ── Report subscriptions, runs and downloads ─────────────────────────────────
+// Removed. All four moved to `analytics.controller.ts`, where a schedule is a
+// standing instruction against a saved report and a run executes that report's
+// definition rather than a query keyed on its category. Exports are streamed in
+// the response now instead of being stored as an artifact and fetched back —
+// the two-step version left rows in the export list with no file behind them.
 
 // ── Organisation settings ────────────────────────────────────────────────────
 export const getOrgSettings = asyncHandler(async (_req: Request, res: Response) => {

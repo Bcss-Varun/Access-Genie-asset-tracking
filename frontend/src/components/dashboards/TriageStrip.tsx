@@ -53,13 +53,6 @@ const CHIPS: Chip[] = [
     icon: '🧰',
   },
   {
-    key: 'stockouts',
-    label: (n) => `${n} stockout${n === 1 ? '' : 's'}`,
-    href: '/reorder',
-    tone: 'amber',
-    icon: '📦',
-  },
-  {
     key: 'expiringCerts',
     label: (n) => `${n} certification${n === 1 ? '' : 's'} expiring`,
     href: '/certifications',

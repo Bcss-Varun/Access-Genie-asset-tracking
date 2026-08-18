@@ -1,6 +1,8 @@
-import type { ReactNode } from 'react';
+import { useEffect, type ReactNode } from 'react';
 import { Link, Outlet } from 'react-router-dom';
+import { useQueryClient } from '@tanstack/react-query';
 import { useDataset } from '@/api/dataset';
+import { prefetchDashboardSummary } from '@/api/dashboard';
 import { useTrackingWorkspace } from '@/api/tracking-workspace';
 import { useLabelWorkspace } from '@/api/labels';
 import { EmptyState, ErrorState } from '@/components/ui/primitives';
@@ -65,6 +67,24 @@ function Gate({
 /** Gate for every screen that reads the reference dataset — nearly all of them. */
 export function RequireDataset() {
   const { isPending, isError, error, refetch } = useDataset();
+  const queryClient = useQueryClient();
+
+  /*
+   * Warm the dashboard's own aggregation while the dataset is still in flight.
+   *
+   * This gate exists to stop screens rendering before the module bindings are
+   * populated — but the landing screen's figures do not come from those
+   * bindings, they come from `/dashboard/summary`. Holding that request behind
+   * this one made two independent reads strictly sequential, which is the
+   * single largest avoidable cost in a cold start.
+   *
+   * A prefetch rather than a render change: the gate's contract is unchanged,
+   * nothing renders early, and if the dashboard is not where the session lands
+   * the warmed entry simply goes unused.
+   */
+  useEffect(() => {
+    prefetchDashboardSummary(queryClient);
+  }, [queryClient]);
 
   return (
     <Gate

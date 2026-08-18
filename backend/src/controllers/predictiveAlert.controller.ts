@@ -1,6 +1,7 @@
 import type { Request, Response } from 'express';
 import { validatedQuery } from '../middleware/validate.js';
 import { asyncHandler } from '../utils/asyncHandler.js';
+import { requireScope } from '../middleware/scope.js';
 import { sendData, sendList } from '../utils/response.js';
 import { recordAudit } from '../services/audit.service.js';
 import * as service from '../services/predictiveAlert.service.js';
@@ -14,20 +15,20 @@ import type {
 /** The caller's name is the actor on every audited write in this module. */
 const actorOf = (req: Request): string => req.auth?.user.name ?? 'system';
 
-export const list = asyncHandler(async (_req: Request, res: Response) => {
+export const list = asyncHandler(async (req: Request, res: Response) => {
   const query = validatedQuery<PredictiveAlertListQuery>(res);
-  const { items, meta } = await service.listPredictiveAlerts(query);
+  const { items, meta } = await service.listPredictiveAlerts(requireScope(req), query);
   sendList(res, items, meta);
 });
 
-export const stats = asyncHandler(async (_req: Request, res: Response) => {
+export const stats = asyncHandler(async (req: Request, res: Response) => {
   // Same filters as the list, so the summary cards describe the cut on screen
   // rather than the whole estate.
   const query = validatedQuery<PredictiveAlertListQuery>(res);
-  sendData(res, await service.getPredictiveAlertStats(query));
+  sendData(res, await service.getPredictiveAlertStats(requireScope(req), query));
 });
 
-export const facets = asyncHandler(async (_req: Request, res: Response) => {
+export const facets = asyncHandler(async (req: Request, res: Response) => {
   sendData(res, await service.getPredictiveAlertFacets());
 });
 
@@ -99,7 +100,7 @@ export const resolve = asyncHandler(async (req: Request, res: Response) => {
  */
 export const raiseWorkOrder = asyncHandler(async (req: Request, res: Response) => {
   const id = req.params.id as string;
-  const result = await service.raiseWorkOrderFromAlert(id, req.body as RaisePredictiveWorkOrderInput, actorOf(req));
+  const result = await service.raiseWorkOrderFromAlert(requireScope(req), id, req.body as RaisePredictiveWorkOrderInput, actorOf(req));
 
   if (!result.reused) {
     recordAudit(req, {

@@ -4,8 +4,6 @@ import type {
   CustodyAction,
   CustodyRecord,
   Notification,
-  Part,
-  Warehouse,
 } from '@access-genie/shared';
 import { apiDelete, apiGet, apiList, apiPatch, apiPost } from '@/api/client';
 
@@ -20,12 +18,6 @@ export const complianceApi = {
     apiList<AuditRecord>('/audit', params as Record<string, unknown>),
   custody: (params: { page?: number; limit?: number; assetId?: string } = {}) =>
     apiList<CustodyRecord>('/custody', params as Record<string, unknown>),
-};
-
-export const inventoryApi = {
-  parts: (params: { page?: number; limit?: number; q?: string; reorder?: string } = {}) =>
-    apiList<Part>('/inventory/parts', params as Record<string, unknown>),
-  warehouses: () => apiGet<Warehouse[]>('/inventory/warehouses'),
 };
 
 /**

@@ -1,6 +1,7 @@
 import type { Request, Response } from 'express';
 import { validatedQuery } from '../middleware/validate.js';
 import { asyncHandler } from '../utils/asyncHandler.js';
+import { requireScope } from '../middleware/scope.js';
 import { ApiError } from '../utils/ApiError.js';
 import { sendData, sendList } from '../utils/response.js';
 import * as registration from '../services/registration.service.js';
@@ -90,7 +91,7 @@ export const register = asyncHandler(async (req: Request, res: Response) => {
     );
   }
 
-  const asset = await assetService.createAsset(parsed.data as CreateAssetInput, actor);
+  const asset = await assetService.createAsset(requireScope(req), parsed.data as CreateAssetInput, actor);
 
   if (draft.source === 'template' && draft.templateId) await registration.noteTemplateUse(draft.templateId);
 

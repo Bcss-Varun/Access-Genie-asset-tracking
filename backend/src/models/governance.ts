@@ -14,22 +14,85 @@ import { baseSchemaPlugin } from '../utils/mongoose.js';
 // collections that share a file because none of them owns behaviour of its own;
 // the moment one grows real rules it earns its own service and module.
 
-// ── Report library ───────────────────────────────────────────────────────────
+// ── Reports ──────────────────────────────────────────────────────────────────
+/**
+ * A saved report.
+ *
+ * `definition` is the whole point: a source, the dimensions to group by, the
+ * measures to aggregate, the filters and a chart type. It is the *question*,
+ * never the answer — running a report executes it against the live collections
+ * (see `services/reportQuery.service.ts`), so reopening one next month reports
+ * next month's estate rather than replaying the figures from the day it was
+ * written. There is no stored result set anywhere in this module.
+ *
+ * It is optional because reports written before the query engine existed have
+ * none. Those are surfaced as `legacy` and run through the fixed category
+ * queries they were built for, rather than being silently reinterpreted as
+ * something the author never asked for.
+ *
+ * `scheduled` is **not** stored. Whether a report has a standing delivery is a
+ * fact about `ReportSubscription`, and keeping a copy here is how the two come
+ * to disagree; the read joins them instead.
+ */
+export interface ReportDefinitionSub {
+  source: string;
+  dimensions: string[];
+  measures: string[];
+  filters: { field: string; op: string; value: unknown }[];
+  visualization: string;
+  sort?: string;
+  limit?: number;
+}
+
 export interface ReportDoc {
   _id: string; // RPT-01
   name: string;
-  /** Executive / Financial / Maintenance / Utilization / Compliance / AI. */
+  /** Executive / Financial / Maintenance / Utilization / Compliance / AI / Custom. */
   category: string;
   persona: string;
   description: string;
-  /** PDF / Excel / Dashboard. */
+  /** Legacy display format. Export format is chosen when the report is run. */
   format: string;
-  lastRun: Date;
+  definition?: ReportDefinitionSub;
+  createdBy: string;
+  lastRun?: Date;
+  /** Rows in the last run. Absent until it has been run at least once. */
+  lastRunRows?: number;
   metrics: string[];
+  /** @deprecated Read from `ReportSubscription`; kept so old records still load. */
   scheduled: boolean;
   createdAt: Date;
   updatedAt: Date;
 }
+
+/**
+ * Stored with `strict: false` on the clause value because a filter value is a
+ * string, a number, a boolean or a pair of them depending on the operator —
+ * and a schema that insists on one of those rejects three legitimate filters.
+ */
+const reportFilterSchema = new Schema(
+  {
+    field: { type: String, required: true },
+    op: { type: String, required: true },
+    value: { type: Schema.Types.Mixed, required: true },
+  },
+  { _id: false },
+);
+
+const reportDefinitionSchema = new Schema<ReportDefinitionSub>(
+  {
+    source: { type: String, required: true },
+    // Order is meaningful: dimensions group outer-to-inner, and the first
+    // measure is the one a chart plots.
+    dimensions: { type: [String], default: [] },
+    measures: { type: [String], default: [] },
+    filters: { type: [reportFilterSchema], default: [] },
+    visualization: { type: String, default: 'table' },
+    sort: String,
+    limit: { type: Number, min: 1 },
+  },
+  { _id: false },
+);
 
 const reportSchema = new Schema<ReportDoc>(
   {
@@ -39,9 +102,15 @@ const reportSchema = new Schema<ReportDoc>(
     persona: { type: String, required: true },
     description: { type: String, default: '' },
     format: { type: String, required: true },
-    lastRun: { type: Date, required: true },
+    definition: { type: reportDefinitionSchema, required: false },
+    createdBy: { type: String, default: '' },
+    // Not required: a report that has never been run has no last run, and
+    // stamping "now" at creation is how a brand-new report comes to claim it
+    // already produced something.
+    lastRun: Date,
+    lastRunRows: { type: Number, min: 0 },
     metrics: { type: [String], default: [] },
-    scheduled: { type: Boolean, default: false, index: true },
+    scheduled: { type: Boolean, default: false },
   },
   { timestamps: true },
 );

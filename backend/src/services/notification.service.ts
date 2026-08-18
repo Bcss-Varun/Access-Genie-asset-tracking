@@ -1,6 +1,7 @@
 import type { RoleId } from '@access-genie/shared';
 import { Notification, User, nextId } from '../models/index.js';
 import { logger } from '../config/logger.js';
+import { deliverNotification } from './notificationDelivery.service.js';
 
 /**
  * Inbox writes. `Notification` (the model) has existed since early on with
@@ -21,7 +22,7 @@ export interface NotifyInput {
 
 async function write(input: NotifyInput): Promise<void> {
   try {
-    await Notification.create({
+    const created = await Notification.create({
       _id: await nextId('notification', 'NTF'),
       userId: input.userId,
       title: input.title,
@@ -30,6 +31,21 @@ async function write(input: NotifyInput): Promise<void> {
       read: false,
       at: new Date(),
     });
+
+    /*
+     * The inbox row is not the delivery.
+     *
+     * Everything used to stop at the line above, and callers read a successful
+     * insert as "the user has been told". External delivery now runs through
+     * the provider chain and its outcome — per channel, per destination — is
+     * written back onto the notification, so a failed webhook is visible rather
+     * than assumed away.
+     *
+     * Awaited rather than fired and forgotten: `notify` is already
+     * fire-and-forget at its own call sites, and swallowing the result here
+     * would put the status write in a race with the request finishing.
+     */
+    await deliverNotification(created.toObject());
   } catch (err) {
     logger.warn('Notification write failed', { category: input.category, err });
   }

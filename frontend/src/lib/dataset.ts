@@ -44,16 +44,12 @@ import type {
   MapZone,
   MovementTrail,
   Notification,
-  Part,
   PmSchedule,
-  PurchaseOrder,
   Report,
   Sensor,
   SensorKind,
-  Supplier,
   TrendPoint,
   AiModel,
-  Warehouse,
   UtilizationDowntimePoint,
   CategoryBreakdown,
   WorkOrder,
@@ -112,10 +108,6 @@ export interface Dataset {
   gateways: Gateway[];
   geofences: Geofence[];
   trails: MovementTrail[];
-  parts: Part[];
-  warehouses: Warehouse[];
-  suppliers: Supplier[];
-  purchaseOrders: PurchaseOrder[];
   reports: Report[];
   cycleCounts: CycleCount[];
   certifications: Certification[];
@@ -178,10 +170,6 @@ export let allSensors: Sensor[] = [];
 export let allGateways: Gateway[] = [];
 export let allGeofences: Geofence[] = [];
 export let allTrails: MovementTrail[] = [];
-export let allParts: Part[] = [];
-export let allWarehouses: Warehouse[] = [];
-export let allSuppliers: Supplier[] = [];
-export let allPurchaseOrders: PurchaseOrder[] = [];
 export let allReports: Report[] = [];
 export let allCycleCounts: CycleCount[] = [];
 export let allCertifications: Certification[] = [];
@@ -268,10 +256,6 @@ export function hydrate(next: Dataset): void {
   allGateways = next.gateways ?? [];
   allGeofences = next.geofences ?? [];
   allTrails = next.trails ?? [];
-  allParts = next.parts ?? [];
-  allWarehouses = next.warehouses ?? [];
-  allSuppliers = next.suppliers ?? [];
-  allPurchaseOrders = next.purchaseOrders ?? [];
   allReports = next.reports ?? [];
   allCycleCounts = next.cycleCounts ?? [];
   allCertifications = next.certifications ?? [];
@@ -348,17 +332,6 @@ export const getSensorsForGateway = (gatewayId: string): Sensor[] =>
 export const getTrailForAsset = (assetId: string): MovementTrail | undefined =>
   allTrails.find((t) => t.assetId === assetId);
 
-export const getWarehouse = (id: string): Warehouse | undefined => allWarehouses.find((w) => w.id === id);
-export const getSupplier = (id: string): Supplier | undefined => allSuppliers.find((s) => s.id === id);
-
-/** Accepts either the part id or its SKU — both appear in URLs. */
-export const getPart = (id: string): Part | undefined => allParts.find((p) => p.id === id || p.sku === id);
-export const getPartsForWarehouse = (warehouseId: string): Part[] =>
-  allParts.filter((p) => p.warehouseId === warehouseId);
-export const reorderParts = (): Part[] => allParts.filter((p) => p.onHand <= p.reorderPoint);
-
-export const getPurchaseOrder = (id: string): PurchaseOrder | undefined =>
-  allPurchaseOrders.find((po) => po.id === id);
 
 export const getPmSchedule = (id: string): PmSchedule | undefined => allPmSchedules.find((p) => p.id === id);
 export const getPmForAsset = (assetId: string): PmSchedule[] => allPmSchedules.filter((p) => p.assetId === assetId);

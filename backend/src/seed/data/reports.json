@@ -105,20 +105,5 @@
       "Predictions/day"
     ],
     "scheduled": false
-  },
-  {
-    "id": "RPT-008",
-    "name": "Inventory & Spares Levels",
-    "category": "Inventory",
-    "persona": "IT Ops",
-    "description": "On-hand vs. reorder point for critical spares and consumables.",
-    "format": "Excel",
-    "lastRun": "2026-07-19T09:00:00.000Z",
-    "metrics": [
-      "SKUs below reorder",
-      "Stock value",
-      "Lead time"
-    ],
-    "scheduled": true
   }
 ]

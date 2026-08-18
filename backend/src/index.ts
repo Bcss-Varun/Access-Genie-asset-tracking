@@ -3,7 +3,11 @@ import { createApp } from './app.js';
 import { connectDb, disconnectDb } from './config/db.js';
 import { env } from './config/env.js';
 import { logger } from './config/logger.js';
-import { startDerivationScheduler, startLifecycleNotificationScheduler } from './services/derivation.scheduler.js';
+import {
+  startComplianceScheduler,
+  startDerivationScheduler,
+  startLifecycleNotificationScheduler,
+} from './services/derivation.scheduler.js';
 
 
 
@@ -27,6 +31,7 @@ async function start(): Promise<void> {
     // listener so a slow first pass cannot delay accepting connections.
     startDerivationScheduler();
     startLifecycleNotificationScheduler();
+    startComplianceScheduler();
   });
 
   const shutdown = (signal: string) => {

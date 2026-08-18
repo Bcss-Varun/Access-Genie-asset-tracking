@@ -20,6 +20,68 @@ const STATUSES = ['All', 'Active', 'Maintenance', 'Missing', 'Staging', 'End_Of_
 const CATEGORIES = ['All', ...ASSET_CATEGORIES] as const;
 
 type SortKey = 'name' | 'status' | 'healthScore' | 'category' | 'utilization' | 'riskScore' | 'lastPing';
+
+/**
+ * A sortable column header.
+ *
+ * Two defects lived here. It was a `<th onClick={…}>` — a cell is not focusable
+ * and does not fire on Enter or Space, so the registry could be filtered and
+ * paged from the keyboard but never reordered. And it was declared *inside* the
+ * page component, which meant every state change produced a new component type,
+ * React unmounted the whole header row, and focus was thrown away on the very
+ * keypress that sorted the table — so a keyboard user got one sort and then
+ * landed back at the top of the document.
+ *
+ * Hoisted to module scope and built on a real `<button>`: activation, focus and
+ * role come from the element. `aria-sort` lives on the cell, which is what a
+ * screen reader announces on entering the column, and the direction is also
+ * spelled out in the button's own text so it is never conveyed by an arrow
+ * glyph alone.
+ */
+function SortHead({
+  sortKey,
+  label,
+  className,
+  active,
+  direction,
+  onSort,
+  thClass,
+}: {
+  sortKey: SortKey;
+  label: string;
+  className?: string;
+  active: SortKey;
+  direction: 'asc' | 'desc';
+  onSort: (k: SortKey) => void;
+  thClass: string;
+}) {
+  const isActive = active === sortKey;
+  const ariaSort = isActive ? (direction === 'asc' ? 'ascending' : 'descending') : 'none';
+
+  return (
+    <th scope="col" aria-sort={ariaSort} className={cn(thClass, 'p-0', className)}>
+      <button
+        type="button"
+        onClick={() => onSort(sortKey)}
+        className={cn(
+          'inline-flex w-full items-center gap-1 px-4 py-3 text-left font-semibold uppercase tracking-wider',
+          'transition-colors hover:text-slate-800',
+          isActive ? 'text-slate-800' : 'text-slate-500',
+        )}
+      >
+        {label}
+        <span aria-hidden className={cn('text-primary-500', !isActive && 'opacity-0')}>
+          {direction === 'asc' ? '▲' : '▼'}
+        </span>
+        <span className="sr-only">
+          {isActive
+            ? `, sorted ${ariaSort}. Activate to sort ${direction === 'asc' ? 'descending' : 'ascending'}.`
+            : ', not sorted. Activate to sort by this column.'}
+        </span>
+      </button>
+    </th>
+  );
+}
 const OPTIONAL_COLUMNS = ['category', 'location', 'custodian', 'utilization', 'riskScore', 'lastPing'] as const;
 type OptCol = (typeof OPTIONAL_COLUMNS)[number];
 const colLabels: Record<OptCol, string> = {
@@ -192,10 +254,9 @@ export default function AssetRegistryPage() {
 
   const th = 'px-4 py-3 text-left font-semibold uppercase tracking-wider text-[11px] text-slate-500 select-none';
   const td = cn('px-4', dense ? 'py-2' : 'py-3.5');
-  const SortHead = ({ k, label, className }: { k: SortKey; label: string; className?: string }) => (
-    <th className={cn(th, 'cursor-pointer hover:text-slate-800', className)} onClick={() => toggleSort(k)}>
-      <span className="inline-flex items-center gap-1">{label}{sortKey === k && <span className="text-primary-500">{sortDir === 'asc' ? '▲' : '▼'}</span>}</span>
-    </th>
+
+  const sortHead = (k: SortKey, label: string, className?: string) => (
+    <SortHead key={k} sortKey={k} label={label} className={className} active={sortKey} direction={sortDir} onSort={toggleSort} thClass={th} />
   );
 
   return (
@@ -230,13 +291,14 @@ export default function AssetRegistryPage() {
                 active ? 'bg-primary-50 border-primary-200 text-primary-700' : 'border-slate-200 text-slate-500 hover:bg-slate-50',
                 count === 0 && !active && 'opacity-45')}
             >
-              <button onClick={() => applyView(v)} className="px-3 py-1 text-xs font-medium">
+              <button type="button" onClick={() => applyView(v)} className="px-3 py-1 text-xs font-medium">
                 {v.name}
                 {count !== undefined && <span className="ml-1.5 tabular-nums text-slate-400">{count}</span>}
               </button>
               {/* Only views someone saved can be removed. */}
               {!v.builtIn && (
                 <button
+                  type="button"
                   onClick={() => { removeView(v.id); if (active) applyView(views[0]); }}
                   aria-label={`Delete view ${v.name}`}
                   className="pr-2.5 pl-0.5 text-xs text-slate-300 hover:text-health-critical"
@@ -262,11 +324,11 @@ export default function AssetRegistryPage() {
               aria-label="Name this view"
               className="w-40 bg-transparent px-1 py-0.5 text-xs outline-none placeholder:text-slate-400"
             />
-            <button onClick={saveCurrentView} disabled={!viewName.trim()} className="text-xs font-semibold text-primary-600 disabled:opacity-40">Save</button>
-            <button onClick={() => { setNaming(false); setViewName(''); }} aria-label="Cancel" className="text-xs text-slate-300 hover:text-slate-600">✕</button>
+            <button type="button" onClick={saveCurrentView} disabled={!viewName.trim()} className="text-xs font-semibold text-primary-600 disabled:opacity-40">Save</button>
+            <button type="button" onClick={() => { setNaming(false); setViewName(''); }} aria-label="Cancel" className="text-xs text-slate-300 hover:text-slate-600">✕</button>
           </span>
         ) : (
-          <button onClick={() => setNaming(true)} className="rounded-full border border-dashed border-slate-300 px-3 py-1 text-xs font-medium text-slate-400 hover:border-slate-400 hover:text-slate-700">
+          <button type="button" onClick={() => setNaming(true)} className="rounded-full border border-dashed border-slate-300 px-3 py-1 text-xs font-medium text-slate-400 hover:border-slate-400 hover:text-slate-700">
             + Save current view
           </button>
         )}
@@ -298,13 +360,13 @@ export default function AssetRegistryPage() {
 
           <div className="ml-auto flex items-center gap-2">
             <span className="text-xs text-slate-400">{filtered.length} of {visible.length}</span>
-            <button onClick={() => setDense((d) => !d)} title="Toggle density" className="rounded-md border border-slate-200 px-2 py-1.5 text-xs text-slate-500 hover:bg-slate-50">
+            <button type="button" onClick={() => setDense((d) => !d)} title="Toggle density" className="rounded-md border border-slate-200 px-2 py-1.5 text-xs text-slate-500 hover:bg-slate-50">
               {dense ? '≣ Comfortable' : '≡ Compact'}
             </button>
             <Dropdown
               ariaLabel="Column configuration"
               trigger={({ toggle }) => (
-                <button onClick={toggle} className="rounded-md border border-slate-200 px-2 py-1.5 text-xs text-slate-500 hover:bg-slate-50">⚙ Columns</button>
+                <button type="button" onClick={toggle} className="rounded-md border border-slate-200 px-2 py-1.5 text-xs text-slate-500 hover:bg-slate-50">⚙ Columns</button>
               )}
             >
               {() => (
@@ -326,7 +388,7 @@ export default function AssetRegistryPage() {
             {/* A view is only a real replacement for a group if you can act on
                 the whole set, not just the ten rows you can see. */}
             {selected.size < filtered.length && (
-              <button onClick={selectAllMatching} className="rounded-md border border-primary-200 bg-white px-2.5 py-1 text-xs font-semibold text-primary-700 hover:bg-primary-50">
+              <button type="button" onClick={selectAllMatching} className="rounded-md border border-primary-200 bg-white px-2.5 py-1 text-xs font-semibold text-primary-700 hover:bg-primary-50">
                 Select all {filtered.length} matching
               </button>
             )}
@@ -370,7 +432,7 @@ export default function AssetRegistryPage() {
                 </button>
               ))}
             </div>
-            <button onClick={() => setSelected(new Set())} className="ml-auto text-xs text-slate-500 hover:text-slate-800">Clear</button>
+            <button type="button" onClick={() => setSelected(new Set())} className="ml-auto text-xs text-slate-500 hover:text-slate-800">Clear</button>
           </div>
         )}
 
@@ -379,19 +441,19 @@ export default function AssetRegistryPage() {
           <table className="w-full text-left text-sm whitespace-nowrap">
             <thead className="bg-slate-50 sticky top-0 z-10 border-b border-slate-200">
               <tr>
-                <th className="px-4 py-3 w-10">
+                <th scope="col" className="px-4 py-3 w-10">
                   <input type="checkbox" checked={allOnPageSelected} onChange={toggleSelectAll} aria-label="Select all on page" className="accent-primary-600" />
                 </th>
-                <SortHead k="name" label="Asset ID / Name" />
-                <SortHead k="status" label="Status" />
-                <SortHead k="healthScore" label="Health" />
-                {show('category') && <SortHead k="category" label="Category" />}
-                {show('location') && <th className={th}>Location</th>}
-                {show('custodian') && <th className={th}>Custodian</th>}
-                {show('utilization') && <SortHead k="utilization" label="Util %" />}
-                {show('riskScore') && <SortHead k="riskScore" label="Risk" />}
-                {show('lastPing') && <SortHead k="lastPing" label="Last Ping" />}
-                <th className={cn(th, 'text-right')}>Actions</th>
+                {sortHead('name', 'Asset ID / Name')}
+                {sortHead('status', 'Status')}
+                {sortHead('healthScore', 'Health')}
+                {show('category') && sortHead('category', 'Category')}
+                {show('location') && <th scope="col" className={th}>Location</th>}
+                {show('custodian') && <th scope="col" className={th}>Custodian</th>}
+                {show('utilization') && sortHead('utilization', 'Util %')}
+                {show('riskScore') && sortHead('riskScore', 'Risk')}
+                {show('lastPing') && sortHead('lastPing', 'Last Ping')}
+                <th scope="col" className={cn(th, 'text-right')}>Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
@@ -453,9 +515,9 @@ export default function AssetRegistryPage() {
           <div className="flex items-center justify-between border-t border-slate-200 px-4 py-2.5 text-sm text-slate-500">
             <span>Showing {page * PAGE_SIZE + 1}–{Math.min((page + 1) * PAGE_SIZE, filtered.length)} of {filtered.length}</span>
             <div className="flex items-center gap-1">
-              <button disabled={page === 0} onClick={() => setPage((p) => p - 1)} className="rounded-md border border-slate-200 px-3 py-1 text-xs disabled:opacity-40 hover:bg-slate-50">← Prev</button>
+              <button type="button" disabled={page === 0} onClick={() => setPage((p) => p - 1)} className="rounded-md border border-slate-200 px-3 py-1 text-xs disabled:opacity-40 hover:bg-slate-50">← Prev</button>
               <span className="px-2 text-xs">Page {page + 1} of {pageCount}</span>
-              <button disabled={page >= pageCount - 1} onClick={() => setPage((p) => p + 1)} className="rounded-md border border-slate-200 px-3 py-1 text-xs disabled:opacity-40 hover:bg-slate-50">Next →</button>
+              <button type="button" disabled={page >= pageCount - 1} onClick={() => setPage((p) => p + 1)} className="rounded-md border border-slate-200 px-3 py-1 text-xs disabled:opacity-40 hover:bg-slate-50">Next →</button>
             </div>
           </div>
         )}

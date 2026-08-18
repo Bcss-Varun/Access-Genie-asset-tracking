@@ -11,7 +11,7 @@ export { UserPreference, type UserPreferenceDoc, type SavedViewDoc } from './Use
 export { MetricSnapshot, type MetricSnapshotDoc } from './MetricSnapshot.js';
 export { ScopeNodeModel, buildScopeTree, type ScopeNodeDoc } from './ScopeNode.js';
 export { AuditLog, type AuditDoc } from './AuditLog.js';
-export { Notification, type NotificationDoc } from './Notification.js';
+export { Notification, type NotificationDoc, type NotificationDeliveryDoc } from './Notification.js';
 
 // ── Asset graph ──────────────────────────────────────────────────────────────
 export { Asset, healthStatusFor, type AssetDoc } from './Asset.js';
@@ -126,22 +126,6 @@ export {
   type PrintJobDoc,
 } from './labelling.js';
 
-// ── Inventory & procurement ──────────────────────────────────────────────────
-export {
-  Part,
-  Warehouse,
-  Supplier,
-  PurchaseOrder,
-  StockMovement,
-  STOCK_MOVEMENT_KINDS,
-  type PartDoc,
-  type StockMovementDoc,
-  type StockMovementKind,
-  type WarehouseDoc,
-  type SupplierDoc,
-  type PurchaseOrderDoc,
-} from './inventory.js';
-
 // ── Operations ───────────────────────────────────────────────────────────────
 export {
   Transfer,
@@ -167,6 +151,7 @@ export {
   RetentionPolicy,
   ReportPack,
   type ReportDoc,
+  type ReportDefinitionSub,
   type CycleCountDoc,
   type CertificationDoc,
   type IntegrationDoc,
