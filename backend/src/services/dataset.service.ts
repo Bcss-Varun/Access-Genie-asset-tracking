@@ -54,7 +54,7 @@ import {
   Warehouse,
   WorkOrder,
   Zone,
-  ChecklistTemplate,
+  InspectionTemplate,
   ReportSubscription,
 } from '../models/index.js';
 import { resolveScope, scopeTreeWithCounts } from './scopeFilter.service.js';
@@ -193,7 +193,7 @@ export async function getDataset(
     helpArticles,
     helpCategories,
     unknownTagReads,
-    checklistTemplates,
+    inspectionTemplates,
     reportSubscriptions,
     orgSettings,
   ] = await Promise.all([
@@ -284,7 +284,7 @@ export async function getDataset(
     // Organisation configuration: the checklist library, standing report
     // deliveries, and the tenant's own identity. Settings are ungated — the
     // shell renders the organisation's name and colours for everyone.
-    can('maintenance') ? ChecklistTemplate.find().sort({ name: 1 }).lean() : empty,
+    can('maintenance') ? InspectionTemplate.find({ active: true }).sort({ name: 1 }).lean() : empty,
     can('analytics') ? ReportSubscription.find().sort({ reportName: 1 }).lean() : empty,
     getOrgSettings(),
   ]);
@@ -357,7 +357,7 @@ export async function getDataset(
     helpArticles: aliasId(helpArticles, 'slug'),
     helpCategories,
     unknownTagReads,
-    checklistTemplates,
+    inspectionTemplates,
     reportSubscriptions,
     orgSettings,
     // The whole tree, always — the switcher has to offer every site regardless

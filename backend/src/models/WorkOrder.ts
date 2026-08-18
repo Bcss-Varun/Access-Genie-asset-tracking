@@ -21,9 +21,12 @@ export interface WorkOrderDoc {
   priority: WorkOrderPriority;
   type: WorkOrderType;
   assignedTo: string;
+  /** When the work is planned to start. Absent on jobs nobody has booked in yet. */
+  scheduledDate?: Date;
   dueDate: Date;
   description: string;
   estimatedHours: number;
+  /** @deprecated Nothing writes this any more. Kept so old records still load. */
   aiGenerated: boolean;
   source?: WorkOrderSource;
   requiredSkill?: string;
@@ -31,6 +34,7 @@ export interface WorkOrderDoc {
   parts: { sku: string; name: string; qty: number; unitCost: number }[];
   laborLog: { tech: string; hours: number; note: string; at: Date }[];
   comments: { author: string; text: string; at: Date }[];
+  history: { from: WorkOrderStatus | null; to: WorkOrderStatus; at: Date; actor: string; note?: string }[];
   completedAt?: Date;
   createdAt: Date;
   updatedAt: Date;
@@ -70,6 +74,25 @@ const commentSchema = new Schema(
   { _id: false },
 );
 
+/**
+ * The status trail.
+ *
+ * `from` is nullable and the opening entry uses it: a work order's history
+ * starts with "created as New", not with its first change — otherwise the state
+ * an order was opened in has to be inferred from the absence of an entry, which
+ * is exactly the sort of inference an audit trail exists to remove.
+ */
+const statusEventSchema = new Schema(
+  {
+    from: { type: String, enum: [...WORK_ORDER_STATUSES, null], default: null },
+    to: { type: String, required: true, enum: WORK_ORDER_STATUSES },
+    at: { type: Date, required: true, default: Date.now },
+    actor: { type: String, required: true },
+    note: { type: String },
+  },
+  { _id: false },
+);
+
 const workOrderSchema = new Schema<WorkOrderDoc>(
   {
     _id: { type: String, required: true },
@@ -80,6 +103,7 @@ const workOrderSchema = new Schema<WorkOrderDoc>(
     priority: { type: String, required: true, enum: WORK_ORDER_PRIORITIES, default: 'Medium', index: true },
     type: { type: String, required: true, enum: WORK_ORDER_TYPES, default: 'Corrective' },
     assignedTo: { type: String, required: true, index: true },
+    scheduledDate: { type: Date, index: true },
     dueDate: { type: Date, required: true, index: true },
     description: { type: String, default: '' },
     estimatedHours: { type: Number, required: true, min: 0, default: 1 },
@@ -90,6 +114,7 @@ const workOrderSchema = new Schema<WorkOrderDoc>(
     parts: { type: [partSchema], default: [] },
     laborLog: { type: [laborSchema], default: [] },
     comments: { type: [commentSchema], default: [] },
+    history: { type: [statusEventSchema], default: [] },
     completedAt: { type: Date },
   },
   { timestamps: true },
@@ -99,6 +124,9 @@ workOrderSchema.plugin(baseSchemaPlugin);
 workOrderSchema.index({ title: 'text', description: 'text', assetName: 'text' }, { name: 'wo_search' });
 // The board's default query: open work orders by due date.
 workOrderSchema.index({ status: 1, dueDate: 1 });
+// The list view's default cut — origin and priority are the two filters that
+// are almost always set, and both are low-cardinality enough to lead.
+workOrderSchema.index({ source: 1, priority: 1, dueDate: 1 });
 
 /** Completion timestamp is owned by the model, not by whoever calls the API. */
 workOrderSchema.pre('save', function stampCompletion(next) {

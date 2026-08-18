@@ -142,6 +142,42 @@ export function Field({
   );
 }
 
+/**
+ * `Field`, for content that is not one labelled control.
+ *
+ * `Field` wraps its children in a `<label>`, which is right for a single input
+ * and wrong for anything containing its own interactive elements. A `<button>`
+ * inside a `<label>` inherits the whole label's text as its accessible name —
+ * "Assets * Select all Clear Apple MacBook Pro M5 …" instead of "Select all" —
+ * so screen-reader users hear the entire field read out as the button's name,
+ * and clicks on the label can be routed to the wrong control.
+ *
+ * Use this for chip rows, checkbox lists and anything with a button in it; use
+ * `Field` when the children really are one input the caption names.
+ */
+export function FieldGroup({
+  label,
+  hint,
+  required,
+  children,
+}: {
+  label: string;
+  hint?: ReactNode;
+  required?: boolean;
+  children: ReactNode;
+}) {
+  return (
+    <div className="block">
+      <span className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-slate-500">
+        {label}
+        {required && <span className="ml-0.5 text-red-500">*</span>}
+      </span>
+      {children}
+      {hint && <span className="mt-1 block text-xs text-slate-400">{hint}</span>}
+    </div>
+  );
+}
+
 export function TextInput(props: React.InputHTMLAttributes<HTMLInputElement>) {
   return <input {...props} className={`${CONTROL} ${props.className ?? ''}`} />;
 }

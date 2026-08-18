@@ -93,29 +93,9 @@ export interface PmSchedule {
 }
 
 // ── Inspections ──────────────────────────────────────────────────────────────
-export const INSPECTION_STATUSES = ['Scheduled', 'In Progress', 'Passed', 'Failed'] as const;
-export type InspectionStatus = (typeof INSPECTION_STATUSES)[number];
-
-export const INSPECTION_RESULTS = ['Pass', 'Fail', 'N/A', 'Pending'] as const;
-export type InspectionResult = (typeof INSPECTION_RESULTS)[number];
-
-export interface InspectionItem {
-  label: string;
-  result: InspectionResult;
-  note?: string;
-}
-
-export interface Inspection {
-  id: string;
-  title: string;
-  assetId: string;
-  assetName: string;
-  template: string;
-  status: InspectionStatus;
-  dueDate: string;
-  inspector: string;
-  items: InspectionItem[];
-}
+// Moved to `inspections.ts` — the module now owns templates as well as records,
+// and typed checkpoints replaced the label-and-result pair that used to live
+// here. Both files are re-exported from the barrel, so importers are unaffected.
 
 // ── AI / MLOps ───────────────────────────────────────────────────────────────
 export const MODEL_STATUSES = ['Production', 'Staging', 'Shadow', 'Retired'] as const;
@@ -563,23 +543,11 @@ export interface HelpCategory {
 }
 
 // ── Organisation configuration ───────────────────────────────────────────────
-/**
- * A reusable checklist body.
- *
- * `usageCount` is joined on read — how many inspections currently reference the
- * template by name — rather than stored, so deleting an inspection lowers it.
- */
-export interface ChecklistTemplate {
-  id: string;
-  name: string;
-  category: string;
-  icon: string;
-  description: string;
-  items: string[];
-  usageCount?: number;
-  createdAt: string;
-  updatedAt: string;
-}
+// `ChecklistTemplate` was a name, a category and a list of plain strings. It is
+// replaced by `InspectionTemplate` in `inspections.ts`, whose checkpoints carry
+// a type, a required flag and a failure rule — none of which a `string[]` can
+// express, and all of which the execution screen needs in order to be more than
+// a row of tick boxes.
 
 export const SUBSCRIPTION_CADENCES = ['Daily', 'Weekly', 'Monthly', 'Quarterly'] as const;
 export type SubscriptionCadence = (typeof SUBSCRIPTION_CADENCES)[number];

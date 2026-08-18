@@ -170,13 +170,17 @@ export const navSections: NavSection[] = [
     to: '/maintenance',
     icon: '🔧',
     items: [
+      // The pillar's read-only overview. Listed first because it is where you
+      // look before deciding which of the screens below to open; the section
+      // still lands on Automated Work Orders, which is where the work happens.
+      { label: 'Maintenance Dashboard', to: '/maintenance/dashboard', icon: '📊' },
       { label: 'Automated Work Orders', to: '/maintenance', icon: '🔧' },
-      { label: 'Maintenance Calendar', to: '/maintenance/calendar', icon: '🗓️' },
       { label: 'Predictive Alerts', to: '/predictive', icon: '⚡' },
       { label: 'Preventive (PM)', to: '/pm', icon: '🔁' },
-      { label: 'Inspections', to: '/inspections', icon: '🔎' },
-      { label: 'Checklists', to: '/checklists', icon: '✅' },
-      { label: 'Spares Consumption', to: '/consumption', icon: '🧯' },
+      // One row, because it is one workflow: a checklist is the template an
+      // inspection is executed from. They were two screens that could not
+      // reach each other.
+      { label: 'Inspections & Checklists', to: '/inspections', icon: '🔎' },
     ],
   },
 

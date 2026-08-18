@@ -208,18 +208,54 @@ export type WorkOrderStatus = (typeof WORK_ORDER_STATUSES)[number];
 export const WORK_ORDER_PRIORITIES = ['Low', 'Medium', 'High', 'Critical'] as const;
 export type WorkOrderPriority = (typeof WORK_ORDER_PRIORITIES)[number];
 
+/**
+ * Which statuses may follow which.
+ *
+ * Checked on the server, and read by the board to decide what to *offer* — one
+ * definition rather than two, because a client that offers a move the server
+ * refuses is a button that fails every time somebody presses it, and the two
+ * copies drift the first time a state is added.
+ *
+ * "Completed → New" is not a workflow, it is a data-entry mistake; reopening
+ * closed work should raise a fresh order that carries its own history.
+ */
+export const WORK_ORDER_TRANSITIONS: Record<WorkOrderStatus, WorkOrderStatus[]> = {
+  New: ['Assigned', 'In Progress', 'On Hold', 'Cancelled'],
+  Assigned: ['In Progress', 'On Hold', 'New', 'Cancelled'],
+  'In Progress': ['On Hold', 'Completed', 'Cancelled'],
+  'On Hold': ['In Progress', 'Assigned', 'Cancelled'],
+  Completed: [],
+  Cancelled: [],
+};
+
+/** The forward move a board card offers as its primary action, if any. */
+export function nextWorkOrderStatus(from: WorkOrderStatus): WorkOrderStatus | null {
+  const forward: Partial<Record<WorkOrderStatus, WorkOrderStatus>> = {
+    New: 'Assigned',
+    Assigned: 'In Progress',
+    'In Progress': 'Completed',
+    'On Hold': 'In Progress',
+  };
+  return forward[from] ?? null;
+}
+
+/** A work order is "open" until it is completed or cancelled. */
+export const OPEN_WORK_ORDER_STATUSES: WorkOrderStatus[] = ['New', 'Assigned', 'In Progress', 'On Hold'];
+
 export const WORK_ORDER_TYPES = ['Preventive', 'Corrective', 'Predictive', 'Inspection'] as const;
 export type WorkOrderType = (typeof WORK_ORDER_TYPES)[number];
 
 /**
  * Where a work order came from.
  *
- * One model, many origins — a predictive alert, a scheduled PM run, an
- * incident report and a hand-raised ticket are all the same `WorkOrder`
- * document with a different `source`, not four separate datasets that happen
- * to look alike. `aiGenerated` predates this field and still drives the "✨
- * AI" badge; `source` is the fuller, human-readable answer to "why does this
- * job exist".
+ * One model, many origins — a scheduled PM run, a failed inspection and a
+ * hand-raised ticket are all the same `WorkOrder` document with a different
+ * `source`, not three separate datasets that happen to look alike.
+ *
+ * **Append-only.** These are Mongoose enum values on documents that already
+ * exist; removing one does not remove it from the database, it only makes those
+ * records fail validation on the next save. Narrowing what the product *offers*
+ * is done with `ACTIVE_WORK_ORDER_SOURCES` below, never by deleting from here.
  */
 export const WORK_ORDER_SOURCES = [
   'Manual',
@@ -228,8 +264,54 @@ export const WORK_ORDER_SOURCES = [
   'Incident',
   'Service Request',
   'Transfer / Deployment',
+  'Inspection Failure',
 ] as const;
 export type WorkOrderSource = (typeof WORK_ORDER_SOURCES)[number];
+
+/**
+ * The origins this phase supports, and the only ones anything may create.
+ *
+ * Work orders come from four places: somebody raised one, a preventive schedule
+ * fell due, an inspection failed, or a predictive alert was actioned. `Incident`,
+ * `Service Request` and `Transfer / Deployment` stay parked — not deleted,
+ * because records carrying them exist and must still open, list and filter
+ * correctly.
+ *
+ * The split is enforced in one direction only: **writes are checked against
+ * this list, reads are not.** A create or update naming a parked source is
+ * refused; a stored one is returned as it is and rendered as legacy. That is
+ * what lets the set be narrowed and widened again without a migration in either
+ * direction — `Predictive Maintenance` came back that way when the Predictive
+ * Alerts module gained a real "Create Work Order" action to raise them from.
+ */
+export const ACTIVE_WORK_ORDER_SOURCES = [
+  'Manual',
+  'Scheduled Maintenance',
+  'Inspection Failure',
+  'Predictive Maintenance',
+] as const;
+export type ActiveWorkOrderSource = (typeof ACTIVE_WORK_ORDER_SOURCES)[number];
+
+/** Same rule as sources. `Predictive` is selectable again for the same reason. */
+export const ACTIVE_WORK_ORDER_TYPES = ['Corrective', 'Preventive', 'Inspection', 'Predictive'] as const;
+export type ActiveWorkOrderType = (typeof ACTIVE_WORK_ORDER_TYPES)[number];
+
+export function isActiveWorkOrderSource(source: string | undefined): source is ActiveWorkOrderSource {
+  return (ACTIVE_WORK_ORDER_SOURCES as readonly string[]).includes(source ?? '');
+}
+
+export function isActiveWorkOrderType(type: string | undefined): type is ActiveWorkOrderType {
+  return (ACTIVE_WORK_ORDER_TYPES as readonly string[]).includes(type ?? '');
+}
+
+/** What each active source is called on screen. `Scheduled Maintenance` is the
+ *  stored value; "Preventive (PM)" is what a planner calls it. */
+export const WORK_ORDER_SOURCE_LABELS: Record<ActiveWorkOrderSource, string> = {
+  Manual: 'Manual',
+  'Scheduled Maintenance': 'Preventive (PM)',
+  'Inspection Failure': 'Inspection Failure',
+  'Predictive Maintenance': 'Predictive Alert',
+};
 
 export interface WoChecklistItem {
   label: string;
@@ -253,6 +335,42 @@ export interface WoComment {
   at: string;
 }
 
+/**
+ * One entry in a work order's status history.
+ *
+ * Written by the server on every transition, never by a caller. `from` is null
+ * for the opening entry, which records the status the order was created in —
+ * so the history is complete from the first moment rather than starting at the
+ * first change and leaving the origin to be inferred.
+ */
+export interface WoStatusEvent {
+  from: WorkOrderStatus | null;
+  to: WorkOrderStatus;
+  at: string;
+  actor: string;
+  note?: string;
+}
+
+/**
+ * Where a work order sits in the organisation.
+ *
+ * Derived on read from the asset's `location`, not stored on the work order.
+ * A work order has no facility of its own — it has an asset, and the asset
+ * records where it is. Copying that onto the order would freeze it: move the
+ * asset to another warehouse and every historic order would still claim the old
+ * one, with nothing to detect the drift. Resolving it per read costs a join and
+ * is always right.
+ */
+export interface WorkOrderPlacement {
+  facilityId: string | null;
+  facilityName: string;
+  organizationId: string | null;
+  organizationName: string;
+  /** The exact node the asset sits in — a floor or a rack, usually. */
+  locationId: string | null;
+  locationName: string;
+}
+
 export interface WorkOrder {
   id: string;
   title: string;
@@ -262,10 +380,16 @@ export interface WorkOrder {
   priority: WorkOrderPriority;
   type: WorkOrderType;
   assignedTo: string;
+  /** When the work is planned to start. Optional — not every job is booked in. */
+  scheduledDate?: string;
   dueDate: string;
   description: string;
   estimatedHours: number;
-  /** True when the predictive engine raised this work order, not a human. */
+  /**
+   * @deprecated Nothing sets this any more — see `ACTIVE_WORK_ORDER_SOURCES`.
+   * Retained so records written before predictive raising was parked still
+   * deserialise; treat it as false everywhere.
+   */
   aiGenerated?: boolean;
   /** Where the job came from — see `WORK_ORDER_SOURCES`. Absent on older records; treated as `Manual`. */
   source?: WorkOrderSource;
@@ -275,18 +399,70 @@ export interface WorkOrder {
   parts: WoPart[];
   laborLog: WoLabor[];
   comments: WoComment[];
+  /** Every status this order has held, oldest first. Server-written. */
+  history?: WoStatusEvent[];
   completedAt?: string;
   createdAt: string;
   updatedAt: string;
+  /** Resolved from the asset on read; absent on endpoints that do not join. */
+  placement?: WorkOrderPlacement;
 }
 
 export type WorkOrderCreateInput = Omit<
   WorkOrder,
-  'id' | 'createdAt' | 'updatedAt' | 'assetName' | 'checklist' | 'parts' | 'laborLog' | 'comments'
+  'id' | 'createdAt' | 'updatedAt' | 'assetName' | 'checklist' | 'parts' | 'laborLog' | 'comments' | 'history' | 'placement'
 > & {
   checklist?: WoChecklistItem[];
   parts?: WoPart[];
 };
+
+/**
+ * The board, one column per status.
+ *
+ * A column carries both its rows and its **true** `total`, because the two are
+ * not the same number: the rows are capped so a column with four hundred open
+ * orders does not ship four hundred documents to draw a scrollable list, while
+ * the count in the column header has to be the real one. Reporting the capped
+ * length as the count is how a board quietly starts under-reporting a backlog.
+ */
+export interface WorkOrderBoardColumn {
+  status: WorkOrderStatus;
+  total: number;
+  items: WorkOrder[];
+}
+
+export interface WorkOrderBoard {
+  columns: WorkOrderBoardColumn[];
+  /** Matching orders across every column — the same number the list view reports. */
+  total: number;
+  /** How many rows each column was capped at, so the UI can say "showing 50 of 412". */
+  limitPerColumn: number;
+}
+
+/**
+ * The filter bar's options, built from the records that exist.
+ *
+ * Facilities and technicians come from the data rather than from a constant:
+ * offering a facility nobody has an asset in, or a technician who is not on the
+ * roster, produces a filter that can only ever return nothing.
+ */
+export interface WorkOrderFacets {
+  facilities: { id: string; name: string; count: number }[];
+  /**
+   * Who a work order may be assigned to.
+   *
+   * `technician` is the Mobile Workforce roster and `user` is an application
+   * account — both are assignable, because an estate that has not onboarded a
+   * field roster yet must still be able to give somebody a job. `historic` is a
+   * name that appears on existing orders and is on neither list any more; it is
+   * offered so past assignments stay filterable, and is refused on new ones.
+   */
+  technicians: { name: string; count: number; kind: 'technician' | 'user' | 'historic' }[];
+  sources: { source: WorkOrderSource; label: string; count: number; active: boolean }[];
+  types: { type: WorkOrderType; count: number; active: boolean }[];
+  statuses: { status: WorkOrderStatus; count: number }[];
+  priorities: { priority: WorkOrderPriority; count: number }[];
+}
 
 export type WorkOrderUpdateInput = Partial<WorkOrderCreateInput>;
 

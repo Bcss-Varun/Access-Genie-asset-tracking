@@ -5,7 +5,7 @@ import { ApiError } from '../utils/ApiError.js';
 import { recordAudit } from '../services/audit.service.js';
 import * as service from '../services/configuration.service.js';
 import * as reportRun from '../services/reportRun.service.js';
-import { ChecklistTemplate, ReportSubscription } from '../models/index.js';
+import { ReportSubscription } from '../models/index.js';
 
 /** These collections are small and bounded, so they are returned whole. */
 const whole = <T>(res: Response, items: T[]) => sendList(res, items, buildMeta(1, items.length || 1, items.length));
@@ -101,23 +101,8 @@ export const restoreBackup = asyncHandler(async (req: Request, _res: Response) =
 });
 
 // ── Checklist templates ──────────────────────────────────────────────────────
-/**
- * The template library, with how often each has actually been used.
- *
- * Usage is joined on read rather than stored on the template: a counter
- * incremented on write drifts the moment an inspection is deleted, and the
- * number people care about is how many inspections reference this today.
- */
-export const listChecklistTemplates = asyncHandler(async (_req: Request, res: Response) => {
-  const [templates, usage] = await Promise.all([
-    ChecklistTemplate.find().sort({ name: 1 }).lean(),
-    service.templateUsage(),
-  ]);
-  whole(
-    res,
-    templates.map((t) => ({ ...t, usageCount: usage[t.name] ?? 0 })),
-  );
-});
+// The checklist library is served by inspection.controller.ts now, at
+// `/inspection-templates`.
 
 // ── Webhooks ─────────────────────────────────────────────────────────────────
 export const testWebhook = asyncHandler(async (req: Request, res: Response) => {

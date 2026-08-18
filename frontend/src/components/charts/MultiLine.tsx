@@ -51,7 +51,18 @@ export function MultiLine({
   const pathFor = (points: number[]) =>
     points.map((v, i) => `${i === 0 ? 'M' : 'L'} ${x(i).toFixed(1)} ${y(v).toFixed(1)}`).join(' ');
 
-  const ticks = [0, 0.25, 0.5, 0.75, 1].map((f) => f * ceiling);
+  /*
+   * Five gridlines, minus the ones that would print the same label twice.
+   *
+   * With a small integer ceiling — a chart of counts where the busiest bucket
+   * holds one record — quarter steps of 1 format to "0, 0, 1, 1, 1" and the
+   * axis reads as broken. Deduplicating on the *formatted* label rather than on
+   * the value is what makes that work for every `format` a caller passes,
+   * including the money formatters that round to the nearest lakh.
+   */
+  const ticks = [0, 0.25, 0.5, 0.75, 1]
+    .map((f) => f * ceiling)
+    .filter((tick, i, all) => all.findIndex((other) => format(other) === format(tick)) === i);
   const step = Math.max(1, Math.ceil(labels.length / 7));
 
   return (
@@ -75,8 +86,8 @@ export function MultiLine({
 
         {ticks.map((tick) => (
           <g key={tick}>
-            <line x1={PAD.left} x2={W - PAD.right} y1={y(tick)} y2={y(tick)} stroke="#e2e8f0" strokeWidth={1} />
-            <text x={PAD.left - 8} y={y(tick) + 4} textAnchor="end" className="fill-slate-400 text-[10px]">
+            <line x1={PAD.left} x2={W - PAD.right} y1={y(tick)} y2={y(tick)} className="stroke-current text-slate-400 opacity-30" strokeWidth={1} />
+            <text x={PAD.left - 8} y={y(tick) + 4} textAnchor="end" className="fill-current text-slate-400 text-[10px]">
               {format(tick)}
             </text>
           </g>
@@ -121,7 +132,7 @@ export function MultiLine({
               onMouseLeave={() => setHovered(null)}
             />
             {i % step === 0 && (
-              <text x={x(i)} y={H - 8} textAnchor="middle" className="fill-slate-400 text-[10px]">
+              <text x={x(i)} y={H - 8} textAnchor="middle" className="fill-current text-slate-400 text-[10px]">
                 {label}
               </text>
             )}

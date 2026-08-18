@@ -1,166 +1,251 @@
-import { useState } from 'react';
-import { Link } from 'react-router-dom';
-import { allInspections } from '@/lib/dataset';
-import type { Inspection, InspectionStatus } from '@access-genie/shared';
-import { PageHeader, KpiCard, Badge, EmptyState } from '@/components/ui/primitives';
+import { useCallback, useState } from 'react';
+import type { InspectionTemplate } from '@access-genie/shared';
+import {
+  EMPTY_INSPECTION_FILTERS,
+  activeInspectionFilterCount,
+  inspectionsApi,
+  useInspectionFacets,
+  useInspectionList,
+  useInspectionStats,
+  useInspectionTemplates,
+  useRefreshInspections,
+  type InspectionFilters,
+} from '@/api/inspections';
+import { ApiRequestError } from '@/api/client';
+import { useMutate } from '@/api/mutate';
+import { ErrorState, MetricCard, PageHeader } from '@/components/ui/primitives';
 import { Button } from '@/components/ui/Button';
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
-import { InspectionDialog } from '@/components/maintenance/InspectionDialog';
-import { useMutate } from '@/api/mutate';
-import { inspectionsApi } from '@/api/maintenance';
-import { cn, relTime } from '@/lib/utils';
+import { InspectionFilterBar } from '@/components/maintenance/inspections/InspectionFilters';
+import { RecordsList } from '@/components/maintenance/inspections/RecordsList';
+import { TemplatesList } from '@/components/maintenance/inspections/TemplatesList';
+import { TemplateEditor } from '@/components/maintenance/inspections/TemplateEditor';
+import { ScheduleDialog } from '@/components/maintenance/inspections/ScheduleDialog';
+import { useToast } from '@/components/providers/ToastProvider';
+import { cn } from '@/lib/utils';
 
-const STATUSES: InspectionStatus[] = ['Scheduled', 'In Progress', 'Passed', 'Failed'];
+/**
+ * Inspections & Checklists — one module, two views.
+ *
+ * This replaces two separate screens. "Checklists" was a library of templates
+ * made of plain strings, and "Inspections" was a list of records that could not
+ * be created from one: the two halves of a single workflow, each unable to
+ * reach the other. They are now the same page, and a template exists in order
+ * to be scheduled.
+ *
+ * Everything on screen comes from the API. The summary cards take the same
+ * filters as the list beneath them, so the numbers describe the cut in view
+ * rather than the whole estate.
+ */
 
-const statusTone = (s: InspectionStatus): 'emerald' | 'red' | 'amber' | 'slate' =>
-  s === 'Passed' ? 'emerald' : s === 'Failed' ? 'red' : s === 'In Progress' ? 'amber' : 'slate';
+type View = 'records' | 'templates';
 
 export default function InspectionsPage() {
-  const { run, isPending } = useMutate();
-  const [filter, setFilter] = useState<'All' | InspectionStatus>('All');
-  const [dialog, setDialog] = useState<{ mode: 'new' } | { mode: 'edit'; inspection: Inspection } | null>(null);
-  const [deleting, setDeleting] = useState<Inspection | null>(null);
+  const [view, setView] = useState<View>('records');
+  const [filters, setFilters] = useState<InspectionFilters>(EMPTY_INSPECTION_FILTERS);
+  const [page, setPage] = useState(1);
+  const [sort, setSort] = useState('scheduledFor');
+  const [templateSearch, setTemplateSearch] = useState('');
 
-  // Read the hydrated binding directly rather than snapshotting into state: a
-  // copy taken on first render never sees the refetch that follows a write, so
-  // a newly scheduled inspection would not appear until reload.
-  const inspections = allInspections;
+  const [editing, setEditing] = useState<{ template?: InspectionTemplate } | null>(null);
+  const [scheduling, setScheduling] = useState<{ template?: InspectionTemplate } | null>(null);
+  const [retiring, setRetiring] = useState<InspectionTemplate | null>(null);
 
-  const remove = async () => {
-    if (!deleting) return;
-    await run(inspectionsApi.remove(deleting.id), {
-      success: 'Inspection removed',
-      successDetail: deleting.title,
-      describe: 'remove that inspection',
+  const { run } = useMutate();
+  const refresh = useRefreshInspections();
+  const { toast } = useToast();
+
+  const listFilters: InspectionFilters = { ...filters, page, limit: 25, sort };
+  const list = useInspectionList(listFilters, view === 'records');
+  const stats = useInspectionStats(filters);
+  const facets = useInspectionFacets();
+  const templates = useInspectionTemplates({ q: templateSearch || undefined }, view === 'templates');
+
+  const activeCount = activeInspectionFilterCount(filters);
+  const now = Date.now();
+
+  const update = useCallback((next: Partial<InspectionFilters>) => {
+    setFilters((current) => ({ ...current, ...next }));
+    // Any filter change invalidates the page number: staying on page 3 of a
+    // one-page result shows an empty table and reads as a bug.
+    setPage(1);
+  }, []);
+
+  const clear = useCallback(() => {
+    setFilters(EMPTY_INSPECTION_FILTERS);
+    setPage(1);
+  }, []);
+
+  const confirmRetire = useCallback(async () => {
+    if (!retiring) return;
+    const used = (retiring.usageCount ?? 0) > 0;
+
+    const result = await run(inspectionsApi.removeTemplate(retiring.id), {
+      describe: used ? 'retire that template' : 'delete that template',
+      refresh,
     });
-    setDeleting(null);
-  };
 
-  const count = (s: InspectionStatus) => inspections.filter((i) => i.status === s).length;
-  const filtered = filter === 'All' ? inspections : inspections.filter((i) => i.status === filter);
+    if (result) {
+      toast({
+        title: result.deleted ? `${retiring.name} deleted` : `${retiring.name} retired`,
+        description: result.deleted
+          ? 'It had never been scheduled, so nothing referenced it.'
+          : 'Inspections raised from it stay readable; it can no longer be scheduled.',
+        tone: 'success',
+      });
+    }
+    setRetiring(null);
+  }, [retiring, run, refresh, toast]);
 
-  const chipCls = (active: boolean) =>
-    cn(
-      'px-3 py-1 rounded-full text-xs font-medium border transition-colors',
-      active
-        ? 'bg-primary-600 text-white border-primary-600 shadow-sm'
-        : 'bg-transparent text-slate-500 border-slate-200 hover:border-primary-500/50 hover:text-slate-700',
-    );
+  const activeQuery = view === 'records' ? list : templates;
+  const error = activeQuery.error;
+
+  const metrics = [
+    { label: 'Scheduled', value: stats.data?.scheduled ?? 0, tone: 'slate' as const, icon: '🗓️', sub: 'Not started' },
+    { label: 'In Progress', value: stats.data?.inProgress ?? 0, tone: 'amber' as const, icon: '🔎', sub: 'Being carried out' },
+    { label: 'Passed', value: stats.data?.passed ?? 0, tone: 'emerald' as const, icon: '✅', sub: 'All checks clear' },
+    { label: 'Failed', value: stats.data?.failed ?? 0, tone: 'red' as const, icon: '⚠️', sub: 'Defects found' },
+    {
+      label: 'Overdue',
+      value: stats.data?.overdue ?? 0,
+      // Zero overdue is good news, not an alarm — a red rail on "0" trains
+      // people to stop reading the colour.
+      tone: (stats.data?.overdue ?? 0) > 0 ? ('red' as const) : ('slate' as const),
+      icon: '⏰',
+      sub: (stats.data?.overdue ?? 0) > 0 ? 'Past their date' : 'On schedule',
+    },
+  ];
 
   return (
-    <div className="h-full flex flex-col space-y-6">
+    <div className="flex h-full flex-col space-y-5">
       <PageHeader
-        title="Inspections"
-        subtitle="Scheduled and completed asset inspections across all facilities."
-        breadcrumb={[{ label: 'Maintenance', href: '/maintenance' }, { label: 'Inspections' }]}
-        actions={<Button onClick={() => setDialog({ mode: 'new' })}>+ New Inspection</Button>}
+        title="Inspections & Checklists"
+        subtitle="Build reusable checklists, schedule them against assets, and record what was found."
+        actions={
+          <div className="flex items-center gap-3">
+            <div className="inline-flex items-center rounded-lg border border-slate-200 bg-slate-100 p-0.5 text-sm font-medium">
+              {(
+                [
+                  ['records', 'Records'],
+                  ['templates', 'Templates'],
+                ] as [View, string][]
+              ).map(([option, label]) => (
+                <button
+                  key={option}
+                  type="button"
+                  onClick={() => setView(option)}
+                  aria-pressed={view === option}
+                  className={cn(
+                    'rounded-md px-3 py-1.5 transition-colors',
+                    view === option ? 'bg-primary-600 text-white shadow-sm' : 'text-slate-600 hover:text-slate-900',
+                  )}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+
+            {view === 'templates' ? (
+              <Button onClick={() => setEditing({})}>+ New Template</Button>
+            ) : (
+              <Button onClick={() => setScheduling({})}>+ Schedule Inspection</Button>
+            )}
+          </div>
+        }
       />
 
-      {/* KPI row */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <KpiCard label="Scheduled" value={count('Scheduled')} tone="slate" sub="Awaiting start" />
-        <KpiCard label="In Progress" value={count('In Progress')} tone="amber" sub="Being filled out" />
-        <KpiCard label="Passed" value={count('Passed')} tone="emerald" sub="Compliant" />
-        <KpiCard label="Failed" value={count('Failed')} tone="red" sub="Needs follow-up" />
-      </div>
-
-      {/* Filter chips */}
-      <div className="flex flex-wrap items-center gap-2">
-        <span className="text-[11px] font-semibold uppercase tracking-wider text-slate-500 mr-1">Status</span>
-        <button onClick={() => setFilter('All')} className={chipCls(filter === 'All')}>
-          All
-        </button>
-        {STATUSES.map((s) => (
-          <button key={s} onClick={() => setFilter(s)} className={chipCls(filter === s)}>
-            {s}
-          </button>
-        ))}
-        <span className="ml-auto text-sm text-slate-500 font-medium">
-          {filtered.length} of {inspections.length}
-        </span>
-      </div>
-
-      {/* Table */}
-      <div className="glass-panel rounded-xl flex-1 min-h-0 overflow-hidden flex flex-col">
-        <div className="flex-1 overflow-auto">
-          <table className="w-full text-left text-sm whitespace-nowrap">
-            <thead className="bg-slate-50 sticky top-0 z-10 border-b border-slate-200 text-slate-500 font-semibold uppercase tracking-wider text-xs">
-              <tr>
-                <th className="px-6 py-4">Inspection</th>
-                <th className="px-6 py-4">Asset</th>
-                <th className="px-6 py-4">Template</th>
-                <th className="px-6 py-4">Status</th>
-                <th className="px-6 py-4">Due</th>
-                <th className="px-6 py-4">Inspector</th>
-                <th className="px-6 py-4 text-right">Actions</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-100">
-              {filtered.map((i) => (
-                <tr key={i.id} className="hover:bg-slate-50 transition-colors">
-                  <td className="px-6 py-4">
-                    <Link to={`/inspections/${i.id}`} className="font-medium text-slate-900 hover:text-primary-600 transition-colors">
-                      {i.title}
-                    </Link>
-                    <div className="text-[11px] font-mono text-slate-400">{i.id}</div>
-                  </td>
-                  <td className="px-6 py-4">
-                    <Link
-                      to={`/assets/${i.assetId}`}
-                      className="text-slate-600 hover:text-primary-600 transition-colors"
-                    >
-                      {i.assetName}
-                    </Link>
-                  </td>
-                  <td className="px-6 py-4 text-slate-600">{i.template}</td>
-                  <td className="px-6 py-4">
-                    <Badge tone={statusTone(i.status)}>{i.status}</Badge>
-                  </td>
-                  <td className="px-6 py-4 text-slate-500">{relTime(i.dueDate)}</td>
-                  <td className="px-6 py-4 text-slate-600">{i.inspector}</td>
-                  <td className="px-6 py-4 text-right">
-                    <div className="flex items-center justify-end gap-1">
-                      <Link to={`/inspections/${i.id}`} className="px-2 text-xs font-medium text-primary-600 hover:text-primary-700">
-                        Open →
-                      </Link>
-                      <Button size="sm" variant="ghost" onClick={() => setDialog({ mode: 'edit', inspection: i })}>
-                        Edit
-                      </Button>
-                      <Button size="sm" variant="ghost" onClick={() => setDeleting(i)}>
-                        Delete
-                      </Button>
-                    </div>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-        {filtered.length === 0 && (
-          <EmptyState
-            variant={inspections.length === 0 ? 'empty' : 'no-results'}
-            icon="🔍"
-            title={inspections.length === 0 ? 'No inspections scheduled' : 'No inspections match this filter'}
-            description={
-              inspections.length === 0
-                ? 'An inspection is a dated, assignable set of checks against one asset. Scheduling one puts it in somebody\u2019s field queue.'
-                : 'Try selecting a different status.'
-            }
-            action={inspections.length === 0 ? <Button onClick={() => setDialog({ mode: 'new' })}>+ New Inspection</Button> : undefined}
+      {/* The five summary cards. Same filters as the list below them. */}
+      <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-5">
+        {metrics.map((metric) => (
+          <MetricCard
+            key={metric.label}
+            label={metric.label}
+            value={metric.value}
+            sub={metric.sub}
+            tone={metric.tone}
+            icon={metric.icon}
           />
-        )}
+        ))}
       </div>
 
-      {dialog?.mode === 'new' && <InspectionDialog onClose={() => setDialog(null)} />}
-      {dialog?.mode === 'edit' && <InspectionDialog existing={dialog.inspection} onClose={() => setDialog(null)} />}
-      {deleting && (
+      {view === 'records' ? (
+        <InspectionFilterBar
+          filters={filters}
+          facets={facets.data}
+          onChange={update}
+          onClear={clear}
+          activeCount={activeCount}
+        />
+      ) : (
+        <div className="glass-panel p-4">
+          <div className="relative">
+            <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-sm text-slate-400" aria-hidden>
+              🔍
+            </span>
+            <input
+              type="search"
+              value={templateSearch}
+              onChange={(e) => setTemplateSearch(e.target.value)}
+              placeholder="Search templates by name, description or category…"
+              aria-label="Search templates"
+              className="w-full rounded-lg border border-slate-300 bg-white py-1.5 pl-9 pr-3 text-sm text-slate-700 shadow-sm focus:border-primary-500 focus:outline-none focus:ring-2 focus:ring-primary-500/25"
+            />
+          </div>
+        </div>
+      )}
+
+      {error ? (
+        <div className="glass-panel">
+          <ErrorState
+            title={view === 'records' ? 'Could not load inspections' : 'Could not load templates'}
+            description={error instanceof ApiRequestError ? error.message : 'The request failed.'}
+            requestId={error instanceof ApiRequestError ? error.requestId : undefined}
+            onRetry={() => void activeQuery.refetch()}
+          />
+        </div>
+      ) : view === 'records' ? (
+        <RecordsList
+          items={list.data?.items ?? []}
+          meta={list.data?.meta}
+          loading={list.isLoading}
+          sort={sort}
+          onSort={(next) => {
+            setSort(next);
+            setPage(1);
+          }}
+          onPage={setPage}
+          now={now}
+          filtersActive={activeCount > 0}
+          onSchedule={() => setScheduling({})}
+        />
+      ) : (
+        <TemplatesList
+          templates={templates.data?.items ?? []}
+          loading={templates.isLoading}
+          onEdit={(template) => setEditing({ template })}
+          onSchedule={(template) => setScheduling({ template })}
+          onCreate={() => setEditing({})}
+          onRetire={setRetiring}
+          filtersActive={templateSearch.length > 0}
+        />
+      )}
+
+      {editing && <TemplateEditor existing={editing.template} onClose={() => setEditing(null)} />}
+      {scheduling && <ScheduleDialog template={scheduling.template} onClose={() => setScheduling(null)} />}
+
+      {retiring && (
         <ConfirmDialog
-          title={`Remove ${deleting.title}?`}
-          description="It disappears from the field queue. Any results already recorded against it go with it."
-          confirmLabel="Remove"
-          busy={isPending}
-          onConfirm={() => void remove()}
-          onCancel={() => setDeleting(null)}
+          title={(retiring.usageCount ?? 0) > 0 ? `Retire ${retiring.name}?` : `Delete ${retiring.name}?`}
+          // The consequence is spelled out because the two outcomes differ, and
+          // which one applies depends on data the reader cannot see from here.
+          description={
+            (retiring.usageCount ?? 0) > 0
+              ? `${retiring.usageCount} inspection${retiring.usageCount === 1 ? ' has' : 's have'} been raised from this template, so it will be retired rather than deleted — those records stay readable, and it can no longer be scheduled.`
+              : 'This template has never been scheduled, so it will be deleted outright.'
+          }
+          confirmLabel={(retiring.usageCount ?? 0) > 0 ? 'Retire' : 'Delete'}
+          onConfirm={() => void confirmRetire()}
+          onCancel={() => setRetiring(null)}
         />
       )}
     </div>

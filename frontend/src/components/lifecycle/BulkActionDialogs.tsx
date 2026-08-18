@@ -1,6 +1,6 @@
 import { useState } from 'react';
-import type { Asset, CustodyAction, WorkOrderPriority, WorkOrderType } from '@access-genie/shared';
-import { WORK_ORDER_PRIORITIES, WORK_ORDER_TYPES } from '@access-genie/shared';
+import type { ActiveWorkOrderType, Asset, CustodyAction, WorkOrderPriority } from '@access-genie/shared';
+import { ACTIVE_WORK_ORDER_TYPES, WORK_ORDER_PRIORITIES } from '@access-genie/shared';
 import { FormDialog, Field, Select, TextArea, TextInput, dateInDays, optionsFrom } from '@/components/ui/FormDialog';
 import { useToast } from '@/components/providers/ToastProvider';
 import { useRefreshDataset } from '@/api/dataset';
@@ -89,7 +89,7 @@ export function BulkAssignDialog({ assets, onClose, onDone }: { assets: Asset[];
 export function BulkMaintenanceDialog({ assets, onClose, onDone }: { assets: Asset[]; onClose: () => void; onDone?: () => void }) {
   const { run, isPending } = useBulkRun();
   const [title, setTitle] = useState('Scheduled inspection');
-  const [type, setType] = useState<WorkOrderType>('Preventive');
+  const [type, setType] = useState<ActiveWorkOrderType>('Preventive');
   const [priority, setPriority] = useState<WorkOrderPriority>('Medium');
   const [assignedTo, setAssignedTo] = useState(allUsers[0]?.name ?? '');
   const [dueDate, setDueDate] = useState(dateInDays(7));
@@ -98,6 +98,8 @@ export function BulkMaintenanceDialog({ assets, onClose, onDone }: { assets: Ass
     const ok = await run(assets, 'Bulk maintenance', (a) =>
       maintenanceApi.create({
         title, assetId: a.id, type, priority, assignedTo, dueDate,
+        // Raised by a person from the Lifecycle module, whatever the work is.
+        source: 'Manual',
         description: `Raised in bulk from the Lifecycle module against ${assets.length} assets.`,
         estimatedHours: 1,
       }),
@@ -122,7 +124,7 @@ export function BulkMaintenanceDialog({ assets, onClose, onDone }: { assets: Ass
       </Field>
       <div className="grid grid-cols-2 gap-3">
         <Field label="Type">
-          <Select value={type} onChange={(e) => setType(e.target.value as WorkOrderType)} options={optionsFrom(WORK_ORDER_TYPES)} />
+          <Select value={type} onChange={(e) => setType(e.target.value as ActiveWorkOrderType)} options={optionsFrom(ACTIVE_WORK_ORDER_TYPES)} />
         </Field>
         <Field label="Priority">
           <Select value={priority} onChange={(e) => setPriority(e.target.value as WorkOrderPriority)} options={optionsFrom(WORK_ORDER_PRIORITIES)} />

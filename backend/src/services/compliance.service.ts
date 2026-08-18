@@ -3,21 +3,16 @@ import {
   Asset,
   Certification,
   CycleCount,
-  Inspection,
   nextId,
   type CertificationDoc,
   type CycleCountDoc,
-  type InspectionDoc,
 } from '../models/index.js';
 import { ApiError } from '../utils/ApiError.js';
-import { markEstateChanged } from './derivation.scheduler.js';
 import type {
   CreateCertificationInput,
   CreateCycleCountInput,
-  CreateInspectionInput,
   UpdateCertificationInput,
   UpdateCycleCountInput,
-  UpdateInspectionInput,
 } from '../validators/compliance.validator.js';
 
 /**
@@ -40,36 +35,11 @@ async function assetOrFail(assetId: string) {
   return asset;
 }
 
-// ── Inspections ──────────────────────────────────────────────────────────────
-
-export async function createInspection(input: CreateInspectionInput): Promise<InspectionDoc> {
-  const asset = await assetOrFail(input.assetId);
-  const created = await Inspection.create({
-    ...input,
-    _id: await nextId('inspection', 'INS'),
-    assetName: asset.name,
-    dueDate: new Date(input.dueDate),
-  });
-  return created.toObject();
-}
-
-export async function updateInspection(id: string, patch: UpdateInspectionInput): Promise<InspectionDoc> {
-  const updated = await Inspection.findByIdAndUpdate(
-    id,
-    { $set: { ...patch, ...(patch.dueDate ? { dueDate: new Date(patch.dueDate) } : {}) } },
-    { new: true, runValidators: true },
-  ).lean<InspectionDoc>();
-
-  if (!updated) throw ApiError.notFound('Inspection');
-  // A failed inspection is evidence about the asset's condition.
-  if (patch.status === 'Failed') markEstateChanged('inspection-failed');
-  return updated;
-}
-
-export async function deleteInspection(id: string): Promise<void> {
-  const removed = await Inspection.findByIdAndDelete(id).lean();
-  if (!removed) throw ApiError.notFound('Inspection');
-}
+// Inspections moved to services/inspection.service.ts when Inspections &
+// Checklists became one module. What used to happen here — flipping a status
+// field and auto-raising a single work order for the whole inspection — is now
+// a graded, checkpoint-level workflow that can raise one corrective order per
+// actual defect.
 
 // ── Certifications ───────────────────────────────────────────────────────────
 

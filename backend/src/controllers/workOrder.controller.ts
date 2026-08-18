@@ -5,7 +5,12 @@ import { asyncHandler } from '../utils/asyncHandler.js';
 import { sendData, sendList } from '../utils/response.js';
 import * as workOrderService from '../services/workOrder.service.js';
 import { recordAudit } from '../services/audit.service.js';
-import type { CreateWorkOrderInput, UpdateWorkOrderInput, WorkOrderListQuery } from '../validators/workOrder.validator.js';
+import type {
+  CreateWorkOrderInput,
+  UpdateWorkOrderInput,
+  WorkOrderBoardQuery,
+  WorkOrderListQuery,
+} from '../validators/workOrder.validator.js';
 
 export const list = asyncHandler(async (_req: Request, res: Response) => {
   const query = validatedQuery<WorkOrderListQuery>(res);
@@ -13,8 +18,29 @@ export const list = asyncHandler(async (_req: Request, res: Response) => {
   sendList(res, items, meta);
 });
 
+/**
+ * The same filtered set the list returns, split into status columns.
+ *
+ * A separate endpoint rather than a `?view=board` flag on the list, because the
+ * answer has a genuinely different shape — per-column caps and per-column
+ * totals — and squeezing that through a paginated list envelope would mean
+ * either lying about `meta.total` or making the board fetch every page.
+ */
+export const board = asyncHandler(async (_req: Request, res: Response) => {
+  const query = validatedQuery<WorkOrderBoardQuery>(res);
+  sendData(res, await workOrderService.getWorkOrderBoard(query));
+});
+
+/** Filter-bar options, counted from the records that exist. */
+export const facets = asyncHandler(async (_req: Request, res: Response) => {
+  sendData(res, await workOrderService.getWorkOrderFacets());
+});
+
 export const stats = asyncHandler(async (_req: Request, res: Response) => {
-  sendData(res, await workOrderService.getWorkOrderStats());
+  // Stats take the same filters as the list, so the header counts describe the
+  // cut on screen rather than the whole estate.
+  const query = validatedQuery<WorkOrderListQuery>(res);
+  sendData(res, await workOrderService.getWorkOrderStats(query));
 });
 
 export const getOne = asyncHandler(async (req: Request, res: Response) => {
@@ -30,10 +56,23 @@ export const create = asyncHandler(async (req: Request, res: Response) => {
 });
 
 export const update = asyncHandler(async (req: Request, res: Response) => {
+  const actor = req.auth?.user.name ?? 'system';
   const id = req.params.id as string;
-  const workOrder = await workOrderService.updateWorkOrder(id, req.body as UpdateWorkOrderInput);
+  const workOrder = await workOrderService.updateWorkOrder(id, req.body as UpdateWorkOrderInput, actor);
 
   recordAudit(req, { action: 'work_order.update', target: id, category: 'Maintenance' });
+  sendData(res, workOrder);
+});
+
+/** Assignment is an audited action, not a field edit — see the service. */
+export const assign = asyncHandler(async (req: Request, res: Response) => {
+  const actor = req.auth?.user.name ?? 'system';
+  const id = req.params.id as string;
+  const { assignedTo, note } = req.body as { assignedTo: string; note?: string };
+
+  const workOrder = await workOrderService.assignWorkOrder(id, assignedTo, actor, note);
+
+  recordAudit(req, { action: 'work_order.assign', target: id, category: 'Maintenance', metadata: { assignedTo } });
   sendData(res, workOrder);
 });
 

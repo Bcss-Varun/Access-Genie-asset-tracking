@@ -11,8 +11,8 @@ import { allWorkOrders, getAssetById } from '@/lib/dataset';
 import { fieldStageLabel, slaStatus, STAGE_TONE, SLA_STATUSES, type SlaStatus } from '@/lib/field-ops';
 import { rosterNames, SKILLS } from '@/lib/technicians';
 import { relTime, isOverdue, cn } from '@/lib/utils';
-import { WORK_ORDER_PRIORITIES, WORK_ORDER_SOURCES, WORK_ORDER_STATUSES, WORK_ORDER_TYPES } from '@access-genie/shared';
-import type { WorkOrder, WorkOrderPriority, WorkOrderType, WorkOrderSource } from '@access-genie/shared';
+import { ACTIVE_WORK_ORDER_SOURCES, ACTIVE_WORK_ORDER_TYPES, WORK_ORDER_PRIORITIES, WORK_ORDER_STATUSES, WORK_ORDER_TYPES } from '@access-genie/shared';
+import type { ActiveWorkOrderSource, ActiveWorkOrderType, WorkOrder, WorkOrderPriority } from '@access-genie/shared';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Work Orders — the field-job register: every job, who has it, where the asset
@@ -54,13 +54,13 @@ function NewWorkOrderDialog({ onClose }: { onClose: () => void }) {
   const [assetId, setAssetId] = useState('');
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
-  const [type, setType] = useState<WorkOrderType>('Corrective');
+  const [type, setType] = useState<ActiveWorkOrderType>('Corrective');
   const [priority, setPriority] = useState<WorkOrderPriority>('Medium');
   const [requiredSkill, setRequiredSkill] = useState('');
   const [dueDate, setDueDate] = useState(dateInDays(3));
   const [estimatedHours, setEstimatedHours] = useState('2');
   const [technician, setTechnician] = useState('Unassigned');
-  const [source, setSource] = useState<WorkOrderSource>('Manual');
+  const [source, setSource] = useState<ActiveWorkOrderSource>('Manual');
 
   const asset = assetId ? getAssetById(assetId) : undefined;
 
@@ -119,7 +119,7 @@ function NewWorkOrderDialog({ onClose }: { onClose: () => void }) {
 
       <FieldRow>
         <Field label="Work Type" required>
-          <Select value={type} onChange={(e) => setType(e.target.value as WorkOrderType)} options={WORK_ORDER_TYPES.map((t) => ({ value: t, label: t }))} />
+          <Select value={type} onChange={(e) => setType(e.target.value as ActiveWorkOrderType)} options={ACTIVE_WORK_ORDER_TYPES.map((t) => ({ value: t, label: t }))} />
         </Field>
         <Field label="Priority" required>
           <Select value={priority} onChange={(e) => setPriority(e.target.value as WorkOrderPriority)} options={WORK_ORDER_PRIORITIES.map((p) => ({ value: p, label: p }))} />
@@ -145,7 +145,7 @@ function NewWorkOrderDialog({ onClose }: { onClose: () => void }) {
       </FieldRow>
 
       <Field label="Source" required hint="Where this job originated.">
-        <Select value={source} onChange={(e) => setSource(e.target.value as WorkOrderSource)} options={WORK_ORDER_SOURCES.map((s) => ({ value: s, label: s }))} />
+        <Select value={source} onChange={(e) => setSource(e.target.value as ActiveWorkOrderSource)} options={ACTIVE_WORK_ORDER_SOURCES.map((s) => ({ value: s, label: s }))} />
       </Field>
     </FormDialog>
   );
@@ -222,7 +222,7 @@ export default function WorkOrdersPage() {
         <Field label="Status"><Select value={status} onChange={(e) => setStatus(e.target.value)} options={[{ value: 'All', label: 'All statuses' }, ...WORK_ORDER_STATUSES.map((s) => ({ value: s, label: s }))]} /></Field>
         <Field label="Priority"><Select value={priority} onChange={(e) => setPriority(e.target.value)} options={[{ value: 'All', label: 'All priorities' }, ...WORK_ORDER_PRIORITIES.map((p) => ({ value: p, label: p }))]} /></Field>
         <Field label="Work Type"><Select value={type} onChange={(e) => setType(e.target.value)} options={[{ value: 'All', label: 'All work types' }, ...WORK_ORDER_TYPES.map((t) => ({ value: t, label: t }))]} /></Field>
-        <Field label="Source"><Select value={source} onChange={(e) => setSource(e.target.value)} options={[{ value: 'All', label: 'All sources' }, ...WORK_ORDER_SOURCES.map((s) => ({ value: s, label: s }))]} /></Field>
+        <Field label="Source"><Select value={source} onChange={(e) => setSource(e.target.value)} options={[{ value: 'All', label: 'All sources' }, ...ACTIVE_WORK_ORDER_SOURCES.map((s) => ({ value: s, label: s }))]} /></Field>
         <Field label="SLA"><Select value={sla} onChange={(e) => setSla(e.target.value as typeof sla)} options={[{ value: 'All', label: 'Any SLA' }, ...SLA_STATUSES.map((s) => ({ value: s, label: s }))]} /></Field>
         <Field label="Technician"><Select value={technician} onChange={(e) => setTechnician(e.target.value)} options={[{ value: 'All', label: 'All technicians' }, ...technicians.map((t) => ({ value: t, label: t }))]} /></Field>
         <Field label="Facility"><Select value={facility} onChange={(e) => setFacility(e.target.value)} options={[{ value: 'All', label: 'All facilities' }, ...facilities.map((f) => ({ value: f, label: f }))]} /></Field>

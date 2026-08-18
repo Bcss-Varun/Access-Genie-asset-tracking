@@ -25,7 +25,7 @@ import type {
   AlertRule,
   AnomalyEvent,
   ApprovalWorkflow,
-  ChecklistTemplate,
+  InspectionTemplate,
   ReportSubscription,
   OrgSettings,
   Asset,
@@ -145,7 +145,7 @@ export interface Dataset {
   helpArticles: HelpArticle[];
   helpCategories: HelpCategory[];
   unknownTagReads: UnknownDetection[];
-  checklistTemplates: ChecklistTemplate[];
+  inspectionTemplates: InspectionTemplate[];
   reportSubscriptions: ReportSubscription[];
   technicians: Technician[];
   /** A singleton, not a list — the tenant's own identity and formatting. */
@@ -208,7 +208,7 @@ export let allPendingScans: PendingScan[] = [];
 export let allHelpArticles: HelpArticle[] = [];
 export let allHelpCategories: HelpCategory[] = [];
 export let allUnknownTagReads: UnknownDetection[] = [];
-export let allChecklistTemplates: ChecklistTemplate[] = [];
+export let allInspectionTemplates: InspectionTemplate[] = [];
 export let allReportSubscriptions: ReportSubscription[] = [];
 
 /**
@@ -298,7 +298,7 @@ export function hydrate(next: Dataset): void {
   allHelpArticles = next.helpArticles ?? [];
   allHelpCategories = next.helpCategories ?? [];
   allUnknownTagReads = next.unknownTagReads ?? [];
-  allChecklistTemplates = next.checklistTemplates ?? [];
+  allInspectionTemplates = next.inspectionTemplates ?? [];
   allReportSubscriptions = next.reportSubscriptions ?? [];
   if (next.orgSettings) orgSettings = next.orgSettings;
   utilizationDowntimeSeries = next.utilizationDowntime ?? [];

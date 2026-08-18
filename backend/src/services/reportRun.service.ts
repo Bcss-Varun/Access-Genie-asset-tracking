@@ -141,9 +141,9 @@ async function complianceRows(): Promise<Row[]> {
       'Asset ID': i.assetId,
       Asset: i.assetName,
       Title: i.title,
-      Authority: i.inspector || 'Unassigned',
+      Authority: i.assignedTo || 'Unassigned',
       Status: i.status,
-      Due: day(i.dueDate),
+      Due: day(i.scheduledFor),
     })),
   ];
 }

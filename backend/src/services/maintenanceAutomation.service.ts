@@ -11,21 +11,45 @@ import { logger } from '../config/logger.js';
  * decide, and type the work order. This closes that gap: the conditions that
  * warrant work now produce the work.
  *
- * Two triggers, deliberately different in character:
+ * One trigger is live:
  *
  *   **Scheduled** — a PM schedule falls due. Certain, calendar-driven, and the
  *   order is raised whether or not anything is wrong. This is the backbone of
- *   preventive maintenance and it must never be missed.
+ *   preventive maintenance and it must never be missed. Raised with
+ *   `source: 'Scheduled Maintenance'`, which is what the board shows as
+ *   "Preventive (PM)".
  *
- *   **Condition** — health crosses a floor. Uncertain, evidence-driven, and
- *   raised as `Predictive` so a planner can tell at a glance which orders came
- *   from a calendar and which came from the asset's actual state.
+ * One is parked:
  *
- * The hard requirement for both is **no duplicates**. An automation that raises
- * the same order every ten minutes destroys the queue it is trying to fill, so
- * every path checks for an existing open order first, and the PM path rolls the
+ *   **Condition** — health crossing a floor used to raise a `Predictive` order
+ *   flagged `aiGenerated`. Predictive work orders themselves are no longer
+ *   parked: the Predictive Alerts module raises them, from an alert that
+ *   carries its evidence, its confidence and who or what produced it. This
+ *   automation stays off because it has none of that — a health score below a
+ *   constant is a threshold being crossed, not a prediction, and dressing it up
+ *   as one would fill the queue with orders nobody can explain. The
+ *   degraded-asset query and its threshold are kept below, behind a flag, as
+ *   the starting point for a real detector that would post to
+ *   `/predictive-alerts` rather than writing work orders directly.
+ *
+ * The hard requirement is **no duplicates**. An automation that raises the same
+ * order every ten minutes destroys the queue it is trying to fill, so every
+ * path checks for an existing open order first, and the PM path rolls the
  * schedule forward in the same pass that raises the order.
  */
+
+/**
+ * Condition-based raising from a health floor. Off, and not because of the
+ * validators — `Predictive` and `'Predictive Maintenance'` are both writable
+ * again now that Predictive Alerts raises them.
+ *
+ * It stays off because a health score under a constant is a threshold, not a
+ * prediction, and this path can attach no evidence, no confidence and no
+ * detector to what it raises. The honest version of this feature is a detector
+ * that posts to `/predictive-alerts`, where a human triages it before any work
+ * order exists. See `services/predictiveAlert.service.ts`.
+ */
+const CONDITION_RAISING_ENABLED = false;
 
 /** How far to advance a schedule once its occurrence has been raised. */
 const INTERVAL_DAYS: Record<PmFrequency, number> = {
@@ -106,11 +130,23 @@ export async function raiseDueMaintenance(): Promise<AutomationResult> {
           `Raised automatically from preventive schedule ${pm._id} (${pm.frequency}). ` +
           `Scheduled for ${dueDate.toISOString().slice(0, 10)}.`,
         estimatedHours: pm.estHours ?? 1,
-        aiGenerated: true,
+        // Calendar-driven, not model-driven: this is scheduled maintenance, and
+        // labelling it AI-generated was always a misnomer.
+        source: 'Scheduled Maintenance',
+        aiGenerated: false,
         checklist: [],
         parts: [],
         laborLog: [],
         comments: [],
+        history: [
+          {
+            from: null,
+            to: 'New',
+            at: now,
+            actor: 'Maintenance automation',
+            note: `Raised from preventive schedule ${pm._id}`,
+          },
+        ],
         createdAt: now,
       });
       result.pmRaised++;
@@ -124,45 +160,50 @@ export async function raiseDueMaintenance(): Promise<AutomationResult> {
   }
 
   // ── Condition ─────────────────────────────────────────────────────────────
-  // Health is already materialised by the metrics pass, so this is a plain
-  // query rather than a recomputation.
-  const degraded = await Asset.find({
-    healthScore: { $lte: CONDITION_HEALTH_FLOOR },
-    status: { $nin: ['End_Of_Life'] },
-  }).lean<AssetDoc[]>();
+  // Parked for this phase — see CONDITION_RAISING_ENABLED. The degraded-asset
+  // query is still here, and still correct, so switching it back on is one
+  // constant rather than a rewrite.
+  if (CONDITION_RAISING_ENABLED) {
+    // Health is already materialised by the metrics pass, so this is a plain
+    // query rather than a recomputation.
+    const degraded = await Asset.find({
+      healthScore: { $lte: CONDITION_HEALTH_FLOOR },
+      status: { $nin: ['End_Of_Life'] },
+    }).lean<AssetDoc[]>();
 
-  for (const asset of degraded) {
-    const id = String(asset._id);
-    if (await hasOpenOrder(id, 'Predictive')) continue;
+    for (const asset of degraded) {
+      const id = String(asset._id);
+      if (await hasOpenOrder(id, 'Predictive')) continue;
 
-    await WorkOrder.create({
-      _id: await nextId('workOrder', 'WO'),
-      title: `Condition check — health at ${asset.healthScore}`,
-      assetId: id,
-      assetName: asset.name,
-      status: 'New',
-      priority: asset.healthScore <= 30 ? 'Critical' : 'High',
-      type: 'Predictive',
-      assignedTo: 'Unassigned',
-      // Condition-driven work is not calendar work: a week is short enough to
-      // matter and long enough to plan around.
-      dueDate: new Date(now.getTime() + 7 * 86_400_000),
-      description:
-        `Raised automatically because health fell to ${asset.healthScore}, at or below the ${CONDITION_HEALTH_FLOOR} floor. ` +
-        'Inspect and confirm whether corrective work is needed.',
-      estimatedHours: 2,
-      aiGenerated: true,
-      checklist: [
-        { label: 'Inspect for the fault the score implies', done: false },
-        { label: 'Confirm or dismiss the predicted failure', done: false },
-        { label: 'Raise corrective work if confirmed', done: false },
-      ],
-      parts: [],
-      laborLog: [],
-      comments: [],
-      createdAt: now,
-    });
-    result.conditionRaised++;
+      await WorkOrder.create({
+        _id: await nextId('workOrder', 'WO'),
+        title: `Condition check — health at ${asset.healthScore}`,
+        assetId: id,
+        assetName: asset.name,
+        status: 'New',
+        priority: asset.healthScore <= 30 ? 'Critical' : 'High',
+        type: 'Predictive',
+        assignedTo: 'Unassigned',
+        // Condition-driven work is not calendar work: a week is short enough to
+        // matter and long enough to plan around.
+        dueDate: new Date(now.getTime() + 7 * 86_400_000),
+        description:
+          `Raised automatically because health fell to ${asset.healthScore}, at or below the ${CONDITION_HEALTH_FLOOR} floor. ` +
+          'Inspect and confirm whether corrective work is needed.',
+        estimatedHours: 2,
+        source: 'Predictive Maintenance',
+        checklist: [
+          { label: 'Inspect for the fault the score implies', done: false },
+          { label: 'Confirm or dismiss the predicted failure', done: false },
+          { label: 'Raise corrective work if confirmed', done: false },
+        ],
+        parts: [],
+        laborLog: [],
+        comments: [],
+        createdAt: now,
+      });
+      result.conditionRaised++;
+    }
   }
 
   if (result.pmRaised || result.conditionRaised) {
@@ -170,3 +211,10 @@ export async function raiseDueMaintenance(): Promise<AutomationResult> {
   }
   return result;
 }
+
+// Raising corrective work from a failed inspection moved to
+// services/inspection.service.ts. It used to be one order for the whole
+// inspection, raised automatically the moment a status field flipped to Failed.
+// The module now grades individual checkpoints, so the work is raised per
+// defect — "the extinguisher is out of date" and "the exit sign is unlit" are
+// two jobs, and one ticket covering both gets closed having done one.

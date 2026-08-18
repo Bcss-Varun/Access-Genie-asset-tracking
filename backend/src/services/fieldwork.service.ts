@@ -54,7 +54,7 @@ export async function fieldQueue(assignee?: string): Promise<FieldTask[]> {
     WorkOrder.find({ status: { $ne: 'Completed' }, ...assignedFilter }).lean(),
     Inspection.find({
       status: { $in: ['Scheduled', 'In Progress'] },
-      ...(assignee ? { $or: [{ inspector: assignee }, { inspector: { $in: ['', 'Unassigned'] } }] } : {}),
+      ...(assignee ? { $or: [{ assignedTo: assignee }, { assignedTo: { $in: ['', 'Unassigned'] } }] } : {}),
     }).lean(),
     AssetPresence.find().select('_id zone lastSeen').lean(),
   ]);
@@ -94,9 +94,9 @@ export async function fieldQueue(assignee?: string): Promise<FieldTask[]> {
       // Inspections carry no priority of their own; they rank as ordinary work
       // rather than being sorted to the bottom for lacking a field.
       priority: 'Medium',
-      dueDate: new Date(i.dueDate).toISOString(),
-      daysUntilDue: days(i.dueDate),
-      assignedTo: i.inspector,
+      dueDate: new Date(i.scheduledFor).toISOString(),
+      daysUntilDue: days(i.scheduledFor),
+      assignedTo: i.assignedTo,
       ...decorate(i.assetId),
     })),
   ];

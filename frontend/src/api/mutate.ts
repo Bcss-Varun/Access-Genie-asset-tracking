@@ -33,6 +33,17 @@ export interface MutateOptions {
   rollback?: () => void;
   /** Also re-read the tracking workspace — for writes that move an asset. */
   refreshTracking?: boolean;
+  /**
+   * Re-read this module's own queries, as soon as the write lands.
+   *
+   * Runs *before* the dataset refresh, and that ordering is the point. A module
+   * with its own React Query cache — work orders, say — otherwise waits for the
+   * whole `/dataset` payload to come back before its screen updates, which on a
+   * cloud database is a second or more of a board showing the state the record
+   * was in before the click. The dataset still catches up behind it, for the
+   * hundred-odd screens that read the module bindings.
+   */
+  refresh?: () => Promise<unknown> | unknown;
 }
 
 export function useMutate() {
@@ -47,6 +58,9 @@ export function useMutate() {
       try {
         const result = await request;
 
+        // The caller's own cache first — it is what the screen in front of the
+        // user is reading — then the shared dataset behind it.
+        await options.refresh?.();
         await refreshDataset();
         if (options.refreshTracking) await refreshTracking();
 

@@ -7,10 +7,8 @@ import {
   AssetDocument,
   AssetGroup,
   Certification,
-  ChecklistTemplate,
   CycleCount,
   ForecastSeries,
-  Inspection,
   Integration,
   MovementTrail,
   PmSchedule,
@@ -26,22 +24,18 @@ import { uploadDocumentSchema } from '../validators/document.validator.js';
 import {
   createApprovalWorkflowSchema,
   createAiModelSchema,
-  createChecklistTemplateSchema,
   createIntegrationSchema,
   createReportSubscriptionSchema,
   updateAiModelSchema,
   updateApprovalWorkflowSchema,
   updateReportSubscriptionSchema,
-  updateChecklistTemplateSchema,
   updateIntegrationSchema,
 } from '../validators/configuration.validator.js';
 import {
   createCertificationSchema,
   createCycleCountSchema,
-  createInspectionSchema,
   updateCertificationSchema,
   updateCycleCountSchema,
-  updateInspectionSchema,
 } from '../validators/compliance.validator.js';
 import { createPmScheduleSchema, updatePmScheduleSchema } from '../validators/pm.validator.js';
 import { idParamSchema } from '../validators/common.js';
@@ -128,9 +122,8 @@ router.post('/pm-schedules/run-automation', requireModule('maintenance'), pmCont
 // Inspections, certifications and cycle counts were read-only: a compliance
 // programme that could be displayed but never run. See compliance.service.ts.
 const comp = requireModule('compliance', 'maintenance');
-router.post('/inspections', comp, validate({ body: createInspectionSchema }), complianceController.createInspection);
-router.patch('/inspections/:id', comp, validate({ params: idParamSchema, body: updateInspectionSchema }), complianceController.updateInspection);
-router.delete('/inspections/:id', comp, validate({ params: idParamSchema }), complianceController.removeInspection);
+// Inspections moved to inspection.routes.ts when Inspections & Checklists became
+// one module with templates, typed checkpoints and server-side grading.
 
 router.post('/certifications', comp, validate({ body: createCertificationSchema }), complianceController.createCertification);
 router.patch('/certifications/:id', comp, validate({ params: idParamSchema, body: updateCertificationSchema }), complianceController.updateCertification);
@@ -147,16 +140,6 @@ router.get('/field/queue', requireModule('maintenance', 'assets'), fieldworkCont
 router.get('/field/queue/all', requireModule('maintenance', 'assets'), fieldworkController.allWork);
 router.post('/field/scan/:id', requireModule('assets'), validate({ params: idParamSchema }), fieldworkController.scan);
 router.get('/pm-schedules/:id', requireModule('maintenance'), pm.getOne);
-
-const inspections = createResource(Inspection, {
-  label: 'Inspection',
-  filters: ['assetId', 'status'],
-  sortable: ['dueDate', 'title', 'status'],
-  defaultSort: 'dueDate',
-  text: true,
-});
-router.get('/inspections', requireModule('maintenance'), inspections.validateQuery, inspections.list);
-router.get('/inspections/:id', requireModule('maintenance'), inspections.getOne);
 
 // ── AI / MLOps ───────────────────────────────────────────────────────────────
 // Writable: the registry records models that exist elsewhere, and a registry
@@ -321,25 +304,9 @@ router.patch('/approval-workflows/:id', admin, validate({ params: idParamSchema 
 router.delete('/approval-workflows/:id', admin, validate({ params: idParamSchema }), workflows.remove);
 
 // ── Checklist library ────────────────────────────────────────────────────────
-// The list is hand-written because it joins usage counts; the writes are plain.
-const checklists = createResource(ChecklistTemplate, {
-  label: 'Checklist template',
-  filters: ['category'],
-  sortable: ['name', 'category'],
-  defaultSort: 'name',
-  paginated: false,
-  writable: {
-    create: createChecklistTemplateSchema,
-    update: updateChecklistTemplateSchema,
-    idSequence: ['checklistTemplate', 'TPLC'],
-    timestamps: { createdAt: 'createdAt', updatedAt: 'updatedAt' },
-    audit: { action: 'checklist_template', category: 'Configuration' },
-  },
-});
-const maint = requireModule('maintenance');
-router.get('/checklist-templates', maint, configurationController.listChecklistTemplates);
-router.post('/checklist-templates', maint, checklists.validateCreate, checklists.create);
-router.patch('/checklist-templates/:id', maint, validate({ params: idParamSchema }), checklists.validateUpdate, checklists.update);
-router.delete('/checklist-templates/:id', maint, validate({ params: idParamSchema }), checklists.remove);
+// Removed: a checklist *is* an inspection template. Both now live at
+// `/inspection-templates` (inspection.routes.ts), where a checkpoint carries a
+// type, a required flag and a failure rule — none of which a `string[]` could
+// express.
 
 export default router;

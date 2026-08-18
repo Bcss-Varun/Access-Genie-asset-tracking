@@ -58,7 +58,7 @@ export function Donut({
     <div className={cn('flex w-full min-w-0 flex-col items-center gap-4 sm:flex-row sm:items-center', className)}>
       <svg viewBox="0 0 160 160" className="h-36 w-36 shrink-0 -rotate-90" role="img" aria-labelledby={titleId}>
         <title id={titleId}>{totalLabel}</title>
-        <circle cx="80" cy="80" r={R} fill="none" stroke="#f1f5f9" strokeWidth="22" />
+        <circle cx="80" cy="80" r={R} fill="none" className="stroke-current text-slate-100" strokeWidth="22" />
         {arcs.map((arc) => (
           <circle
             key={arc.label}
@@ -77,10 +77,10 @@ export function Donut({
           />
         ))}
         <g className="rotate-90" style={{ transformOrigin: '80px 80px' }}>
-          <text x="80" y="76" textAnchor="middle" className="fill-slate-900 text-[20px] font-bold">
+          <text x="80" y="76" textAnchor="middle" className="fill-current text-slate-900 text-[20px] font-bold">
             {shown.toLocaleString('en-IN')}
           </text>
-          <text x="80" y="94" textAnchor="middle" className="fill-slate-400 text-[9px]">
+          <text x="80" y="94" textAnchor="middle" className="fill-current text-slate-400 text-[9px]">
             {totalLabel}
           </text>
         </g>

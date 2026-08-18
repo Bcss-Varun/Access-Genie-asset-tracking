@@ -2,7 +2,6 @@ import type {
   AiModel,
   ApprovalWorkflow,
   Backup,
-  ChecklistTemplate,
   Integration,
   OrgSettings,
   Passkey,
@@ -45,14 +44,7 @@ export const workflowsApi = {
   remove: (id: string) => apiDelete(`/approval-workflows/${id}`),
 };
 
-export const checklistTemplatesApi = {
-  list: () => apiGet<ChecklistTemplate[]>('/checklist-templates'),
-  create: (body: { name: string; category?: string; icon?: string; description?: string; items: string[] }) =>
-    apiPost<ChecklistTemplate>('/checklist-templates', body),
-  update: (id: string, body: Partial<{ name: string; category: string; icon: string; description: string; items: string[] }>) =>
-    apiPatch<ChecklistTemplate>(`/checklist-templates/${id}`, body),
-  remove: (id: string) => apiDelete(`/checklist-templates/${id}`),
-};
+// Checklist templates are inspection templates now — see api/inspections.ts.
 
 export const subscriptionsApi = {
   create: (body: { reportId: string; cadence: SubscriptionCadence; format?: string; recipients: string[] }) =>

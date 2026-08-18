@@ -40,7 +40,10 @@ export default function AnomalyPage() {
       maintenanceApi.create({
         title: `Investigate ${a.metric} anomaly`,
         assetId: a.assetId,
-        type: 'Predictive',
+        // A person reviewed the anomaly and decided to act, which is a manual
+        // corrective order. Predictive raising is parked for this phase.
+        type: 'Corrective',
+        source: 'Manual',
         priority: a.severity === 'Critical' ? 'Critical' : a.severity === 'Warning' ? 'High' : 'Medium',
         assignedTo: 'Unassigned',
         // A week: long enough to plan around, short enough that the evidence
@@ -51,7 +54,6 @@ export default function AnomalyPage() {
           `Metric: ${a.metric}. Z-score ${a.zScore}, detector confidence ${a.confidence}%. ` +
           `Detected ${new Date(a.detectedAt).toISOString()} by ${session.user.name}'s review.`,
         estimatedHours: 2,
-        aiGenerated: true,
         checklist: [
           { label: `Confirm the ${a.metric} reading against the device`, done: false },
           { label: 'Decide whether it is a fault or a false positive', done: false },

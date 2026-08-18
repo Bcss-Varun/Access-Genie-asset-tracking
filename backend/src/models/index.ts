@@ -34,11 +34,22 @@ export {
 
 // ── Maintenance ──────────────────────────────────────────────────────────────
 export { WorkOrder, type WorkOrderDoc } from './WorkOrder.js';
-export { PmSchedule, Inspection, type PmScheduleDoc, type InspectionDoc } from './maintenance.js';
+export { PmSchedule, type PmScheduleDoc } from './maintenance.js';
+export {
+  Inspection,
+  InspectionTemplate,
+  type InspectionDoc,
+  type InspectionTemplateDoc,
+  type InspectionResponseSub,
+  type InspectionCheckpointSub,
+} from './inspection.js';
 
 // ── Alerts ───────────────────────────────────────────────────────────────────
 export { Alert, OPEN_ALERT_STATUSES, type AlertDoc } from './Alert.js';
 export { AlertRule, type AlertRuleDoc } from './AlertRule.js';
+// Separate from `Alert` on purpose: that one records an event that happened,
+// this one a failure that has not. Different lifecycle, different evidence.
+export { PredictiveAlert, type PredictiveAlertDoc, type PredictiveSignalSub } from './predictiveAlert.js';
 
 // ── AI ───────────────────────────────────────────────────────────────────────
 export { Insight, type InsightDoc } from './Insight.js';
@@ -197,13 +208,11 @@ export {
 
 // ── Organisation configuration ───────────────────────────────────────────────
 export {
-  ChecklistTemplate,
   ReportSubscription,
   OrgSettings,
   ExportArtifact,
   RoleGrant,
   SUBSCRIPTION_CADENCES,
-  type ChecklistTemplateDoc,
   type ReportSubscriptionDoc,
   type OrgSettingsDoc,
   type ExportArtifactDoc,

@@ -80,7 +80,10 @@ export default function SchedulingPage() {
     setWorkOrders((prev) => prev.map((w) => (w.id === woId ? { ...w, assignedTo: tech, status: nextStatus ?? w.status } : w)));
     setSelectedWoId(null);
 
-    await run(maintenanceApi.update(woId, { assignedTo: tech, status: nextStatus }), {
+    // The assign action, not a PATCH: it checks the name against the roster and
+    // advances New → Assigned itself, so the optimistic `nextStatus` above is a
+    // prediction of what the server does rather than an instruction to it.
+    await run(maintenanceApi.assign(woId, tech), {
       success: 'Work order assigned',
       successDetail: `${woId} → ${tech}`,
       describe: 'assign that work order',

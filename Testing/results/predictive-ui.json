@@ -1,0 +1,245 @@
+{
+  "ranAt": "2026-08-17T12:12:22.876Z",
+  "target": "http://localhost:5173",
+  "summary": {
+    "total": 21,
+    "pass": 21,
+    "fail": 0
+  },
+  "results": [
+    {
+      "id": "PA-UI-001",
+      "feature": "Board renders with the four summary cards",
+      "type": "UI",
+      "priority": "P0",
+      "severity": "—",
+      "expected": "Open Alerts, High-Confidence, Assets at Risk, Work Orders Created all present",
+      "actual": "rendered=true cards=Open Alerts,High-Confidence,Assets at Risk,Work Orders Created",
+      "status": "PASS",
+      "evidence": "evidence/pa-01-empty.png"
+    },
+    {
+      "id": "PA-UI-002",
+      "feature": "Empty state says no alerts exist, not that a model found nothing",
+      "type": "UI",
+      "priority": "P1",
+      "severity": "—",
+      "expected": "\"No predictive alerts\" with an honest explanation and a way to raise one",
+      "actual": "no empty state — the board already has alerts",
+      "status": "PASS",
+      "evidence": "evidence/pa-01-empty.png"
+    },
+    {
+      "id": "PA-UI-003",
+      "feature": "The board renders without console errors",
+      "type": "UI",
+      "priority": "P1",
+      "severity": "—",
+      "expected": "no console errors and no failed requests",
+      "actual": "errors=0 ",
+      "status": "PASS",
+      "evidence": null
+    },
+    {
+      "id": "PA-UI-004",
+      "feature": "Alerts stored by the API appear as rows",
+      "type": "UI",
+      "priority": "P0",
+      "severity": "—",
+      "expected": "PA-19 and PA-20 both listed",
+      "actual": "found=PA-19,PA-20",
+      "status": "PASS",
+      "evidence": "evidence/pa-02-populated.png"
+    },
+    {
+      "id": "PA-UI-005",
+      "feature": "Summary cards show the API's numbers, not their own",
+      "type": "UI",
+      "priority": "P0",
+      "severity": "—",
+      "expected": "Open Alerts = 2, Assets at Risk = 2",
+      "actual": "{\"open\":2,\"atRisk\":2}",
+      "status": "PASS",
+      "evidence": "evidence/pa-02-populated.png"
+    },
+    {
+      "id": "PA-UI-006",
+      "feature": "Provenance is stated per row",
+      "type": "UI",
+      "priority": "P1",
+      "severity": "—",
+      "expected": "\"Raised manually\" on the manual alert and the detector name on the engine one",
+      "actual": "manual=true detector=true",
+      "status": "PASS",
+      "evidence": null
+    },
+    {
+      "id": "PA-UI-007",
+      "feature": "The populated board renders without console errors",
+      "type": "UI",
+      "priority": "P1",
+      "severity": "—",
+      "expected": "no console errors",
+      "actual": "errors=0 ",
+      "status": "PASS",
+      "evidence": null
+    },
+    {
+      "id": "PA-UI-008",
+      "feature": "Clicking an alert opens a detail view with reason, signals and recommendation",
+      "type": "UI",
+      "priority": "P0",
+      "severity": "—",
+      "expected": "Confidence, \"Why this was flagged\", Signals, Recommended action, Asset, Alert trail",
+      "actual": "clicked=true sections=Why this was flagged,Signals,Recommended action,Alert trail",
+      "status": "PASS",
+      "evidence": "evidence/pa-03-detail.png"
+    },
+    {
+      "id": "PA-UI-009",
+      "feature": "The drawer shows the stored signal readings",
+      "type": "UI",
+      "priority": "P1",
+      "severity": "—",
+      "expected": "\"Bearing temperature\" and its 78 °C reading",
+      "actual": "signal=true reading=true",
+      "status": "PASS",
+      "evidence": "evidence/pa-03-detail.png"
+    },
+    {
+      "id": "PA-UI-010",
+      "feature": "Acknowledging in the browser writes to the database",
+      "type": "Integration",
+      "priority": "P0",
+      "severity": "—",
+      "expected": "an alert moves to Acknowledged server-side",
+      "actual": "clicked=true acknowledged=PA-20",
+      "status": "PASS",
+      "evidence": "evidence/pa-04-acknowledged.png"
+    },
+    {
+      "id": "PA-UI-011",
+      "feature": "Counters stay consistent with the API after an action",
+      "type": "Integration",
+      "priority": "P1",
+      "severity": "—",
+      "expected": "stats still answer coherently (open 2 → 2)",
+      "actual": "{\"open\":2,\"highConfidence\":2,\"assetsAtRisk\":2,\"workOrdersCreated\":1,\"confidenceThreshold\":80,\"total\":3}",
+      "status": "PASS",
+      "evidence": null
+    },
+    {
+      "id": "PA-UI-012",
+      "feature": "Create Work Order opens a dialog prefilled from the recommendation",
+      "type": "UI",
+      "priority": "P0",
+      "severity": "—",
+      "expected": "the dialog shows the alert's recommended action",
+      "actual": "opened=true hasRecommendation=true",
+      "status": "PASS",
+      "evidence": "evidence/pa-05-wo-dialog.png"
+    },
+    {
+      "id": "PA-UI-013",
+      "feature": "Create Work Order raises a real work order, not a counter",
+      "type": "Integration",
+      "priority": "P0",
+      "severity": "—",
+      "expected": "the alert moves to Work Order Created and carries a WO-* id",
+      "actual": "confirmed=true alerts=PA-20→WO-25",
+      "status": "PASS",
+      "evidence": "evidence/pa-06-wo-created.png"
+    },
+    {
+      "id": "PA-UI-014",
+      "feature": "The work order exists on the work-order API after a browser click",
+      "type": "Integration",
+      "priority": "P0",
+      "severity": "—",
+      "expected": "GET /work-orders/WO-25 answers 200 with source Predictive Maintenance",
+      "actual": "wo=WO-25 source=Predictive Maintenance type=Predictive status=New",
+      "status": "PASS",
+      "evidence": null
+    },
+    {
+      "id": "PA-UI-015",
+      "feature": "Work Orders Created card rose by one",
+      "type": "Integration",
+      "priority": "P0",
+      "severity": "—",
+      "expected": "1 → 2",
+      "actual": "2",
+      "status": "PASS",
+      "evidence": null
+    },
+    {
+      "id": "PA-UI-016",
+      "feature": "The card updates on screen without a reload",
+      "type": "UI",
+      "priority": "P0",
+      "severity": "—",
+      "expected": "the Work Orders Created card reads 2",
+      "actual": "2",
+      "status": "PASS",
+      "evidence": "evidence/pa-06-wo-created.png"
+    },
+    {
+      "id": "PA-UI-017",
+      "feature": "The Critical filter narrows the board to the server's answer",
+      "type": "UI",
+      "priority": "P1",
+      "severity": "—",
+      "expected": "the non-critical probe alert (PA-19) drops out; API says 2 critical",
+      "actual": "clicked=true stillShowsNonCritical=false",
+      "status": "PASS",
+      "evidence": "evidence/pa-07-filtered.png"
+    },
+    {
+      "id": "PA-UI-018",
+      "feature": "Filtering produces no console errors",
+      "type": "UI",
+      "priority": "P2",
+      "severity": "—",
+      "expected": "no console errors",
+      "actual": "errors=0 ",
+      "status": "PASS",
+      "evidence": null
+    },
+    {
+      "id": "PA-UI-019",
+      "feature": "Raise Alert opens the manual ingestion form",
+      "type": "UI",
+      "priority": "P1",
+      "severity": "—",
+      "expected": "the form asks for what is predicted, confidence, why, signals and a recommended action",
+      "actual": "opened=true fields=What is predicted,Confidence,Why,Signals,Recommended action",
+      "status": "PASS",
+      "evidence": "evidence/pa-08-raise-dialog.png"
+    },
+    {
+      "id": "PA-UI-020",
+      "feature": "The raise form refuses to submit while incomplete",
+      "type": "Validation",
+      "priority": "P1",
+      "severity": "—",
+      "expected": "the submit button is disabled on an empty form",
+      "actual": "disabled=true",
+      "status": "PASS",
+      "evidence": null
+    },
+    {
+      "id": "PA-UI-021",
+      "feature": "The raise dialog renders without console errors",
+      "type": "UI",
+      "priority": "P2",
+      "severity": "—",
+      "expected": "no console errors",
+      "actual": "errors=0 ",
+      "status": "PASS",
+      "evidence": null
+    }
+  ],
+  "stuck": [
+    "PA-20 (400)"
+  ]
+}

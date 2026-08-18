@@ -9,21 +9,7 @@ import * as service from '../services/compliance.service.js';
 const audit = (req: Request, action: string, target: string) =>
   recordAudit(req, { action, target, category: 'Compliance' });
 
-export const createInspection = asyncHandler(async (req: Request, res: Response) => {
-  const created = await service.createInspection(req.body);
-  audit(req, 'inspection.create', created._id);
-  sendData(res, created, 201);
-});
-export const updateInspection = asyncHandler(async (req: Request, res: Response) => {
-  const updated = await service.updateInspection(req.params.id as string, req.body);
-  audit(req, 'inspection.update', req.params.id as string);
-  sendData(res, updated);
-});
-export const removeInspection = asyncHandler(async (req: Request, res: Response) => {
-  await service.deleteInspection(req.params.id as string);
-  audit(req, 'inspection.delete', req.params.id as string);
-  res.status(204).end();
-});
+// Inspection handlers moved to controllers/inspection.controller.ts.
 
 export const createCertification = asyncHandler(async (req: Request, res: Response) => {
   const created = await service.createCertification(req.body);

@@ -51,10 +51,10 @@ export default function ComplianceReportsPage() {
         Asset: i.assetName,
         'Asset ID': i.assetId,
         Item: i.title,
-        Authority: i.inspector || 'Unassigned',
+        Authority: i.assignedTo || 'Unassigned',
         Status: i.status,
         Issued: '',
-        Due: i.dueDate.slice(0, 10),
+        Due: i.scheduledFor.slice(0, 10),
       })),
       ...allAuditLog.slice(0, 500).map((a) => ({
         Section: 'Audit trail',

@@ -1,5 +1,5 @@
 {
-  "ranAt": "2026-08-07T13:54:31.066Z",
+  "ranAt": "2026-08-17T12:13:24.978Z",
   "summary": {
     "total": 70,
     "pass": 69,
@@ -7,17 +7,17 @@
   },
   "teardown": {
     "removed": [
-      "AST-168",
-      "AST-167",
-      "AST-166",
-      "AST-165",
-      "AST-164",
-      "AST-163",
-      "AST-162",
-      "AST-161",
-      "AST-159",
-      "AST-158",
-      "AST-157"
+      "AST-14",
+      "AST-13",
+      "AST-12",
+      "AST-11",
+      "AST-10",
+      "AST-9",
+      "AST-8",
+      "AST-7",
+      "AST-5",
+      "AST-4",
+      "AST-3"
     ],
     "stuck": []
   },
@@ -40,7 +40,7 @@
       "priority": "P2",
       "severity": "—",
       "expected": "200 with total, portfolioValue, avgHealth, byStatus[], byCategory[]",
-      "actual": "200 {\"total\":2,\"portfolioValue\":120000,\"avgHealth\":100,\"avgUtilization\":3,\"byStatus\":[{\"status\":\"Staging\",\"count\":2}],\"byCategory\":[{\"category\":\"Compute\",\"count\":2,",
+      "actual": "200 {\"total\":2,\"portfolioValue\":350000,\"avgHealth\":85,\"avgUtilization\":3,\"byStatus\":[{\"status\":\"Active\",\"count\":2}],\"byCategory\":[{\"category\":\"Compute\",\"count\":2,\"v",
       "status": "PASS",
       "evidence": null
     },
@@ -51,7 +51,7 @@
       "priority": "P0",
       "severity": "—",
       "expected": "401 with error envelope",
-      "actual": "401 {\"success\":false,\"error\":{\"code\":\"UNAUTHORIZED\",\"message\":\"Missing bearer token\"},\"requestId\":\"4d346b9b-27a9-490c-916f-8",
+      "actual": "401 {\"success\":false,\"error\":{\"code\":\"UNAUTHORIZED\",\"message\":\"Missing bearer token\"},\"requestId\":\"7162507b-0530-4a2c-897e-6",
       "status": "PASS",
       "evidence": null
     },
@@ -95,7 +95,7 @@
       "priority": "P0",
       "severity": "—",
       "expected": "201, id matches /^AST-\\d+$/",
-      "actual": "201 id=AST-157",
+      "actual": "201 id=AST-3",
       "status": "PASS",
       "evidence": null
     },
@@ -513,7 +513,7 @@
       "priority": "P1",
       "severity": "—",
       "expected": "asset, workOrders[], activity[], insights[], custody[]",
-      "actual": "200 keys=asset,workOrders,activity,insights,custody",
+      "actual": "200 keys=asset,workOrders,activity,insights,custody,lifecycleHistory",
       "status": "PASS",
       "evidence": null
     },
@@ -755,7 +755,7 @@
       "priority": "P2",
       "severity": "—",
       "expected": "< 2000 ms",
-      "actual": "245 ms",
+      "actual": "250 ms",
       "status": "PASS",
       "evidence": null
     },
@@ -766,7 +766,7 @@
       "priority": "P2",
       "severity": "—",
       "expected": "< 10000 ms for 10 concurrent reads",
-      "actual": "2363 ms",
+      "actual": "2341 ms",
       "status": "PASS",
       "evidence": null
     },

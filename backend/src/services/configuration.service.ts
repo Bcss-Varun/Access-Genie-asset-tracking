@@ -1,7 +1,6 @@
 import mongoose from 'mongoose';
 import {
   Backup,
-  ChecklistTemplate,
   OrgSettings,
   Passkey,
   Report,
@@ -223,17 +222,9 @@ export async function requestRestore(id: string): Promise<never> {
   );
 }
 
-// ── Checklist templates ──────────────────────────────────────────────────────
-/** How many inspections were raised from each template, for the library screen. */
-export async function templateUsage(): Promise<Record<string, number>> {
-  const { Inspection } = await import('../models/index.js');
-  const rows = await Inspection.aggregate<{ _id: string; count: number }>([
-    { $group: { _id: '$template', count: { $sum: 1 } } },
-  ]);
-  return Object.fromEntries(rows.map((r) => [r._id, r.count]));
-}
-
-export { ChecklistTemplate };
+// The checklist library moved to services/inspection.service.ts — see
+// `listTemplates`, which joins the same usage count off `Inspection.templateId`
+// rather than off a template *name*, so renaming one no longer zeroes it.
 
 // ── Webhook delivery ─────────────────────────────────────────────────────────
 export interface WebhookTestResult {

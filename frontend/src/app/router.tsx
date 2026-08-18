@@ -80,6 +80,26 @@ export const router = createBrowserRouter([
               { path: 'checkinout', element: <Navigate to="/asset-movement" replace /> },
               { path: 'operations/transfers', element: <Navigate to="/asset-movement" replace /> },
 
+              // Maintenance Calendar and Spares Consumption are removed, not
+              // pending. Both were read-only views over data another screen
+              // already owns — the calendar re-rendered the work-order list by
+              // due date, and consumption *invented* its figures from each
+              // part's SKU rather than reading any stock movement. Neither had
+              // a route, a service or a collection behind it.
+              //
+              // They forward instead of falling through to the catch-all, which
+              // would tell anyone holding an old link that the feature is "on
+              // the roadmap" — the opposite of what was decided.
+              { path: 'maintenance/calendar', element: <Navigate to="/maintenance" replace /> },
+              { path: 'consumption', element: <Navigate to="/inventory" replace /> },
+
+              // Checklists merged into Inspections & Checklists — a checklist is
+              // the template an inspection runs from, so the library now lives
+              // in that module's Templates view rather than on a screen of its
+              // own. Forwards so old links land there instead of on the
+              // "coming soon" catch-all.
+              { path: 'checklists', element: <Navigate to="/inspections" replace /> },
+
               // Scan-to-open. Declared here rather than in the generated route
               // list because it is a contract with something physical — the URL
               // is printed on labels already in the field, so it must not move

@@ -6,7 +6,9 @@ import { listQuerySchema } from '../validators/common.js';
 import authRoutes from './auth.routes.js';
 import assetRoutes from './asset.routes.js';
 import workOrderRoutes from './workOrder.routes.js';
+import inspectionRoutes from './inspection.routes.js';
 import alertRoutes from './alert.routes.js';
+import predictiveAlertRoutes from './predictiveAlert.routes.js';
 import trackingRoutes from './tracking.routes.js';
 import userRoutes from './user.routes.js';
 import registryRoutes from './registry.routes.js';
@@ -16,6 +18,7 @@ import platformRoutes from './platform.routes.js';
 import technicianRoutes from './technician.routes.js';
 
 import * as dashboardController from '../controllers/dashboard.controller.js';
+import * as maintenanceDashboardController from '../controllers/maintenanceDashboard.controller.js';
 import * as insightController from '../controllers/insight.controller.js';
 import * as catalogController from '../controllers/catalog.controller.js';
 import * as preferenceController from '../controllers/preference.controller.js';
@@ -34,6 +37,7 @@ import {
   updateWarehouseSchema,
 } from '../validators/inventory.validator.js';
 import { createScopeSchema, updateScopeSchema } from '../validators/scope.validator.js';
+import { maintenanceDashboardQuerySchema } from '../validators/maintenanceDashboard.validator.js';
 import {
   renameViewSchema,
   savedViewSchema,
@@ -61,6 +65,15 @@ router.use(requireAuth);
 
 // ── Workspace ────────────────────────────────────────────────────────────────
 router.get('/dashboard/summary', requireModule('workspace'), dashboardController.summary);
+// The organisation-wide maintenance read. Gated on `maintenance` — the same
+// grant the modules it aggregates are behind, so it cannot show a role figures
+// it would not be allowed to open the records for.
+router.get(
+  '/maintenance-dashboard',
+  requireModule('maintenance'),
+  validate({ query: maintenanceDashboardQuerySchema }),
+  maintenanceDashboardController.dashboard,
+);
 // ── Org & facilities ─────────────────────────────────────────────────────────
 // Reads are ungated: the scope picker is part of the chrome and every screen
 // that shows a location needs the tree. Writes are `admin` — the hierarchy is
@@ -104,7 +117,13 @@ router.get('/intelligence/explain/:id', requireModule('ai'), validate({ params: 
 // ── Core modules ─────────────────────────────────────────────────────────────
 router.use('/assets', assetRoutes);
 router.use('/work-orders', workOrderRoutes);
+// Inspections & Checklists. Mounted at the root because it owns two top-level
+// resources — `/inspection-templates` and `/inspections` — that are one module.
+router.use('/', inspectionRoutes);
 router.use('/alerts', alertRoutes);
+// Distinct from `/alerts`: that is the operational alert centre (something
+// happened), this is the Predictive Maintenance board (something is going to).
+router.use('/predictive-alerts', predictiveAlertRoutes);
 router.use('/tracking', trackingRoutes);
 router.use('/users', userRoutes);
 router.use('/labels', labellingRoutes);

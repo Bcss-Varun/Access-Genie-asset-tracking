@@ -508,7 +508,10 @@ export default function AssetProfilePage() {
         title: `Health check — ${asset.name}`,
         assetId: asset.id,
         priority: asset.healthScore < 50 ? 'Critical' : 'Medium',
-        type: 'Predictive',
+        // Somebody pressed a button, so it is manual corrective work.
+        // `Predictive` is parked for this phase and the server refuses it.
+        type: 'Corrective',
+        source: 'Manual',
         description: `Raised from the asset profile. Health ${asset.healthScore}, risk ${asset.riskScore ?? 0}.`,
         estimatedHours: 2,
         dueDate: new Date(nowMs() + 3 * 86_400_000).toISOString(),

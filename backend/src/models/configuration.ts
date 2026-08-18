@@ -4,51 +4,17 @@ import { baseSchemaPlugin } from '../utils/mongoose.js';
 /**
  * Things the organisation configures about itself.
  *
- * Three collections that had screens and no storage: a checklist library that
- * existed only as a hard-coded map, report subscriptions that were listed but
- * could never be created, and branding that "saved" into a toast.
+ * Collections that had screens and no storage: report subscriptions that were
+ * listed but could never be created, and branding that "saved" into a toast.
  *
  * They share a file for the same reason the platform records do — none has
  * behaviour beyond being written and read back.
- */
-
-// ── Checklist templates ──────────────────────────────────────────────────────
-/**
- * The reusable body of an inspection.
  *
- * Inspections already carry their own `items`, which is what made the template
- * library look real: it was derived by scanning existing inspections. That
- * derivation cannot be edited, and it cannot produce a template for work nobody
- * has scheduled yet — which is precisely when you want one.
+ * The checklist library used to live here too. It is now `InspectionTemplate`
+ * in models/inspection.ts: a checklist *is* an inspection template, and keeping
+ * two collections for one idea meant a checklist you could edit and an
+ * inspection that ignored it.
  */
-export interface ChecklistTemplateDoc {
-  _id: string; // TPLC-1
-  name: string;
-  category: string;
-  icon: string;
-  description: string;
-  /** Ordered — a checklist is a sequence of checks, not a set. */
-  items: string[];
-  createdAt: Date;
-  updatedAt: Date;
-}
-
-const checklistTemplateSchema = new Schema<ChecklistTemplateDoc>(
-  {
-    _id: { type: String, required: true },
-    name: { type: String, required: true, trim: true },
-    category: { type: String, required: true, default: 'General', index: true },
-    icon: { type: String, default: '📋' },
-    description: { type: String, default: '' },
-    items: { type: [String], default: [] },
-    createdAt: { type: Date, required: true },
-    updatedAt: { type: Date, required: true },
-  },
-  { versionKey: false },
-);
-
-checklistTemplateSchema.plugin(baseSchemaPlugin);
-export const ChecklistTemplate = model<ChecklistTemplateDoc>('ChecklistTemplate', checklistTemplateSchema);
 
 // ── Report subscriptions ─────────────────────────────────────────────────────
 export const SUBSCRIPTION_CADENCES = ['Daily', 'Weekly', 'Monthly', 'Quarterly'] as const;
