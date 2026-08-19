@@ -1,11 +1,20 @@
 import { useState } from 'react';
-import type { ApprovalWorkflow, WorkflowStep } from '@access-genie/shared';
+import {
+  APPROVAL_TRIGGERS,
+  APPROVAL_TRIGGER_LABELS,
+  ROLES,
+  WIRED_TRIGGERS,
+  type ApprovalTrigger,
+  type ApprovalWorkflow,
+  type RoleId,
+  type WorkflowStatus,
+  type WorkflowStep,
+} from '@access-genie/shared';
 import { FormDialog, Field, FieldRow, Select, TextInput } from '@/components/ui/FormDialog';
 import { Button } from '@/components/ui/Button';
 import { useMutate } from '@/api/mutate';
 import { workflowsApi } from '@/api/configuration';
-import { allTeams } from '@/lib/dataset';
-import { allUsers, roles } from '@/lib/rbac';
+import { allUsers } from '@/lib/rbac';
 
 /**
  * The approval-chain builder.
@@ -19,40 +28,68 @@ import { allUsers, roles } from '@/lib/rbac';
  * free-hand, because a chain routed to a name nobody recognises stalls silently.
  */
 
-/** The events worth gating. Each maps to an action that already exists. */
-const TRIGGERS = [
-  'Asset transfer requested',
-  'Asset disposal requested',
-  'Purchase order raised above threshold',
-  'Work order marked complete',
-  'Asset write-off',
-  'Privileged access granted',
-  'Cycle count variance recorded',
-];
+/**
+ * The events worth gating.
+ *
+ * A closed list taken from the shared contract rather than free text, because
+ * the server only fires a workflow whose trigger it recognises. The previous
+ * version offered seven English sentences, none of which any service consulted —
+ * which is precisely how a workflow feature ends up being configuration that
+ * affects nothing.
+ */
 
+/**
+ * Who a step can be routed to: any role, or a specific person.
+ *
+ * Roles first and prefixed, because a step pinned to one individual is the
+ * exception — it stops working the day they leave.
+ */
 function approverOptions(): { value: string; label: string }[] {
   return [
-    ...allTeams.map((t) => ({ value: t.name, label: `${t.emoji} ${t.name} (team)` })),
-    ...allUsers.map((u) => ({ value: u.name, label: `${u.name} — ${roles[u.roleId]?.name ?? u.roleId}` })),
+    ...Object.values(ROLES).map((r) => ({ value: `role:${r.id}`, label: `${r.name} (role)` })),
+    ...allUsers.map((u) => ({ value: `user:${u.id}`, label: `${u.name} — ${ROLES[u.roleId]?.name ?? u.roleId}` })),
   ];
+}
+
+/** The picker's value for a step, derived from whichever approver it carries. */
+function approverValue(step: WorkflowStep): string {
+  if (step.approverUserId) return `user:${step.approverUserId}`;
+  if (step.approverRole) return `role:${step.approverRole}`;
+  return '';
+}
+
+/** Split a picker value back into the one field the server expects. */
+function applyApprover(value: string): Pick<WorkflowStep, 'approverRole' | 'approverUserId'> {
+  if (value.startsWith('user:')) return { approverUserId: value.slice(5), approverRole: undefined };
+  if (value.startsWith('role:')) return { approverRole: value.slice(5) as RoleId, approverUserId: undefined };
+  return {};
 }
 
 export function WorkflowDialog({ existing, onClose }: { existing?: ApprovalWorkflow; onClose: () => void }) {
   const { run, isPending } = useMutate();
   const approvers = approverOptions();
-  const firstApprover = approvers[0]?.value ?? 'Unassigned';
+  const firstApprover = approvers[0]?.value ?? '';
 
   const [name, setName] = useState(existing?.name ?? '');
-  const [trigger, setTrigger] = useState(existing?.trigger ?? TRIGGERS[0]);
-  const [status, setStatus] = useState<'Active' | 'Draft'>(existing?.status ?? 'Draft');
+  const [description, setDescription] = useState(existing?.description ?? '');
+  const [trigger, setTrigger] = useState<ApprovalTrigger>(
+    (existing?.trigger as ApprovalTrigger) ?? APPROVAL_TRIGGERS[0],
+  );
+  const [status, setStatus] = useState<WorkflowStatus>(existing?.status ?? 'Draft');
   const [steps, setSteps] = useState<WorkflowStep[]>(
-    existing?.steps?.length ? existing.steps : [{ name: 'Manager approval', approver: firstApprover }],
+    existing?.steps?.length
+      ? existing.steps
+      : [{ order: 1, name: 'Manager approval', approver: '', ...applyApprover(firstApprover) }],
   );
 
   const patchStep = (index: number, patch: Partial<WorkflowStep>) =>
     setSteps((prev) => prev.map((s, i) => (i === index ? { ...s, ...patch } : s)));
 
-  const addStep = () => setSteps((prev) => [...prev, { name: `Step ${prev.length + 1}`, approver: firstApprover }]);
+  const addStep = () =>
+    setSteps((prev) => [
+      ...prev,
+      { order: prev.length + 1, name: `Step ${prev.length + 1}`, approver: '', ...applyApprover(firstApprover) },
+    ]);
   const removeStep = (index: number) => setSteps((prev) => prev.filter((_, i) => i !== index));
 
   /** Swap with the neighbour — the only reordering a short list needs. */
@@ -66,7 +103,15 @@ export function WorkflowDialog({ existing, onClose }: { existing?: ApprovalWorkf
     });
 
   const submit = async () => {
-    const body = { name: name.trim(), trigger, steps, status };
+    const body = {
+      name: name.trim(),
+      description: description.trim(),
+      trigger,
+      status,
+      // `order` is the position in this list. Renumbered on save rather than
+      // maintained on every move, so the arrows only have to reorder an array.
+      steps: steps.map((step, i) => ({ ...step, order: i + 1 })),
+    };
     const ok = await run(existing ? workflowsApi.update(existing.id, body) : workflowsApi.create(body), {
       success: existing ? 'Workflow saved' : `${name.trim()} created`,
       successDetail: `${steps.length} step${steps.length === 1 ? '' : 's'} · ${status}`,
@@ -75,7 +120,10 @@ export function WorkflowDialog({ existing, onClose }: { existing?: ApprovalWorkf
     if (ok) onClose();
   };
 
-  const valid = name.trim().length >= 2 && steps.length > 0 && steps.every((s) => s.name.trim() && s.approver.trim());
+  const valid =
+    name.trim().length >= 2 &&
+    steps.length > 0 &&
+    steps.every((s) => s.name.trim() && (s.approverRole || s.approverUserId));
 
   return (
     <FormDialog
@@ -96,17 +144,38 @@ export function WorkflowDialog({ existing, onClose }: { existing?: ApprovalWorkf
         <Field label="Status" hint="Draft chains are saved but do not gate anything.">
           <Select
             value={status}
-            onChange={(e) => setStatus(e.target.value as 'Active' | 'Draft')}
+            onChange={(e) => setStatus(e.target.value as WorkflowStatus)}
             options={[
               { value: 'Draft', label: 'Draft' },
+              { value: 'Inactive', label: 'Inactive — switched off' },
               { value: 'Active', label: 'Active — gates the trigger' },
             ]}
           />
         </Field>
       </FieldRow>
 
-      <Field label="Trigger" hint="What has to happen for this chain to start.">
-        <Select value={trigger} onChange={(e) => setTrigger(e.target.value)} options={TRIGGERS.map((t) => ({ value: t, label: t }))} />
+      <Field label="Description" hint="What this chain is for.">
+        <TextInput
+          value={description}
+          onChange={(e) => setDescription(e.target.value)}
+          placeholder="Transfers out of a facility need the facility manager and an org admin."
+        />
+      </Field>
+
+      <Field
+        label="Trigger"
+        hint="The operation this chain gates. Only wired operations raise a real approval today."
+      >
+        <Select
+          value={trigger}
+          onChange={(e) => setTrigger(e.target.value as ApprovalTrigger)}
+          options={APPROVAL_TRIGGERS.map((t) => ({
+            value: t,
+            label: WIRED_TRIGGERS.includes(t)
+              ? APPROVAL_TRIGGER_LABELS[t]
+              : `${APPROVAL_TRIGGER_LABELS[t]} — not wired yet`,
+          }))}
+        />
       </Field>
 
       <div>
@@ -133,7 +202,11 @@ export function WorkflowDialog({ existing, onClose }: { existing?: ApprovalWorkf
 
               <div className="min-w-0 flex-1">
                 <label className="mb-1 block text-[11px] font-semibold uppercase tracking-wide text-slate-400">Approver</label>
-                <Select value={step.approver} onChange={(e) => patchStep(i, { approver: e.target.value })} options={approvers} />
+                <Select
+                  value={approverValue(step)}
+                  onChange={(e) => patchStep(i, applyApprover(e.target.value))}
+                  options={approvers}
+                />
               </div>
 
               <div className="flex shrink-0 items-center gap-0.5 pb-1">
@@ -171,7 +244,7 @@ export function WorkflowDialog({ existing, onClose }: { existing?: ApprovalWorkf
 
         {approvers.length === 0 && (
           <p className="mt-2 rounded-lg bg-amber-50 px-3 py-2 text-xs text-amber-700">
-            There are no people or teams to route to yet. Add a user under Administration ▸ Users first.
+            There is nobody to route to yet. Add a user under Administration ▸ Users first.
           </p>
         )}
       </div>

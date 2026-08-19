@@ -1,102 +1,25 @@
 [
   {
     "id": "WF-01",
-    "name": "High-value asset disposal",
-    "trigger": "Lifecycle stage → Disposal AND bookValue > ₹1 L",
+    "name": "Asset transfer sign-off",
+    "description": "Any asset transfer is released by the facility manager and confirmed by an organisation admin before the asset moves.",
+    "trigger": "asset_transfer",
     "status": "Active",
+    "createdBy": "Seed",
     "steps": [
-      {
-        "name": "Facility Manager review",
-        "approver": "Sneha Iyer"
-      },
-      {
-        "name": "Finance sign-off",
-        "approver": "Ananya Sharma"
-      },
-      {
-        "name": "Data sanitisation evidence",
-        "approver": "Tarun Fernandes"
-      }
+      { "order": 1, "name": "Facility manager release", "approver": "Facility Manager", "approverRole": "facility_manager" },
+      { "order": 2, "name": "Organisation admin confirmation", "approver": "Organization Admin", "approverRole": "org_admin" }
     ]
   },
   {
     "id": "WF-02",
-    "name": "Inter-facility asset transfer",
-    "trigger": "Transfer request across facilities",
+    "name": "Asset disposal sign-off",
+    "description": "Retiring or disposing of an asset needs an organisation admin decision, since it writes the asset out of the estate.",
+    "trigger": "asset_disposal",
     "status": "Active",
+    "createdBy": "Seed",
     "steps": [
-      {
-        "name": "Origin custodian release",
-        "approver": "Custodian on record"
-      },
-      {
-        "name": "Receiving facility accept",
-        "approver": "Sneha Iyer"
-      }
-    ]
-  },
-  {
-    "id": "WF-03",
-    "name": "Purchase order above ₹5 L",
-    "trigger": "PO total > ₹5,00,000",
-    "status": "Active",
-    "steps": [
-      {
-        "name": "Maintenance Manager review",
-        "approver": "Manoj Reddy"
-      },
-      {
-        "name": "Finance approval",
-        "approver": "Ananya Sharma"
-      },
-      {
-        "name": "Org Admin release",
-        "approver": "Raj"
-      }
-    ]
-  },
-  {
-    "id": "WF-04",
-    "name": "Emergency work order override",
-    "trigger": "Priority = Critical AND SLA breach imminent",
-    "status": "Active",
-    "steps": [
-      {
-        "name": "Maintenance Manager approval",
-        "approver": "Manoj Reddy"
-      }
-    ]
-  },
-  {
-    "id": "WF-05",
-    "name": "Missing-asset write-off",
-    "trigger": "Status = Missing for 30 days",
-    "status": "Active",
-    "steps": [
-      {
-        "name": "Security investigation close",
-        "approver": "Tarun Fernandes"
-      },
-      {
-        "name": "Finance write-off posting",
-        "approver": "Ananya Sharma"
-      }
-    ]
-  },
-  {
-    "id": "WF-06",
-    "name": "New device onboarding",
-    "trigger": "Device registered via tag registry",
-    "status": "Draft",
-    "steps": [
-      {
-        "name": "Commissioning checklist",
-        "approver": "Network Team"
-      },
-      {
-        "name": "Facility Manager activation",
-        "approver": "Sneha Iyer"
-      }
+      { "order": 1, "name": "Organisation admin approval", "approver": "Organization Admin", "approverRole": "org_admin" }
     ]
   }
 ]

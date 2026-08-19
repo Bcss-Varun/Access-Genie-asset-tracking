@@ -1,5 +1,6 @@
 import type {
   AiModel,
+  ApprovalTrigger,
   ApprovalWorkflow,
   Backup,
   Integration,
@@ -7,6 +8,7 @@ import type {
   Passkey,
   RetentionPolicy,
   Session,
+  WorkflowStatus,
   WorkflowStep,
 } from '@access-genie/shared';
 import { apiDelete, apiGet, apiPatch, apiPost } from '@/api/client';
@@ -34,10 +36,25 @@ export const integrationsApi = {
   setStatus: (id: string, status: Integration['status']) => apiPatch<Integration>(`/integrations/${id}`, { status }),
 };
 
+/**
+ * A workflow as the builder submits it.
+ *
+ * `trigger` is the enum the server acts on, not free text, and a step carries
+ * the approver the engine resolves against — see `governance.ts`. The previous
+ * shape allowed any string for both, which typechecked and then matched nothing.
+ */
+export interface WorkflowPayload {
+  name: string;
+  description: string;
+  trigger: ApprovalTrigger;
+  scopeId?: string;
+  steps: WorkflowStep[];
+  status: WorkflowStatus;
+}
+
 export const workflowsApi = {
-  create: (body: { name: string; trigger: string; steps: WorkflowStep[]; status?: 'Active' | 'Draft' }) =>
-    apiPost<ApprovalWorkflow>('/approval-workflows', body),
-  update: (id: string, body: Partial<{ name: string; trigger: string; steps: WorkflowStep[]; status: 'Active' | 'Draft' }>) =>
+  create: (body: WorkflowPayload) => apiPost<ApprovalWorkflow>('/approval-workflows', body),
+  update: (id: string, body: Partial<WorkflowPayload>) =>
     apiPatch<ApprovalWorkflow>(`/approval-workflows/${id}`, body),
   remove: (id: string) => apiDelete(`/approval-workflows/${id}`),
 };
