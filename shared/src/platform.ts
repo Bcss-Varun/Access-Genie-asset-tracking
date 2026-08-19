@@ -145,11 +145,21 @@ export interface Session {
 export const SCOPE_LEVELS = ['group', 'org', 'region', 'facility', 'building', 'floor', 'zone'] as const;
 export type ScopeLevel = (typeof SCOPE_LEVELS)[number];
 
+/**
+ * `status` is the org-structure equivalent of deactivating a user: the node
+ * stays in the tree, keeps its id, and every asset and user still referencing it
+ * keeps that reference — it simply stops being offered for new work. Deleting
+ * instead would orphan those references, which is why a site that closes is
+ * deactivated rather than removed.
+ */
+export type ScopeStatus = 'active' | 'inactive';
+
 export interface ScopeNode {
   id: string;
   name: string;
   level: ScopeLevel;
   parentId?: string;
   assetCount?: number;
+  status?: ScopeStatus;
   children?: ScopeNode[];
 }

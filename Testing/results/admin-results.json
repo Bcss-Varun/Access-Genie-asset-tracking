@@ -1,5 +1,5 @@
 {
-  "ranAt": "2026-08-19T09:41:52.029Z",
+  "ranAt": "2026-08-19T10:10:58.632Z",
   "summary": {
     "total": 22,
     "pass": 22,
@@ -17,7 +17,7 @@
       "priority": "P0",
       "severity": "—",
       "expected": "three users and three sessions",
-      "actual": "fm=U-30 oa=U-31 tech=U-32",
+      "actual": "fm=U-35 oa=U-36 tech=U-37",
       "status": "PASS",
       "pass": true,
       "evidence": null
@@ -116,7 +116,7 @@
       "actual": "transfer 201, request = none",
       "status": "PASS",
       "pass": true,
-      "evidence": "workflow WF-4 left in Draft"
+      "evidence": "workflow WF-7 left in Draft"
     },
     {
       "id": "ADM-CHAIN-001",
@@ -125,7 +125,7 @@
       "priority": "P0",
       "severity": "—",
       "expected": "a Pending request on step 1 of 2, linked to the transfer",
-      "actual": "APR-2 step=0 steps=2",
+      "actual": "APR-6 step=0 steps=2",
       "status": "PASS",
       "pass": true,
       "evidence": null
@@ -137,7 +137,7 @@
       "priority": "P0",
       "severity": "—",
       "expected": "409 and the transfer still Pending",
-      "actual": "409 — This transfer is governed by \"QA Transfer Workflow 1787132496142-6nc9v · transfer Pending",
+      "actual": "409 — This transfer is governed by \"QA Transfer Workflow 1787134198448-2lyjj · transfer Pending",
       "status": "PASS",
       "pass": true,
       "evidence": "Without this the workflow is advisory."

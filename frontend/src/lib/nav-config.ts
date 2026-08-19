@@ -255,15 +255,16 @@ export const navSections: NavSection[] = [
     items: [
       // Configuration, not operations: a class decides how thousands of assets
       // behave, so it is edited deliberately from Administration (docs/22 §22.2).
+      //
+      // Three rows fewer than before. `Roles & Permissions` is now a tab inside
+      // Users & Roles, because a role is only ever reasoned about in terms of
+      // the people holding it and splitting the two made you cross the nav to
+      // answer "what can this person do". `Teams` is gone with it — it was a
+      // grouping nothing enforced. And `Facilities` was a second view of the
+      // same ScopeNode collection Org & Structure owns; two screens editing one
+      // hierarchy is how the two drift.
       { label: 'Users & Roles', to: '/admin/users', icon: '👥' },
-      { label: 'Roles & Permissions', to: '/admin/roles', icon: '🔐' },
-      { label: 'Teams', to: '/admin/teams', icon: '🧑‍🤝‍🧑' },
-      // Two rows, not one: the structure view is the whole hierarchy at a
-      // glance, the facilities view is the list of sites you actually work
-      // with. `/admin/facilities` had no nav row at all and was reachable only
-      // by typing the URL or following a link from elsewhere.
       { label: 'Org & Structure', to: '/admin/org', icon: '🏛️' },
-      { label: 'Facilities', to: '/admin/facilities', icon: '🏭' },
       { label: 'Approval Workflows', to: '/admin/workflows', icon: '🔀' },
       { label: 'Integrations & API', to: '/admin/integrations', icon: '🔌' },
       { label: 'Webhooks', to: '/admin/webhooks', icon: '🪝' },

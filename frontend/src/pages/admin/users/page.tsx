@@ -1,12 +1,13 @@
 import { useMemo, useState } from 'react';
-import { Link } from 'react-router-dom';
-import { allUsers, roles, findScope } from '@/lib/rbac';
+import { Link, useSearchParams } from 'react-router-dom';
+import { allUsers, roles, findScope, scopeTree } from '@/lib/rbac';
 import type { RoleId } from '@access-genie/shared';
 import type { PublicUser } from '@access-genie/shared';
 import { PageHeader, Badge, KpiCard, EmptyState, Avatar } from '@/components/ui/primitives';
 import { Button } from '@/components/ui/Button';
 import { InviteUserDialog } from '@/components/admin/InviteUserDialog';
 import { EditUserDialog } from '@/components/admin/EditUserDialog';
+import AdminRolesPanel from '@/pages/admin/roles/page';
 import { cn } from '@/lib/utils';
 
 const tierTone: Record<string, 'primary' | 'emerald' | 'amber' | 'slate'> = {
@@ -19,20 +20,61 @@ const tierTone: Record<string, 'primary' | 'emerald' | 'amber' | 'slate'> = {
 
 const ROLE_OPTIONS: (RoleId | 'all')[] = ['all', ...(Object.keys(roles) as RoleId[])];
 
+/**
+ * Every facility-or-above node, flattened for the filter.
+ *
+ * Stops at facility level: below it the picker becomes a list of racks, which is
+ * not the question "which site does this person work at" is asking.
+ */
+function facilityOptions(): { id: string; name: string }[] {
+  const out: { id: string; name: string }[] = [];
+  const walk = (node: typeof scopeTree, depth: number) => {
+    out.push({ id: node.id, name: `${'— '.repeat(Math.max(0, depth - 1))}${node.name}` });
+    if (depth >= 2) return;
+    for (const child of node.children ?? []) walk(child, depth + 1);
+  };
+  walk(scopeTree, 0);
+  return out;
+}
+
 export default function AdminUsersPage() {
+  // The tab lives in the URL so `/admin/roles` can forward straight to the
+  // roles view rather than dropping anyone holding that link on the user list.
+  const [params, setParams] = useSearchParams();
+  const tab = params.get('tab') === 'roles' ? 'roles' : 'people';
+  const setTab = (next: 'people' | 'roles') => {
+    const copy = new URLSearchParams(params);
+    if (next === 'people') copy.delete('tab');
+    else copy.set('tab', next);
+    setParams(copy, { replace: true });
+  };
+
   const [query, setQuery] = useState('');
   const [roleFilter, setRoleFilter] = useState<RoleId | 'all'>('all');
+  const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'suspended'>('all');
+  const [facilityFilter, setFacilityFilter] = useState<string>('all');
   const [inviting, setInviting] = useState(false);
   const [editing, setEditing] = useState<PublicUser | null>(null);
+
+  const facilities = useMemo(facilityOptions, []);
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
     return allUsers.filter((u) => {
       if (roleFilter !== 'all' && u.roleId !== roleFilter) return false;
+      if (statusFilter !== 'all' && u.status !== statusFilter) return false;
+      if (facilityFilter !== 'all' && u.homeScopeId !== facilityFilter) return false;
       if (!q) return true;
       return u.name.toLowerCase().includes(q) || u.email.toLowerCase().includes(q);
     });
-  }, [query, roleFilter]);
+  }, [query, roleFilter, statusFilter, facilityFilter]);
+
+  const clearFilters = () => {
+    setQuery('');
+    setRoleFilter('all');
+    setStatusFilter('all');
+    setFacilityFilter('all');
+  };
 
   const tiers = useMemo(() => {
     const counts: Record<string, number> = {};
@@ -49,9 +91,33 @@ export default function AdminUsersPage() {
         title="Users & Roles"
         subtitle="Everyone with access to the platform, and the role that governs what they can do."
         breadcrumb={[{ label: 'Administration', href: '/admin/org' }, { label: 'Users & Roles' }]}
-        actions={<Button onClick={() => setInviting(true)}>+ Invite User</Button>}
+        actions={tab === 'people' ? <Button onClick={() => setInviting(true)}>+ Invite User</Button> : undefined}
       />
 
+      {/* Two views of one subject: the people, and what their roles permit. */}
+      <div className="flex items-center gap-1 border-b border-slate-200">
+        {(['people', 'roles'] as const).map((key) => (
+          <button
+            key={key}
+            type="button"
+            onClick={() => setTab(key)}
+            aria-current={tab === key}
+            className={cn(
+              '-mb-px border-b-2 px-4 py-2 text-sm font-medium transition-colors',
+              tab === key
+                ? 'border-primary-600 text-primary-700'
+                : 'border-transparent text-slate-500 hover:text-slate-700',
+            )}
+          >
+            {key === 'people' ? `People (${allUsers.length})` : 'Roles & permissions'}
+          </button>
+        ))}
+      </div>
+
+      {tab === 'roles' && <AdminRolesPanel />}
+
+      {tab === 'people' && (
+      <>
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         <KpiCard label="Total Users" value={allUsers.length} sub="With platform access" tone="primary" accent />
         <KpiCard label="Management" value={tiers['Management'] ?? 0} sub="Managers & admins" tone="emerald" />
@@ -66,6 +132,31 @@ export default function AdminUsersPage() {
           placeholder="Search by name or email…"
           className="flex-1 rounded-lg border border-slate-300 bg-white px-3.5 py-2 text-sm text-slate-800 placeholder:text-slate-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
         />
+        <select
+          aria-label="Status"
+          value={statusFilter}
+          onChange={(e) => setStatusFilter(e.target.value as 'all' | 'active' | 'suspended')}
+          className="rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
+        >
+          <option value="all">All statuses</option>
+          <option value="active">Active</option>
+          <option value="suspended">Suspended</option>
+        </select>
+
+        <select
+          aria-label="Facility"
+          value={facilityFilter}
+          onChange={(e) => setFacilityFilter(e.target.value)}
+          className="rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
+        >
+          <option value="all">All facilities</option>
+          {facilities.map((f) => (
+            <option key={f.id} value={f.id}>
+              {f.name}
+            </option>
+          ))}
+        </select>
+
         <div className="flex items-center gap-1.5 overflow-x-auto pb-0.5">
           {ROLE_OPTIONS.map((r) => (
             <button
@@ -89,8 +180,8 @@ export default function AdminUsersPage() {
           <EmptyState
             variant="no-results"
             title="No users match"
-            description="Try a different search term or role filter."
-            action={<Button variant="outline" onClick={() => { setQuery(''); setRoleFilter('all'); }}>Clear filters</Button>}
+            description="Try a different search term, role, status or facility."
+            action={<Button variant="outline" onClick={clearFilters}>Clear filters</Button>}
           />
         ) : (
           <div className="overflow-x-auto">
@@ -137,6 +228,8 @@ export default function AdminUsersPage() {
           </div>
         )}
       </div>
+      </>
+      )}
 
       {inviting && <InviteUserDialog onClose={() => setInviting(false)} />}
       {editing && <EditUserDialog user={editing} onClose={() => setEditing(null)} />}
