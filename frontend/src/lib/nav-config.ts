@@ -263,15 +263,16 @@ export const navSections: NavSection[] = [
       // grouping nothing enforced. And `Facilities` was a second view of the
       // same ScopeNode collection Org & Structure owns; two screens editing one
       // hierarchy is how the two drift.
+      // Administration is the five sections that govern how the platform
+      // behaves — who may act, where they act, what needs sign-off, how records
+      // are numbered and when people are told. The six rows removed alongside
+      // these were either platform plumbing that belongs in a deployment's own
+      // tooling (integrations, webhooks, API keys, backups) or presentation and
+      // commercial settings that are not administration of the asset estate
+      // (branding, billing).
       { label: 'Users & Roles', to: '/admin/users', icon: '👥' },
       { label: 'Org & Structure', to: '/admin/org', icon: '🏛️' },
       { label: 'Approval Workflows', to: '/admin/workflows', icon: '🔀' },
-      { label: 'Integrations & API', to: '/admin/integrations', icon: '🔌' },
-      { label: 'Webhooks', to: '/admin/webhooks', icon: '🪝' },
-      { label: 'API Keys', to: '/admin/api-keys', icon: '🗝️' },
-      { label: 'Branding & White-Label', to: '/admin/branding', icon: '🎨' },
-      { label: 'Data Management', to: '/admin/data', icon: '🗃️' },
-      { label: 'Billing & Subscription', to: '/admin/billing', icon: '💳' },
     ],
   },
 ];

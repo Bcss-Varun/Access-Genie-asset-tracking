@@ -2,6 +2,7 @@ import type { FilterQuery } from 'mongoose';
 import type { ApiMeta } from '@access-genie/shared';
 import { Activity, Asset, CustodyRecord, Insight, LifecycleTransition, Transfer, WorkOrder, healthStatusFor, nextId, type AssetDoc } from '../models/index.js';
 import { ApiError } from '../utils/ApiError.js';
+import { mintId } from './numbering.service.js';
 import { logger } from '../config/logger.js';
 import { csvFilter, escapeRegex, paginate, parsePagination } from '../utils/query.js';
 import { projectAssetUpdate, projectNewAsset, retireAssetFromGraph } from './assetGraph.service.js';
@@ -93,7 +94,15 @@ export async function createAsset(scope: VisibleScope, input: CreateAssetInput, 
   // not then read back — and is the write-side half of the same leak.
   assertLocationVisible(scope, input.location?.id, 'Location');
 
-  const id = input.id ?? (await nextId('asset', 'AST'));
+  // An explicit id still wins — imports and migrations carry their own. Only a
+  // *new* id is shaped by the numbering rules, so nothing already issued moves.
+  const id =
+    input.id ??
+    (await mintId('asset', 'asset', 'AST', {
+      scopeId: input.location?.id,
+      facilityName: input.location?.name,
+      category: input.category,
+    }));
 
   const existing = await Asset.findById(id).lean();
   if (existing) throw ApiError.conflict(`Asset ${id} already exists`);

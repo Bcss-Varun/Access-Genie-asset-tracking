@@ -182,3 +182,175 @@ export interface ApprovalRequestView extends ApprovalRequest {
   /** True when the signed-in caller may decide the current step. */
   canDecide: boolean;
 }
+
+// ── Numbering & ID rules ─────────────────────────────────────────────────────
+
+/**
+ * The records whose IDs an administrator may shape.
+ *
+ * Only entities this codebase actually mints IDs for. Purchase requests and
+ * purchase orders are in the brief but not in the product — procurement was
+ * withdrawn along with Inventory & Parts — so they are absent rather than
+ * present-and-inert, for the same reason `WIRED_TRIGGERS` exists above.
+ */
+export const NUMBERED_ENTITIES = ['asset', 'workOrder', 'transfer', 'inspection'] as const;
+export type NumberedEntity = (typeof NUMBERED_ENTITIES)[number];
+
+export const NUMBERED_ENTITY_LABELS: Record<NumberedEntity, string> = {
+  asset: 'Assets / asset tags',
+  workOrder: 'Work orders',
+  transfer: 'Asset transfers',
+  inspection: 'Inspections',
+};
+
+/**
+ * What the sequence counts within.
+ *
+ * `global` is one run of numbers for the whole rule. `facility` and `category`
+ * give each site or each category its own run, which is what makes
+ * `LAP-HYD-00001` and `LAP-PUN-00001` both legitimate first numbers rather than
+ * a collision.
+ */
+export const SEQUENCE_SCOPES = ['global', 'facility', 'category'] as const;
+export type SequenceScope = (typeof SEQUENCE_SCOPES)[number];
+
+/**
+ * Tokens a pattern may contain. Anything else in the pattern is a literal.
+ *
+ *   {PREFIX}    the rule's prefix
+ *   {CATEGORY}  a short code from the record's category
+ *   {FACILITY}  a short code from the facility the record sits in
+ *   {YYYY} {YY} {MM}   the date the ID is minted
+ *   {SEQ} {SEQ:n}      the sequence, optionally zero-padded to n digits
+ */
+export const PATTERN_TOKENS = ['{PREFIX}', '{CATEGORY}', '{FACILITY}', '{YYYY}', '{YY}', '{MM}', '{SEQ}'] as const;
+
+export interface NumberingRule {
+  id: string;
+  name: string;
+  entity: NumberedEntity;
+  prefix: string;
+  /** e.g. `{PREFIX}-{FACILITY}-{SEQ:5}` → `LAP-HYD-00001`. */
+  pattern: string;
+  startAt: number;
+  sequenceScope: SequenceScope;
+  /** Limits the rule to these asset categories; empty means all. */
+  categories: string[];
+  /** Limits the rule to a branch of the location tree; absent means everywhere. */
+  scopeId?: string;
+  scopeName?: string;
+  status: 'active' | 'inactive';
+  createdBy: string;
+  createdAt: string;
+  updatedAt: string;
+  /** What the next ID would look like — rendered by the server, never guessed. */
+  preview: string;
+  /** How many IDs this rule has already minted, per sequence. */
+  issued: number;
+}
+
+// ── Notification rules ───────────────────────────────────────────────────────
+
+/**
+ * The events the application actually raises.
+ *
+ * Every member is emitted by a real code path — see `notificationRule.service`'s
+ * `fireEvent` call sites. A rule can only be built on an event the system emits,
+ * because the alternative is a screen offering triggers that never fire.
+ */
+export const NOTIFICATION_EVENTS = [
+  'approval.requested',
+  'approval.decided',
+  'transfer.requested',
+  'asset.status_changed',
+  'work_order.overdue',
+] as const;
+export type NotificationEvent = (typeof NOTIFICATION_EVENTS)[number];
+
+export const NOTIFICATION_EVENT_LABELS: Record<NotificationEvent, string> = {
+  'approval.requested': 'Approval requested',
+  'approval.decided': 'Approval decided',
+  'transfer.requested': 'Transfer requested',
+  'asset.status_changed': 'Asset status changed',
+  'work_order.overdue': 'Work order overdue',
+};
+
+export const NOTIFICATION_CHANNELS = ['in_app', 'email', 'webhook'] as const;
+export type NotificationChannel = (typeof NOTIFICATION_CHANNELS)[number];
+
+/** How a recipient is chosen: by role, by named user, or by the actor involved. */
+export const RECIPIENT_KINDS = ['role', 'user', 'requester'] as const;
+export type RecipientKind = (typeof RECIPIENT_KINDS)[number];
+
+export interface NotificationRecipient {
+  kind: RecipientKind;
+  /** A RoleId for `role`, a user id for `user`, unused for `requester`. */
+  value?: string;
+}
+
+/**
+ * A condition on the event's payload.
+ *
+ * Deliberately a small, closed comparison set over named fields rather than an
+ * expression language: a rule an administrator can write wrongly in ways nobody
+ * can debug is worse than one that only expresses simple things.
+ */
+export const CONDITION_OPERATORS = ['eq', 'neq', 'in', 'gt', 'lt'] as const;
+export type ConditionOperator = (typeof CONDITION_OPERATORS)[number];
+
+export interface NotificationCondition {
+  field: string;
+  op: ConditionOperator;
+  value: string | number | string[];
+}
+
+/** Hours during which nothing is delivered; sending resumes afterwards. */
+export interface QuietHours {
+  enabled: boolean;
+  /** 24h local time, `HH:MM`. A window may wrap midnight. */
+  start: string;
+  end: string;
+}
+
+export interface NotificationEscalation {
+  enabled: boolean;
+  /** Hours to wait before escalating an unacknowledged notification. */
+  afterHours: number;
+  toRole?: RoleId;
+}
+
+export interface NotificationRule {
+  id: string;
+  name: string;
+  event: NotificationEvent;
+  conditions: NotificationCondition[];
+  channels: NotificationChannel[];
+  recipients: NotificationRecipient[];
+  /** Minimum minutes between two sends of this rule to the same recipient. 0 = no throttle. */
+  throttleMinutes: number;
+  quietHours: QuietHours;
+  escalation: NotificationEscalation;
+  scopeId?: string;
+  scopeName?: string;
+  status: 'active' | 'inactive';
+  createdBy: string;
+  createdAt: string;
+  updatedAt: string;
+  /** Real counters, not estimates — see the rule log. */
+  sentCount: number;
+  lastFiredAt?: string;
+}
+
+/** One line of the delivery log: what this rule did, and to whom. */
+export interface NotificationRuleLogEntry {
+  id: string;
+  ruleId: string;
+  ruleName: string;
+  event: NotificationEvent;
+  at: string;
+  subjectId?: string;
+  recipients: string[];
+  channels: NotificationChannel[];
+  outcome: 'sent' | 'throttled' | 'quiet_hours' | 'no_recipients' | 'test';
+  detail?: string;
+}

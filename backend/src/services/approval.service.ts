@@ -18,6 +18,7 @@ import {
 } from '../models/index.js';
 import { ApiError } from '../utils/ApiError.js';
 import { logger } from '../config/logger.js';
+import { fireEvent } from './notificationRule.service.js';
 
 /**
  * The approval engine.
@@ -158,6 +159,22 @@ export async function openIfRequired(input: OpenApprovalInput): Promise<Approval
     requestedAt: now,
   });
 
+  // A real event, raised where the thing actually happens. Notification rules
+  // react to this; nothing here knows or cares whether any rule exists.
+  await fireEvent(
+    'approval.requested',
+    {
+      subjectId: doc._id,
+      scopeId: input.scopeId,
+      actorId: input.requestedBy,
+      actorName: input.requestedByName,
+      trigger: input.trigger,
+      workflow: workflow.name,
+    },
+    `Approval needed: ${workflow.name}`,
+    `${input.requestedByName} raised ${input.subjectLabel}. Step 1 of ${steps.length} is awaiting a decision.`,
+  );
+
   return doc.toObject();
 }
 
@@ -271,6 +288,23 @@ export async function decide(
   }
 
   await request.save();
+
+  if (settled) {
+    await fireEvent(
+      'approval.decided',
+      {
+        subjectId: request._id,
+        scopeId: request.scopeId,
+        actorId: decider.id,
+        actorName: decider.name,
+        decision: settled,
+        trigger: request.trigger,
+      },
+      `Approval ${settled.toLowerCase()}: ${request.workflowName}`,
+      `${decider.name} ${settled.toLowerCase()} ${request.subjectLabel}.${comment ? ` "${comment}"` : ''}`,
+    );
+  }
+
   return { request: request.toObject(), settled };
 }
 

@@ -1,5 +1,5 @@
 {
-  "ranAt": "2026-08-19T10:09:57.983Z",
+  "ranAt": "2026-08-19T10:26:38.741Z",
   "summary": {
     "total": 49,
     "pass": 49,
@@ -7,9 +7,9 @@
   },
   "teardown": {
     "removed": [
-      "AST-60",
-      "AST-59",
-      "AST-58"
+      "AST-72",
+      "AST-71",
+      "AST-70"
     ],
     "stuck": []
   },
@@ -21,7 +21,7 @@
       "priority": "P0",
       "severity": "—",
       "expected": "201 and a user id",
-      "actual": "201 U-34",
+      "actual": "201 U-41",
       "status": "PASS",
       "pass": true,
       "evidence": null
@@ -33,7 +33,7 @@
       "priority": "P0",
       "severity": "—",
       "expected": "201 and an asset id",
-      "actual": "201 AST-58",
+      "actual": "201 AST-70",
       "status": "PASS",
       "pass": true,
       "evidence": null
@@ -45,7 +45,7 @@
       "priority": "P0",
       "severity": "—",
       "expected": "201 and an asset id",
-      "actual": "201 AST-59",
+      "actual": "201 AST-71",
       "status": "PASS",
       "pass": true,
       "evidence": null
@@ -297,7 +297,7 @@
       "priority": "P0",
       "severity": "—",
       "expected": "201 and a report id",
-      "actual": "201 RPT-19",
+      "actual": "201 RPT-21",
       "status": "PASS",
       "pass": true,
       "evidence": null
@@ -308,8 +308,8 @@
       "type": "Functional",
       "priority": "P0",
       "severity": "—",
-      "expected": "200 and id RPT-19",
-      "actual": "200 RPT-19",
+      "expected": "200 and id RPT-21",
+      "actual": "200 RPT-21",
       "status": "PASS",
       "pass": true,
       "evidence": null
@@ -320,8 +320,8 @@
       "type": "Functional",
       "priority": "P1",
       "severity": "—",
-      "expected": "name = QA Analytics Renamed 1787134177950",
-      "actual": "name = QA Analytics Renamed 1787134177950",
+      "expected": "name = QA Analytics Renamed 1787135179981",
+      "actual": "name = QA Analytics Renamed 1787135179981",
       "status": "PASS",
       "pass": true,
       "evidence": null
@@ -360,7 +360,7 @@
       "actual": "admin: inside=true outside=true · probe: inside=true outside=false",
       "status": "PASS",
       "pass": true,
-      "evidence": "QA Analytics Custodian Report 1787134158158\r\nScope: N-Heights Hitech city\r\nRows: 1 · source records: 1\r\nGenerated: 2026-08-19 10:09:44 UTC\r\nReport: RPT-20 — Created by the analytics harness; deleted at teardown.\r\n\r\nCustodian,Asset count\r\nQA-CUSTODIAN-INSIDE-1787134158158,1\r\nTotal,1"
+      "evidence": "QA Analytics Custodian Report 1787135155320\r\nScope: N-Heights Hitech city\r\nRows: 1 · source records: 1\r\nGenerated: 2026-08-19 10:26:24 UTC\r\nReport: RPT-22 — Created by the analytics harness; deleted at teardown.\r\n\r\nCustodian,Asset count\r\nQA-CUSTODIAN-INSIDE-1787135155320,1\r\nTotal,1"
     },
     {
       "id": "AN-EXP-002",
@@ -405,7 +405,7 @@
       "priority": "P1",
       "severity": "—",
       "expected": "201, an id and a computed nextRun",
-      "actual": "201 SUB-11 nextRun=2026-08-20T00:00:00.000Z",
+      "actual": "201 SUB-12 nextRun=2026-08-20T00:00:00.000Z",
       "status": "PASS",
       "pass": true,
       "evidence": null

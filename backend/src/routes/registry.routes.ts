@@ -14,6 +14,18 @@ import {
 } from '../models/index.js';
 import { requireModule, validate } from '../middleware/index.js';
 import * as approvalController from '../controllers/approval.controller.js';
+import * as numberingController from '../controllers/numbering.controller.js';
+import * as notificationRuleController from '../controllers/notificationRule.controller.js';
+import {
+  createNotificationRuleSchema,
+  logQuerySchema,
+  updateNotificationRuleSchema,
+} from '../validators/notificationRule.validator.js';
+import {
+  createNumberingRuleSchema,
+  previewNumberingSchema,
+  updateNumberingRuleSchema,
+} from '../validators/numbering.validator.js';
 import {
   cancelSchema,
   createWorkflowSchema,
@@ -267,6 +279,49 @@ router.delete(
   approvalController.removeWorkflow,
 );
 router.get('/approval-workflows/approvers', admin, approvalController.listApprovers);
+
+// ── Numbering & ID rules ─────────────────────────────────────────────────────
+// Administration only: these decide the shape of every ID the platform issues
+// from here on, which is not a setting an operator should be able to reach.
+router.get('/numbering-rules', admin, numberingController.list);
+router.post(
+  '/numbering-rules',
+  admin,
+  validate({ body: createNumberingRuleSchema }),
+  numberingController.create,
+);
+router.post(
+  '/numbering-rules/preview',
+  admin,
+  validate({ body: previewNumberingSchema }),
+  numberingController.preview,
+);
+router.patch(
+  '/numbering-rules/:id',
+  admin,
+  validate({ params: idParamSchema, body: updateNumberingRuleSchema }),
+  numberingController.update,
+);
+router.delete(
+  '/numbering-rules/:id',
+  admin,
+  validate({ params: idParamSchema }),
+  numberingController.remove,
+);
+
+// ── Notification rules ───────────────────────────────────────────────────────
+router.get('/notification-rules', admin, notificationRuleController.list);
+router.get('/notification-rules/log', admin, validate({ query: logQuerySchema }), notificationRuleController.log);
+router.post('/notification-rules', admin, validate({ body: createNotificationRuleSchema }), notificationRuleController.create);
+router.patch(
+  '/notification-rules/:id',
+  admin,
+  validate({ params: idParamSchema, body: updateNotificationRuleSchema }),
+  notificationRuleController.update,
+);
+router.delete('/notification-rules/:id', admin, validate({ params: idParamSchema }), notificationRuleController.remove);
+router.get('/notification-rules/:id/preview', admin, validate({ params: idParamSchema }), notificationRuleController.preview);
+router.post('/notification-rules/:id/test', admin, validate({ params: idParamSchema }), notificationRuleController.testSend);
 
 // ── Approval requests ────────────────────────────────────────────────────────
 // Deliberately *not* behind the `admin` gate. An approver is a facility manager

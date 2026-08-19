@@ -29,6 +29,7 @@ import {
   type WorkOrderDoc,
 } from '../models/index.js';
 import { ApiError } from '../utils/ApiError.js';
+import { mintId } from './numbering.service.js';
 import { assertLocationVisible, type VisibleScope } from './tenancy.service.js';
 import { markEstateChanged } from './derivation.scheduler.js';
 import { applyLifecycleTransition } from './lifecycle.service.js';
@@ -648,7 +649,11 @@ export async function createWorkOrder(
     throw ApiError.badRequest('The scheduled start cannot be after the due date.');
   }
 
-  const id = await nextId('workOrder', 'WO');
+  const id = await mintId('workOrder', 'workOrder', 'WO', {
+    scopeId: asset?.location?.id,
+    facilityName: asset?.location?.name,
+    category: asset?.category,
+  });
 
   // The created document is not read back here: `getWorkOrder(id)` below
   // returns it with its placement resolved, and every other write path in this
