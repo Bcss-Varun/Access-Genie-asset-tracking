@@ -273,6 +273,8 @@ export const navSections: NavSection[] = [
       { label: 'Users & Roles', to: '/admin/users', icon: '👥' },
       { label: 'Org & Structure', to: '/admin/org', icon: '🏛️' },
       { label: 'Approval Workflows', to: '/admin/workflows', icon: '🔀' },
+      { label: 'Numbering & ID Rules', to: '/admin/numbering', icon: '🔢' },
+      { label: 'Notification Rules', to: '/admin/notification-rules', icon: '🔔' },
     ],
   },
 ];
