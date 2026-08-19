@@ -38,14 +38,18 @@ export interface AnalyticsFilters {
   /** Read only when `period` is `custom`; both are required then. */
   from?: string;
   to?: string;
-  /** A scope-node id — the org root, a region, a facility, a building. */
-  facility?: string;
+  /**
+   * Scope-node ids — the org root, a region, a facility, a building, or several
+   * of them. Empty means the caller's whole permitted estate.
+   */
+  facilities: string[];
   categories: string[];
   statuses: string[];
 }
 
 export const EMPTY_ANALYTICS_FILTERS: AnalyticsFilters = {
   period: '12m',
+  facilities: [],
   categories: [],
   statuses: [],
 };
@@ -53,7 +57,7 @@ export const EMPTY_ANALYTICS_FILTERS: AnalyticsFilters = {
 /** How many filters are narrowing the view — drives the "Clear" affordance. */
 export function activeAnalyticsFilterCount(filters: AnalyticsFilters): number {
   return (
-    (filters.facility ? 1 : 0) +
+    (filters.facilities.length > 0 ? 1 : 0) +
     (filters.categories.length > 0 ? 1 : 0) +
     (filters.statuses.length > 0 ? 1 : 0) +
     (filters.period === EMPTY_ANALYTICS_FILTERS.period ? 0 : 1)
@@ -77,7 +81,10 @@ function toQuery(filters: AnalyticsFilters): URLSearchParams {
     query.set('from', filters.from as string);
     query.set('to', filters.to as string);
   }
-  if (filters.facility) query.set('facility', filters.facility);
+  // One parameter whether one facility is picked or five: the server reads a
+  // comma-separated selection and unions their subtrees, so the client does not
+  // need a second shape for the multi case.
+  if (filters.facilities.length > 0) query.set('facility', filters.facilities.join(','));
   if (filters.categories.length > 0) query.set('category', filters.categories.join(','));
   if (filters.statuses.length > 0) query.set('status', filters.statuses.join(','));
 

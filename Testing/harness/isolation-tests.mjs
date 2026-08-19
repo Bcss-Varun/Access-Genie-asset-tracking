@@ -16,10 +16,13 @@
 // it, and deletes it again. Assets created along the way are torn down too.
 
 import { writeFileSync, mkdirSync } from 'node:fs';
-import { API, login, req, mkAsset, teardown, record, results, summarise } from './lib.mjs';
+import { API, login, req, mkAsset, teardown, onTeardown, guardAgainstCrash, record, results, summarise } from './lib.mjs';
 
 const admin = await login();
 console.log(`\nAuthenticated as super admin. Target ${API}\n${'─'.repeat(78)}`);
+
+// Fixtures live in a real cluster, so a crash has to clean up after itself.
+guardAgainstCrash(admin);
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Fixtures — one facility-scoped user, homed somewhere with no assets in it.
@@ -56,6 +59,8 @@ if (!probeId) {
   console.error('Could not provision the probe user; aborting.');
   process.exit(1);
 }
+
+onTeardown(() => req(admin, 'DELETE', `/users/${probeId}`));
 
 const probe = await login(PROBE.email, PROBE.password);
 
@@ -532,12 +537,13 @@ if (asset?.id) {
 // ─────────────────────────────────────────────────────────────────────────────
 
 console.log(`\n${'─'.repeat(78)}\nTearing down…`);
+// The probe user is removed by the cleanup registered at provisioning time, so
+// it goes with the assets in one pass rather than being deleted again here.
 const td = await teardown(admin);
-const removedUser = await req(admin, 'DELETE', `/users/${probeId}`);
 console.log(
   `  assets removed ${td.removed.length}` +
     (td.stuck.length ? `, STUCK ${JSON.stringify(td.stuck)}` : '') +
-    `, probe user removed = ${removedUser.status === 200 || removedUser.status === 204}`,
+    `, probe user removed = ${!td.stuck.some((s) => s.cleanup)}`,
 );
 
 const sum = summarise();

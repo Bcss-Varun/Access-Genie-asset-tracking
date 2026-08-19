@@ -16,6 +16,7 @@ import { ApiRequestError } from '@/api/client';
 import { Badge, ErrorState, PageHeader, Skeleton } from '@/components/ui/primitives';
 import { Button } from '@/components/ui/Button';
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
+import { FacilityPicker } from '@/components/analytics/AnalyticsFilters';
 import { ExportMenu } from '@/components/analytics/ExportMenu';
 import { ReportResultView } from '@/components/analytics/ReportResultView';
 import { ScheduleDialog } from '@/components/analytics/ScheduleDialog';
@@ -43,7 +44,10 @@ export default function ReportDetailPage() {
   // server has already narrowed to what this session may see.
   const scopes = useAnalyticsDashboard(EMPTY_ANALYTICS_FILTERS);
 
-  const [facility, setFacility] = useState<string | undefined>(undefined);
+  // A list, not a single id: a report may be run against several facilities at
+  // once, and the engine unions them the same way the dashboard filter does.
+  const [facilities, setFacilities] = useState<string[]>([]);
+  const facility = facilities.length > 0 ? facilities.join(',') : undefined;
   /* Bumped to force a re-run. Setting the scope to the value it already holds
      would not change state, so "Re-run" needs something that actually does. */
   const [nonce, setNonce] = useState(0);
@@ -187,26 +191,12 @@ export default function ReportDetailPage() {
       )}
 
       <div className="glass-panel flex flex-wrap items-center gap-3 p-3">
-        <label className="text-xs font-medium text-slate-500" htmlFor="report-scope">
-          Run against
-        </label>
-        <select
-          id="report-scope"
-          className="rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 text-xs font-medium text-slate-700 focus:border-primary-400 focus:outline-none focus:ring-1 focus:ring-primary-200"
-          value={facility ?? ''}
-          onChange={(e) => setFacility(e.target.value || undefined)}
-        >
-          <option value="">
-            {scopes.data?.filterOptions.facilities[0]?.name
-              ? `${scopes.data.filterOptions.facilities[0].name} — everything`
-              : 'Everything'}
-          </option>
-          {(scopes.data?.filterOptions.facilities ?? []).slice(1).map((node) => (
-            <option key={node.id} value={node.id}>
-              {node.name} ({node.assetCount})
-            </option>
-          ))}
-        </select>
+        <span className="text-xs font-medium text-slate-500">Run against</span>
+        <FacilityPicker
+          nodes={scopes.data?.filterOptions.facilities ?? []}
+          selected={facilities}
+          onChange={setFacilities}
+        />
 
         <Button variant="outline" size="sm" onClick={rerun} disabled={running}>
           {running ? 'Running…' : 'Re-run'}

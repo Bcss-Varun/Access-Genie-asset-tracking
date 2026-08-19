@@ -163,11 +163,17 @@ export interface AnalyticsDashboard {
   generatedAt: string;
   /** The slice actually aggregated — after permissions, not what was asked for. */
   scope: {
+    /** The selected node ids, comma-joined — hand it back as `facility` to reproduce this cut. */
     id: string;
     name: string;
     level: ScopeLevel;
     /** True when this is the widest slice the caller may see. */
     isRoot: boolean;
+    /**
+     * The nodes named in the selection. The picker reads this to decide which
+     * boxes are ticked, rather than re-parsing `id`.
+     */
+    selectedIds: string[];
   };
   range: { from: string; to: string; label: string };
   kpis: AnalyticsKpi[];
