@@ -388,6 +388,92 @@ await makeWorkflow(TWO_STEP);
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
+// 6. Action permissions
+//
+// The module gate answers "may you enter Assets"; these answer "may you delete
+// one". The distinction only means something if the API enforces it, so every
+// assertion here is a real request by a real session — never a check of what the
+// matrix says it should be.
+// ─────────────────────────────────────────────────────────────────────────────
+
+{
+  const roles = await req(admin, 'GET', '/users/roles');
+  const fmRole = (roles.body?.data ?? []).find((r) => r.id === 'facility_manager');
+
+  record({
+    id: 'ADM-PERM-001', feature: 'The roles listing carries the action matrix the API enforces', type: 'Functional',
+    priority: 'P0', severity: 'Critical',
+    expected: 'facility_manager holds view/create/edit in assets',
+    actual: JSON.stringify(fmRole?.permissions?.assets),
+    pass: Array.isArray(fmRole?.permissions?.assets) && fmRole.permissions.assets.includes('create'),
+  });
+
+  const mkAssetAs = (token, name) =>
+    req(token, 'POST', '/assets', { name, category: 'Compute', location: { id: building.id, name: building.name } });
+
+  const before = await mkAssetAs(fm.token, `QA Perm Baseline ${STAMP}`);
+  if (before.body?.data?.id) onTeardown(() => req(admin, 'DELETE', `/assets/${before.body.data.id}`));
+  record({
+    id: 'ADM-PERM-002', feature: 'A role with the create action can create', type: 'Functional',
+    priority: 'P0', severity: 'Critical',
+    expected: '201', actual: `${before.status}`, pass: before.status === 201,
+  });
+
+  // Narrow the role to view-only and try the identical call again.
+  await req(admin, 'PATCH', '/users/roles/facility_manager/permissions', {
+    permissions: { ...(fmRole?.permissions ?? {}), assets: ['view'] },
+  });
+
+  const denied = await mkAssetAs(fm.token, `QA Perm Denied ${STAMP}`);
+  if (denied.body?.data?.id) onTeardown(() => req(admin, 'DELETE', `/assets/${denied.body.data.id}`));
+  record({
+    id: 'ADM-PERM-003', feature: 'Removing an action refuses the call on the caller’s existing session', type: 'Security',
+    priority: 'P0', severity: 'Critical',
+    expected: '403 without the user signing in again',
+    actual: `${denied.status} ${denied.body?.error?.message?.slice(0, 60) ?? ''}`,
+    pass: denied.status === 403,
+    evidence: 'Grants are resolved per request, so a permission removed now applies now.',
+  });
+
+  const stillReads = await req(fm.token, 'GET', '/assets?limit=1');
+  record({
+    id: 'ADM-PERM-004', feature: 'Narrowing one action leaves the others intact', type: 'Functional',
+    priority: 'P1', severity: 'High',
+    expected: '200 — view was kept',
+    actual: `${stillReads.status}`, pass: stillReads.status === 200,
+  });
+
+  const edit = await req(fm.token, 'PATCH', `/assets/${before.body?.data?.id}`, { name: 'nope' });
+  record({
+    id: 'ADM-PERM-005', feature: 'The edit action is enforced separately from create', type: 'Security',
+    priority: 'P0', severity: 'Critical',
+    expected: '403', actual: `${edit.status}`, pass: edit.status === 403,
+  });
+
+  // Restore, and confirm the restoration is equally immediate.
+  await req(admin, 'PATCH', '/users/roles/facility_manager/permissions', {
+    permissions: fmRole?.permissions ?? {},
+  });
+  const restored = await mkAssetAs(fm.token, `QA Perm Restored ${STAMP}`);
+  if (restored.body?.data?.id) onTeardown(() => req(admin, 'DELETE', `/assets/${restored.body.data.id}`));
+  record({
+    id: 'ADM-PERM-006', feature: 'Restoring an action permits the call again immediately', type: 'Functional',
+    priority: 'P0', severity: 'Critical',
+    expected: '201', actual: `${restored.status}`, pass: restored.status === 201,
+  });
+
+  const narrowSuper = await req(admin, 'PATCH', '/users/roles/super_admin/permissions', {
+    permissions: { assets: ['view'] },
+  });
+  record({
+    id: 'ADM-PERM-007', feature: 'Super Admin cannot be narrowed', type: 'Security',
+    priority: 'P0', severity: 'Critical',
+    expected: '400 — narrowing it would lock everyone out of the screen that undoes it',
+    actual: `${narrowSuper.status}`, pass: narrowSuper.status === 400,
+  });
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 // Teardown
 // ─────────────────────────────────────────────────────────────────────────────
 

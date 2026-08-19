@@ -218,6 +218,10 @@ export const navSections: NavSection[] = [
     items: [
       { label: 'Workforce Dashboard', to: '/workforce', icon: '📊' },
       { label: 'My Work', to: '/my-work', icon: '🧰' },
+      // The queue the approval workflows route to. It sits with the operational
+      // work rather than under Administration because approving a transfer is a
+      // job a facility manager does, not a configuration change.
+      { label: 'Approvals', to: '/approvals', icon: '✅' },
       { label: 'Work Orders', to: '/work-orders', icon: '🧾' },
       { label: 'Scheduling & Dispatch', to: '/scheduling', icon: '👷' },
       { label: 'Asset Movement & Custody', to: '/asset-movement', icon: '🚚' },

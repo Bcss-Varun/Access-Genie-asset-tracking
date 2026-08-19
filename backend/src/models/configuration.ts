@@ -181,6 +181,15 @@ export const ExportArtifact = model<ExportArtifactDoc>('ExportArtifact', exportA
 export interface RoleGrantDoc {
   _id: string; // a RoleId
   modules: string[];
+  /**
+   * What the role may *do* inside each module it holds, keyed by module.
+   *
+   * Optional, and absent on every row written before action permissions
+   * existed. A missing entry falls back to the role's defaults rather than to
+   * "nothing" — reading an old row as a denial would silently strip every
+   * existing deployment's permissions the moment this shipped.
+   */
+  actions?: Record<string, string[]>;
   updatedAt: Date;
 }
 
@@ -188,6 +197,7 @@ const roleGrantSchema = new Schema<RoleGrantDoc>(
   {
     _id: { type: String, required: true },
     modules: { type: [String], default: [] },
+    actions: { type: Schema.Types.Mixed, default: undefined },
     updatedAt: { type: Date, required: true },
   },
   { versionKey: false },

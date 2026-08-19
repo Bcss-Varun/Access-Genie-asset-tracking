@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import { z } from 'zod';
 import * as controller from '../controllers/workOrder.controller.js';
-import { requireModule, validate } from '../middleware/index.js';
+import { requireModule, validate, requirePermission } from '../middleware/index.js';
 import { idParamSchema } from '../validators/common.js';
 import {
   createWorkOrderSchema,
@@ -29,9 +29,9 @@ router.get('/stats', validate({ query: workOrderListQuerySchema }), controller.s
 router.get('/:id', validate({ params: idParamSchema }), controller.getOne);
 
 // ── Writes ───────────────────────────────────────────────────────────────────
-router.post('/', validate({ body: createWorkOrderSchema }), controller.create);
-router.patch('/:id', validate({ params: idParamSchema, body: updateWorkOrderSchema }), controller.update);
-router.delete('/:id', validate({ params: idParamSchema }), controller.remove);
+router.post('/', requirePermission('maintenance', 'create'), validate({ body: createWorkOrderSchema }), controller.create);
+router.patch('/:id', requirePermission('maintenance', 'edit'), validate({ params: idParamSchema, body: updateWorkOrderSchema }), controller.update);
+router.delete('/:id', requirePermission('maintenance', 'delete'), validate({ params: idParamSchema }), controller.remove);
 
 // ── Work-order actions ───────────────────────────────────────────────────────
 // Each of these is a domain action with a rule of its own — a checked

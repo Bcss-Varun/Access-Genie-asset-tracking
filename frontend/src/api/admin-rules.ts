@@ -1,5 +1,7 @@
 import { useQuery, type UseQueryResult } from '@tanstack/react-query';
 import type {
+  ApprovalRequestStatus,
+  ApprovalRequestView,
   NotificationRule,
   NotificationRuleLogEntry,
   NumberingRule,
@@ -98,4 +100,33 @@ export const notificationRulesApi = {
   /** Delivers to the real recipients now, bypassing throttle and quiet hours. */
   test: (id: string) =>
     apiPost<{ ruleId: string; outcome: string; recipients: string[] }>(`/notification-rules/${id}/test`, {}),
+};
+
+// ── Approvals ────────────────────────────────────────────────────────────────
+
+export const APPROVALS_KEY = ['approvals'] as const;
+
+/**
+ * The approvals queue.
+ *
+ * `mine` narrows to requests the signed-in caller can decide *right now* — the
+ * server works that out from the current step's approver and the caller's own
+ * scope, so the screen never has to reimplement who may sign what off.
+ */
+export function useApprovals(mine: boolean, status?: ApprovalRequestStatus): UseQueryResult<ApprovalRequestView[]> {
+  return useQuery({
+    queryKey: [...APPROVALS_KEY, mine ? 'mine' : 'all', status ?? 'any'],
+    queryFn: () =>
+      apiGet<ApprovalRequestView[]>('/approvals', {
+        ...(mine ? { mine: 'true' } : {}),
+        ...(status ? { status } : {}),
+      }),
+    staleTime: 15_000,
+  });
+}
+
+export const approvalsApi = {
+  decide: (id: string, decision: 'Approved' | 'Rejected', comment: string) =>
+    apiPost<ApprovalRequestView>(`/approvals/${id}/decide`, { decision, comment }),
+  cancel: (id: string, reason: string) => apiPost<ApprovalRequestView>(`/approvals/${id}/cancel`, { reason }),
 };

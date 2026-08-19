@@ -21,6 +21,7 @@ export const pageRoutes: RouteObject[] = [
   { path: 'admin/facilities', lazy: async () => ({ Component: (await import('@/pages/admin/facilities/page')).default }) },
   { path: 'admin/facilities/:id', lazy: async () => ({ Component: (await import('@/pages/admin/facilities/[id]/page')).default }) },
   { path: 'admin/integrations', lazy: async () => ({ Component: (await import('@/pages/admin/integrations/page')).default }) },
+  { path: 'approvals', lazy: async () => ({ Component: (await import('@/pages/approvals/page')).default }) },
   { path: 'admin/notification-rules', lazy: async () => ({ Component: (await import('@/pages/admin/notification-rules/page')).default }) },
   { path: 'admin/numbering', lazy: async () => ({ Component: (await import('@/pages/admin/numbering/page')).default }) },
   { path: 'admin/org', lazy: async () => ({ Component: (await import('@/pages/admin/org/page')).default }) },

@@ -1,9 +1,9 @@
 import type { RequestHandler } from 'express';
-import type { ModuleKey, RoleId } from '@access-genie/shared';
+import type { ModuleKey, RoleId, PermissionAction } from '@access-genie/shared';
 import { User } from '../models/index.js';
 import { ApiError } from '../utils/ApiError.js';
 import { verifyAccessToken } from '../services/token.service.js';
-import { grantedModules } from '../services/roleGrant.service.js';
+import { grantedActions, grantedModules } from '../services/roleGrant.service.js';
 import { asyncHandler } from '../utils/asyncHandler.js';
 
 /**
@@ -63,5 +63,34 @@ export function requireRole(...roles: RoleId[]): RequestHandler {
       return next(ApiError.forbidden('This action is restricted to: ' + roles.join(', ')));
     }
     next();
+  };
+}
+
+/**
+ * Gate a route on a specific action inside a module.
+ *
+ * `requireModule` asks whether the caller may enter Assets at all;
+ * this asks whether they may delete one. Routes that mutate should use this,
+ * because a module-only gate means everyone who can open a screen can do
+ * everything on it — and hiding the button in the client is not a control, it
+ * is a suggestion.
+ *
+ * Resolved per request from `roleGrant.service`, so a permission change takes
+ * effect on the caller's next call rather than on their next sign-in.
+ */
+export function requirePermission(module: ModuleKey, action: PermissionAction): RequestHandler {
+  return (req, _res, next) => {
+    if (!req.auth) return next(ApiError.unauthorized());
+
+    grantedActions(req.auth.roleId, module)
+      .then((actions) => {
+        if (!actions.includes(action)) {
+          return next(
+            ApiError.forbidden(`Your role may not ${action} in ${module}.`),
+          );
+        }
+        next();
+      })
+      .catch(next);
   };
 }
