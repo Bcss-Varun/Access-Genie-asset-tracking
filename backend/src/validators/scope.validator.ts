@@ -20,6 +20,7 @@ export const createScopeSchema = z.object({
 
 export const updateScopeSchema = z.object({
   name: z.string().trim().min(2).max(80).optional(),
+  status: z.enum(['active', 'inactive']).optional(),
 });
 
 export type CreateScopeInput = z.infer<typeof createScopeSchema>;

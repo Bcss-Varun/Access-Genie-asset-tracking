@@ -522,6 +522,7 @@ export async function analyticsDashboard(
       name: scopeWithCounts.name,
       level: scopeWithCounts.level,
       isRoot: scopeWithCounts.isRoot,
+      selectedIds: scopeWithCounts.selectedIds,
     },
     range: { from: range.from.toISOString(), to: range.to.toISOString(), label: range.label },
     kpis,

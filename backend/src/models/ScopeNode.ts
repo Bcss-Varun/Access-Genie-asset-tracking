@@ -1,5 +1,5 @@
 import { model, Schema } from 'mongoose';
-import { SCOPE_LEVELS, type ScopeLevel, type ScopeNode } from '@access-genie/shared';
+import { SCOPE_LEVELS, type ScopeLevel, type ScopeNode, type ScopeStatus } from '@access-genie/shared';
 import { baseSchemaPlugin } from '../utils/mongoose.js';
 
 /**
@@ -15,6 +15,7 @@ export interface ScopeNodeDoc {
   level: ScopeLevel;
   parentId?: string;
   assetCount: number;
+  status: ScopeStatus;
 }
 
 const scopeSchema = new Schema<ScopeNodeDoc>(
@@ -24,6 +25,8 @@ const scopeSchema = new Schema<ScopeNodeDoc>(
     level: { type: String, required: true, enum: SCOPE_LEVELS, index: true },
     parentId: { type: String, ref: 'ScopeNode', index: true },
     assetCount: { type: Number, default: 0, min: 0 },
+    // Defaults to active so every existing row stays exactly as it was.
+    status: { type: String, enum: ['active', 'inactive'], default: 'active', index: true },
   },
   { versionKey: false },
 );
@@ -54,7 +57,17 @@ export const ScopeNodeModel = model<ScopeNodeDoc>('ScopeNode', scopeSchema);
  */
 export function buildScopeTree(rows: ScopeNodeDoc[]): ScopeNode | null {
   const byId = new Map<string, ScopeNode>(
-    rows.map((r) => [r._id, { id: r._id, name: r.name, level: r.level, parentId: r.parentId, assetCount: r.assetCount }]),
+    rows.map((r) => [
+      r._id,
+      {
+        id: r._id,
+        name: r.name,
+        level: r.level,
+        parentId: r.parentId,
+        assetCount: r.assetCount,
+        status: r.status ?? 'active',
+      },
+    ]),
   );
 
   const roots: ScopeNode[] = [];

@@ -20,6 +20,14 @@ router.patch(
   validate({ params: idParamSchema, body: roleGrantsSchema }),
   controller.updateRoleGrants,
 );
+// Action permissions are a separate write from the module grant: which screens
+// a role may open, versus what it may do once inside one.
+router.patch(
+  '/roles/:id/permissions',
+  requireRole('super_admin', 'org_admin'),
+  validate({ params: idParamSchema }),
+  controller.setRolePermissions,
+);
 router.post(
   '/roles/:id/reset',
   requireRole('super_admin', 'org_admin'),

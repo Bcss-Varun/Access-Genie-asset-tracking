@@ -105,6 +105,32 @@ export const router = createBrowserRouter([
               // the roadmap" — the opposite of what was decided.
               { path: 'maintenance/calendar', element: <Navigate to="/maintenance" replace /> },
 
+              // The three Analytics screens that were folded into the four the
+              // module now has. Each forwards to whatever absorbed its job —
+              // `BI Explorer` to the dashboard that answers the same questions
+              // against live collections, `Export Center` to Reports (export is
+              // an action on a report now, not a destination of its own), and
+              // `Scheduled Subscriptions` to Scheduled Reports, which is the
+              // same idea with a start and an end date.
+              //
+              // These forward rather than falling through to the catch-all for
+              // the reason given above: the capability still exists and has a
+              // successor screen, so telling anyone holding an old link that it
+              // is "coming soon" would be false in both directions.
+              { path: 'bi', element: <Navigate to="/analytics" replace /> },
+              { path: 'exports', element: <Navigate to="/reports" replace /> },
+              { path: 'subscriptions', element: <Navigate to="/reports/schedules" replace /> },
+
+              // Administration consolidation (Part 1). These three screens are
+              // gone as destinations, not as capability: roles are a tab inside
+              // Users & Roles, and the facilities list was a second view of the
+              // ScopeNode hierarchy Org & Structure owns. Declared ahead of the
+              // generated routes so they win over the pages still on disk.
+              { path: 'admin/roles', element: <Navigate to="/admin/users?tab=roles" replace /> },
+              { path: 'admin/teams', element: <Navigate to="/admin/users" replace /> },
+              { path: 'admin/facilities', element: <Navigate to="/admin/org" replace /> },
+              { path: 'admin/facilities/:id', element: <Navigate to="/admin/org" replace /> },
+
               // Inventory & Parts, withdrawn along with its collections. These
               // resolve to a page that says so rather than falling through to
               // the catch-all, which would advertise a removed module as

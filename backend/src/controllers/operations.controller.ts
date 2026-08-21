@@ -5,11 +5,27 @@ import { sendData } from '../utils/response.js';
 import { ApiError } from '../utils/ApiError.js';
 import { recordAudit } from '../services/audit.service.js';
 import * as service from '../services/operations.service.js';
+import type { Decider } from '../services/approval.service.js';
 
 /** The signed-in user's name — the requester or approver on the record. */
 function actorOf(req: Request): string {
   if (!req.auth) throw ApiError.unauthorized();
   return req.auth.user.name;
+}
+
+/**
+ * The full identity, for anything that has to decide *authority* rather than
+ * just stamp a name — the approval engine needs the role and home scope to work
+ * out who may sign a step off.
+ */
+function deciderOf(req: Request): Decider {
+  if (!req.auth) throw ApiError.unauthorized();
+  return {
+    id: req.auth.user.id,
+    name: req.auth.user.name,
+    roleId: req.auth.roleId,
+    homeScopeId: req.auth.user.homeScopeId,
+  };
 }
 
 // ── Transfers ────────────────────────────────────────────────────────────────
@@ -18,7 +34,7 @@ export const listTransfers = asyncHandler(async (_req: Request, res: Response) =
 });
 
 export const createTransfer = asyncHandler(async (req: Request, res: Response) => {
-  const transfer = await service.createTransfer(req.body as service.CreateTransferInput, actorOf(req));
+  const transfer = await service.createTransfer(req.body as service.CreateTransferInput, deciderOf(req));
   recordAudit(req, { action: 'transfer.request', target: transfer._id, category: 'Asset' });
   sendData(res, transfer, 201);
 });

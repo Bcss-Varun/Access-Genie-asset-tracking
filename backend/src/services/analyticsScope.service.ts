@@ -38,10 +38,20 @@ export interface AnalyticsScope {
   /** The widest slice this caller may see. */
   rootId: string;
   rootName: string;
-  /** The slice actually selected — the root, or a node beneath it. */
+  /**
+   * The slice actually selected — the root, a node beneath it, or the union of
+   * several. For a union `id` is the selected ids joined by commas, so the value
+   * round-trips back through the query string that produced it.
+   */
   id: string;
   name: string;
   level: ScopeLevel;
+  /**
+   * The nodes named in the selection, in tree order — one entry for a single
+   * facility, several for a union, and the root when nothing was asked for.
+   * Distinct from `ids`, which is those nodes *and everything beneath them*.
+   */
+  selectedIds: string[];
   /** True when the selection is the caller's whole permitted estate. */
   isRoot: boolean;
   /** Every scope-node id in the selection, including the selected node. */
@@ -107,7 +117,60 @@ function treeRoot(rows: ScopeNodeDoc[]): ScopeNodeDoc | null {
 }
 
 /**
+ * The requested selection, normalised.
+ *
+ * Accepts a single id, a comma-separated list, or an array, because the same
+ * selection arrives as a query parameter on the dashboard and as a JSON field on
+ * a preview. Blanks and duplicates are dropped — a trailing comma is a typo, not
+ * a request for an unnamed facility.
+ */
+function requestedIds(requested?: string | string[]): string[] {
+  const parts = Array.isArray(requested) ? requested : (requested ?? '').split(',');
+  return [...new Set(parts.map((part) => part.trim()).filter(Boolean))];
+}
+
+/** Depth below the tree root, used to pick a level for a mixed selection. */
+function depthOf(byId: Map<string, ScopeNodeDoc>, start: string): number {
+  const seen = new Set<string>();
+  let depth = 0;
+  let node = byId.get(start);
+  while (node?.parentId && !seen.has(node._id)) {
+    seen.add(node._id);
+    node = byId.get(node.parentId);
+    depth += 1;
+  }
+  return depth;
+}
+
+/**
+ * A readable name for a multi-node selection.
+ *
+ * Names the first two and counts the rest. "Hyderabad warehouse, Pune plant and
+ * 3 more" tells somebody what they are looking at; "5 locations" tells them only
+ * how much of it there is, and the heading it lands in is the one place the
+ * distinction matters.
+ */
+function selectionName(nodes: ScopeNodeDoc[]): string {
+  const [first, second] = nodes;
+  if (!first) return 'nothing';
+  if (!second) return first.name;
+  if (nodes.length === 2) return `${first.name} and ${second.name}`;
+  return `${first.name}, ${second.name} and ${nodes.length - 2} more`;
+}
+
+/**
  * Resolve the caller's permitted root and their requested selection within it.
+ *
+ * The selection may name several nodes, in which case the scope is the **union**
+ * of their subtrees. Overlap is harmless — selecting a facility and a building
+ * inside it yields the facility's subtree once, not twice — because the result
+ * is a set of node ids rather than a list of branches to add up. That property
+ * is what lets the caller aggregate over a multi-facility selection without
+ * double-counting anything that sits in two of the chosen branches.
+ *
+ * Every named node is still checked against the permitted subtree individually,
+ * so a union cannot be used to smuggle in one foreign facility alongside five
+ * legitimate ones.
  *
  * `assetCounts` is the direct count per location id — supplied by the caller
  * because it already has the assets loaded, so the picker can show a real
@@ -116,7 +179,7 @@ function treeRoot(rows: ScopeNodeDoc[]): ScopeNodeDoc | null {
  */
 export async function resolveAnalyticsScope(
   identity: ScopeIdentity,
-  requested?: string,
+  requested?: string | string[],
   assetCounts?: Map<string, number>,
 ): Promise<AnalyticsScope> {
   const rows = await ScopeNodeModel.find().lean<ScopeNodeDoc[]>();
@@ -136,17 +199,50 @@ export async function resolveAnalyticsScope(
 
   // The selection. Refused rather than widened when it is outside the caller's
   // remit, and refused rather than ignored when it does not exist at all.
-  let selected = root;
-  if (requested && requested !== root._id) {
-    const node = byId.get(requested);
+  //
+  // Naming the root among several nodes selects the root: the union of "the
+  // whole estate" with anything inside it is the whole estate, and honouring the
+  // narrower siblings instead would answer a smaller question than the one
+  // asked.
+  const wanted = requestedIds(requested);
+
+  // Every member is checked *before* the root shortcut below, and that order is
+  // load-bearing. Collapsing to the root first would mean a caller who names
+  // their own root alongside a facility they may not see gets a quiet 200 over
+  // the half they are allowed — the foreign member simply dropped on the floor.
+  // Checking first turns that into the 403 it should always have been.
+  const named = wanted.map((id) => {
+    const node = byId.get(id);
     if (!node) throw ApiError.notFound('Facility');
-    if (!permitted.has(requested)) {
+    if (!permitted.has(id)) {
       throw ApiError.forbidden(`Your access does not extend to ${node.name}`);
     }
-    selected = node;
+    return node;
+  });
+
+  const selectsRoot = named.length === 0 || named.some((node) => node._id === root._id);
+
+  let selectedNodes: ScopeNodeDoc[];
+  if (selectsRoot) {
+    selectedNodes = [root];
+  } else {
+    selectedNodes = named;
+    // Tree order, so the name and the id list read the same way twice running
+    // regardless of the order the checkboxes happened to be ticked in.
+    selectedNodes.sort((a, b) => depthOf(byId, a._id) - depthOf(byId, b._id) || a.name.localeCompare(b.name));
   }
 
-  const ids = selected._id === root._id ? permitted : subtreeIds(children, selected._id);
+  // Non-empty by construction: the root branch seeds it, and the other branch
+  // only reaches here having mapped a non-empty `wanted`. Narrowed rather than
+  // asserted so a future edit that can empty it fails here instead of at a
+  // caller reading `scope.level`.
+  const selected = selectedNodes[0] ?? root;
+  const ids = selectsRoot
+    ? permitted
+    : selectedNodes.reduce<Set<string>>((union, node) => {
+        for (const id of subtreeIds(children, node._id)) union.add(id);
+        return union;
+      }, new Set<string>());
 
   const facilityOf = new Map<string, { id: string; name: string; level: ScopeLevel }>();
   for (const row of rows) {
@@ -186,10 +282,15 @@ export async function resolveAnalyticsScope(
   return {
     rootId: root._id,
     rootName: root.name,
-    id: selected._id,
-    name: selected.name,
+    // Joined rather than just the first, so the value a response carries is the
+    // value that reproduces it when handed back as `?facility=`.
+    id: selectedNodes.map((node) => node._id).join(','),
+    name: selectionName(selectedNodes),
+    // A mixed selection has no single level; the shallowest is the honest
+    // answer, being the coarsest thing the selection actually covers.
     level: selected.level,
-    isRoot: selected._id === root._id,
+    selectedIds: selectedNodes.map((node) => node._id),
+    isRoot: selectsRoot,
     ids,
     coversAll: ids.size === rows.length,
     rows,

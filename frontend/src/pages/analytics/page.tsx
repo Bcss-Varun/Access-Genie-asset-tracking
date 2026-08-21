@@ -60,6 +60,16 @@ export default function AnalyticsDashboardPage() {
   const update = useCallback((next: Partial<AnalyticsFilters>) => setFilters((c) => ({ ...c, ...next })), []);
   const clear = useCallback(() => setFilters(EMPTY_ANALYTICS_FILTERS), []);
 
+  /** Clicking a facility row narrows to it, and clicking it again clears it. */
+  const toggleFacility = useCallback(
+    (id: string) =>
+      setFilters((c) => ({
+        ...c,
+        facilities: c.facilities.length === 1 && c.facilities[0] === id ? [] : [id],
+      })),
+    [],
+  );
+
   /** Clicking a category bar filters the whole dashboard by it. */
   const toggleCategory = useCallback(
     (key: string) =>
@@ -256,7 +266,7 @@ export default function AnalyticsDashboardPage() {
                           <button
                             type="button"
                             className="font-medium text-slate-900 hover:text-primary-600"
-                            onClick={() => update({ facility: row.id === 'unassigned' ? undefined : row.id })}
+                            onClick={() => toggleFacility(row.id)}
                             disabled={row.id === 'unassigned'}
                           >
                             {row.name}

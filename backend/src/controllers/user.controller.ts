@@ -3,7 +3,7 @@ import { validatedQuery } from '../middleware/validate.js';
 import { ApiError } from '../utils/ApiError.js';
 import { asyncHandler } from '../utils/asyncHandler.js';
 import { sendData, sendList } from '../utils/response.js';
-import type { ModuleKey, RoleId } from '@access-genie/shared';
+import { ROLES, type PermissionMatrix, ModuleKey, RoleId } from '@access-genie/shared';
 import * as userService from '../services/user.service.js';
 import * as roleGrantService from '../services/roleGrant.service.js';
 import { recordAudit } from '../services/audit.service.js';
@@ -32,6 +32,22 @@ export const updateRoleGrants = asyncHandler(async (req: Request, res: Response)
 });
 
 /** Return a role to the shipped matrix. */
+/**
+ * Replace a role's action permissions.
+ *
+ * Separate from the module grant above because they answer different questions
+ * and are edited at different moments: which screens a role can open, versus
+ * what it may do once inside one.
+ */
+export const setRolePermissions = asyncHandler(async (req: Request, res: Response) => {
+  const id = req.params.id as RoleId;
+  if (!ROLES[id]) throw ApiError.notFound('Role');
+
+  const matrix = await roleGrantService.setPermissions(id, (req.body as { permissions: PermissionMatrix }).permissions);
+  recordAudit(req, { action: 'role.permissions', target: id, category: 'Configuration' });
+  sendData(res, matrix);
+});
+
 export const resetRoleGrants = asyncHandler(async (req: Request, res: Response) => {
   const id = req.params.id as RoleId;
   const view = await roleGrantService.resetRoleGrants(id);

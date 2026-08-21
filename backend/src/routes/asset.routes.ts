@@ -2,7 +2,7 @@ import { Router } from 'express';
 import * as controller from '../controllers/asset.controller.js';
 import * as registration from '../controllers/registration.controller.js';
 import lifecycleRoutes from './lifecycle.routes.js';
-import { requireModule, validate } from '../middleware/index.js';
+import { requireModule, validate, requirePermission } from '../middleware/index.js';
 import {
   assetListQuerySchema,
   bulkUpdateAssetsSchema,
@@ -69,16 +69,18 @@ router.get('/:id', validate({ params: idParamSchema }), controller.getOne);
 router.get('/:id/profile', validate({ params: idParamSchema }), controller.getProfile);
 router.get('/:id/clone-source', validate({ params: idParamSchema }), registration.cloneSource);
 
-router.post('/', validate({ body: createAssetSchema }), controller.create);
+router.post('/', requirePermission('assets', 'create'), validate({ body: createAssetSchema }), controller.create);
 
 // Registered before `/:id` would ever be reached for a POST, and named `bulk`
 // rather than sitting on `PATCH /` so it can never be confused with a
 // collection-wide update.
-router.post('/bulk', validate({ body: bulkUpdateAssetsSchema }), controller.bulkUpdate);
-router.patch('/:id', validate({ params: idParamSchema, body: updateAssetSchema }), controller.update);
+router.post('/bulk', requirePermission('assets', 'edit'), validate({ body: bulkUpdateAssetsSchema }), controller.bulkUpdate);
+router.patch('/:id', requirePermission('assets', 'edit'), validate({ params: idParamSchema, body: updateAssetSchema }), controller.update);
 
-// Retiring an asset is destructive and administrative — deliberately narrower
-// than the read/write grant the rest of the module uses.
-router.delete('/:id', requireModule('admin'), validate({ params: idParamSchema }), controller.remove);
+// Retiring an asset is destructive, so it needs the `delete` action rather than
+// merely write access to the module. The `admin` module gate it used to carry
+// was a blunter stand-in for exactly this — now that actions exist, a role can
+// be given asset deletion without being handed Administration as well.
+router.delete('/:id', requirePermission('assets', 'delete'), validate({ params: idParamSchema }), controller.remove);
 
 export default router;

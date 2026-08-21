@@ -27,8 +27,10 @@
     "migrate:lifecycle": "npm run migrate:lifecycle -w @access-genie/backend",
     "typecheck": "npm run build:shared && npm run typecheck --workspaces --if-present",
     "lint": "eslint .",
-    "test": "node Testing/harness/isolation-tests.mjs",
+    "test": "node Testing/harness/isolation-tests.mjs && node Testing/harness/analytics-tests.mjs && node Testing/harness/admin-tests.mjs",
     "test:api": "node Testing/harness/api-tests.mjs",
+    "test:analytics": "node Testing/harness/analytics-tests.mjs",
+    "test:admin": "node Testing/harness/admin-tests.mjs",
     "clean": "rimraf shared/dist backend/dist frontend/dist"
   },
   "devDependencies": {

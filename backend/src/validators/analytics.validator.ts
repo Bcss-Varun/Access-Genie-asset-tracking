@@ -21,13 +21,30 @@ import { blankToUndefined, csvString, isoDateString } from './common.js';
  * *date* is refused, because silently ignoring it would answer a question
  * nobody asked.
  */
+/**
+ * A facility selection: one scope-node id, or several separated by commas.
+ *
+ * Shape-checked rather than length-checked alone, so a stray query string
+ * cannot smuggle regex metacharacters or whitespace into an id that is about to
+ * be looked up. Whether the ids *exist*, and whether this caller may see them,
+ * is settled in `resolveAnalyticsScope` where the tree is loaded — validating it
+ * here would need a second copy of that lookup.
+ */
+const facilitySelection = blankToUndefined(
+  z
+    .string()
+    .trim()
+    .max(512)
+    .regex(/^[A-Za-z0-9_-]+(?:,[A-Za-z0-9_-]+)*$/, 'Invalid facility selection'),
+);
+
 export const analyticsDashboardQuerySchema = z
   .object({
     period: z.enum(ANALYTICS_PERIODS).optional(),
     from: blankToUndefined(isoDateString).optional(),
     to: blankToUndefined(isoDateString).optional(),
-    /** A scope-node id at any level, not only a facility. */
-    facility: blankToUndefined(z.string().trim().max(64)).optional(),
+    /** One scope-node id at any level, or several comma-separated. */
+    facility: facilitySelection.optional(),
     category: csvString,
     status: csvString,
   })
@@ -99,23 +116,23 @@ export const updateReportSchema = z.object({
 /** `POST /analytics/reports/preview` — run a definition that is not saved yet. */
 export const previewReportSchema = z.object({
   definition: reportDefinitionSchema,
-  facility: blankToUndefined(z.string().trim().max(64)).optional(),
+  facility: facilitySelection.optional(),
 });
 
 export const runReportSchema = z.object({
-  facility: blankToUndefined(z.string().trim().max(64)).optional(),
+  facility: facilitySelection.optional(),
 });
 
 export const exportQuerySchema = z.object({
   format: z.enum(REPORT_EXPORT_FORMATS).default('csv'),
-  facility: blankToUndefined(z.string().trim().max(64)).optional(),
+  facility: facilitySelection.optional(),
 });
 
 /** Ad-hoc export straight from the builder, before anything is saved. */
 export const exportPreviewSchema = z.object({
   definition: reportDefinitionSchema,
   format: z.enum(REPORT_EXPORT_FORMATS).default('csv'),
-  facility: blankToUndefined(z.string().trim().max(64)).optional(),
+  facility: facilitySelection.optional(),
   title: z.string().trim().min(1).max(160).default('Report'),
 });
 

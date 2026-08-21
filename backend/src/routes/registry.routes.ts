@@ -3,7 +3,6 @@ import { createResource } from '../controllers/resource.controller.js';
 import {
   AnomalyEvent,
   AiModel,
-  ApprovalWorkflow,
   AssetDocument,
   AssetGroup,
   Certification,
@@ -14,17 +13,35 @@ import {
   PmSchedule,
 } from '../models/index.js';
 import { requireModule, validate } from '../middleware/index.js';
+import * as approvalController from '../controllers/approval.controller.js';
+import * as numberingController from '../controllers/numbering.controller.js';
+import * as notificationRuleController from '../controllers/notificationRule.controller.js';
+import {
+  createNotificationRuleSchema,
+  logQuerySchema,
+  updateNotificationRuleSchema,
+} from '../validators/notificationRule.validator.js';
+import {
+  createNumberingRuleSchema,
+  previewNumberingSchema,
+  updateNumberingRuleSchema,
+} from '../validators/numbering.validator.js';
+import {
+  cancelSchema,
+  createWorkflowSchema,
+  decideSchema,
+  listRequestsQuerySchema,
+  updateWorkflowSchema,
+} from '../validators/approval.validator.js';
 import * as pmController from '../controllers/pm.controller.js';
 import * as complianceController from '../controllers/compliance.controller.js';
 import * as fieldworkController from '../controllers/fieldwork.controller.js';
 import * as documentController from '../controllers/document.controller.js';
 import { uploadDocumentSchema } from '../validators/document.validator.js';
 import {
-  createApprovalWorkflowSchema,
   createAiModelSchema,
   createIntegrationSchema,
   updateAiModelSchema,
-  updateApprovalWorkflowSchema,
   updateIntegrationSchema,
 } from '../validators/configuration.validator.js';
 import {
@@ -237,23 +254,96 @@ router.post('/integrations', admin, integrations.validateCreate, integrations.cr
 router.patch('/integrations/:id', admin, validate({ params: idParamSchema }), integrations.validateUpdate, integrations.update);
 router.delete('/integrations/:id', admin, validate({ params: idParamSchema }), integrations.remove);
 
-const workflows = createResource(ApprovalWorkflow, {
-  label: 'Approval workflow',
-  filters: ['status'],
-  sortable: ['name', 'status'],
-  defaultSort: 'name',
-  paginated: false,
-  writable: {
-    create: createApprovalWorkflowSchema,
-    update: updateApprovalWorkflowSchema,
-    idSequence: ['approvalWorkflow', 'WF'],
-    audit: { action: 'approval_workflow', category: 'Configuration' },
-  },
-});
-router.get('/approval-workflows', admin, workflows.validateQuery, workflows.list);
-router.post('/approval-workflows', admin, workflows.validateCreate, workflows.create);
-router.patch('/approval-workflows/:id', admin, validate({ params: idParamSchema }), workflows.validateUpdate, workflows.update);
-router.delete('/approval-workflows/:id', admin, validate({ params: idParamSchema }), workflows.remove);
+// Approval workflows have their own controller rather than the generic resource
+// helper: a workflow validates its scope against the location tree, joins that
+// scope's name on read, and orders its steps — none of which the generic CRUD
+// knows about. The requests it raises live alongside it, because the pair is one
+// feature (see approval.controller.ts).
+router.get('/approval-workflows', admin, approvalController.listWorkflows);
+router.post(
+  '/approval-workflows',
+  admin,
+  validate({ body: createWorkflowSchema }),
+  approvalController.createWorkflow,
+);
+router.patch(
+  '/approval-workflows/:id',
+  admin,
+  validate({ params: idParamSchema, body: updateWorkflowSchema }),
+  approvalController.updateWorkflow,
+);
+router.delete(
+  '/approval-workflows/:id',
+  admin,
+  validate({ params: idParamSchema }),
+  approvalController.removeWorkflow,
+);
+router.get('/approval-workflows/approvers', admin, approvalController.listApprovers);
+
+// ── Numbering & ID rules ─────────────────────────────────────────────────────
+// Administration only: these decide the shape of every ID the platform issues
+// from here on, which is not a setting an operator should be able to reach.
+router.get('/numbering-rules', admin, numberingController.list);
+router.post(
+  '/numbering-rules',
+  admin,
+  validate({ body: createNumberingRuleSchema }),
+  numberingController.create,
+);
+router.post(
+  '/numbering-rules/preview',
+  admin,
+  validate({ body: previewNumberingSchema }),
+  numberingController.preview,
+);
+router.patch(
+  '/numbering-rules/:id',
+  admin,
+  validate({ params: idParamSchema, body: updateNumberingRuleSchema }),
+  numberingController.update,
+);
+router.delete(
+  '/numbering-rules/:id',
+  admin,
+  validate({ params: idParamSchema }),
+  numberingController.remove,
+);
+
+// ── Notification rules ───────────────────────────────────────────────────────
+router.get('/notification-rules', admin, notificationRuleController.list);
+router.get('/notification-rules/log', admin, validate({ query: logQuerySchema }), notificationRuleController.log);
+router.post('/notification-rules', admin, validate({ body: createNotificationRuleSchema }), notificationRuleController.create);
+router.patch(
+  '/notification-rules/:id',
+  admin,
+  validate({ params: idParamSchema, body: updateNotificationRuleSchema }),
+  notificationRuleController.update,
+);
+router.delete('/notification-rules/:id', admin, validate({ params: idParamSchema }), notificationRuleController.remove);
+router.get('/notification-rules/:id/preview', admin, validate({ params: idParamSchema }), notificationRuleController.preview);
+router.post('/notification-rules/:id/test', admin, validate({ params: idParamSchema }), notificationRuleController.testSend);
+
+// ── Approval requests ────────────────────────────────────────────────────────
+// Deliberately *not* behind the `admin` gate. An approver is a facility manager
+// or a maintenance manager acting on their own queue — requiring the
+// Administration grant to approve a transfer would mean only administrators
+// could ever clear one, which is the opposite of what a multi-role chain is for.
+router.get(
+  '/approvals',
+  validate({ query: listRequestsQuerySchema }),
+  approvalController.listRequests,
+);
+router.get('/approvals/:id', validate({ params: idParamSchema }), approvalController.getRequest);
+router.post(
+  '/approvals/:id/decide',
+  validate({ params: idParamSchema, body: decideSchema }),
+  approvalController.decideRequest,
+);
+router.post(
+  '/approvals/:id/cancel',
+  validate({ params: idParamSchema, body: cancelSchema }),
+  approvalController.cancelRequest,
+);
 
 // ── Checklist library ────────────────────────────────────────────────────────
 // Removed: a checklist *is* an inspection template. Both now live at

@@ -49,7 +49,10 @@ const ID_PREFIX: Record<ScopeLevel, string> = {
 
 function toWire(doc: ScopeNodeDoc): ScopeNode {
   const { _id, ...rest } = doc;
-  return { ...rest, id: _id };
+  // Rows written before `status` existed have none. A schema default only
+  // applies to new documents, so it is normalised here rather than left for
+  // every reader to guess what `undefined` means.
+  return { ...rest, id: _id, status: doc.status ?? 'active' };
 }
 
 export async function listScopeNodes(): Promise<ScopeNode[]> {
@@ -129,8 +132,49 @@ export async function updateScopeNode(id: string, input: UpdateScopeInput): Prom
     node.name = input.name;
   }
 
+  /*
+   * Deactivating cascades down; reactivating does not.
+   *
+   * A closed site closes everything inside it — leaving a floor "active" under
+   * an inactive facility describes a place you cannot reach. Reopening is the
+   * asymmetric case on purpose: the parts of a reopened site that come back are
+   * a decision somebody makes deliberately, not something to infer, so the
+   * children stay as they were and are switched on individually.
+   */
+  if (input.status && input.status !== node.status) {
+    node.status = input.status;
+    if (input.status === 'inactive') {
+      const doomed = await descendantIds(id);
+      if (doomed.length > 0) {
+        await ScopeNodeModel.updateMany({ _id: { $in: doomed } }, { $set: { status: 'inactive' } });
+      }
+    }
+  }
+
   await node.save();
   return toWire(node.toObject());
+}
+
+/** Every node beneath `id`, excluding `id` itself. */
+async function descendantIds(id: string): Promise<string[]> {
+  const rows = await ScopeNodeModel.find().select('parentId').lean<{ _id: string; parentId?: string }[]>();
+  const children = new Map<string, string[]>();
+  for (const row of rows) {
+    if (!row.parentId) continue;
+    children.set(row.parentId, [...(children.get(row.parentId) ?? []), row._id]);
+  }
+
+  const out: string[] = [];
+  const queue = [...(children.get(id) ?? [])];
+  const seen = new Set<string>();
+  while (queue.length > 0) {
+    const next = queue.pop() as string;
+    if (seen.has(next)) continue; // a cycle would otherwise spin forever
+    seen.add(next);
+    out.push(next);
+    queue.push(...(children.get(next) ?? []));
+  }
+  return out;
 }
 
 /**

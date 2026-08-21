@@ -12,6 +12,7 @@ import {
 } from '../models/index.js';
 import { ApiError } from '../utils/ApiError.js';
 import { logger } from '../config/logger.js';
+import { openIfRequired, openRequestFor, type Decider } from './approval.service.js';
 
 /**
  * Transfers and reservations.
@@ -38,7 +39,10 @@ export interface CreateTransferInput {
   notes?: string;
 }
 
-export async function createTransfer(input: CreateTransferInput, requester: string): Promise<TransferDoc> {
+export async function createTransfer(
+  input: CreateTransferInput,
+  requester: Decider,
+): Promise<TransferDoc> {
   const asset = await Asset.findById(input.assetId).lean();
   if (!asset) throw ApiError.notFound('Asset');
 
@@ -57,7 +61,7 @@ export async function createTransfer(input: CreateTransferInput, requester: stri
     assetName: asset.name,
     from: from || 'Unassigned',
     to: input.to,
-    requester,
+    requester: requester.name,
     approver: '',
     status: 'Pending',
     requestedAt: new Date(),
@@ -69,6 +73,18 @@ export async function createTransfer(input: CreateTransferInput, requester: stri
     batchId: input.batchId ?? undefined,
     requiredDate: input.requiredDate ? new Date(input.requiredDate) : undefined,
     notes: input.notes ?? '',
+  });
+
+  // If a workflow governs transfers here, this raises the real approval request
+  // that has to be settled before the transfer can move. When none does, the
+  // transfer behaves exactly as it did before approvals existed.
+  await openIfRequired({
+    trigger: 'asset_transfer',
+    subjectId: transfer._id,
+    subjectLabel: `${asset.name} → ${input.to}`,
+    scopeId: asset.location?.id,
+    requestedBy: requester.id,
+    requestedByName: requester.name,
   });
 
   return transfer.toObject();
@@ -100,6 +116,20 @@ export async function advanceTransfer(
 
   if ((status === 'Approved' || status === 'Rejected') && actor === transfer.requester) {
     throw ApiError.forbidden('A transfer cannot be approved by the person who requested it.');
+  }
+
+  // A transfer under an open approval request is decided in Approvals, not here.
+  // Without this the workflow would be advisory — anyone with the transfer
+  // screen could approve around the chain, which is the exact failure mode of a
+  // workflow feature that only stores configuration.
+  if (status === 'Approved' || status === 'Rejected') {
+    const pending = await openRequestFor('asset_transfer', id);
+    if (pending) {
+      throw ApiError.conflict(
+        `This transfer is governed by "${pending.workflowName}" and is awaiting approval step ` +
+          `${pending.currentStep + 1} of ${pending.steps.length}. Decide it from Approvals.`,
+      );
+    }
   }
 
   transfer.status = status;
@@ -163,6 +193,43 @@ export async function advanceTransfer(
 
 export async function listTransfers() {
   return Transfer.find().sort({ requestedAt: -1 }).lean();
+}
+
+/**
+ * Apply a settled approval to the transaction it was gating.
+ *
+ * Called by the approvals controller once a request reaches `Approved` or
+ * `Rejected`. It bypasses `advanceTransfer`'s "decided in Approvals" guard on
+ * purpose — that guard exists to stop somebody stepping *around* the chain, and
+ * this is the chain having finished.
+ *
+ * Failures here are logged rather than thrown. The approval itself is already
+ * recorded and must not be rolled back because the downstream record refused a
+ * transition; a transfer that was cancelled while its approval was in flight is
+ * an ordinary race, not a reason to lose the decision.
+ */
+export async function applyApprovalOutcome(
+  subjectId: string,
+  outcome: 'Approved' | 'Rejected',
+  approver: string,
+): Promise<void> {
+  const transfer = await Transfer.findById(subjectId);
+  if (!transfer) return;
+
+  const allowed = TRANSFER_FLOW[transfer.status];
+  if (!allowed.includes(outcome)) {
+    logger.warn('Approval settled but the transfer cannot take that transition', {
+      transferId: subjectId,
+      from: transfer.status,
+      to: outcome,
+    });
+    return;
+  }
+
+  transfer.status = outcome;
+  transfer.approver = approver;
+  transfer.approvedAt = new Date();
+  await transfer.save();
 }
 
 // ── Reservations ─────────────────────────────────────────────────────────────

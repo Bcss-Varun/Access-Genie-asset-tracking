@@ -13,6 +13,7 @@
 // ─────────────────────────────────────────────────────────────────────────────
 
 import type { WorkOrderType } from './domain.js';
+import type { RoleId } from './platform.js';
 
 // ── Attribute schema ─────────────────────────────────────────────────────────
 export const ATTRIBUTE_TYPES = ['text', 'number', 'select', 'date', 'boolean'] as const;
@@ -222,17 +223,36 @@ export interface Integration {
   description: string;
 }
 
+/**
+ * One step of an approval chain.
+ *
+ * `approver` is the original free-text label and stays for display. The engine
+ * resolves against `approverRole` (the normal case) or `approverUserId` (a step
+ * pinned to one person) — see `governance.ts` for why the role form is the
+ * default.
+ */
 export interface WorkflowStep {
+  order: number;
   name: string;
   approver: string;
+  approverRole?: RoleId;
+  approverUserId?: string;
 }
 
 export interface ApprovalWorkflow {
   id: string;
   name: string;
+  description: string;
+  /** An `ApprovalTrigger` — see governance.ts. */
   trigger: string;
+  /** Scope-node id this applies within; absent means the whole organisation. */
+  scopeId?: string;
+  scopeName?: string;
   steps: WorkflowStep[];
-  status: 'Active' | 'Draft';
+  status: 'Active' | 'Inactive' | 'Draft';
+  createdBy: string;
+  createdAt: string;
+  updatedAt: string;
 }
 
 // ── Operations: transfers & reservations ─────────────────────────────────────

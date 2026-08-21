@@ -1,5 +1,5 @@
 {
-  "ranAt": "2026-08-18T13:11:55.928Z",
+  "ranAt": "2026-08-19T11:03:38.801Z",
   "summary": {
     "total": 44,
     "pass": 44,
@@ -7,7 +7,7 @@
   },
   "teardown": {
     "removed": [
-      "AST-20"
+      "AST-89"
     ],
     "stuck": []
   },
@@ -19,8 +19,9 @@
       "priority": "P0",
       "severity": "—",
       "expected": "201 and a user id",
-      "actual": "201 U-7",
+      "actual": "201 U-51",
       "status": "PASS",
+      "pass": true,
       "evidence": null
     },
     {
@@ -32,6 +33,7 @@
       "expected": "401",
       "actual": "401",
       "status": "PASS",
+      "pass": true,
       "evidence": null
     },
     {
@@ -43,6 +45,7 @@
       "expected": "401",
       "actual": "401",
       "status": "PASS",
+      "pass": true,
       "evidence": null
     },
     {
@@ -54,6 +57,7 @@
       "expected": "401",
       "actual": "401",
       "status": "PASS",
+      "pass": true,
       "evidence": null
     },
     {
@@ -65,6 +69,7 @@
       "expected": "200 with 0 rows (the probe is homed at a node holding no assets)",
       "actual": "200, 0 rows",
       "status": "PASS",
+      "pass": true,
       "evidence": null
     },
     {
@@ -76,6 +81,7 @@
       "expected": "200 with 0 rows (the probe is homed at a node holding no assets)",
       "actual": "200, 0 rows",
       "status": "PASS",
+      "pass": true,
       "evidence": null
     },
     {
@@ -87,6 +93,7 @@
       "expected": "200 with 0 rows (the probe is homed at a node holding no assets)",
       "actual": "200, 0 rows",
       "status": "PASS",
+      "pass": true,
       "evidence": null
     },
     {
@@ -98,6 +105,7 @@
       "expected": "200 with 0 rows (the probe is homed at a node holding no assets)",
       "actual": "200, 0 rows",
       "status": "PASS",
+      "pass": true,
       "evidence": null
     },
     {
@@ -109,6 +117,7 @@
       "expected": "200 with 0 rows (the probe is homed at a node holding no assets)",
       "actual": "200, 0 rows",
       "status": "PASS",
+      "pass": true,
       "evidence": null
     },
     {
@@ -120,6 +129,7 @@
       "expected": "200 with 0 rows (the probe is homed at a node holding no assets)",
       "actual": "200, 0 rows",
       "status": "PASS",
+      "pass": true,
       "evidence": null
     },
     {
@@ -131,6 +141,7 @@
       "expected": "200 with 0 rows (the probe is homed at a node holding no assets)",
       "actual": "200, 0 rows",
       "status": "PASS",
+      "pass": true,
       "evidence": null
     },
     {
@@ -142,6 +153,7 @@
       "expected": "200 with 0 rows (the probe is homed at a node holding no assets)",
       "actual": "200, 0 rows",
       "status": "PASS",
+      "pass": true,
       "evidence": null
     },
     {
@@ -153,6 +165,7 @@
       "expected": "200 with 0 rows (the probe is homed at a node holding no assets)",
       "actual": "200, 0 rows",
       "status": "PASS",
+      "pass": true,
       "evidence": null
     },
     {
@@ -164,6 +177,7 @@
       "expected": "every asset-derived slice empty",
       "actual": "all empty",
       "status": "PASS",
+      "pass": true,
       "evidence": null
     },
     {
@@ -175,6 +189,7 @@
       "expected": "404 (not 403 — confirming existence is itself a disclosure)",
       "actual": "404",
       "status": "PASS",
+      "pass": true,
       "evidence": null
     },
     {
@@ -186,6 +201,7 @@
       "expected": "root = BLD-1",
       "actual": "root = BLD-1",
       "status": "PASS",
+      "pass": true,
       "evidence": null
     },
     {
@@ -197,6 +213,7 @@
       "expected": "total = 0",
       "actual": "total = 0",
       "status": "PASS",
+      "pass": true,
       "evidence": null
     },
     {
@@ -208,6 +225,7 @@
       "expected": "403",
       "actual": "403",
       "status": "PASS",
+      "pass": true,
       "evidence": null
     },
     {
@@ -219,6 +237,7 @@
       "expected": "403",
       "actual": "403",
       "status": "PASS",
+      "pass": true,
       "evidence": null
     },
     {
@@ -230,6 +249,7 @@
       "expected": "403",
       "actual": "403",
       "status": "PASS",
+      "pass": true,
       "evidence": null
     },
     {
@@ -241,6 +261,7 @@
       "expected": "403",
       "actual": "403",
       "status": "PASS",
+      "pass": true,
       "evidence": null
     },
     {
@@ -252,6 +273,7 @@
       "expected": "403",
       "actual": "403",
       "status": "PASS",
+      "pass": true,
       "evidence": null
     },
     {
@@ -263,6 +285,7 @@
       "expected": "403",
       "actual": "403",
       "status": "PASS",
+      "pass": true,
       "evidence": null
     },
     {
@@ -272,8 +295,9 @@
       "priority": "P0",
       "severity": "—",
       "expected": "201 and an asset id",
-      "actual": "201 AST-20",
+      "actual": "201 AST-89",
       "status": "PASS",
+      "pass": true,
       "evidence": null
     },
     {
@@ -282,9 +306,10 @@
       "type": "Functional",
       "priority": "P0",
       "severity": "—",
-      "expected": "200 and id AST-20",
-      "actual": "200 AST-20",
+      "expected": "200 and id AST-89",
+      "actual": "200 AST-89",
       "status": "PASS",
+      "pass": true,
       "evidence": null
     },
     {
@@ -293,9 +318,10 @@
       "type": "Functional",
       "priority": "P0",
       "severity": "—",
-      "expected": "name = QA Probe Renamed 1787058710726",
-      "actual": "name = QA Probe Renamed 1787058710726",
+      "expected": "name = QA Probe Renamed 1787137411959",
+      "actual": "name = QA Probe Renamed 1787137411959",
       "status": "PASS",
+      "pass": true,
       "evidence": null
     },
     {
@@ -304,9 +330,10 @@
       "type": "Functional",
       "priority": "P1",
       "severity": "—",
-      "expected": "custodian = QA Custodian 1787058711113",
-      "actual": "custodian = QA Custodian 1787058711113",
+      "expected": "custodian = QA Custodian 1787137412395",
+      "actual": "custodian = QA Custodian 1787137412395",
       "status": "PASS",
+      "pass": true,
       "evidence": null
     },
     {
@@ -318,6 +345,7 @@
       "expected": "status = Maintenance",
       "actual": "status = Maintenance",
       "status": "PASS",
+      "pass": true,
       "evidence": null
     },
     {
@@ -327,8 +355,9 @@
       "priority": "P0",
       "severity": "—",
       "expected": "404/403 and the name unchanged",
-      "actual": "404, name = QA Probe Renamed 1787058710726",
+      "actual": "404, name = QA Probe Renamed 1787137411959",
       "status": "PASS",
+      "pass": true,
       "evidence": null
     },
     {
@@ -340,6 +369,7 @@
       "expected": "404/403 and the asset still present",
       "actual": "403, still present = true",
       "status": "PASS",
+      "pass": true,
       "evidence": null
     },
     {
@@ -349,8 +379,9 @@
       "priority": "P0",
       "severity": "—",
       "expected": "201 and an id",
-      "actual": "201 WO-31",
+      "actual": "201 WO-42",
       "status": "PASS",
+      "pass": true,
       "evidence": null
     },
     {
@@ -362,6 +393,7 @@
       "expected": "200",
       "actual": "200",
       "status": "PASS",
+      "pass": true,
       "evidence": null
     },
     {
@@ -373,6 +405,7 @@
       "expected": "status = Assigned",
       "actual": "status = Assigned",
       "status": "PASS",
+      "pass": true,
       "evidence": null
     },
     {
@@ -384,6 +417,7 @@
       "expected": "404",
       "actual": "404",
       "status": "PASS",
+      "pass": true,
       "evidence": null
     },
     {
@@ -393,8 +427,9 @@
       "priority": "P1",
       "severity": "—",
       "expected": "201 and a document id",
-      "actual": "201 DOC-3",
+      "actual": "201 DOC-14",
       "status": "PASS",
+      "pass": true,
       "evidence": null
     },
     {
@@ -406,6 +441,7 @@
       "expected": "the uploaded document appears in the asset’s documents",
       "actual": "found = true",
       "status": "PASS",
+      "pass": true,
       "evidence": null
     },
     {
@@ -417,6 +453,7 @@
       "expected": "404",
       "actual": "404",
       "status": "PASS",
+      "pass": true,
       "evidence": null
     },
     {
@@ -428,6 +465,7 @@
       "expected": "404",
       "actual": "404",
       "status": "PASS",
+      "pass": true,
       "evidence": null
     },
     {
@@ -439,6 +477,7 @@
       "expected": "the document no longer appears",
       "actual": "gone = true",
       "status": "PASS",
+      "pass": true,
       "evidence": null
     },
     {
@@ -450,6 +489,7 @@
       "expected": "a tracked zone to exercise",
       "actual": "no tracked zones in this database — route verified by its 404 below instead",
       "status": "PASS",
+      "pass": true,
       "evidence": null
     },
     {
@@ -461,6 +501,7 @@
       "expected": "404 for an unknown zone (not 404 for a missing route)",
       "actual": "404 Zone not found",
       "status": "PASS",
+      "pass": true,
       "evidence": null
     },
     {
@@ -470,8 +511,9 @@
       "priority": "P1",
       "severity": "—",
       "expected": "201 and an id",
-      "actual": "201 RUL-2",
+      "actual": "201 RUL-13",
       "status": "PASS",
+      "pass": true,
       "evidence": null
     },
     {
@@ -480,9 +522,10 @@
       "type": "Functional",
       "priority": "P1",
       "severity": "—",
-      "expected": "name = QA Probe Rule Renamed 1787058714950",
-      "actual": "name = QA Probe Rule Renamed 1787058714950",
+      "expected": "name = QA Probe Rule Renamed 1787137417709",
+      "actual": "name = QA Probe Rule Renamed 1787137417709",
       "status": "PASS",
+      "pass": true,
       "evidence": null
     },
     {
@@ -494,6 +537,7 @@
       "expected": "the rule no longer appears",
       "actual": "gone = true",
       "status": "PASS",
+      "pass": true,
       "evidence": null
     }
   ]

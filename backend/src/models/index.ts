@@ -204,3 +204,7 @@ export {
   type RoleGrantDoc,
   type SubscriptionCadence,
 } from './configuration.js';
+
+export * from './approval.js';
+export * from './numbering.js';
+export * from './notificationRule.js';

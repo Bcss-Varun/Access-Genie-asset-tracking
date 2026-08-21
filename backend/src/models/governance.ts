@@ -1,11 +1,14 @@
 import { model, Schema } from 'mongoose';
 import {
   CERT_STATUSES,
+  ROLE_IDS,
+  WORKFLOW_STATUSES,
   CYCLE_COUNT_STATUSES,
   INTEGRATION_STATUSES,
   type CertStatus,
   type CycleCountStatus,
   type IntegrationStatus,
+  type WorkflowStatus,
   type WorkflowStep,
 } from '@access-genie/shared';
 import { baseSchemaPlugin } from '../utils/mongoose.js';
@@ -206,15 +209,28 @@ export const Integration = model<IntegrationDoc>('Integration', integrationSchem
 export interface ApprovalWorkflowDoc {
   _id: string; // WF-01
   name: string;
+  description: string;
+  /** An `ApprovalTrigger`. Held as a string so an unknown value reads rather than throws. */
   trigger: string;
+  /** The scope-node this applies within. Absent = the whole organisation. */
+  scopeId?: string;
   steps: WorkflowStep[];
-  status: 'Active' | 'Draft';
+  status: WorkflowStatus;
+  createdBy: string;
+  createdAt: Date;
+  updatedAt: Date;
 }
 
 const workflowStepSchema = new Schema<WorkflowStep>(
   {
+    order: { type: Number, required: true, min: 1 },
     name: { type: String, required: true },
-    approver: { type: String, required: true },
+    // `approver` is the legacy free-text label. The two fields below are what
+    // the engine actually resolves against; the label is kept so existing rows
+    // still render rather than showing a blank step.
+    approver: { type: String, default: '' },
+    approverRole: { type: String, enum: ROLE_IDS },
+    approverUserId: { type: String },
   },
   { _id: false },
 );
@@ -223,13 +239,20 @@ const approvalWorkflowSchema = new Schema<ApprovalWorkflowDoc>(
   {
     _id: { type: String, required: true },
     name: { type: String, required: true, trim: true },
-    trigger: { type: String, required: true },
+    description: { type: String, default: '' },
+    trigger: { type: String, required: true, index: true },
+    // Indexed with `trigger` because resolving a workflow for an operation asks
+    // exactly this pair, on every transfer raised.
+    scopeId: { type: String, index: true },
     // Order is the approval order, so this array is a sequence, not a set.
     steps: { type: [workflowStepSchema], default: [] },
-    status: { type: String, required: true, enum: ['Active', 'Draft'], default: 'Draft', index: true },
+    status: { type: String, required: true, enum: WORKFLOW_STATUSES, default: 'Draft', index: true },
+    createdBy: { type: String, default: '' },
   },
-  { versionKey: false },
+  { versionKey: false, timestamps: true },
 );
+
+approvalWorkflowSchema.index({ trigger: 1, status: 1 });
 
 approvalWorkflowSchema.plugin(baseSchemaPlugin);
 export const ApprovalWorkflow = model<ApprovalWorkflowDoc>('ApprovalWorkflow', approvalWorkflowSchema);
