@@ -14,4 +14,5 @@ export * from './maintenance-dashboard.js'; // the org-wide maintenance read
 export * from './label.js'; // labelling and tag printing
 export * from './analytics.js'; // the analytics dashboard and the report engine
 export * from './governance.js'; // administration: action permissions and approvals
+export * from './compliance.js'; // Compliance Monitoring & Audit Center: findings, audits, evidence
 export * from './api.js'; // envelopes, query contracts, auth payloads

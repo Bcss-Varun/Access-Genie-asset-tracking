@@ -264,6 +264,10 @@ export const NOTIFICATION_EVENTS = [
   'transfer.requested',
   'asset.status_changed',
   'work_order.overdue',
+  'compliance.finding_raised',
+  'audit.finding_raised',
+  'certification.expiring',
+  'certification.expired',
 ] as const;
 export type NotificationEvent = (typeof NOTIFICATION_EVENTS)[number];
 
@@ -273,6 +277,10 @@ export const NOTIFICATION_EVENT_LABELS: Record<NotificationEvent, string> = {
   'transfer.requested': 'Transfer requested',
   'asset.status_changed': 'Asset status changed',
   'work_order.overdue': 'Work order overdue',
+  'compliance.finding_raised': 'Compliance finding raised',
+  'audit.finding_raised': 'Audit finding raised',
+  'certification.expiring': 'Certification expiring',
+  'certification.expired': 'Certification expired',
 };
 
 export const NOTIFICATION_CHANNELS = ['in_app', 'email', 'webhook'] as const;

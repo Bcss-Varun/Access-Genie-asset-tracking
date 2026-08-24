@@ -1,171 +1,214 @@
-import { useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { allAuditLog, allCycleCounts, allCustody, allCertifications, allAssets } from '@/lib/dataset';
-import { TRACKED_FACILITIES } from '@/lib/tracking-data';
-import { PageHeader, KpiCard, Badge } from '@/components/ui/primitives';
+import { AUDIT_STATUSES, AUDIT_TYPES, type AuditStatus, type AuditType } from '@access-genie/shared';
+import { EMPTY_AUDIT_FILTERS, activeAuditFilterCount, useAuditCount, useAuditList, type AuditFilters } from '@/api/compliance';
+import { ApiRequestError } from '@/api/client';
+import { useAuth } from '@/api/auth';
+import { Badge, EmptyState, ErrorState, FilterBar, MetricCard, PageHeader, TableSkeleton } from '@/components/ui/primitives';
+import { Select, TextInput, optionsFrom } from '@/components/ui/FormDialog';
 import { Button } from '@/components/ui/Button';
-import { FormDialog, Field, FieldRow, Select, TextInput } from '@/components/ui/FormDialog';
-import { useMutate } from '@/api/mutate';
-import { auditsApi } from '@/api/tracking-ops';
 import { relTime } from '@/lib/utils';
-
-const HUBS: { href: string; title: string; desc: string }[] = [
-  { href: '/cycle-counts', title: 'Cycle Counts', desc: 'Scheduled & reconciled physical inventory counts.' },
-  { href: '/custody', title: 'Chain of Custody', desc: 'Who holds what, and every hand-off in between.' },
-  { href: '/certifications', title: 'Certifications', desc: 'Cert & warranty expiry tracking by asset.' },
-  { href: '/audit-log', title: 'Immutable Log', desc: 'Tamper-evident, hash-chained system of record.' },
-];
+import { AUDIT_STATUS_TONE, formatDateShort } from '@/components/compliance-monitoring/tokens';
+import { AuditDialog } from '@/components/compliance-monitoring/AuditDialog';
 
 /**
- * Open a real audit session.
+ * Audit Center.
  *
- * "Start Audit" used to raise a toast saying a workspace had been created.
- * There is a real one — the counting session the Inventory Tracking screen
- * works through — so this creates that and takes you to it.
+ * An audit is an engagement, not a physical count — it carries a lifecycle
+ * (Planned → In Progress → Completed → Closed), a lead auditor, and the
+ * findings raised as it's worked. This replaced a hub whose "Start Audit"
+ * opened a cycle-count session; that screen is still reachable from Asset
+ * Tracking, this one is the compliance audit trail.
  */
-function StartAuditDialog({ onClose }: { onClose: () => void }) {
-  const { run, isPending } = useMutate();
-  const navigate = useNavigate();
 
-  const facilities = TRACKED_FACILITIES;
-  const [name, setName] = useState('');
-  const [scope, setScope] = useState('Whole facility');
-  const [facility, setFacility] = useState(facilities[0]?.name ?? '');
-  const [expected, setExpected] = useState(String(allAssets.length));
-  const [dueInDays, setDueInDays] = useState('14');
-
-  const submit = async () => {
-    const created = await run(
-      auditsApi.start({
-        name: name.trim(),
-        scope,
-        facility,
-        expected: Number(expected) || 0,
-        dueInDays: Number(dueInDays) || 14,
-      }),
-      {
-        success: 'Audit opened',
-        successDetail: `${name.trim()} — counting starts on Inventory Tracking.`,
-        describe: 'open that audit',
-        refreshTracking: true,
-      },
-    );
-    if (!created) return;
-    onClose();
-    navigate('/tracking/inventory');
-  };
-
-  return (
-    <FormDialog
-      icon="📋"
-      title="Start an audit"
-      description="Opens a counting session. Progress and variance are worked through on Inventory Tracking."
-      submitLabel="Open audit"
-      busy={isPending}
-      disabled={name.trim().length < 3 || !facility}
-      onSubmit={() => void submit()}
-      onCancel={onClose}
-    >
-      <Field label="Audit name" required>
-        <TextInput autoFocus value={name} onChange={(e) => setName(e.target.value)} placeholder="Q3 physical verification" />
-      </Field>
-
-      <FieldRow>
-        <Field label="Facility" required>
-          {facilities.length > 0 ? (
-            <Select value={facility} onChange={(e) => setFacility(e.target.value)} options={facilities.map((f) => ({ value: f.name, label: f.name }))} />
-          ) : (
-            <TextInput value={facility} onChange={(e) => setFacility(e.target.value)} placeholder="Hyderabad Campus" />
-          )}
-        </Field>
-        <Field label="Scope">
-          <TextInput value={scope} onChange={(e) => setScope(e.target.value)} placeholder="Whole facility" />
-        </Field>
-      </FieldRow>
-
-      <FieldRow>
-        <Field label="Expected count" hint="How many assets should be found.">
-          <TextInput type="number" min={0} value={expected} onChange={(e) => setExpected(e.target.value)} />
-        </Field>
-        <Field label="Due in (days)">
-          <TextInput type="number" min={1} value={dueInDays} onChange={(e) => setDueInDays(e.target.value)} />
-        </Field>
-      </FieldRow>
-    </FormDialog>
-  );
-}
+const DEFAULT_SORT = 'dueDate';
 
 export default function AuditCenterPage() {
-  const [starting, setStarting] = useState(false);
+  const { can } = useAuth();
+  const navigate = useNavigate();
+  const [filters, setFilters] = useState<AuditFilters>(EMPTY_AUDIT_FILTERS);
+  const [page, setPage] = useState(1);
+  const [sort, setSort] = useState(DEFAULT_SORT);
+  const [search, setSearch] = useState('');
+  const [creating, setCreating] = useState(false);
 
-  const coveredAssets = new Set(allCustody.map((c) => c.assetId)).size;
-  // Guarded: an empty registry made this NaN%.
-  const coverage = allAssets.length === 0 ? 0 : Math.round((coveredAssets / allAssets.length) * 100);
-  const openFindings = allCertifications.filter((c) => c.status !== 'Valid').length
-    + allCycleCounts.filter((c) => c.status === 'Variance').length;
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      const next = search.trim();
+      if (next !== (filters.q ?? '')) {
+        setFilters((f) => ({ ...f, q: next || undefined }));
+        setPage(1);
+      }
+    }, 300);
+    return () => clearTimeout(timer);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [search]);
 
-  const recent = [...allAuditLog].sort((a, b) => Date.parse(b.timestamp) - Date.parse(a.timestamp)).slice(0, 6);
+  const update = useCallback((next: Partial<AuditFilters>) => {
+    setFilters((current) => ({ ...current, ...next }));
+    setPage(1);
+  }, []);
+
+  const clear = useCallback(() => {
+    setFilters(EMPTY_AUDIT_FILTERS);
+    setSearch('');
+    setPage(1);
+  }, []);
+
+  const activeCount = activeAuditFilterCount(filters);
+  const list = useAuditList({ ...filters, page, limit: 25, sort });
+
+  const inProgressCount = useAuditCount({ status: ['In Progress'] });
+  const plannedCount = useAuditCount({ status: ['Planned'] });
+  const overdueCount = useAuditCount({ status: ['In Progress', 'Planned'] });
+  const completedCount = useAuditCount({ status: ['Completed', 'Closed'] });
+
+  const items = list.data?.items ?? [];
+  const meta = list.data?.meta;
+  const canWrite = can('compliance');
 
   return (
-    <div className="h-full flex flex-col space-y-6">
+    <div className="flex h-full flex-col space-y-5">
       <PageHeader
         title="Audit Center"
-        subtitle="Compliance command post — audits, findings, custody and evidence in one place."
-        breadcrumb={[{ label: 'Compliance' }, { label: 'Audit Center' }]}
-        actions={<Button onClick={() => setStarting(true)}>Start Audit</Button>}
+        subtitle="Compliance audits, their findings and the evidence behind each one."
+        breadcrumb={[{ label: 'Security & Compliance' }, { label: 'Audit Center' }]}
+        actions={canWrite && <Button onClick={() => setCreating(true)}>+ Open audit</Button>}
       />
 
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        <KpiCard label="Audits YTD" value={allAuditLog.length} tone="primary" accent sub="Recorded audit events" />
-        <KpiCard label="Open Findings" value={openFindings} tone="amber" sub="Awaiting remediation" />
-        <KpiCard label="Cycle Counts" value={allCycleCounts.length} tone="slate" sub="Across all locations" />
-        <KpiCard label="Custody Coverage" value={`${coverage}%`} tone="emerald" sub={`${coveredAssets} of ${allAssets.length} assets tracked`} />
+      <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
+        <MetricCard label="Planned" value={plannedCount.data ?? '—'} tone="slate" icon="🗓️" sub="Not yet started" />
+        <MetricCard label="In progress" value={inProgressCount.data ?? '—'} tone="primary" icon="🕵️" sub="Being worked" />
+        <MetricCard label="Open engagements" value={overdueCount.data ?? '—'} tone="amber" icon="📋" sub="Planned + in progress" />
+        <MetricCard label="Completed" value={completedCount.data ?? '—'} tone="emerald" icon="✅" sub="Completed or closed" />
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 flex-1 min-h-0">
-        {/* Hub links */}
-        <div className="lg:col-span-2 grid grid-cols-1 sm:grid-cols-2 gap-4 content-start">
-          {HUBS.map((h) => (
-            <Link
-              key={h.href}
-              to={h.href}
-              className="glass-panel rounded-xl p-5 hover:border-primary-300 hover:shadow-md transition-all group"
-            >
-              <div className="min-w-0">
-                <h3 className="font-heading font-semibold text-slate-900 group-hover:text-primary-600 transition-colors">{h.title}</h3>
-                <p className="text-sm text-slate-500 mt-1">{h.desc}</p>
-                <span className="mt-2 inline-flex text-xs font-medium text-primary-600">Open →</span>
-              </div>
-            </Link>
-          ))}
+      <FilterBar>
+        <div>
+          <span className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-slate-500">Search</span>
+          <TextInput type="search" value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search audit name…" />
         </div>
+        <div>
+          <span className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-slate-500">Status</span>
+          <Select
+            options={[{ value: '', label: 'All statuses' }, ...optionsFrom(AUDIT_STATUSES)]}
+            value={filters.status?.[0] ?? ''}
+            onChange={(e) => update({ status: e.target.value ? [e.target.value as AuditStatus] : undefined })}
+          />
+        </div>
+        <div>
+          <span className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-slate-500">Type</span>
+          <Select
+            options={[{ value: '', label: 'All types' }, ...optionsFrom(AUDIT_TYPES)]}
+            value={filters.type?.[0] ?? ''}
+            onChange={(e) => update({ type: e.target.value ? [e.target.value as AuditType] : undefined })}
+          />
+        </div>
+        {activeCount > 0 && (
+          <button type="button" onClick={clear} className="text-xs font-medium text-primary-600 hover:text-primary-700 justify-self-start">
+            Clear {activeCount} filter{activeCount === 1 ? '' : 's'}
+          </button>
+        )}
+      </FilterBar>
 
-        {/* Recent activity */}
-        <div className="glass-panel rounded-xl p-5 flex flex-col min-h-0">
-          <div className="flex items-center justify-between mb-4">
-            <h3 className="text-base font-semibold text-slate-800">Recent Activity</h3>
-            <Link to="/audit-log" className="text-xs font-medium text-primary-600 hover:underline">Full log →</Link>
+      {list.error ? (
+        <div className="glass-panel">
+          <ErrorState
+            title="Could not load audits"
+            description={list.error instanceof ApiRequestError ? list.error.message : 'The request failed.'}
+            requestId={list.error instanceof ApiRequestError ? list.error.requestId : undefined}
+            onRetry={() => void list.refetch()}
+          />
+        </div>
+      ) : list.isLoading && items.length === 0 ? (
+        <TableSkeleton rows={8} columns={6} />
+      ) : items.length === 0 ? (
+        <div className="glass-panel">
+          <EmptyState
+            variant={activeCount > 0 ? 'no-results' : 'empty'}
+            icon="🕵️"
+            title={activeCount > 0 ? 'No audits match these filters' : 'No audits yet'}
+            description={activeCount > 0 ? 'Clear a filter to widen the search.' : 'Open one against a facility to start raising findings.'}
+          />
+        </div>
+      ) : (
+        <div className="glass-panel flex min-h-0 flex-1 flex-col overflow-hidden">
+          <div className="flex-1 overflow-auto">
+            <table className="w-full min-w-[900px] text-left text-sm">
+              <thead className="sticky top-0 z-10 border-b border-slate-200 bg-slate-50 text-xs font-semibold uppercase tracking-wider text-slate-500">
+                <tr>
+                  <th className="px-5 py-3.5">Audit</th>
+                  <th className="px-5 py-3.5">Type</th>
+                  <th className="px-5 py-3.5">Facility</th>
+                  <th className="px-5 py-3.5">Lead auditor</th>
+                  <th className="px-5 py-3.5">Status</th>
+                  <th className="px-5 py-3.5">Findings</th>
+                  <th className="px-5 py-3.5">Due</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100">
+                {items.map((audit) => (
+                  <tr key={audit.id} className="cursor-pointer transition-colors hover:bg-slate-50" onClick={() => navigate(`/audit/${audit.id}`)}>
+                    <td className="px-5 py-3">
+                      <Link to={`/audit/${audit.id}`} className="font-medium text-slate-900 hover:text-primary-700" onClick={(e) => e.stopPropagation()}>
+                        {audit.name}
+                      </Link>
+                      <div className="font-mono text-[11px] text-slate-400">{audit.id}</div>
+                    </td>
+                    <td className="px-5 py-3 text-slate-600">{audit.type}</td>
+                    <td className="px-5 py-3 text-slate-600">{audit.scopeId}</td>
+                    <td className="px-5 py-3 text-slate-600">{audit.leadAuditor}</td>
+                    <td className="px-5 py-3">
+                      <Badge tone={AUDIT_STATUS_TONE[audit.status]}>{audit.status}</Badge>
+                    </td>
+                    <td className="px-5 py-3">
+                      {audit.findingsCount === 0 ? (
+                        <span className="text-slate-400">None yet</span>
+                      ) : (
+                        <span className={audit.openFindingsCount > 0 ? 'font-medium text-health-critical' : 'text-emerald-600'}>
+                          {audit.openFindingsCount} open / {audit.findingsCount} total
+                        </span>
+                      )}
+                    </td>
+                    <td className="px-5 py-3 whitespace-nowrap text-slate-500">
+                      {formatDateShort(audit.dueDate)}
+                      <div className="text-[11px] text-slate-400">{relTime(audit.dueDate)}</div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </div>
-          <ul className="space-y-3 overflow-auto flex-1">
-            {recent.map((r) => (
-              <li key={r.id} className="flex items-start gap-3">
-                <span className="mt-1 h-2 w-2 rounded-full bg-primary-400 shrink-0" />
-                <div className="min-w-0 flex-1">
-                  <div className="flex items-center gap-2 flex-wrap">
-                    <span className="font-medium text-slate-800 text-sm">{r.actor}</span>
-                    <Badge tone="slate" className="font-mono">{r.action}</Badge>
-                  </div>
-                  <div className="text-xs text-slate-500 mt-0.5">
-                    {r.category} · {r.target} · {relTime(r.timestamp)}
-                  </div>
-                </div>
-              </li>
-            ))}
-          </ul>
-        </div>
-      </div>
 
-      {starting && <StartAuditDialog onClose={() => setStarting(false)} />}
+          {meta && meta.totalPages > 1 && (
+            <div className="flex items-center justify-between border-t border-slate-100 px-5 py-3 text-xs text-slate-500">
+              <span>
+                Page {meta.page} of {meta.totalPages} · {meta.total} audit{meta.total === 1 ? '' : 's'}
+              </span>
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => setPage(meta.page - 1)}
+                  disabled={!meta.hasPrev}
+                  className="rounded-lg border border-slate-200 px-3 py-1 font-medium hover:border-slate-300 disabled:opacity-40"
+                >
+                  Previous
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setPage(meta.page + 1)}
+                  disabled={!meta.hasNext}
+                  className="rounded-lg border border-slate-200 px-3 py-1 font-medium hover:border-slate-300 disabled:opacity-40"
+                >
+                  Next
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
+      {creating && <AuditDialog onClose={() => setCreating(false)} onCreated={(id) => navigate(`/audit/${id}`)} />}
     </div>
   );
 }

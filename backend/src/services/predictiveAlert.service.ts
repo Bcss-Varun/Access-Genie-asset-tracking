@@ -19,6 +19,7 @@ import {
 import {
   Activity,
   Asset,
+  ComplianceRecord,
   PredictiveAlert,
   ScopeNodeModel,
   WorkOrder,
@@ -34,6 +35,8 @@ import { descendantIds } from './scopeFilter.service.js';
 import { buildMeta } from '../utils/response.js';
 import { escapeRegex, parsePagination } from '../utils/query.js';
 import { createWorkOrder } from './workOrder.service.js';
+import { recordSystemAudit } from './audit.service.js';
+import { fireEvent } from './notificationRule.service.js';
 import type {
   CreatePredictiveAlertInput,
   PredictiveAlertListQuery,
@@ -606,6 +609,43 @@ export async function createPredictiveAlert(
     actor,
     timestamp: now,
   });
+
+  // A Critical prediction is not just an operational alert — it is a
+  // compliance-relevant fact about the asset (it may fail before its next
+  // scheduled inspection), so it also lands in Compliance Monitoring. Scoped to
+  // `Critical` and non-manual sources: a human's own judgement call does not
+  // need to be reflected back at them as a compliance finding.
+  if (input.severity === 'Critical' && input.source !== 'Manual') {
+    const recordId = await nextId('complianceRecord', 'CMR');
+    await ComplianceRecord.create({
+      _id: recordId,
+      assetId: input.assetId,
+      assetName: asset.name,
+      scopeId: asset.location.id,
+      title: `Predictive alert: ${input.title}`,
+      description: `${input.detector?.name ?? 'A detector'} raised a Critical prediction against ${asset.name} (${input.confidence}% confidence). See predictive alert ${id}.`,
+      category: 'Operational',
+      severity: 'Critical',
+      status: 'Open',
+      source: 'Automated',
+      createdBy: actor,
+    });
+
+    recordSystemAudit({
+      action: 'compliance_record.create',
+      target: recordId,
+      category: 'Compliance',
+      actor,
+      metadata: { predictiveAlertId: id, assetId: input.assetId },
+    });
+
+    void fireEvent(
+      'compliance.finding_raised',
+      { subjectId: recordId, scopeId: asset.location.id, actorId: actor, actorName: actor, severity: 'Critical' },
+      `Compliance finding raised: ${input.title}`,
+      `A Critical predictive alert on ${asset.name} was promoted to a compliance finding.`,
+    );
+  }
 
   logger.info('Predictive alert raised', { alert: id, asset: input.assetId, source: input.source, confidence: input.confidence });
   return getPredictiveAlert(id);

@@ -94,31 +94,6 @@ export const createEscalationPolicySchema = z.object({
 
 export const updateEscalationPolicySchema = partialUpdate(createEscalationPolicySchema);
 
-/**
- * Deliberately narrow. Retention is a compliance control, so the screen may
- * change the period, the disposal method and the legal hold — never the data
- * class a policy applies to, which would silently re-point it at other records.
- */
-export const updateRetentionPolicySchema = z
-  .object({
-    retention: z.string().trim().min(1).max(60),
-    disposal: z.string().trim().min(1).max(120),
-    legalHold: z.boolean(),
-  })
-  .partial();
-
-/**
- * Creating one, unlike updating one, does name the data class: that is the
- * whole content of a new policy. Removing a class from the programme is the
- * only way to un-govern it, so delete is allowed too.
- */
-export const createRetentionPolicySchema = z.object({
-  dataClass: z.string().trim().min(1).max(80),
-  retention: z.string().trim().min(1).max(60),
-  disposal: z.string().trim().min(1).max(120),
-  legalHold: z.boolean().default(false),
-});
-
 // ── Reports ──────────────────────────────────────────────────────────────────
 export const createReportSchema = z.object({
   name: z.string().trim().min(1).max(160),

@@ -147,8 +147,6 @@ export {
   ApprovalWorkflow,
   EscalationPolicy,
   OnCallShift,
-  ComplianceFramework,
-  RetentionPolicy,
   ReportPack,
   type ReportDoc,
   type ReportDefinitionSub,
@@ -158,10 +156,18 @@ export {
   type ApprovalWorkflowDoc,
   type EscalationPolicyDoc,
   type OnCallShiftDoc,
-  type ComplianceFrameworkDoc,
-  type RetentionPolicyDoc,
   type ReportPackDoc,
 } from './governance.js';
+
+// ── Compliance & Audit ───────────────────────────────────────────────────────
+export { ComplianceRecord, type ComplianceRecordDoc } from './complianceRecord.js';
+export {
+  Audit,
+  AuditFinding,
+  type AuditEngagementDoc,
+  type AuditFindingDoc,
+  type AuditEvidenceSub,
+} from './audit.js';
 
 // ── Platform administration ──────────────────────────────────────────────────
 export {

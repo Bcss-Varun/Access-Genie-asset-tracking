@@ -36,7 +36,6 @@ import {
   AutomationRule,
   Backup,
   Certification,
-  ComplianceFramework,
   CoverageCell,
   CustodyRecord,
   CycleCount,
@@ -70,7 +69,6 @@ import {
   Report,
   ReportPack,
   Reservation,
-  RetentionPolicy,
   ScopeNodeModel,
   Sensor,
   SupportTicket,
@@ -94,7 +92,6 @@ import { SEEDED_COLLECTIONS, type SeedModel } from './collections.js';
 
 import apiKeys from './data/apiKeys.json' with { type: 'json' };
 import backups from './data/backups.json' with { type: 'json' };
-import complianceFrameworks from './data/complianceFrameworks.json' with { type: 'json' };
 import escalationPolicies from './data/escalationPolicies.json' with { type: 'json' };
 import exportJobs from './data/exportJobs.json' with { type: 'json' };
 import invoices from './data/invoices.json' with { type: 'json' };
@@ -105,7 +102,6 @@ import poLines from './data/poLines.json' with { type: 'json' };
 import helpArticles from './data/helpArticles.json' with { type: 'json' };
 import helpCategories from './data/helpCategories.json' with { type: 'json' };
 import reportPacks from './data/reportPacks.json' with { type: 'json' };
-import retentionPolicies from './data/retentionPolicies.json' with { type: 'json' };
 import supportTickets from './data/supportTickets.json' with { type: 'json' };
 import teams from './data/teams.json' with { type: 'json' };
 import technicians from './data/technicians.json' with { type: 'json' };
@@ -420,8 +416,6 @@ export async function seedDemo(options: { fresh?: boolean; skipConnect?: boolean
   // ── Governance ─────────────────────────────────────────────────────────────
   await upsert(EscalationPolicy, escalationPolicies.map(withId));
   await upsert(OnCallShift, onCallShifts.map(withId));
-  await upsert(ComplianceFramework, datesOn(complianceFrameworks, ['lastAssessment']).map(withId));
-  await upsert(RetentionPolicy, retentionPolicies.map(withId));
   await upsert(ReportPack, reportPacks.map(withId));
 
   // ── Registration sources & help ────────────────────────────────────────────

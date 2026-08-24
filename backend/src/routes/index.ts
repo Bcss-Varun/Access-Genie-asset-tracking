@@ -9,6 +9,8 @@ import workOrderRoutes from './workOrder.routes.js';
 import inspectionRoutes from './inspection.routes.js';
 import alertRoutes from './alert.routes.js';
 import predictiveAlertRoutes from './predictiveAlert.routes.js';
+import complianceRecordRoutes from './complianceRecord.routes.js';
+import auditCenterRoutes from './auditCenter.routes.js';
 import trackingRoutes from './tracking.routes.js';
 import userRoutes from './user.routes.js';
 import registryRoutes from './registry.routes.js';
@@ -121,6 +123,8 @@ router.use('/alerts', alertRoutes);
 // Distinct from `/alerts`: that is the operational alert centre (something
 // happened), this is the Predictive Maintenance board (something is going to).
 router.use('/predictive-alerts', predictiveAlertRoutes);
+router.use('/compliance-records', complianceRecordRoutes);
+router.use('/audits', auditCenterRoutes);
 router.use('/tracking', trackingRoutes);
 router.use('/users', userRoutes);
 router.use('/labels', labellingRoutes);

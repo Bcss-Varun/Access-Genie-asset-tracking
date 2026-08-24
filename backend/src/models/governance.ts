@@ -331,57 +331,6 @@ const onCallShiftSchema = new Schema<OnCallShiftDoc>(
 onCallShiftSchema.plugin(baseSchemaPlugin);
 export const OnCallShift = model<OnCallShiftDoc>('OnCallShift', onCallShiftSchema);
 
-// ── Regulatory frameworks ────────────────────────────────────────────────────
-export interface ComplianceFrameworkDoc {
-  _id: string; // soc2
-  name: string;
-  scope: string;
-  status: string;
-  /** Controls satisfied, 0–100. */
-  coverage: number;
-  lastAssessment: Date;
-  /** Artefacts attached as proof. */
-  evidence: number;
-}
-
-const complianceFrameworkSchema = new Schema<ComplianceFrameworkDoc>(
-  {
-    _id: { type: String, required: true },
-    name: { type: String, required: true },
-    scope: { type: String, default: '' },
-    status: { type: String, required: true, index: true },
-    coverage: { type: Number, required: true, min: 0, max: 100 },
-    lastAssessment: { type: Date, required: true },
-    evidence: { type: Number, default: 0, min: 0 },
-  },
-  { versionKey: false },
-);
-complianceFrameworkSchema.plugin(baseSchemaPlugin);
-export const ComplianceFramework = model<ComplianceFrameworkDoc>('ComplianceFramework', complianceFrameworkSchema);
-
-// ── Retention policies ───────────────────────────────────────────────────────
-/** `legalHold` overrides the schedule — nothing under hold is ever disposed of. */
-export interface RetentionPolicyDoc {
-  _id: string; // RP-01
-  dataClass: string;
-  retention: string;
-  disposal: string;
-  legalHold: boolean;
-}
-
-const retentionPolicySchema = new Schema<RetentionPolicyDoc>(
-  {
-    _id: { type: String, required: true },
-    dataClass: { type: String, required: true },
-    retention: { type: String, required: true },
-    disposal: { type: String, required: true },
-    legalHold: { type: Boolean, default: false, index: true },
-  },
-  { versionKey: false },
-);
-retentionPolicySchema.plugin(baseSchemaPlugin);
-export const RetentionPolicy = model<RetentionPolicyDoc>('RetentionPolicy', retentionPolicySchema);
-
 // ── Standard report packs ────────────────────────────────────────────────────
 /** A pre-built evidence bundle mapped to a framework. */
 export interface ReportPackDoc {

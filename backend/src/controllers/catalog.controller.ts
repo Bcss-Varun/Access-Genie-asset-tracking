@@ -67,6 +67,7 @@ export const listAudit = asyncHandler(async (_req: Request, res: Response) => {
 
   if (query.category) filter.category = query.category;
   if (query.actor) filter.actor = query.actor;
+  if (query.q) filter.$text = { $search: query.q };
 
   const pagination = parsePagination(query, ['timestamp', 'actor', 'category'], '-timestamp');
   const { items, meta } = await paginate(AuditLog, filter, pagination);

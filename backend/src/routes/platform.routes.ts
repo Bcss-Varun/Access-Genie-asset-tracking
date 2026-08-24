@@ -3,14 +3,12 @@ import { createResource } from '../controllers/resource.controller.js';
 import {
   ApiKey,
   Backup,
-  ComplianceFramework,
   EscalationPolicy,
   ExportJob,
   Invoice,
   OnCallShift,
   Passkey,
   ReportPack,
-  RetentionPolicy,
   SupportTicket,
   Team,
   Webhook,
@@ -24,13 +22,11 @@ import {
   createApiKeySchema,
   createEscalationPolicySchema,
   createExportJobSchema,
-  createRetentionPolicySchema,
   createSupportTicketSchema,
   createTeamSchema,
   createWebhookSchema,
   updateApiKeySchema,
   updateEscalationPolicySchema,
-  updateRetentionPolicySchema,
   updateSupportTicketSchema,
   updateTeamSchema,
   updateWebhookSchema,
@@ -237,31 +233,6 @@ mount('/on-call', createResource(OnCallShift, {
   defaultSort: 'order',
   paginated: false,
 }), 'alerts', 'compliance');
-
-mount('/compliance-frameworks', createResource(ComplianceFramework, {
-  label: 'Framework',
-  filters: ['status'],
-  sortable: ['name', 'coverage', 'lastAssessment'],
-  defaultSort: 'name',
-  paginated: false,
-}), 'compliance');
-
-// A compliance programme is written from this screen, not loaded from a
-// fixture: a class of data the organisation holds and has no policy for is the
-// gap the page exists to close, so it can be added here.
-mountWritable('/retention-policies', createResource(RetentionPolicy, {
-  label: 'Retention policy',
-  filters: ['legalHold'],
-  sortable: ['dataClass'],
-  defaultSort: 'dataClass',
-  paginated: false,
-  writable: {
-    create: createRetentionPolicySchema,
-    update: updateRetentionPolicySchema,
-    idSequence: ['retentionPolicy', 'RP'],
-    audit: { action: 'retention_policy', category: 'Compliance' },
-  },
-}), { create: true, update: true, remove: true }, 'compliance', 'admin');
 
 mount('/report-packs', createResource(ReportPack, {
   label: 'Report pack',

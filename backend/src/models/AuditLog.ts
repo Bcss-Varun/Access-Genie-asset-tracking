@@ -32,5 +32,8 @@ const auditSchema = new Schema<AuditDoc>(
 
 auditSchema.plugin(baseSchemaPlugin);
 auditSchema.index({ timestamp: -1 });
+// The Immutable Audit Log's search box — actor, action and target are the
+// three fields a compliance officer actually types words from.
+auditSchema.index({ actor: 'text', action: 'text', target: 'text' }, { name: 'audit_log_search' });
 
 export const AuditLog = model<AuditDoc>('AuditLog', auditSchema);

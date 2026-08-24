@@ -188,22 +188,14 @@ export const navSections: NavSection[] = [
   {
     id: 'compliance',
     label: 'Security & Compliance',
-    fullLabel: 'Asset Security, Geo-fencing and Compliance Monitoring',
+    fullLabel: 'Compliance Monitoring, Audit Center and the Immutable Audit Log',
     module: 'compliance',
     to: '/compliance-reports',
     icon: '🛡️',
-    badgeKey: 'openAlerts',
     items: [
       { label: 'Compliance Monitoring', to: '/compliance-reports', icon: '🛡️' },
-      { label: 'Regulatory Frameworks', to: '/regulatory', icon: '📜' },
-      { label: 'Alert Center', to: '/alerts', icon: '🔔', badgeKey: 'openAlerts' },
-      { label: 'Alert Rules', to: '/alert-rules', icon: '⚙️' },
-      { label: 'Escalation Policies', to: '/escalations', icon: '📣' },
-      { label: 'Chain of Custody', to: '/custody', icon: '🔗' },
-      { label: 'Certifications', to: '/certifications', icon: '🎖️' },
       { label: 'Audit Center', to: '/audit', icon: '🕵️' },
       { label: 'Immutable Audit Log', to: '/audit-log', icon: '📒' },
-      { label: 'Data Retention', to: '/retention', icon: '🗄️' },
     ],
   },
 
