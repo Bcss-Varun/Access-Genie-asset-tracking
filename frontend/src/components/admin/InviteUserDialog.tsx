@@ -1,10 +1,11 @@
 import { useState } from 'react';
-import type { RoleId } from '@access-genie/shared';
+import type { ModuleKey, RoleId } from '@access-genie/shared';
 import { ROLE_IDS } from '@access-genie/shared';
 import { FormDialog, Field, FieldRow, Select, TextInput } from '@/components/ui/FormDialog';
 import { useMutate } from '@/api/mutate';
 import { adminApi } from '@/api/users';
-import { flattenScope, roles } from '@/lib/rbac';
+import { flattenScope, resolveModules, roles } from '@/lib/rbac';
+import { ExtraModulesPicker } from '@/components/admin/ExtraModulesPicker';
 
 /**
  * Create an account.
@@ -40,10 +41,24 @@ export function InviteUserDialog({ onClose, onCreated }: { onClose: () => void; 
   const [roleId, setRoleId] = useState<RoleId>('technician');
   const [homeScopeId, setHomeScopeId] = useState(scopeOptions()[0]?.value ?? 'ORG-1');
   const [password, setPassword] = useState(suggestPassword);
+  const [extraModules, setExtraModules] = useState<ModuleKey[]>([]);
+
+  // Switching roles can grant a module the extra list had picked by hand —
+  // dropping it from the list rather than leaving a redundant, invisible grant.
+  const roleModules = resolveModules(roleId);
+  const effectiveExtra = extraModules.filter((m) => !roleModules.includes(m));
 
   const submit = async () => {
     const created = await run(
-      adminApi.createUser({ name: name.trim(), email: email.trim(), title: title.trim(), roleId, homeScopeId, password }),
+      adminApi.createUser({
+        name: name.trim(),
+        email: email.trim(),
+        title: title.trim(),
+        roleId,
+        homeScopeId,
+        password,
+        extraModules: effectiveExtra,
+      }),
       {
         success: `${name.trim()} can now sign in`,
         successDetail: `Give them the starting password — they can change it under Settings ▸ Security.`,
@@ -93,6 +108,8 @@ export function InviteUserDialog({ onClose, onCreated }: { onClose: () => void; 
       <Field label="Home scope" hint="Where they land by default, and what they see first.">
         <Select value={homeScopeId} onChange={(e) => setHomeScopeId(e.target.value)} options={scopeOptions()} />
       </Field>
+
+      <ExtraModulesPicker roleModules={roleModules} value={effectiveExtra} onChange={setExtraModules} />
 
       <Field
         label="Starting password"

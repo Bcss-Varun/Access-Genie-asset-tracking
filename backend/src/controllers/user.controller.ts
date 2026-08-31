@@ -7,7 +7,7 @@ import { ROLES, type PermissionMatrix, ModuleKey, RoleId } from '@access-genie/s
 import * as userService from '../services/user.service.js';
 import * as roleGrantService from '../services/roleGrant.service.js';
 import { recordAudit } from '../services/audit.service.js';
-import type { CreateUserInput, UpdateUserInput } from '../validators/user.validator.js';
+import type { CreateUserInput, SetUserPasswordInput, UpdateUserInput } from '../validators/user.validator.js';
 import type { ListQueryInput } from '../validators/common.js';
 
 type UserQuery = ListQueryInput & { roleId?: string; status?: string };
@@ -73,6 +73,15 @@ export const update = asyncHandler(async (req: Request, res: Response) => {
   const user = await userService.updateUser(id, req.body as UpdateUserInput, req.auth.user.id);
 
   recordAudit(req, { action: 'user.update', target: id, category: 'Administration', metadata: { fields: Object.keys(req.body ?? {}) } });
+  sendData(res, user);
+});
+
+/** An administrator sets a new password for someone who has locked themselves out. */
+export const setPassword = asyncHandler(async (req: Request, res: Response) => {
+  const id = req.params.id as string;
+  const user = await userService.setUserPassword(id, req.body as SetUserPasswordInput);
+
+  recordAudit(req, { action: 'user.password_reset', target: id, category: 'Administration' });
   sendData(res, user);
 });
 

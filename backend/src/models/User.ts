@@ -1,6 +1,6 @@
 import bcrypt from 'bcryptjs';
 import { model, Schema, type HydratedDocument, type Model } from 'mongoose';
-import { ROLE_IDS, type PublicUser, type RoleId } from '@access-genie/shared';
+import { MODULE_KEYS, ROLE_IDS, type ModuleKey, type PublicUser, type RoleId } from '@access-genie/shared';
 import { env } from '../config/env.js';
 import { baseSchemaPlugin } from '../utils/mongoose.js';
 
@@ -11,6 +11,8 @@ export interface UserDoc {
   passwordHash: string;
   initials: string;
   roleId: RoleId;
+  /** Modules granted to this user specifically, additive to their role's own grants. */
+  extraModules: ModuleKey[];
   title: string;
   homeScopeId: string;
   phone: string;
@@ -57,6 +59,7 @@ const userSchema = new Schema<UserDoc, UserModel, UserMethods>(
     passwordHash: { type: String, required: true, select: false },
     initials: { type: String, required: true, maxlength: 3 },
     roleId: { type: String, required: true, enum: ROLE_IDS },
+    extraModules: { type: [String], enum: MODULE_KEYS, default: [] },
     title: { type: String, required: true },
     homeScopeId: { type: String, required: true },
     // Maintained by the user on their own profile, not by an administrator.
@@ -95,6 +98,7 @@ userSchema.methods.toPublic = function toPublic(): PublicUser {
     email: this.email,
     initials: this.initials,
     roleId: this.roleId,
+    extraModules: this.extraModules,
     title: this.title,
     homeScopeId: this.homeScopeId,
     phone: this.phone,

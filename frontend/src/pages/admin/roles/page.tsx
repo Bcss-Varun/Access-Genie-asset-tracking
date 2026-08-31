@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import type { ModuleKey } from '@access-genie/shared';
 import { PageHeader, Badge, TableSkeleton, ErrorState } from '@/components/ui/primitives';
 import { Button } from '@/components/ui/Button';
@@ -8,6 +8,7 @@ import { useMutate } from '@/api/mutate';
 import { adminApi, type RoleView } from '@/api/users';
 import { useSession } from '@/components/providers/SessionProvider';
 import { cn } from '@/lib/utils';
+import { MODULE_CATALOG } from '@/lib/module-catalog';
 
 /**
  * Roles & permissions.
@@ -37,32 +38,29 @@ const tierTone: Record<string, 'primary' | 'emerald' | 'amber' | 'slate'> = {
   Business: 'slate',
 };
 
-const MODULES: { key: ModuleKey; label: string; blurb: string }[] = [
-  { key: 'workspace', label: 'Workspace', blurb: 'Dashboards, notifications, the home screen' },
-  { key: 'assets', label: 'Assets', blurb: 'The registry, registration, custody' },
-  { key: 'tracking', label: 'Tracking', blurb: 'Live map, journeys, geofences, devices' },
-  { key: 'ai', label: 'AI', blurb: 'Insights, forecasting, anomaly detection' },
-  { key: 'maintenance', label: 'Maint.', blurb: 'Work orders, PM schedules, inspections' },
-  { key: 'operations', label: 'Ops', blurb: 'Transfers, reservations, cycle counts' },
-  { key: 'analytics', label: 'Analytics', blurb: 'Reports, exports, BI' },
-  { key: 'alerts', label: 'Alerts', blurb: 'Alert queue, rules, escalation' },
-  { key: 'compliance', label: 'Compliance', blurb: 'Certifications, audit log, retention' },
-  { key: 'admin', label: 'Admin', blurb: 'Users, roles, org configuration' },
-  { key: 'system', label: 'System', blurb: 'API keys, integrations, platform internals' },
-];
+const MODULES = MODULE_CATALOG;
 
 function EditRoleDialog({ role, onClose }: { role: RoleView; onClose: () => void }) {
   const { run, isPending } = useMutate();
+  const queryClient = useQueryClient();
   const [modules, setModules] = useState<ModuleKey[]>(role.modules);
 
   const toggle = (key: ModuleKey) =>
     setModules((prev) => (prev.includes(key) ? prev.filter((m) => m !== key) : [...prev, key]));
+
+  // `useMutate` re-reads the shared `/dataset` payload on every write, but this
+  // screen's data comes from its own `['roles']` query — a different cache key
+  // that a dataset refresh never touches. Without invalidating it explicitly
+  // here, the save reported success while the matrix (and a reopened dialog)
+  // kept showing the permissions from before the edit.
+  const refresh = () => queryClient.invalidateQueries({ queryKey: ['roles'] });
 
   const save = async () => {
     const ok = await run(adminApi.setRoleGrants(role.id, modules), {
       success: `${role.name} updated`,
       successDetail: `${modules.length} module${modules.length === 1 ? '' : 's'} — in effect on their next action.`,
       describe: 'change those permissions',
+      refresh,
     });
     if (ok) onClose();
   };
@@ -72,6 +70,7 @@ function EditRoleDialog({ role, onClose }: { role: RoleView; onClose: () => void
       success: `${role.name} reset`,
       successDetail: 'Back to the shipped defaults.',
       describe: 'reset that role',
+      refresh,
     });
     if (ok) onClose();
   };

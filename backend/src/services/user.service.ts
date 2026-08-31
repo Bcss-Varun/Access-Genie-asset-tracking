@@ -5,7 +5,7 @@ import { ApiError } from '../utils/ApiError.js';
 import { csvFilter, escapeRegex, parsePagination } from '../utils/query.js';
 import { buildMeta } from '../utils/response.js';
 import { revokeAllForUser } from './token.service.js';
-import type { CreateUserInput, UpdateUserInput } from '../validators/user.validator.js';
+import type { CreateUserInput, SetUserPasswordInput, UpdateUserInput } from '../validators/user.validator.js';
 import type { ListQueryInput } from '../validators/common.js';
 import type { UpdateProfileInput } from '../validators/auth.validator.js';
 
@@ -67,6 +67,7 @@ export async function createUser(input: CreateUserInput): Promise<PublicUser> {
     passwordHash: input.password, // hashed by the pre-save hook
     initials: input.initials ?? deriveInitials(input.name),
     roleId: input.roleId,
+    extraModules: input.extraModules,
     title: input.title,
     homeScopeId: input.homeScopeId,
     status: 'active',
@@ -97,6 +98,27 @@ export async function updateUser(id: string, input: UpdateUserInput, actorId: st
   // A role change or a suspension must take effect now, not whenever the
   // user's existing sessions happen to expire.
   if (roleChanged || suspended) await revokeAllForUser(id);
+
+  return user.toPublic();
+}
+
+/**
+ * Set someone's password on their behalf — the "they forgot it" path.
+ *
+ * Distinct from `auth.service.changePassword`, which requires the caller to
+ * prove they know the current password: that check is exactly what a locked-out
+ * user cannot pass, which is the whole reason this exists. Ends every session
+ * the account has open, the same as a role change or a suspension — a password
+ * an administrator just set is not one an old, still-live session should have
+ * skipped past.
+ */
+export async function setUserPassword(id: string, input: SetUserPasswordInput): Promise<PublicUser> {
+  const user = await User.findById(id).select('+passwordHash');
+  if (!user) throw ApiError.notFound('User');
+
+  user.passwordHash = input.password; // hashed by the pre-save hook
+  await user.save();
+  await revokeAllForUser(id);
 
   return user.toPublic();
 }

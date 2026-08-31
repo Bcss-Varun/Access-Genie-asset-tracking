@@ -1,26 +1,10 @@
 import { useState, type FormEvent } from 'react';
 import { Link, Navigate, useLocation, useNavigate, useSearchParams } from 'react-router-dom';
-import { useQuery } from '@tanstack/react-query';
 import { Button } from '@/components/ui/Button';
 import { AuthLayout } from '@/components/layout/AuthLayout';
 import { ApiRequestError } from '@/api/client';
-import { authApi } from '@/api/auth-endpoints';
 import { useAuth } from '@/api/auth';
 import { DEFAULT_LANDING } from '@/lib/nav-config';
-import { cn } from '@/lib/utils';
-
-/**
- * Password the account shortcuts prefill.
- *
- * Env-driven rather than written into this file: it has to agree with the API's
- * ADMIN_PASSWORD (or SEED_PASSWORD, if the demo fixtures were loaded), and a
- * literal here would silently drift the moment either changed. Unset — the
- * default — means the shortcuts fill the email only, which is what you want
- * anywhere the account is real: a shortcut that prefills a *stale* password is
- * worse than one that prefills none, because it fails as "incorrect password"
- * against credentials that are in fact correct.
- */
-const DEMO_PASSWORD = import.meta.env.VITE_DEMO_PASSWORD ?? '';
 
 export default function LoginPage() {
   const { session, isBootstrapping, login } = useAuth();
@@ -54,13 +38,6 @@ export default function LoginPage() {
   const from = (location.state as { from?: string } | null)?.from;
   const scanned = from?.startsWith('/a/') ? from : null;
   const next = searchParams.get('next') || scanned || DEFAULT_LANDING;
-
-  // The seeded accounts, so a first sign-in does not require knowing one.
-  const { data: personas } = useQuery({
-    queryKey: ['personas'],
-    queryFn: authApi.personas,
-    staleTime: Infinity,
-  });
 
   // Hold the screen while the silent refresh settles, so reloading an
   // authenticated session does not flash the login form on the way through.
@@ -98,16 +75,6 @@ export default function LoginPage() {
       setLoading(false);
     }
   }
-
-  /**
-   * Fill in an account. The password is only touched when one is configured —
-   * otherwise a click would wipe a password the person had already typed.
-   */
-  const pick = (personaEmail: string) => {
-    setEmail(personaEmail);
-    if (DEMO_PASSWORD) setPassword(DEMO_PASSWORD);
-    setError(null);
-  };
 
   const field =
     'w-full rounded-lg border border-slate-300 bg-white px-3.5 py-2.5 text-sm text-slate-900 shadow-sm outline-none transition ' +
@@ -186,55 +153,6 @@ export default function LoginPage() {
             {loading ? 'Signing in…' : 'Sign in'}
           </Button>
         </form>
-
-        {/* The seeded personas, so each role can be tried without a user list. */}
-        {personas && personas.length > 0 && (
-          <div className="mt-7">
-            <div className="flex items-center gap-3">
-              <span className="h-px flex-1 bg-slate-200" />
-              <span className="text-[10px] font-semibold uppercase tracking-wider text-slate-400">
-                Or sign in as
-              </span>
-              <span className="h-px flex-1 bg-slate-200" />
-            </div>
-
-            <div className="mt-3 grid gap-1.5">
-              {personas.map((p) => (
-                <button
-                  key={p.email}
-                  type="button"
-                  onClick={() => pick(p.email)}
-                  className={cn(
-                    'group flex w-full items-center gap-3 rounded-lg border px-2.5 py-2 text-left transition-colors',
-                    email === p.email
-                      ? 'border-primary-300 bg-primary-50/70'
-                      : 'border-transparent hover:border-slate-200 hover:bg-slate-50',
-                  )}
-                >
-                  <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-primary-100 text-[10px] font-bold text-primary-700">
-                    {p.initials}
-                  </span>
-                  <span className="min-w-0 flex-1">
-                    <span className="block truncate text-xs font-semibold text-slate-700">{p.name}</span>
-                    <span className="block truncate text-[11px] text-slate-400">{p.roleName}</span>
-                  </span>
-                  <span
-                    aria-hidden
-                    className="shrink-0 text-xs text-slate-300 transition-colors group-hover:text-primary-500"
-                  >
-                    →
-                  </span>
-                </button>
-              ))}
-            </div>
-
-            <p className="mt-3 text-center text-[11px] leading-relaxed text-slate-400">
-              {DEMO_PASSWORD
-                ? 'Picking an account fills both fields.'
-                : 'Picking an account fills the email — type the password to continue.'}
-            </p>
-          </div>
-        )}
       </div>
     </AuthLayout>
   );

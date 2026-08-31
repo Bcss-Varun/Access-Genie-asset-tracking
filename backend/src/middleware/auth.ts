@@ -26,13 +26,18 @@ export const requireAuth: RequestHandler = asyncHandler(async (req, _res, next) 
   if (!user) throw ApiError.unauthorized('Account no longer exists');
   if (user.status !== 'active') throw ApiError.forbidden('This account is suspended');
 
+  // Effective grants: the role's own (possibly customised) modules, unioned
+  // with whatever has been granted to this user specifically. A per-user grant
+  // only ever adds — there is no per-user revocation of something the role
+  // already grants, so this is a plain set union, not a resolution the way the
+  // role's own grant is.
+  const roleModules = await grantedModules(user.roleId);
+  const modules = Array.from(new Set([...roleModules, ...user.extraModules]));
+
   req.auth = {
     user: user.toPublic(),
     roleId: user.roleId,
-    // Effective grants, not the shipped matrix — an administrator may have
-    // widened or narrowed this role. Served from a process cache that is
-    // dropped on write, so a change lands on the very next request.
-    modules: await grantedModules(user.roleId),
+    modules,
   };
 
   next();

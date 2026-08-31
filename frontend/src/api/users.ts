@@ -34,6 +34,8 @@ export interface CreateUserInput {
   roleId: RoleId;
   title: string;
   homeScopeId?: string;
+  /** Beyond the role's own grants. */
+  extraModules?: ModuleKey[];
 }
 
 export const adminApi = {
@@ -47,5 +49,7 @@ export const adminApi = {
 
   createUser: (input: CreateUserInput) => apiPost<PublicUser>('/users', input),
   updateUser: (id: string, input: Record<string, unknown>) => apiPatch<PublicUser>(`/users/${id}`, input),
+  /** Admin-on-behalf-of-user reset — the "they forgot it" path. Ends every session they have open. */
+  setPassword: (id: string, password: string) => apiPatch<PublicUser>(`/users/${id}/password`, { password }),
   removeUser: (id: string) => apiDelete(`/users/${id}`),
 };

@@ -1,13 +1,17 @@
-import { useMemo, useState } from 'react';
+import { useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { allUsers, roles, findScope, scopeTree } from '@/lib/rbac';
 import type { RoleId } from '@access-genie/shared';
 import type { PublicUser } from '@access-genie/shared';
 import { PageHeader, Badge, KpiCard, EmptyState, Avatar } from '@/components/ui/primitives';
 import { Button } from '@/components/ui/Button';
+import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 import { InviteUserDialog } from '@/components/admin/InviteUserDialog';
 import { EditUserDialog } from '@/components/admin/EditUserDialog';
 import AdminRolesPanel from '@/pages/admin/roles/page';
+import { useMutate } from '@/api/mutate';
+import { adminApi } from '@/api/users';
+import { useSession } from '@/components/providers/SessionProvider';
 import { cn } from '@/lib/utils';
 
 const tierTone: Record<string, 'primary' | 'emerald' | 'amber' | 'slate'> = {
@@ -55,19 +59,41 @@ export default function AdminUsersPage() {
   const [facilityFilter, setFacilityFilter] = useState<string>('all');
   const [inviting, setInviting] = useState(false);
   const [editing, setEditing] = useState<PublicUser | null>(null);
+  const [deleting, setDeleting] = useState<PublicUser | null>(null);
 
-  const facilities = useMemo(facilityOptions, []);
+  const { session } = useSession();
+  const { run, isPending } = useMutate();
+  // The server also refuses this to anyone but a super admin — matched here so
+  // the row action isn't offered only to fail with a 403 on click.
+  const canDelete = session.role.id === 'super_admin';
 
-  const filtered = useMemo(() => {
-    const q = query.trim().toLowerCase();
-    return allUsers.filter((u) => {
-      if (roleFilter !== 'all' && u.roleId !== roleFilter) return false;
-      if (statusFilter !== 'all' && u.status !== statusFilter) return false;
-      if (facilityFilter !== 'all' && u.homeScopeId !== facilityFilter) return false;
-      if (!q) return true;
-      return u.name.toLowerCase().includes(q) || u.email.toLowerCase().includes(q);
+  const removeUser = async (user: PublicUser) => {
+    const ok = await run(adminApi.removeUser(user.id), {
+      success: `${user.name} removed`,
+      describe: 'remove that account',
     });
-  }, [query, roleFilter, statusFilter, facilityFilter]);
+    if (ok !== null) setDeleting(null);
+  };
+
+  // Same live-binding reasoning as `filtered`/`tiers` below — `scopeTree` can
+  // change (a facility added under Administration) without this component's
+  // props or state changing, so it is recomputed every render rather than memoised.
+  const facilities = facilityOptions();
+
+  // Deliberately not `useMemo`: `allUsers` is a live module binding (see
+  // lib/dataset.ts), not React state, so a dependency array can never include
+  // it correctly — memoising here served a stale snapshot back after every
+  // create, edit or role change until the component happened to re-render for
+  // an unrelated reason. Filtering a user list on every render is cheap enough
+  // that there is nothing to memoise for.
+  const q = query.trim().toLowerCase();
+  const filtered = allUsers.filter((u) => {
+    if (roleFilter !== 'all' && u.roleId !== roleFilter) return false;
+    if (statusFilter !== 'all' && u.status !== statusFilter) return false;
+    if (facilityFilter !== 'all' && u.homeScopeId !== facilityFilter) return false;
+    if (!q) return true;
+    return u.name.toLowerCase().includes(q) || u.email.toLowerCase().includes(q);
+  });
 
   const clearFilters = () => {
     setQuery('');
@@ -76,14 +102,11 @@ export default function AdminUsersPage() {
     setFacilityFilter('all');
   };
 
-  const tiers = useMemo(() => {
-    const counts: Record<string, number> = {};
-    for (const u of allUsers) {
-      const tier = roles[u.roleId].tier;
-      counts[tier] = (counts[tier] ?? 0) + 1;
-    }
-    return counts;
-  }, []);
+  const tiers: Record<string, number> = {};
+  for (const u of allUsers) {
+    const tier = roles[u.roleId].tier;
+    tiers[tier] = (tiers[tier] ?? 0) + 1;
+  }
 
   return (
     <div className="h-full flex flex-col space-y-6">
@@ -218,7 +241,14 @@ export default function AdminUsersPage() {
                         <Badge tone={u.status === 'active' ? 'emerald' : 'red'}>{u.status}</Badge>
                       </td>
                       <td className="px-5 py-3 text-right">
-                        <Button variant="ghost" onClick={() => setEditing(u)}>Edit</Button>
+                        <div className="flex items-center justify-end gap-1">
+                          <Button variant="ghost" onClick={() => setEditing(u)}>Edit</Button>
+                          {canDelete && u.id !== session.user.id && (
+                            <Button variant="ghost" className="!text-health-critical hover:!bg-red-50" onClick={() => setDeleting(u)}>
+                              Delete
+                            </Button>
+                          )}
+                        </div>
                       </td>
                     </tr>
                   );
@@ -233,6 +263,16 @@ export default function AdminUsersPage() {
 
       {inviting && <InviteUserDialog onClose={() => setInviting(false)} />}
       {editing && <EditUserDialog user={editing} onClose={() => setEditing(null)} />}
+      {deleting && (
+        <ConfirmDialog
+          title={`Delete ${deleting.name}?`}
+          description="This removes their account permanently and signs them out everywhere. It cannot be undone. Anything they created (assets, work orders, findings) stays in place — only the account itself is removed."
+          confirmLabel="Delete"
+          busy={isPending}
+          onConfirm={() => void removeUser(deleting)}
+          onCancel={() => setDeleting(null)}
+        />
+      )}
     </div>
   );
 }

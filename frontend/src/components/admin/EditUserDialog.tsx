@@ -1,11 +1,14 @@
 import { useState } from 'react';
-import type { PublicUser, RoleId } from '@access-genie/shared';
+import type { ModuleKey, PublicUser, RoleId } from '@access-genie/shared';
 import { ROLE_IDS } from '@access-genie/shared';
 import { FormDialog, Field, FieldRow, Select, TextInput } from '@/components/ui/FormDialog';
+import { Button } from '@/components/ui/Button';
 import { useMutate } from '@/api/mutate';
 import { adminApi } from '@/api/users';
-import { flattenScope, roles } from '@/lib/rbac';
+import { flattenScope, resolveModules, roles } from '@/lib/rbac';
 import { useSession } from '@/components/providers/SessionProvider';
+import { ExtraModulesPicker } from '@/components/admin/ExtraModulesPicker';
+import { ChangePasswordDialog } from '@/components/admin/ChangePasswordDialog';
 
 /**
  * Change someone's role, title or standing.
@@ -29,13 +32,27 @@ export function EditUserDialog({ user, onClose }: { user: PublicUser; onClose: (
   const [roleId, setRoleId] = useState<RoleId>(user.roleId);
   const [homeScopeId, setHomeScopeId] = useState(user.homeScopeId);
   const [status, setStatus] = useState<'active' | 'suspended'>(user.status);
+  const [extraModules, setExtraModules] = useState<ModuleKey[]>(user.extraModules ?? []);
+  const [changingPassword, setChangingPassword] = useState(false);
 
   const roleChanged = roleId !== user.roleId;
   const suspending = status === 'suspended' && user.status !== 'suspended';
 
+  // Switching roles can grant a module the extra list had picked by hand —
+  // dropping it from the list rather than leaving a redundant, invisible grant.
+  const roleModules = resolveModules(roleId);
+  const effectiveExtra = extraModules.filter((m) => !roleModules.includes(m));
+
   const submit = async () => {
     const ok = await run(
-      adminApi.updateUser(user.id, { name: name.trim(), title: title.trim(), roleId, homeScopeId, status }),
+      adminApi.updateUser(user.id, {
+        name: name.trim(),
+        title: title.trim(),
+        roleId,
+        homeScopeId,
+        status,
+        extraModules: effectiveExtra,
+      }),
       {
         success: `${name.trim()} updated`,
         successDetail:
@@ -47,6 +64,7 @@ export function EditUserDialog({ user, onClose }: { user: PublicUser; onClose: (
   };
 
   return (
+    <>
     <FormDialog
       icon="✏️"
       title={`Edit ${user.name}`}
@@ -55,6 +73,11 @@ export function EditUserDialog({ user, onClose }: { user: PublicUser; onClose: (
       disabled={name.trim().length < 2 || title.trim().length < 2}
       onSubmit={() => void submit()}
       onCancel={onClose}
+      footer={
+        <Button type="button" variant="ghost" disabled={isPending} onClick={() => setChangingPassword(true)}>
+          🔑 Change password
+        </Button>
+      }
     >
       <FieldRow>
         <Field label="Full name" required>
@@ -101,6 +124,8 @@ export function EditUserDialog({ user, onClose }: { user: PublicUser; onClose: (
         />
       </Field>
 
+      <ExtraModulesPicker roleModules={roleModules} value={effectiveExtra} onChange={setExtraModules} />
+
       {(roleChanged || suspending) && (
         <p className="rounded-lg bg-amber-50 px-3 py-2 text-xs text-amber-700">
           {suspending
@@ -109,5 +134,8 @@ export function EditUserDialog({ user, onClose }: { user: PublicUser; onClose: (
         </p>
       )}
     </FormDialog>
+
+    {changingPassword && <ChangePasswordDialog user={user} onClose={() => setChangingPassword(false)} />}
+    </>
   );
 }

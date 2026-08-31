@@ -1,11 +1,13 @@
 import { useState } from 'react';
-import { Link, useParams } from 'react-router-dom';
+import { Link, useNavigate, useParams } from 'react-router-dom';
 import type { ModuleKey } from '@access-genie/shared';
 import { allUsers, roles, resolveModules, findScope } from '@/lib/rbac';
+import { MODULE_LABEL } from '@/lib/module-catalog';
 import { PageHeader, Badge, EmptyState, Avatar } from '@/components/ui/primitives';
 import { Button } from '@/components/ui/Button';
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 import { EditUserDialog } from '@/components/admin/EditUserDialog';
+import { ChangePasswordDialog } from '@/components/admin/ChangePasswordDialog';
 import { useMutate } from '@/api/mutate';
 import { adminApi } from '@/api/users';
 import { useSession } from '@/components/providers/SessionProvider';
@@ -18,29 +20,23 @@ const tierTone: Record<string, 'primary' | 'emerald' | 'amber' | 'slate'> = {
   Business: 'slate',
 };
 
-const moduleLabel: Record<ModuleKey, string> = {
-  workspace: 'Workspace',
-  assets: 'Assets',
-  tracking: 'Tracking',
-  ai: 'AI Intelligence',
-  maintenance: 'Maintenance',
-  operations: 'Operations',
-  analytics: 'Analytics',
-  alerts: 'Alerts',
-  compliance: 'Compliance',
-  admin: 'Administration',
-  system: 'System',
-};
+const moduleLabel = MODULE_LABEL;
 
 export default function UserDetailPage() {
   const { id = '' } = useParams();
   const { session } = useSession();
+  const navigate = useNavigate();
   const { run, isPending } = useMutate();
   const [editing, setEditing] = useState(false);
   const [suspending, setSuspending] = useState(false);
+  const [changingPassword, setChangingPassword] = useState(false);
+  const [deleting, setDeleting] = useState(false);
 
   const user = allUsers.find((u) => u.id === id);
   const isSelf = session.user.id === id;
+  // The server also refuses this to anyone but a super admin — matched here so
+  // the button isn't offered only to fail with a 403 on click.
+  const canDelete = session.role.id === 'super_admin' && !isSelf;
 
   // Suspending ends every session the account has open — that is the point of
   // the action, so it is stated before the button rather than discovered after.
@@ -52,6 +48,14 @@ export default function UserDetailPage() {
     });
 
   const reactivate = () => void setStatus('active');
+
+  const remove = async () => {
+    const ok = await run(adminApi.removeUser(id), {
+      success: `${user?.name ?? id} removed`,
+      describe: 'remove that account',
+    });
+    if (ok !== null) navigate('/admin/users');
+  };
 
   if (!user) {
     return (
@@ -67,7 +71,9 @@ export default function UserDetailPage() {
   }
 
   const role = roles[user.roleId];
-  const modules = resolveModules(user.roleId);
+  const roleModules = resolveModules(user.roleId);
+  const extraModules = (user.extraModules ?? []).filter((m) => !roleModules.includes(m));
+  const modules = Array.from(new Set([...roleModules, ...extraModules]));
   const scope = findScope(user.homeScopeId);
 
   return (
@@ -95,6 +101,9 @@ export default function UserDetailPage() {
           </div>
         </div>
         <div className="flex items-center gap-2 shrink-0">
+          <Button variant="outline" onClick={() => setChangingPassword(true)}>
+            🔑 Change password
+          </Button>
           <Button variant="outline" onClick={() => setEditing(true)}>
             Edit user
           </Button>
@@ -107,10 +116,26 @@ export default function UserDetailPage() {
               Reactivate
             </Button>
           )}
+          {canDelete && (
+            <Button variant="danger" disabled={isPending} onClick={() => setDeleting(true)}>
+              🗑️ Delete
+            </Button>
+          )}
         </div>
       </div>
 
       {editing && <EditUserDialog user={user} onClose={() => setEditing(false)} />}
+      {changingPassword && <ChangePasswordDialog user={user} onClose={() => setChangingPassword(false)} />}
+      {deleting && (
+        <ConfirmDialog
+          title={`Delete ${user.name}?`}
+          description="This removes their account permanently and signs them out everywhere. It cannot be undone. Anything they created (assets, work orders, findings) stays in place — only the account itself is removed."
+          confirmLabel="Delete"
+          busy={isPending}
+          onConfirm={() => void remove()}
+          onCancel={() => setDeleting(false)}
+        />
+      )}
       {suspending && (
         <ConfirmDialog
           title={`Suspend ${user.name}?`}
@@ -128,22 +153,29 @@ export default function UserDetailPage() {
       <div className="glass-panel rounded-xl p-5">
         <div className="flex items-center justify-between mb-4">
           <h2 className="font-heading font-semibold text-slate-900">Module Permissions</h2>
-          <span className="text-xs text-slate-400">{modules.length} of {Object.keys(moduleLabel).length} modules</span>
+          <span className="text-xs text-slate-400">
+            {modules.length} of {Object.keys(moduleLabel).length} modules
+            {extraModules.length > 0 && ` · ${extraModules.length} extra`}
+          </span>
         </div>
         <div className="flex flex-wrap gap-2">
           {(Object.keys(moduleLabel) as ModuleKey[]).map((m) => {
-            const granted = modules.includes(m);
+            const grantedByRole = roleModules.includes(m);
+            const grantedByExtra = extraModules.includes(m);
+            const tone = grantedByRole
+              ? 'border-emerald-200 bg-emerald-50 text-emerald-700'
+              : grantedByExtra
+                ? 'border-amber-200 bg-amber-50 text-amber-700'
+                : 'border-slate-200 bg-slate-50 text-slate-400';
             return (
               <span
                 key={m}
-                className={
-                  granted
-                    ? 'inline-flex items-center gap-1.5 rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-xs font-medium text-emerald-700'
-                    : 'inline-flex items-center gap-1.5 rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-xs font-medium text-slate-400'
-                }
+                title={grantedByExtra ? 'Granted to this person specifically, beyond their role' : undefined}
+                className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs font-medium ${tone}`}
               >
-                <span>{granted ? '✓' : '–'}</span>
+                <span>{grantedByRole || grantedByExtra ? '✓' : '–'}</span>
                 {moduleLabel[m]}
+                {grantedByExtra && <span className="text-[10px] uppercase tracking-wide">extra</span>}
               </span>
             );
           })}

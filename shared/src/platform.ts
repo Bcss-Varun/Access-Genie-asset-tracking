@@ -115,6 +115,14 @@ export interface PublicUser {
   timezone?: string;
   /** Whether a verified authenticator is enrolled. The secret never leaves the server. */
   mfaEnabled?: boolean;
+  /**
+   * Modules granted to this user specifically, on top of whatever their role
+   * grants. Additive only — there is no per-user *revocation* of a module the
+   * role already grants, because that would make "what can this person reach"
+   * two places to check instead of one whenever the answer is "less than the
+   * role". Resolved into the session's effective `modules` by the server.
+   */
+  extraModules?: ModuleKey[];
   status: 'active' | 'suspended';
   lastLoginAt?: string;
   createdAt: string;

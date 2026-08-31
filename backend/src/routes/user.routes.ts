@@ -2,7 +2,13 @@ import { Router } from 'express';
 import * as controller from '../controllers/user.controller.js';
 import { requireModule, requireRole, validate } from '../middleware/index.js';
 import { idParamSchema, listQuerySchema } from '../validators/common.js';
-import { createUserSchema, roleGrantsSchema, updateUserSchema, userListQuerySchema } from '../validators/user.validator.js';
+import {
+  createUserSchema,
+  roleGrantsSchema,
+  setUserPasswordSchema,
+  updateUserSchema,
+  userListQuerySchema,
+} from '../validators/user.validator.js';
 
 const router = Router();
 
@@ -44,6 +50,15 @@ router.patch(
   requireRole('super_admin', 'org_admin'),
   validate({ params: idParamSchema, body: updateUserSchema }),
   controller.update,
+);
+// An administrator setting a password on someone's behalf — the "they're
+// locked out" path — carries the same weight as a role change, so it is bound
+// to the two administrator roles rather than the admin module grant.
+router.patch(
+  '/:id/password',
+  requireRole('super_admin', 'org_admin'),
+  validate({ params: idParamSchema, body: setUserPasswordSchema }),
+  controller.setPassword,
 );
 router.delete('/:id', requireRole('super_admin'), validate({ params: idParamSchema }), controller.remove);
 

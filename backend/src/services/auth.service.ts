@@ -26,10 +26,18 @@ async function toAuthPayload(
   publicUser: AuthPayload['user'],
 ): Promise<AuthPayload> {
   const { token, expiresIn } = signAccessToken(user.id, user.roleId);
+  // Same union `requireAuth` applies on every later request (see
+  // middleware/auth.ts) — computed independently here because sign-in builds
+  // this payload before any request goes through that middleware, and without
+  // it the navigation shown at login would omit a per-user grant until the
+  // next page load happened to re-resolve it.
+  const roleModules = await grantedModules(user.roleId);
+  const modules = Array.from(new Set([...roleModules, ...(publicUser.extraModules ?? [])]));
+
   return {
     user: publicUser,
     role: ROLES[user.roleId],
-    modules: await grantedModules(user.roleId),
+    modules,
     accessToken: token,
     expiresIn,
   };

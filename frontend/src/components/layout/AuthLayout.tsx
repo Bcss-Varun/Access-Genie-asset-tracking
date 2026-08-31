@@ -1,4 +1,3 @@
-import { Link } from 'react-router-dom';
 import { AssetOpsArt } from './AssetOpsArt';
 
 /**
@@ -87,14 +86,7 @@ export function AuthLayout({ children }: { children: React.ReactNode }) {
 
         <div className="w-full max-w-sm">{children}</div>
 
-        <p className="mt-8 text-center text-xs text-slate-400">
-          Need help?{' '}
-          <Link to="/help" className="font-medium text-primary-600 hover:underline">
-            Contact support
-          </Link>
-        </p>
-
-        <div className="mt-6 flex flex-col items-center gap-1.5">
+        <div className="mt-8 flex flex-col items-center gap-1.5">
           <span className="text-[9px] font-semibold uppercase tracking-wider text-slate-300">Powered by</span>
           <img src="/bcss-logo.png" alt="Blue Cloud Softech Solutions Ltd." className="h-auto w-36 opacity-90" />
         </div>
