@@ -23,6 +23,7 @@ import { PageHeader, Badge, EmptyState } from '@/components/ui/primitives';
 import { Button } from '@/components/ui/Button';
 import { Tabs, useTabs } from '@/components/tracking/shell';
 import type { LabelSpec } from '@/components/assets/LabelArtwork';
+import { encodeCode128 } from '@/lib/code128';
 import { encodeQr } from '@/lib/qr';
 import {
   DEFAULT_TEMPLATE_ID, identityStatus, labelTemplates, templateById,
@@ -88,10 +89,23 @@ const SHOW_ON_LABEL: { key: LabelFieldKey; label: string }[] = [
 ];
 
 function CodeGlyph({ id, format, px }: { id: string; format: LabelMedium; px: number }) {
-  const matrix = useMemo(() => encodeQr(scanUrlFor(id), 'M'), [id]);
-  if (format !== 'QR') return <p className="text-xs text-amber-800">{format} output is unavailable. Choose QR for a scannable label.</p>;
+  const payload = scanUrlFor(id);
+  const matrix = useMemo(() => encodeQr(payload, 'M'), [payload]);
+  const barcode = useMemo(() => encodeCode128(payload), [payload]);
+  if (format === 'RFID') {
+    return <div className="max-w-44 rounded-lg border border-amber-200 bg-amber-50 p-3 text-xs text-amber-900" role="status">
+      RFID needs a configured hardware encoder to write this asset URL to a physical tag.
+    </div>;
+  }
+  if (format === 'Barcode') {
+    return <svg viewBox={`0 0 ${barcode.modules} 100`} width={px * 1.45} height={px * 0.62} shapeRendering="crispEdges" role="img" aria-label={`Barcode code encoding ${payload}`}>
+      <rect width={barcode.modules} height="100" fill="white" />
+      {barcode.bars.map((bar, index) => <rect key={index} x={bar.x} y="8" width={bar.width} height="72" fill="#0f172a" />)}
+      <text x={barcode.modules / 2} y="94" textAnchor="middle" fontSize="8" fontFamily="ui-monospace, monospace" fill="#0f172a">{payload}</text>
+    </svg>;
+  }
   const unit = 100 / (matrix.length + 8);
-  return <svg viewBox="0 0 100 100" width={px} height={px} shapeRendering="crispEdges" role="img" aria-label={`QR code opening ${id}`}>
+  return <svg viewBox="0 0 100 100" width={px} height={px} shapeRendering="crispEdges" role="img" aria-label={`QR code encoding ${payload}`}>
     <rect width="100" height="100" fill="white" />
     {matrix.flatMap((row, r) => row.map((on, c) => on ? <rect key={`${r}-${c}`} x={(c + 4) * unit} y={(r + 4) * unit} width={unit + 0.02} height={unit + 0.02} fill="#0f172a" /> : null))}
   </svg>;
@@ -176,7 +190,7 @@ export default function LabelPrintingPage() {
   // Binding is durable before opening the browser dialog. Printing does not
   // prove a physical label was produced or scanned.
   const runPrint = async () => {
-    if (printLock.current || !selectedAssets.length || spec.medium !== 'QR') return;
+    if (printLock.current || !selectedAssets.length || spec.medium === 'RFID') return;
     printLock.current = true; setPrinting(true);
     const mint = new Set(taken);
     try {
@@ -277,7 +291,7 @@ export default function LabelPrintingPage() {
       <div className="no-print space-y-5">
         <PageHeader
           title="Label Printing"
-          subtitle="Print scannable QR labels and manage identity bindings. Barcode and RFID output require an encoder integration."
+          subtitle="Print scannable QR and Code 128 labels. RFID requires a configured hardware encoder."
           breadcrumb={[{ label: 'Assets', href: '/assets' }, { label: 'Labels' }]}
           actions={
             <>
@@ -289,12 +303,12 @@ export default function LabelPrintingPage() {
               */}
               <Button
                 variant="outline"
-                disabled={!selectedAssets.length || printing || spec.medium !== 'QR'}
+                disabled={!selectedAssets.length || printing || spec.medium === 'RFID'}
                 onClick={() => void runPrint()}
               >
                 Save as PDF
               </Button>
-              <Button onClick={() => void runPrint()} disabled={!selectedAssets.length || printing || spec.medium !== 'QR'}>
+              <Button onClick={() => void runPrint()} disabled={!selectedAssets.length || printing || spec.medium === 'RFID'}>
                 🖨 Print {selectedAssets.length > 0 ? `(${selectedAssets.length})` : ''}
               </Button>
             </>
@@ -412,6 +426,11 @@ export default function LabelPrintingPage() {
                     </button>
                   ))}
                 </div>
+                {spec.medium === 'RFID' && (
+                  <p className="mt-2 rounded-md bg-amber-50 px-3 py-2 text-xs text-amber-900" role="status">
+                    RFID tags cannot be produced by a browser or paper printer. Configure a compatible RFID encoder before creating these labels.
+                  </p>
+                )}
               </div>
 
               <div>

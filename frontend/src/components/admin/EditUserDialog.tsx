@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import type { ModuleKey, PublicUser, RoleId } from '@access-genie/shared';
 import { ROLE_IDS } from '@access-genie/shared';
 import { FormDialog, Field, FieldRow, Select, TextInput } from '@/components/ui/FormDialog';
@@ -24,6 +25,7 @@ import { ChangePasswordDialog } from '@/components/admin/ChangePasswordDialog';
 export function EditUserDialog({ user, onClose }: { user: PublicUser; onClose: () => void }) {
   const { run, isPending } = useMutate();
   const { session } = useSession();
+  const { data: roleViews } = useQuery({ queryKey: ['roles'], queryFn: adminApi.roles });
 
   const isSelf = session.user.id === user.id;
 
@@ -35,12 +37,13 @@ export function EditUserDialog({ user, onClose }: { user: PublicUser; onClose: (
   const [extraModules, setExtraModules] = useState<ModuleKey[]>(user.extraModules ?? []);
   const [changingPassword, setChangingPassword] = useState(false);
 
+  const assignableRoles = ROLE_IDS.filter((id) => session.role.id === 'super_admin' || id !== 'super_admin');
   const roleChanged = roleId !== user.roleId;
   const suspending = status === 'suspended' && user.status !== 'suspended';
 
   // Switching roles can grant a module the extra list had picked by hand —
   // dropping it from the list rather than leaving a redundant, invisible grant.
-  const roleModules = resolveModules(roleId);
+  const roleModules = roleViews?.find((role) => role.id === roleId)?.modules ?? resolveModules(roleId);
   const effectiveExtra = extraModules.filter((m) => !roleModules.includes(m));
 
   const submit = async () => {
@@ -97,7 +100,7 @@ export function EditUserDialog({ user, onClose }: { user: PublicUser; onClose: (
             value={roleId}
             disabled={isSelf}
             onChange={(e) => setRoleId(e.target.value as RoleId)}
-            options={ROLE_IDS.map((id) => ({ value: id, label: `${roles[id].name} · ${roles[id].tier}` }))}
+            options={assignableRoles.map((id) => ({ value: id, label: `${roles[id].name} · ${roles[id].tier}` }))}
           />
         </Field>
         <Field label="Status" hint={isSelf ? 'You cannot suspend your own account.' : undefined}>

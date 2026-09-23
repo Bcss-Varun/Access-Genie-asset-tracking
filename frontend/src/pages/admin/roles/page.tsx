@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import type { ModuleKey } from '@access-genie/shared';
+import { defaultActionsFor, PERMISSION_ACTIONS } from '@access-genie/shared';
+import type { ModuleKey, PermissionAction, PermissionMatrix } from '@access-genie/shared';
 import { PageHeader, Badge, TableSkeleton, ErrorState } from '@/components/ui/primitives';
 import { Button } from '@/components/ui/Button';
 import { FormDialog, CheckField } from '@/components/ui/FormDialog';
@@ -22,12 +23,8 @@ import { MODULE_CATALOG } from '@/lib/module-catalog';
  * What an administrator actually asks for is narrower and entirely safe: "our
  * facility managers also need Analytics". So the matrix is editable.
  *
- * On when a change takes effect — this screen used to say holders were "signed
- * out", which was not what happened and undersold what does. `requireAuth`
- * re-reads the user and re-resolves the role's grants on every single request,
- * so a change lands on the holder's very next action, in both directions, with
- * no sign-out and nothing to wait for. Their refresh token is revoked as well,
- * so the client re-authenticates and picks up its new navigation shortly after.
+ * Permission changes revoke sessions held by that role. On the next sign-in the
+ * navigation and API enforcement are rebuilt from the same effective grants.
  */
 
 const tierTone: Record<string, 'primary' | 'emerald' | 'amber' | 'slate'> = {
@@ -44,9 +41,23 @@ function EditRoleDialog({ role, onClose }: { role: RoleView; onClose: () => void
   const { run, isPending } = useMutate();
   const queryClient = useQueryClient();
   const [modules, setModules] = useState<ModuleKey[]>(role.modules);
+  const [permissions, setPermissions] = useState<PermissionMatrix>(() => structuredClone(role.permissions));
 
-  const toggle = (key: ModuleKey) =>
-    setModules((prev) => (prev.includes(key) ? prev.filter((m) => m !== key) : [...prev, key]));
+  const toggle = (key: ModuleKey) => {
+    const adding = !modules.includes(key);
+    setModules((prev) => (adding ? [...prev, key] : prev.filter((m) => m !== key)));
+    if (adding && !permissions[key]) {
+      setPermissions((prev) => ({ ...prev, [key]: defaultActionsFor(role.id, key) }));
+    }
+  };
+
+  const toggleAction = (module: ModuleKey, action: PermissionAction) => {
+    const current = permissions[module] ?? [];
+    setPermissions((prev) => ({
+      ...prev,
+      [module]: current.includes(action) ? current.filter((item) => item !== action) : [...current, action],
+    }));
+  };
 
   // `useMutate` re-reads the shared `/dataset` payload on every write, but this
   // screen's data comes from its own `['roles']` query — a different cache key
@@ -56,9 +67,16 @@ function EditRoleDialog({ role, onClose }: { role: RoleView; onClose: () => void
   const refresh = () => queryClient.invalidateQueries({ queryKey: ['roles'] });
 
   const save = async () => {
-    const ok = await run(adminApi.setRoleGrants(role.id, modules), {
+    const request = (async () => {
+      await adminApi.setRoleGrants(role.id, modules);
+      return adminApi.setRolePermissions(
+        role.id,
+        Object.fromEntries(modules.map((module) => [module, permissions[module] ?? []])) as PermissionMatrix,
+      );
+    })();
+    const ok = await run(request, {
       success: `${role.name} updated`,
-      successDetail: `${modules.length} module${modules.length === 1 ? '' : 's'} — in effect on their next action.`,
+      successDetail: `${modules.length} modules and their action permissions are in effect now.`,
       describe: 'change those permissions',
       refresh,
     });
@@ -76,13 +94,14 @@ function EditRoleDialog({ role, onClose }: { role: RoleView; onClose: () => void
   };
 
   const changed =
-    modules.length !== role.modules.length || modules.some((m) => !role.modules.includes(m));
+    modules.length !== role.modules.length || modules.some((m) => !role.modules.includes(m))
+    || JSON.stringify(permissions) !== JSON.stringify(role.permissions);
 
   return (
     <FormDialog
       icon="🔐"
       title={`${role.name} permissions`}
-      description={`${role.userCount} ${role.userCount === 1 ? 'person holds' : 'people hold'} this role. The API checks these grants on every request, so a change applies to them immediately — they do not need to sign in again.`}
+      description={`${role.userCount} ${role.userCount === 1 ? 'person holds' : 'people hold'} this role. Saving signs out everyone holding this role. Their next sign-in receives the updated navigation and permissions.`}
       submitLabel="Save permissions"
       width="lg"
       busy={isPending}
@@ -109,6 +128,34 @@ function EditRoleDialog({ role, onClose }: { role: RoleView; onClose: () => void
         ))}
       </div>
 
+      {modules.length > 0 && (
+        <div className="space-y-3 border-t border-slate-200 pt-4">
+          <div>
+            <h3 className="text-sm font-semibold text-slate-800">Actions inside each module</h3>
+            <p className="text-xs text-slate-500">These are enforced by the API on every request.</p>
+          </div>
+          {modules.map((module) => {
+            const label = MODULES.find((item) => item.key === module)?.label ?? module;
+            const granted = permissions[module] ?? [];
+            return (
+              <fieldset key={module} className="rounded-lg border border-slate-200 p-3">
+                <legend className="px-1 text-xs font-semibold text-slate-700">{label}</legend>
+                <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+                  {PERMISSION_ACTIONS.map((action) => (
+                    <CheckField
+                      key={action}
+                      label={action[0].toUpperCase() + action.slice(1)}
+                      checked={granted.includes(action)}
+                      onChange={() => toggleAction(module, action)}
+                    />
+                  ))}
+                </div>
+              </fieldset>
+            );
+          })}
+        </div>
+      )}
+
       {modules.length === 0 && (
         <p className="rounded-lg bg-red-50 px-3 py-2 text-xs text-red-700">
           A role must grant at least one module — otherwise nobody holding it can reach any screen.
@@ -120,7 +167,7 @@ function EditRoleDialog({ role, onClose }: { role: RoleView; onClose: () => void
 
 export default function AdminRolesPage() {
   const { session } = useSession();
-  const canEdit = session.role.id === 'super_admin' || session.role.id === 'org_admin';
+  const canEdit = session.role.id === 'super_admin';
 
   const { data, isLoading, error, refetch } = useQuery({
     queryKey: ['roles'],
@@ -153,8 +200,8 @@ export default function AdminRolesPage() {
             <h2 className="font-heading font-semibold text-slate-900">Permission Matrix</h2>
             <p className="mt-0.5 text-xs text-slate-500">
               {canEdit
-                ? 'Click a role to change what it can reach. Grants are checked on every request, so changes apply at once.'
-                : 'Only an administrator can change these.'}
+                ? 'Click a role to change module and action access. Saving signs out affected users so their next login receives the new grants.'
+                : 'Only a Super Admin can change role permissions.'}
             </p>
           </div>
           <span className="text-xs text-slate-400">

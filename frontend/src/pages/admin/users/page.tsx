@@ -65,6 +65,7 @@ export default function AdminUsersPage() {
   const { run, isPending } = useMutate();
   // The server also refuses this to anyone but a super admin — matched here so
   // the row action isn't offered only to fail with a 403 on click.
+  const canManageUsers = session.role.id === 'super_admin' || session.role.id === 'org_admin';
   const canDelete = session.role.id === 'super_admin';
 
   const removeUser = async (user: PublicUser) => {
@@ -114,7 +115,7 @@ export default function AdminUsersPage() {
         title="Users & Roles"
         subtitle="Everyone with access to the platform, and the role that governs what they can do."
         breadcrumb={[{ label: 'Administration', href: '/admin/org' }, { label: 'Users & Roles' }]}
-        actions={tab === 'people' ? <Button onClick={() => setInviting(true)}>+ Invite User</Button> : undefined}
+        actions={tab === 'people' && canManageUsers ? <Button onClick={() => setInviting(true)}>+ Invite User</Button> : undefined}
       />
 
       {/* Two views of one subject: the people, and what their roles permit. */}
@@ -242,7 +243,7 @@ export default function AdminUsersPage() {
                       </td>
                       <td className="px-5 py-3 text-right">
                         <div className="flex items-center justify-end gap-1">
-                          <Button variant="ghost" onClick={() => setEditing(u)}>Edit</Button>
+                          {canManageUsers && <Button variant="ghost" onClick={() => setEditing(u)}>Edit</Button>}
                           {canDelete && u.id !== session.user.id && (
                             <Button variant="ghost" className="!text-health-critical hover:!bg-red-50" onClick={() => setDeleting(u)}>
                               Delete

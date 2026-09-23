@@ -1,4 +1,4 @@
-import type { ModuleKey, PublicUser, Role, RoleId } from '@access-genie/shared';
+import type { ModuleKey, PermissionMatrix, PublicUser, Role, RoleId } from '@access-genie/shared';
 import { apiDelete, apiGet, apiList, apiPatch, apiPost } from '@/api/client';
 
 export interface UserFilters {
@@ -25,6 +25,8 @@ export interface RoleView {
   /** False for Super Admin, which holds everything by definition. */
   editable: boolean;
   userCount: number;
+  /** Effective action grants enforced by the API for each module. */
+  permissions: PermissionMatrix;
 }
 
 export interface CreateUserInput {
@@ -45,6 +47,8 @@ export const adminApi = {
 
   /** Widening or narrowing a role signs out everyone who holds it. */
   setRoleGrants: (id: RoleId, modules: ModuleKey[]) => apiPatch<RoleView>(`/users/roles/${id}`, { modules }),
+  setRolePermissions: (id: RoleId, permissions: PermissionMatrix) =>
+    apiPatch<PermissionMatrix>(`/users/roles/${id}/permissions`, { permissions }),
   resetRoleGrants: (id: RoleId) => apiPost<RoleView>(`/users/roles/${id}/reset`),
 
   createUser: (input: CreateUserInput) => apiPost<PublicUser>('/users', input),

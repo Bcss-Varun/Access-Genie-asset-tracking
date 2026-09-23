@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import type { ModuleKey, RoleId } from '@access-genie/shared';
 import { ROLE_IDS } from '@access-genie/shared';
 import { FormDialog, Field, FieldRow, Select, TextInput } from '@/components/ui/FormDialog';
@@ -6,6 +7,7 @@ import { useMutate } from '@/api/mutate';
 import { adminApi } from '@/api/users';
 import { flattenScope, resolveModules, roles } from '@/lib/rbac';
 import { ExtraModulesPicker } from '@/components/admin/ExtraModulesPicker';
+import { useSession } from '@/components/providers/SessionProvider';
 
 /**
  * Create an account.
@@ -34,6 +36,8 @@ function suggestPassword(): string {
 
 export function InviteUserDialog({ onClose, onCreated }: { onClose: () => void; onCreated?: () => void }) {
   const { run, isPending } = useMutate();
+  const { session } = useSession();
+  const { data: roleViews } = useQuery({ queryKey: ['roles'], queryFn: adminApi.roles });
 
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
@@ -45,7 +49,7 @@ export function InviteUserDialog({ onClose, onCreated }: { onClose: () => void; 
 
   // Switching roles can grant a module the extra list had picked by hand —
   // dropping it from the list rather than leaving a redundant, invisible grant.
-  const roleModules = resolveModules(roleId);
+  const roleModules = roleViews?.find((role) => role.id === roleId)?.modules ?? resolveModules(roleId);
   const effectiveExtra = extraModules.filter((m) => !roleModules.includes(m));
 
   const submit = async () => {
@@ -70,7 +74,9 @@ export function InviteUserDialog({ onClose, onCreated }: { onClose: () => void; 
     onClose();
   };
 
-  const valid = name.trim().length >= 2 && /\S+@\S+\.\S+/.test(email) && title.trim().length >= 2;
+  const passwordValid = password.length >= 10 && /[a-z]/.test(password) && /[A-Z]/.test(password) && /\d/.test(password);
+  const valid = name.trim().length >= 2 && /\S+@\S+\.\S+/.test(email) && title.trim().length >= 2 && passwordValid;
+  const assignableRoles = ROLE_IDS.filter((id) => session.role.id === 'super_admin' || id !== 'super_admin');
 
   return (
     <FormDialog
@@ -85,28 +91,29 @@ export function InviteUserDialog({ onClose, onCreated }: { onClose: () => void; 
     >
       <FieldRow>
         <Field label="Full name" required>
-          <TextInput autoFocus value={name} onChange={(e) => setName(e.target.value)} placeholder="Ananya Sharma" />
+          <TextInput id="invite-name" autoFocus value={name} onChange={(e) => setName(e.target.value)} placeholder="Ananya Sharma" />
         </Field>
         <Field label="Email" required>
-          <TextInput type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="ananya@company.com" />
+          <TextInput id="invite-email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="ananya@company.com" />
         </Field>
       </FieldRow>
 
       <FieldRow>
         <Field label="Job title" required>
-          <TextInput value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Facilities Technician" />
+          <TextInput id="invite-title" value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Facilities Technician" />
         </Field>
         <Field label="Role" hint={`Tier: ${roles[roleId]?.tier}`}>
           <Select
+            id="invite-role"
             value={roleId}
             onChange={(e) => setRoleId(e.target.value as RoleId)}
-            options={ROLE_IDS.map((id) => ({ value: id, label: `${roles[id].name} · ${roles[id].tier}` }))}
+            options={assignableRoles.map((id) => ({ value: id, label: `${roles[id].name} · ${roles[id].tier}` }))}
           />
         </Field>
       </FieldRow>
 
       <Field label="Home scope" hint="Where they land by default, and what they see first.">
-        <Select value={homeScopeId} onChange={(e) => setHomeScopeId(e.target.value)} options={scopeOptions()} />
+        <Select id="invite-scope" value={homeScopeId} onChange={(e) => setHomeScopeId(e.target.value)} options={scopeOptions()} />
       </Field>
 
       <ExtraModulesPicker roleModules={roleModules} value={effectiveExtra} onChange={setExtraModules} />
@@ -117,7 +124,7 @@ export function InviteUserDialog({ onClose, onCreated }: { onClose: () => void; 
         hint="At least 10 characters with an upper case letter, a lower case letter and a number."
       >
         <div className="flex gap-2">
-          <TextInput value={password} onChange={(e) => setPassword(e.target.value)} />
+          <TextInput id="invite-password" type="text" autoComplete="new-password" value={password} onChange={(e) => setPassword(e.target.value)} aria-invalid={!passwordValid} />
           <button
             type="button"
             onClick={() => setPassword(suggestPassword())}
@@ -126,6 +133,11 @@ export function InviteUserDialog({ onClose, onCreated }: { onClose: () => void; 
             Suggest
           </button>
         </div>
+        {!passwordValid && (
+          <p className="mt-2 text-xs text-red-600" role="alert">
+            Password needs 10 characters, including uppercase, lowercase and a number.
+          </p>
+        )}
       </Field>
     </FormDialog>
   );

@@ -316,11 +316,25 @@ export async function getDataset(
     certifications,
     integrations,
     workflows,
-    // A user's hash is on the document and must never reach a client.
-    users: users.map((u) => {
-      const { passwordHash: _hash, ...rest } = u;
-      return rest;
-    }),
+    // Keep the dataset directory on the same PublicUser contract as /users.
+    // Lean documents carry `_id` and Date objects; sending them through directly
+    // leaves the admin table with `user.id === undefined` after a refresh.
+    users: users.map((u) => ({
+      id: u._id,
+      name: u.name,
+      email: u.email,
+      initials: u.initials,
+      roleId: u.roleId,
+      extraModules: u.extraModules ?? [],
+      title: u.title,
+      homeScopeId: u.homeScopeId,
+      phone: u.phone,
+      timezone: u.timezone,
+      mfaEnabled: u.mfaEnabled,
+      status: u.status,
+      lastLoginAt: u.lastLoginAt?.toISOString(),
+      createdAt: u.createdAt.toISOString(),
+    })),
     transfers,
     reservations,
     technicians,

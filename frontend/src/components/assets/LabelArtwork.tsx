@@ -13,7 +13,8 @@
 
 import { useMemo } from 'react';
 import { LABEL_SIZES } from '@/lib/label-data';
-import { shortIdFor } from '@/lib/onboarding';
+import { scanUrlFor } from '@/lib/onboarding';
+import { encodeCode128 } from '@/lib/code128';
 import { encodeQr } from '@/lib/qr';
 import type { Asset } from '@access-genie/shared';
 import type { LabelFieldKey, LabelMedium, LabelSizeKey } from '@access-genie/shared';
@@ -30,10 +31,9 @@ export interface LabelSpec {
   showBorder: boolean;
 }
 
-// ── Deterministic symbology ──────────────────────────────────────────────────
-// A real encoder would run Reed-Solomon over the payload. This is a demo, so the
-// glyph is generated from a hash of the payload instead: stable across renders
-// (no hydration drift), visibly different per asset, honest about being artwork.
+// ── Symbology rendering ──────────────────────────────────────────────────────
+// QR and Code 128 are standards-compliant and carry the scan URL. Matrix and
+// physical inlay previews remain deterministic illustrations.
 
 function hashOf(s: string): number {
   let h = 2166136261;
@@ -66,10 +66,8 @@ function FinderEye({ cell, ox, oy }: { cell: number; ox: number; oy: number }) {
 /**
  * A real, scannable QR code.
  *
- * Everything else in this file draws a *representation* of a symbology — the
- * bars and the RFID inlay are illustrative, and that is fine because nobody
- * decodes a printed picture of an inlay. QR is different: it is the one people
- * point a phone at, so it has to carry the payload for real. See lib/qr.ts.
+ * QR and Code 128 both carry the real asset URL. RFID remains an inlay preview:
+ * writing silicon requires a configured hardware encoder. See lib/qr.ts.
  */
 function QrCode({ payload }: { payload: string }) {
   const matrix = useMemo(() => encodeQr(payload, 'M'), [payload]);
@@ -142,28 +140,17 @@ function MatrixCode({ payload, modules, finders }: { payload: string; modules: n
   );
 }
 
-/** Code-128-style bars — variable width, quiet zones, human-readable strip. */
+/** Standards-compliant Code 128 B with checksum and ten-module quiet zones. */
 function BarcodeCode({ payload }: { payload: string }) {
-  const bars = useMemo(() => {
-    const rng = makeRng(hashOf(payload));
-    const out: { x: number; w: number }[] = [];
-    let x = 6;
-    while (x < 94) {
-      const w = 0.9 + rng() * 2.2;
-      if (rng() > 0.42) out.push({ x, w });
-      x += w + 0.5;
-    }
-    return out;
-  }, [payload]);
-
+  const encoded = useMemo(() => encodeCode128(payload), [payload]);
   return (
     <>
-      <rect x={0} y={0} width={100} height={100} fill={STOCK} />
-      {bars.map((b, i) => (
-        <rect key={i} x={b.x} y={14} width={b.w} height={58} fill={INK} />
+      <rect x={0} y={0} width={encoded.modules} height={100} fill={STOCK} />
+      {encoded.bars.map((bar, i) => (
+        <rect key={i} x={bar.x} y={8} width={bar.width} height={70} fill={INK} />
       ))}
-      <text x={50} y={88} textAnchor="middle" fontSize={13} fontFamily="ui-monospace, monospace" fill={INK}>
-        {payload.slice(-12)}
+      <text x={encoded.modules / 2} y={92} textAnchor="middle" fontSize={9} fontFamily="ui-monospace, monospace" fill={INK}>
+        {payload}
       </text>
     </>
   );
@@ -206,6 +193,7 @@ function InlayCode({ payload, nfc }: { payload: string; nfc: boolean }) {
 }
 
 export function CodeGlyph({ payload, medium, mm }: { payload: string; medium: LabelMedium; mm: number }) {
+  const barcodeModules = medium === 'Barcode' ? encodeCode128(payload).modules : 100;
   const body =
     medium === 'Barcode' ? <BarcodeCode payload={payload} />
       : medium === 'RFID' ? <InlayCode payload={payload} nfc={false} />
@@ -215,8 +203,8 @@ export function CodeGlyph({ payload, medium, mm }: { payload: string; medium: La
 
   return (
     <svg
-      viewBox="0 0 100 100"
-      width={`${mm}mm`}
+      viewBox={`0 0 ${barcodeModules} 100`}
+      width={`${medium === 'Barcode' ? mm * 2.4 : mm}mm`}
       height={`${mm}mm`}
       shapeRendering={medium === 'RFID' || medium === 'NFC' ? 'auto' : 'crispEdges'}
       role="img"
@@ -243,15 +231,14 @@ export function fieldValue(key: LabelFieldKey, asset: Asset, tagId?: string): st
       : asset.location.name;
     case 'criticality': return asset.criticality ? `${asset.criticality} criticality` : '';
     case 'tagId': return tagId ?? 'Tag pending';
-    case 'scanUrl': return `accessgenie.app/a/${shortIdFor(asset.id)}`;
+    case 'scanUrl': return scanUrlFor(asset.id);
     case 'owner': return 'Access Genie Technologies Pvt Ltd';
     default: return '';
   }
 }
 
 /** What the code resolves to when scanned — the short URL contract in docs/10. */
-export const scanPayload = (asset: Asset, tagId?: string): string =>
-  tagId ?? `https://accessgenie.app/a/${shortIdFor(asset.id)}`;
+export const scanPayload = (asset: Asset, _tagId?: string): string => scanUrlFor(asset.id);
 
 // ── The label ────────────────────────────────────────────────────────────────
 

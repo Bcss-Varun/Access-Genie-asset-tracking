@@ -356,11 +356,18 @@ test('QR label binding waits for persistence, survives reload, and does not inve
   assert.equal(saved.onboarding.bindings[0].verifiedAt, undefined);
   assert.equal(saved.trackingId, saved.onboarding.bindings[0].tagId);
   await visit(`/assets/labels?ids=${registeredId}`, 'Label Printing');
+  const qrPayload = await page.eval(`return document.querySelector('svg[aria-label^="QR code encoding "]').getAttribute('aria-label').replace('QR code encoding ', '')`);
+  const scannedUrl = new URL(qrPayload);
+  assert.equal(scannedUrl.pathname, `/a/${registeredId.replace('AST-', 'ag')}`);
+  assert.equal(scannedUrl.origin, new URL(web).origin);
   await page.send('Emulation.setEmulatedMedia', {media:'print'});
   assert.equal(await page.eval('return getComputedStyle(document.querySelector(".app-sidebar")).display'), 'none');
   await page.shot('stage3-label-print');
   await page.send('Emulation.setEmulatedMedia', {media:''});
-  await visit(`/a/${registeredId.replace('AST-', 'ag')}`, 'Journey laptop');
+  await page.eval(`const b = [...document.querySelectorAll('#main button')].find(e => e.textContent.trim() === 'Barcode'); b.click();`);
+  assert.ok(await page.eval(`const svg = document.querySelector('svg[aria-label^="Barcode code encoding "]'); return svg && svg.querySelectorAll('rect').length > 20;`));
+  assert.equal(await page.eval(`return [...document.querySelectorAll('#main button')].find(e => e.textContent.includes('🖨 Print')).disabled`), false);
+  await visit(scannedUrl.pathname, 'Journey laptop');
 });
 
 test('lifecycle approval and financial values remain consistent with saved asset data', async () => {
