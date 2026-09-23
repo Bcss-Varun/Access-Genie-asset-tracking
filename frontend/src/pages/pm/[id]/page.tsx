@@ -1,9 +1,8 @@
 import { Link, useParams } from 'react-router-dom';
-import { getPmSchedule, getAssetById } from '@/lib/dataset';
+import { getPmSchedule, getAssetById, allWorkOrders } from '@/lib/dataset';
 import type { PmSchedule, PmFrequency } from '@access-genie/shared';
 import { PageHeader, Badge, EmptyState } from '@/components/ui/primitives';
 import { Button } from '@/components/ui/Button';
-import { useToast } from '@/components/providers/ToastProvider';
 import { cn, relTime, formatDate, nowMs } from '@/lib/utils';
 
 // ── token helpers ─────────────────────────────────────────────────────────────
@@ -18,18 +17,6 @@ const freqTone = (f: PmFrequency): Tone =>
         : f === 'Annual' ? 'slate'
           : 'red';
 
-// Nominal cadence in days — used to synthesise deterministic past occurrences.
-const freqDays: Record<PmFrequency, number> = {
-  Monthly: 30,
-  Quarterly: 91,
-  'Semi-Annual': 182,
-  Annual: 365,
-  'Usage-based': 45,
-};
-
-const complianceHex = (pct: number): string =>
-  pct >= 95 ? '#10b981' : pct >= 80 ? '#f59e0b' : '#ef4444';
-
 const fmtDate = formatDate;
 
 function dueLabel(iso: string): { text: string; overdue: boolean } {
@@ -42,7 +29,6 @@ function dueLabel(iso: string): { text: string; overdue: boolean } {
 
 export default function PmDetailPage() {
   const { id = '' } = useParams();
-  const { toast } = useToast();
   const pm: PmSchedule | undefined = getPmSchedule(id);
 
   if (!pm) {
@@ -63,19 +49,11 @@ export default function PmDetailPage() {
 
   const asset = getAssetById(pm.assetId);
   const due = dueLabel(pm.nextDue);
-  const interval = freqDays[pm.frequency];
-
-  // Synthetic history — derive 4 deterministic past occurrences by stepping back
-  // from the anchored lastDone date at the plan's nominal cadence (no Date.now()).
-  const history = Array.from({ length: 4 }, (_, i) => {
-    const iso = new Date(Date.parse(pm.lastDone) - i * interval * DAY).toISOString();
-    return {
-      iso,
-      result: i === 0 ? 'Completed' : i === 2 ? 'Completed (late)' : 'Completed',
-      tech: pm.assignedTeam,
-      hours: pm.estHours,
-    };
-  });
+  const history = allWorkOrders.filter(w => w.assetId === pm.assetId && w.status === 'Completed'
+    && w.description?.includes(`schedule ${pm.id}`) && w.completedAt)
+    .sort((a, b) => Date.parse(b.completedAt!) - Date.parse(a.completedAt!))
+    .map(w => ({ iso: w.completedAt!, result: 'Completed', tech: w.assignedTo,
+      hours: w.laborLog.reduce((total, entry) => total + entry.hours, 0) }));
 
   const detailRows: { label: string; value: React.ReactNode }[] = [
     {
@@ -97,17 +75,10 @@ export default function PmDetailPage() {
         </span>
       ),
     },
-    { label: 'Last done', value: `${fmtDate(pm.lastDone)} · ${relTime(pm.lastDone)}` },
+    { label: 'Last done', value: history[0] ? `${fmtDate(history[0].iso)} · ${relTime(history[0].iso)}` : 'No recorded completion' },
     { label: 'Est. hours', value: `${pm.estHours}h` },
     { label: 'Assigned team', value: pm.assignedTeam },
   ];
-
-  const generateWo = () =>
-    toast({
-      title: 'Work order generated',
-      description: `${pm.title} — WO created for ${pm.assetName} and assigned to ${pm.assignedTeam}.`,
-      tone: 'success',
-    });
 
   return (
     <div className="h-full flex flex-col space-y-6">
@@ -134,23 +105,10 @@ export default function PmDetailPage() {
             ))}
           </dl>
 
-          <div className="pt-1">
-            <div className="flex items-center justify-between mb-1.5">
-              <span className="text-xs font-medium text-slate-500">Compliance</span>
-              <span className="text-xs font-semibold text-slate-700 tabular-nums">{pm.compliancePct}%</span>
-            </div>
-            <div className="h-2 w-full rounded-full bg-slate-200 overflow-hidden">
-              <div
-                className="h-full rounded-full"
-                style={{ width: `${Math.max(0, Math.min(100, pm.compliancePct))}%`, backgroundColor: complianceHex(pm.compliancePct) }}
-              />
-            </div>
-          </div>
+          <p className="text-xs text-slate-500">Occurrence compliance is unavailable until completed work is linked to scheduled occurrences.</p>
 
           <div className="pt-1">
-            <Button variant="primary" size="md" className="w-full" onClick={generateWo}>
-              Generate Work Order now
-            </Button>
+            <Link to={`/work-orders?create=1&pmId=${encodeURIComponent(pm.id)}`}><Button variant="primary" size="md" className="w-full">Create Work Order</Button></Link>
           </div>
         </div>
 
@@ -161,6 +119,7 @@ export default function PmDetailPage() {
               <h3 className="font-bold text-lg font-heading text-slate-800">Maintenance History</h3>
               <p className="text-xs text-slate-500 mt-0.5">Recent occurrences of this {pm.frequency.toLowerCase()} plan</p>
             </div>
+            {history.length === 0 && <p className="text-sm text-slate-500">No completed work orders recorded for this plan.</p>}
             <ul className="space-y-3">
               {history.map((h, i) => {
                 const late = h.result.includes('late');
@@ -191,7 +150,7 @@ export default function PmDetailPage() {
               This {pm.frequency.toLowerCase()} {pm.type.toLowerCase()} plan covers{' '}
               <span className="font-medium text-slate-800">{pm.assetName}</span> and is owned by the{' '}
               <span className="font-medium text-slate-800">{pm.assignedTeam}</span> team. Each occurrence is
-              budgeted at {pm.estHours} hours. Adherence sits at {pm.compliancePct}% over the trailing window
+              budgeted at {pm.estHours} hours
               {due.overdue ? ', and this plan is currently overdue for service.' : `, with the next service ${due.text}.`}
             </p>
           </div>

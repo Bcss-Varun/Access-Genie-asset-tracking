@@ -65,6 +65,10 @@ export const register = asyncHandler(async (req: Request, res: Response) => {
   const actor = req.auth.user.name;
   const draft = req.body as RegistrationDraftInput;
 
+  if (draft.source === 'clone' && draft.cloneOfId) {
+    await assetService.getAsset(requireScope(req), draft.cloneOfId);
+  }
+
   const fields = await registration.resolveFields(draft.source, draft.templateId);
   const result = registration.validateDraft(draft.values, fields);
   if (!result.valid) {
@@ -106,7 +110,7 @@ export const register = asyncHandler(async (req: Request, res: Response) => {
 
 /** Everything about an existing asset except what identifies that one unit. */
 export const cloneSource = asyncHandler(async (req: Request, res: Response) => {
-  sendData(res, await registration.clonePrefill(req.params.id as string));
+  sendData(res, await registration.clonePrefill(requireScope(req), req.params.id as string));
 });
 
 // ── Templates ────────────────────────────────────────────────────────────────

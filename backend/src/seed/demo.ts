@@ -232,6 +232,7 @@ async function insertIfEmpty(model: SeedModel, build: () => Record<string, unkno
 }
 
 export async function seedDemo(options: { fresh?: boolean; skipConnect?: boolean } = {}): Promise<void> {
+  if (env.isProd) throw new Error('Demo seeding is disabled in production');
   if (!options.skipConnect) {
     await connectDb();
   }
@@ -477,7 +478,7 @@ export async function seedDemo(options: { fresh?: boolean; skipConnect?: boolean
   ]);
 
   logger.info('Seed complete', { assets: assetCount, users: userCount, tracked: presenceCount });
-  logger.info(`Sign in with any seeded email and the password: ${env.SEED_PASSWORD}`);
+  logger.info('Sign in with a seeded email and the configured SEED_PASSWORD');
   logger.info(`  e.g. ${users[0]?.email ?? 'raj@bcss.in'}`);
 }
 

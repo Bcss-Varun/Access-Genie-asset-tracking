@@ -43,7 +43,7 @@ export default function ComplianceMonitoringPage() {
   const { can } = useAuth();
   const [filters, setFilters] = useState<ComplianceFilters>(EMPTY_COMPLIANCE_FILTERS);
   const [page, setPage] = useState(1);
-  const [sort, setSort] = useState(DEFAULT_SORT);
+  const sort = DEFAULT_SORT;
   const [search, setSearch] = useState('');
   const [creating, setCreating] = useState(false);
   const [resolving, setResolving] = useState<ComplianceRecord | null>(null);

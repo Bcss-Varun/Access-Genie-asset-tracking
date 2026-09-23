@@ -1,3 +1,4 @@
+import { assertAssetVisible } from '../services/tenancy.service.js';
 import type { Request, Response } from 'express';
 import { validatedQuery } from '../middleware/validate.js';
 import { asyncHandler } from '../utils/asyncHandler.js';
@@ -13,6 +14,11 @@ import type {
 } from '../validators/predictiveAlert.validator.js';
 
 /** The caller's name is the actor on every audited write in this module. */
+async function assertAlert(req: Request) {
+  const row = await service.getPredictiveAlert(req.params.id as string);
+  await assertAssetVisible(requireScope(req), row.assetId, 'Predictive alert');
+}
+
 const actorOf = (req: Request): string => req.auth?.user.name ?? 'system';
 
 export const list = asyncHandler(async (req: Request, res: Response) => {
@@ -29,15 +35,17 @@ export const stats = asyncHandler(async (req: Request, res: Response) => {
 });
 
 export const facets = asyncHandler(async (req: Request, res: Response) => {
-  sendData(res, await service.getPredictiveAlertFacets());
+  sendData(res, await service.getPredictiveAlertFacets(requireScope(req)));
 });
 
 export const getOne = asyncHandler(async (req: Request, res: Response) => {
+  await assertAlert(req);
   sendData(res, await service.getPredictiveAlert(req.params.id as string));
 });
 
 /** The alert, its asset, the orders it raised and the asset's other alerts. */
 export const detail = asyncHandler(async (req: Request, res: Response) => {
+  await assertAlert(req);
   sendData(res, await service.getPredictiveAlertDetail(req.params.id as string));
 });
 
@@ -49,6 +57,7 @@ export const detail = asyncHandler(async (req: Request, res: Response) => {
  * service refuses the combinations that would misattribute either.
  */
 export const create = asyncHandler(async (req: Request, res: Response) => {
+  await assertAssetVisible(requireScope(req), req.body.assetId);
   const alert = await service.createPredictiveAlert(req.body as CreatePredictiveAlertInput, actorOf(req));
   recordAudit(req, {
     action: 'predictive_alert.create',
@@ -60,6 +69,7 @@ export const create = asyncHandler(async (req: Request, res: Response) => {
 });
 
 export const acknowledge = asyncHandler(async (req: Request, res: Response) => {
+  await assertAlert(req);
   const id = req.params.id as string;
   const { note } = (req.body ?? {}) as { note?: string };
   const alert = await service.acknowledgePredictiveAlert(id, actorOf(req), note);
@@ -68,6 +78,7 @@ export const acknowledge = asyncHandler(async (req: Request, res: Response) => {
 });
 
 export const dismiss = asyncHandler(async (req: Request, res: Response) => {
+  await assertAlert(req);
   const id = req.params.id as string;
   const { reason } = req.body as DismissPredictiveAlertInput;
   const alert = await service.dismissPredictiveAlert(id, actorOf(req), reason);
@@ -76,6 +87,7 @@ export const dismiss = asyncHandler(async (req: Request, res: Response) => {
 });
 
 export const reopen = asyncHandler(async (req: Request, res: Response) => {
+  await assertAlert(req);
   const id = req.params.id as string;
   const { note } = (req.body ?? {}) as { note?: string };
   const alert = await service.reopenPredictiveAlert(id, actorOf(req), note);
@@ -84,6 +96,7 @@ export const reopen = asyncHandler(async (req: Request, res: Response) => {
 });
 
 export const resolve = asyncHandler(async (req: Request, res: Response) => {
+  await assertAlert(req);
   const id = req.params.id as string;
   const { note } = (req.body ?? {}) as { note?: string };
   const alert = await service.resolvePredictiveAlert(id, actorOf(req), note);
@@ -99,6 +112,7 @@ export const resolve = asyncHandler(async (req: Request, res: Response) => {
  * one.
  */
 export const raiseWorkOrder = asyncHandler(async (req: Request, res: Response) => {
+  await assertAlert(req);
   const id = req.params.id as string;
   const result = await service.raiseWorkOrderFromAlert(requireScope(req), id, req.body as RaisePredictiveWorkOrderInput, actorOf(req));
 
@@ -115,6 +129,7 @@ export const raiseWorkOrder = asyncHandler(async (req: Request, res: Response) =
 });
 
 export const remove = asyncHandler(async (req: Request, res: Response) => {
+  await assertAlert(req);
   const id = req.params.id as string;
   await service.deletePredictiveAlert(id);
   recordAudit(req, { action: 'predictive_alert.delete', target: id, category: 'Maintenance' });

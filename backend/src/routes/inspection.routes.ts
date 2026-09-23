@@ -26,7 +26,7 @@ import {
  */
 const router = Router();
 
-router.use(requireModule('maintenance'));
+router.use(['/inspection-templates', '/inspections'], requireModule('maintenance'));
 
 // ── Templates ────────────────────────────────────────────────────────────────
 router.get('/inspection-templates', validate({ query: templateListQuerySchema }), controller.listTemplates);

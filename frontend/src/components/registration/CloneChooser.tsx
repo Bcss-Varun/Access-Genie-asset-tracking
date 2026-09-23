@@ -1,3 +1,4 @@
+import { Button } from '@/components/ui/Button';
 import { useEffect, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { EmptyState } from '@/components/ui/primitives';
@@ -24,7 +25,7 @@ export function CloneChooser({ onPick }: { onPick: (id: string) => void }) {
     return () => clearTimeout(t);
   }, [q]);
 
-  const { data, isLoading } = useQuery({
+  const { data, isLoading, isError, refetch } = useQuery({
     queryKey: ['clone-candidates', debounced],
     queryFn: () => assetsApi.list({ q: debounced || undefined, limit: 50, sort: '-createdAt' }),
   });
@@ -49,6 +50,8 @@ export function CloneChooser({ onPick }: { onPick: (id: string) => void }) {
       <div className="mt-4 max-h-[26rem] overflow-y-auto rounded-lg border border-slate-200">
         {isLoading ? (
           <p className="p-6 text-sm text-slate-500">Loading assets…</p>
+        ) : isError ? (
+          <div role="alert" className="p-4"><p>Assets could not be loaded.</p><Button onClick={() => void refetch()}>Retry</Button></div>
         ) : assets.length === 0 ? (
           <div className="p-4">
             <EmptyState

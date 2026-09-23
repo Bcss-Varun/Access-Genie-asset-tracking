@@ -426,7 +426,7 @@ export async function getRequest(
 }
 
 /** Names for the approver pickers — active users, by role. */
-export async function approverCandidates(): Promise<{ id: string; name: string; roleId: RoleId }[]> {
-  const rows = await User.find({ status: 'active' }).select('name roleId').lean<{ _id: string; name: string; roleId: RoleId }[]>();
+export async function approverCandidates(scopeIds?: Set<string>): Promise<{ id: string; name: string; roleId: RoleId }[]> {
+  const rows = await User.find({ status: 'active', ...(scopeIds ? { homeScopeId: { $in: [...scopeIds] } } : {}) }).select('name roleId').lean<{ _id: string; name: string; roleId: RoleId }[]>();
   return rows.map((r) => ({ id: r._id, name: r.name, roleId: r.roleId }));
 }

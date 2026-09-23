@@ -7,7 +7,7 @@ import { AssetPicker } from '@/components/ui/AssetPicker';
 import { FieldActionButtons, SlaChip } from '@/components/workforce/WorkOrderActions';
 import { useMutate } from '@/api/mutate';
 import { maintenanceApi } from '@/api/work-orders';
-import { allWorkOrders, getAssetById } from '@/lib/dataset';
+import { allWorkOrders, getAssetById, getPmSchedule } from '@/lib/dataset';
 import { fieldStageLabel, slaStatus, STAGE_TONE, SLA_STATUSES, type SlaStatus } from '@/lib/field-ops';
 import { rosterNames, SKILLS } from '@/lib/technicians';
 import { relTime, isOverdue, cn } from '@/lib/utils';
@@ -48,17 +48,18 @@ function dueMatches(dueDate: string, filter: DueFilter): boolean {
  * picked rather than asked for again — the asset registry already owns that,
  * so this form does not collect a second, independently-typed copy of it.
  */
-function NewWorkOrderDialog({ onClose }: { onClose: () => void }) {
+function NewWorkOrderDialog({ onClose, pmId }: { onClose: () => void; pmId?: string }) {
+  const pm = pmId ? getPmSchedule(pmId) : undefined;
   const { run, isPending } = useMutate();
 
-  const [assetId, setAssetId] = useState('');
-  const [title, setTitle] = useState('');
-  const [description, setDescription] = useState('');
-  const [type, setType] = useState<ActiveWorkOrderType>('Corrective');
+  const [assetId, setAssetId] = useState(pm?.assetId ?? '');
+  const [title, setTitle] = useState(pm ? `${pm.title} — manual request` : '');
+  const [description, setDescription] = useState(pm ? `Requested from preventive schedule ${pm.id}` : '');
+  const [type, setType] = useState<ActiveWorkOrderType>(pm?.type === 'Preventive' ? 'Preventive' : 'Corrective');
   const [priority, setPriority] = useState<WorkOrderPriority>('Medium');
   const [requiredSkill, setRequiredSkill] = useState('');
   const [dueDate, setDueDate] = useState(dateInDays(3));
-  const [estimatedHours, setEstimatedHours] = useState('2');
+  const [estimatedHours, setEstimatedHours] = useState(String(pm?.estHours ?? 2));
   const [technician, setTechnician] = useState('Unassigned');
   const [source, setSource] = useState<ActiveWorkOrderSource>('Manual');
 
@@ -152,7 +153,7 @@ function NewWorkOrderDialog({ onClose }: { onClose: () => void }) {
 }
 
 export default function WorkOrdersPage() {
-  const [params] = useSearchParams();
+  const [params, setSearchParams] = useSearchParams();
 
   const [status, setStatus] = useState(params.get('status') ?? 'All');
   const [priority, setPriority] = useState(params.get('priority') ?? 'All');
@@ -293,7 +294,7 @@ export default function WorkOrdersPage() {
         </div>
       </div>
 
-      {creating && <NewWorkOrderDialog onClose={() => setCreating(false)} />}
+      {(creating || params.get('create') === '1') && <NewWorkOrderDialog pmId={params.get('pmId') ?? undefined} onClose={() => { setCreating(false); setSearchParams(prev => { const next = new URLSearchParams(prev); next.delete('create'); next.delete('pmId'); return next; }); }} />}
     </div>
   );
 }

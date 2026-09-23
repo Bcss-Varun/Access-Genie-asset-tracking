@@ -99,18 +99,22 @@ function codeFor(secret: string, step: number): string {
  * short-circuits on the first wrong character leaks how much of the code was
  * right, which over enough attempts is enough to guess one.
  */
-export function verifyCode(secret: string, code: string, now = Date.now()): boolean {
-  const cleaned = code.replace(/\D/g, '');
-  if (cleaned.length !== DIGITS) return false;
+export function matchingStep(secret: string, code: string, now = Date.now()): number | null {
+  const cleaned = code.trim();
+  if (!/^\d{6}$/.test(cleaned)) return null;
 
   const currentStep = Math.floor(now / 1000 / STEP_SECONDS);
   const candidate = Buffer.from(cleaned);
 
   for (let drift = -DRIFT_STEPS; drift <= DRIFT_STEPS; drift++) {
     const expected = Buffer.from(codeFor(secret, currentStep + drift));
-    if (expected.length === candidate.length && timingSafeEqual(expected, candidate)) return true;
+    if (expected.length === candidate.length && timingSafeEqual(expected, candidate)) return currentStep + drift;
   }
-  return false;
+  return null;
+}
+
+export function verifyCode(secret: string, code: string, now = Date.now()): boolean {
+  return matchingStep(secret, code, now) !== null;
 }
 
 /** The URI an authenticator app scans. */

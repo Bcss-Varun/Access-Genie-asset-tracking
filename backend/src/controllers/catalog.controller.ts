@@ -1,7 +1,7 @@
 import type { Request, Response } from 'express';
 import { asyncHandler } from '../utils/asyncHandler.js';
 import { requireScope } from '../middleware/scope.js';
-import { assetClause } from '../services/tenancy.service.js';
+import { assertAssetVisible, assetClause } from '../services/tenancy.service.js';
 import { sendData, sendList } from '../utils/response.js';
 import { validatedQuery } from '../middleware/validate.js';
 import { parsePagination, paginate } from '../utils/query.js';
@@ -30,7 +30,7 @@ export const listNotifications = asyncHandler(async (req: Request, res: Response
   if (!req.auth) throw ApiError.unauthorized();
 
   // A notification with no `userId` is a broadcast every user receives.
-  const notifications = await Notification.find({ $or: [{ userId: req.auth.user.id }, { userId: { $exists: false } }] })
+  const notifications = await Notification.find({ userId: req.auth.user.id })
     .sort({ at: -1 })
     .limit(100)
     .lean();
@@ -39,8 +39,8 @@ export const listNotifications = asyncHandler(async (req: Request, res: Response
 });
 
 export const markNotificationRead = asyncHandler(async (req: Request, res: Response) => {
-  const notification = await Notification.findByIdAndUpdate(
-    req.params.id as string,
+  const notification = await Notification.findOneAndUpdate(
+    { _id: req.params.id as string, userId: req.auth!.user.id },
     { $set: { read: true } },
     { new: true },
   ).lean();
@@ -53,7 +53,7 @@ export const markAllNotificationsRead = asyncHandler(async (req: Request, res: R
   if (!req.auth) throw ApiError.unauthorized();
 
   const result = await Notification.updateMany(
-    { $or: [{ userId: req.auth.user.id }, { userId: { $exists: false } }], read: false },
+    { userId: req.auth.user.id, read: false },
     { $set: { read: true } },
   );
 
@@ -61,9 +61,9 @@ export const markAllNotificationsRead = asyncHandler(async (req: Request, res: R
 });
 
 // ── Compliance ───────────────────────────────────────────────────────────────
-export const listAudit = asyncHandler(async (_req: Request, res: Response) => {
+export const listAudit = asyncHandler(async (req: Request, res: Response) => {
   const query = validatedQuery<ListQueryInput & { category?: string; actor?: string }>(res);
-  const filter: Record<string, unknown> = {};
+  const filter: Record<string, unknown> = req.auth?.roleId === 'super_admin' ? {} : { scopeId: { $in: [...requireScope(req).ids] } };
 
   if (query.category) filter.category = query.category;
   if (query.actor) filter.actor = query.actor;
@@ -81,7 +81,10 @@ export const listCustody = asyncHandler(async (req: Request, res: Response) => {
   // otherwise a facility manager reads the movement history of the whole
   // organisation, which is exactly what this used to do.
   const filter: Record<string, unknown> = { ...(await assetClause(requireScope(req))) };
-  if (query.assetId) filter.assetId = query.assetId;
+  if (query.assetId) {
+    await assertAssetVisible(requireScope(req), query.assetId);
+    filter.assetId = query.assetId;
+  }
 
   const pagination = parsePagination(query, ['at', 'holder'], '-at');
   const { items, meta } = await paginate(CustodyRecord, filter, pagination);
@@ -99,6 +102,7 @@ export const createCustody = asyncHandler(async (req: Request, res: Response) =>
   const body = req.body as { assetId: string; holder: string; action: CustodyAction; note?: string };
   const actor = req.auth?.user.name ?? req.auth?.user.email ?? 'system';
 
+  await assertAssetVisible(requireScope(req), body.assetId);
   const record = await recordCustody(body, actor);
 
   recordAudit(req, {

@@ -1,4 +1,6 @@
-import { useMemo, useState } from 'react';
+import { useQuery } from '@tanstack/react-query';
+import { registrationApi } from '@/api/registration';
+import { useMemo, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useNavigate } from 'react-router-dom';
 import { ASSET_CATEGORIES, type Asset, type AssetCategory, type Criticality } from '@access-genie/shared';
@@ -23,6 +25,7 @@ interface FormState {
   taxonomyClassId: string;
   attributes: Record<string, string | boolean>;
   custodian: string;
+  locationId: string;
   locationName: string;
   building: string;
   zone: string;
@@ -43,6 +46,7 @@ function seedFromAsset(asset?: Asset): FormState {
     taxonomyClassId: '',
     attributes: {},
     custodian: asset?.custodian ?? '',
+    locationId: asset?.location.id ?? '',
     locationName: asset?.location.name ?? '',
     building: asset?.location.building ?? '',
     zone: asset?.location.zone ?? '',
@@ -110,10 +114,12 @@ export function AssetForm({ mode, asset }: { mode: 'create' | 'edit'; asset?: As
   const { toast } = useToast();
   const refreshDataset = useRefreshDataset();
 
+  const defaults = useQuery({ queryKey: ['registration-defaults'], queryFn: registrationApi.defaults });
   const initial = useMemo(() => seedFromAsset(asset), [asset]);
   const [form, setForm] = useState<FormState>(initial);
   const [tagDraft, setTagDraft] = useState('');
   const [touched, setTouched] = useState(false);
+  const saveLock = useRef(false);
   const [saving, setSaving] = useState(false);
 
   const set = <K extends keyof FormState>(key: K, value: FormState[K]) =>
@@ -122,12 +128,13 @@ export function AssetForm({ mode, asset }: { mode: 'create' | 'edit'; asset?: As
   // ── Validation ──────────────────────────────────────────────────────────────
   const errors = useMemo(() => {
     const e: Partial<Record<'name' | 'category' | 'serialNumber', string>> = {};
-    if (!form.name.trim()) e.name = 'Asset name is required.';
+    if (form.name.trim().length < 2) e.name = 'Asset name needs at least 2 characters.';
+    if (form.serialNumber.trim().length === 1) e.serialNumber = 'Serial number needs at least 2 characters.';
     if (!form.category) e.category = 'Select a category.';
     // No serial-number check: plenty of assets genuinely have none, and the
     // server stores the absence rather than substituting a placeholder.
     return e;
-  }, [form.name, form.category]);
+  }, [form.name, form.category, form.serialNumber]);
 
   const isValid = Object.keys(errors).length === 0;
   const dirty = useMemo(() => JSON.stringify(form) !== JSON.stringify(initial) || tagDraft.trim() !== '', [form, initial, tagDraft]);
@@ -162,22 +169,22 @@ export function AssetForm({ mode, asset }: { mode: 'create' | 'edit'; asset?: As
       serialNumber: form.serialNumber.trim(),
       custodian: form.custodian.trim() || 'Unassigned',
       criticality: form.criticality,
-      manufacturer: form.manufacturer.trim() || undefined,
-      model: form.model.trim() || undefined,
-      tags: form.tags,
+      manufacturer: form.manufacturer.trim(),
+      model: form.model.trim(),
+      tags: Array.from(new Set([...form.tags, ...tagDraft.split(',').map((t) => t.trim()).filter(Boolean)])),
       location: {
+        ...(form.locationId === asset?.location.id ? asset.location : {}),
         // Reuse the existing location id on edit so the asset stays attached to
         // the same place rather than being re-pointed at a new one on every save.
-        id: asset?.location.id ?? `LOC-${locationName.toUpperCase().replace(/[^A-Z0-9]+/g, '-').slice(0, 24)}`,
+        id: form.locationId,
         name: locationName,
         building: form.building.trim() || undefined,
         zone: form.zone.trim() || undefined,
       },
       purchasePrice: Number(form.purchasePrice) || 0,
-      // The API requires a purchase date; an asset registered without one is
-      // dated today rather than rejected at the last step of a long form.
-      purchaseDate: form.purchaseDate || new Date().toISOString().slice(0, 10),
-      warrantyExpiry: form.warrantyExpiry || undefined,
+      // Omitted dates preserve the saved purchase date on edits.
+      purchaseDate: form.purchaseDate || undefined,
+      warrantyExpiry: form.warrantyExpiry || (mode === 'edit' ? null : undefined),
     };
   };
 
@@ -185,7 +192,8 @@ export function AssetForm({ mode, asset }: { mode: 'create' | 'edit'; asset?: As
     e.preventDefault();
     setTouched(true);
     if (tagDraft.trim()) commitTags(tagDraft);
-    if (!isValid) return;
+    if (!isValid || saveLock.current) return;
+    saveLock.current = true;
 
     setSaving(true);
     try {
@@ -212,6 +220,7 @@ export function AssetForm({ mode, asset }: { mode: 'create' | 'edit'; asset?: As
         tone: 'error',
       });
     } finally {
+      saveLock.current = false;
       setSaving(false);
     }
   };
@@ -269,7 +278,7 @@ export function AssetForm({ mode, asset }: { mode: 'create' | 'edit'; asset?: As
             />
           </Field>
 
-          <Field label="Serial Number" required error={showError('serialNumber')} htmlFor="f-serial">
+          <Field label="Serial Number" error={showError('serialNumber')} htmlFor="f-serial">
             <input
               id="f-serial"
               className={cn(inputCls, 'font-mono', showError('serialNumber') && 'border-health-critical focus:ring-red-500/30')}
@@ -309,14 +318,16 @@ export function AssetForm({ mode, asset }: { mode: 'create' | 'edit'; asset?: As
             </select>
           </Field>
 
-          <Field label="Location Name" htmlFor="f-locname">
-            <input
-              id="f-locname"
-              className={inputCls}
-              value={form.locationName}
-              onChange={(e) => set('locationName', e.target.value)}
-              placeholder="e.g. North Distribution Center"
-            />
+          <Field label="Location" htmlFor="f-locname">
+            <select id="f-locname" className={inputCls} value={form.locationId} required onChange={(e) => {
+              const next = defaults.data?.facilities.find((f) => f.id === e.target.value);
+              if (next) setForm((f) => ({ ...f, locationId: next.id, locationName: next.name, building: '', zone: '' }));
+            }}>
+              <option value="">Select a site</option>
+              {asset && !defaults.data?.facilities.some((f) => f.id === asset.location.id) && <option value={asset.location.id}>{asset.location.name}</option>}
+              {defaults.data?.facilities.map((f) => <option key={f.id} value={f.id}>{f.name}</option>)}
+            </select>
+            {defaults.isError && <button type="button" onClick={() => void defaults.refetch()} className="text-sm underline">Retry loading sites</button>}
           </Field>
 
           <Field label="Building" htmlFor="f-building">

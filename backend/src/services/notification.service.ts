@@ -1,3 +1,4 @@
+import { resolveVisibleScope } from './tenancy.service.js';
 import type { RoleId } from '@access-genie/shared';
 import { Notification, User, nextId } from '../models/index.js';
 import { logger } from '../config/logger.js';
@@ -18,6 +19,8 @@ export interface NotifyInput {
   category: string;
   /** Omit for a broadcast every user sees. */
   userId?: string;
+  scopeId?: string;
+  platformOnly?: boolean;
 }
 
 async function write(input: NotifyInput): Promise<void> {
@@ -51,14 +54,27 @@ async function write(input: NotifyInput): Promise<void> {
   }
 }
 
-/** Broadcast, or targeted when `userId` is given. */
-export async function notify(input: NotifyInput): Promise<void> {
-  await write(input);
+/** Resolve recipients before storing any asset details in an inbox. */
+async function recipients(input: NotifyInput, roles?: RoleId[]): Promise<void> {
+  const users = await User.find({ status: 'active',
+    ...(input.userId ? { _id: input.userId } : {}),
+    ...(input.platformOnly ? { roleId: 'super_admin' } : roles ? { roleId: { $in: roles } } : {}),
+  }).lean();
+  for (const user of users) {
+    if (input.scopeId && user.roleId !== 'super_admin') {
+      try {
+        const scope = await resolveVisibleScope({ roleId: user.roleId, homeScopeId: user.homeScopeId });
+        if (!scope.ids.has(input.scopeId)) continue;
+      } catch { continue; }
+    }
+    await write({ ...input, userId: String(user._id) });
+  }
 }
-
-/** One notification per active user holding any of the given roles. */
+export async function notify(input: NotifyInput): Promise<void> {
+  try { await recipients(input); }
+  catch (err) { logger.warn('Notification recipients could not be resolved', { category: input.category, err }); }
+}
 export async function notifyRoles(roles: RoleId[], input: Omit<NotifyInput, 'userId'>): Promise<void> {
-  if (roles.length === 0) return;
-  const users = await User.find({ roleId: { $in: roles }, status: 'active' }).select('_id').lean();
-  await Promise.all(users.map((u) => write({ ...input, userId: String(u._id) })));
+  try { if (roles.length) await recipients(input, roles); }
+  catch (err) { logger.warn('Notification recipients could not be resolved', { category: input.category, err }); }
 }

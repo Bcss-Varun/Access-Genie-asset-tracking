@@ -9,6 +9,8 @@ export interface UserDoc {
   name: string;
   email: string;
   passwordHash: string;
+  authVersion: number;
+  mfaLastStep?: number;
   initials: string;
   roleId: RoleId;
   /** Modules granted to this user specifically, additive to their role's own grants. */
@@ -57,6 +59,8 @@ const userSchema = new Schema<UserDoc, UserModel, UserMethods>(
     // `select: false` keeps the hash out of every query that does not ask for
     // it by name, so it cannot leak through a forgotten `.lean()` or `toJSON`.
     passwordHash: { type: String, required: true, select: false },
+    authVersion: { type: Number, default: 0 },
+    mfaLastStep: { type: Number, select: false },
     initials: { type: String, required: true, maxlength: 3 },
     roleId: { type: String, required: true, enum: ROLE_IDS },
     extraModules: { type: [String], enum: MODULE_KEYS, default: [] },

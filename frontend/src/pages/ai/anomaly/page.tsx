@@ -82,7 +82,7 @@ export default function AnomalyPage() {
 
   const dismiss = (a: AnomalyEvent) => {
     setDismissed((prev) => new Set(prev).add(a.id));
-    toast({ title: 'Anomaly dismissed', description: `${a.assetName} · ${a.metric}`, tone: 'default' });
+    toast({ title: 'Hidden for this session', description: `${a.assetName} · ${a.metric}. Reload to show it again.`, tone: 'default' });
   };
 
   return (

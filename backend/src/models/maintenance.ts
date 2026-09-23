@@ -14,7 +14,7 @@ export interface PmScheduleDoc {
   frequency: PmFrequency;
   type: WorkOrderType;
   nextDue: Date;
-  lastDone: Date;
+  lastDone?: Date;
   estHours: number;
   /** Share of occurrences completed on time, 0–100. */
   compliancePct: number;
@@ -32,7 +32,7 @@ const pmScheduleSchema = new Schema<PmScheduleDoc>(
     frequency: { type: String, required: true, enum: PM_FREQUENCIES, index: true },
     type: { type: String, required: true, enum: WORK_ORDER_TYPES },
     nextDue: { type: Date, required: true, index: true },
-    lastDone: { type: Date, required: true },
+    lastDone: { type: Date },
     estHours: { type: Number, required: true, min: 0 },
     compliancePct: { type: Number, required: true, min: 0, max: 100 },
     assignedTeam: { type: String, required: true },

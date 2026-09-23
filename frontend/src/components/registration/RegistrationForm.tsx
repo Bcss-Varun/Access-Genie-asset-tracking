@@ -63,6 +63,7 @@ export function RegistrationForm({
   const [step, setStep] = useState(0);
   /** Steps the user has already left — errors only surface once they have. */
   const [visited, setVisited] = useState<Set<string>>(new Set());
+  const submitLock = useRef(false);
   const [submitting, setSubmitting] = useState(false);
   const [submitAttempted, setSubmitAttempted] = useState(false);
 
@@ -97,16 +98,18 @@ export function RegistrationForm({
 
   useEffect(() => {
     if (!fields.length) return;
+    let current = true;
+    setValidation(null);
     clearTimeout(validateRef.current);
     validateRef.current = setTimeout(() => {
       registrationApi
         .validate({ source, templateId, cloneOfId, values })
-        .then(setValidation)
+        .then((result) => { if (current) setValidation(result); })
         .catch(() => {
           /* a failed check must never block typing; the commit re-checks */
         });
     }, 350);
-    return () => clearTimeout(validateRef.current);
+    return () => { current = false; clearTimeout(validateRef.current); };
   }, [values, fields.length, source, templateId, cloneOfId]);
 
   const set = (key: string, value: string | number | boolean | null) =>
@@ -174,7 +177,7 @@ export function RegistrationForm({
   const goto = (index: number) => {
     if (current) setVisited((v) => new Set(v).add(current.key));
     setStep(Math.max(0, Math.min(steps.length - 1, index)));
-    window.scrollTo({ top: 0, behavior: 'smooth' });
+    document.getElementById('main')?.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
   /** Errors show once the step has been left, or once Register was pressed. */
@@ -215,26 +218,27 @@ export function RegistrationForm({
 
   // ── Submit ─────────────────────────────────────────────────────────────────
   const submit = async () => {
-    setSubmitAttempted(true);
-
-    // Re-check synchronously: the debounce may not have caught the last
-    // keystroke, and committing on a stale "valid" is how a form lies.
-    const fresh = await registrationApi.validate({ source, templateId, cloneOfId, values }).catch(() => null);
-    if (fresh) setValidation(fresh);
-    if (fresh && !fresh.valid) {
-      const bad = fresh.errors[0];
-      const target = steps.findIndex((s) => s.key === bad?.section);
-      if (target >= 0) setStep(target);
-      toast({
-        title: 'Not ready yet',
-        description: `${fresh.errors.length} field${fresh.errors.length === 1 ? '' : 's'} still need attention.`,
-        tone: 'error',
-      });
-      return;
-    }
-
+    if (submitLock.current) return;
+    submitLock.current = true;
     setSubmitting(true);
+    setSubmitAttempted(true);
     try {
+      // Re-check synchronously: the debounce may not have caught the last
+      // keystroke, and committing on a stale "valid" is how a form lies.
+      const fresh = await registrationApi.validate({ source, templateId, cloneOfId, values });
+      setValidation(fresh);
+      if (!fresh.valid) {
+        const bad = fresh.errors[0];
+        const target = steps.findIndex((s) => s.key === bad?.section);
+        if (target >= 0) setStep(target);
+        toast({
+          title: 'Not ready yet',
+          description: `${fresh.errors.length} field${fresh.errors.length === 1 ? '' : 's'} still need attention.`,
+          tone: 'error',
+        });
+        return;
+      }
+
       const asset = await registrationApi.register({ source, templateId, cloneOfId, values });
       // Awaited: the Asset 360 page this navigates to next reads the registry
       // provider, which re-seeds itself from the dataset — landing there before
@@ -249,22 +253,23 @@ export function RegistrationForm({
         tone: 'error',
       });
     } finally {
+      submitLock.current = false;
       setSubmitting(false);
     }
   };
 
-  if (formQuery.isLoading) {
+  if (formQuery.isLoading || defaultsQuery.isLoading) {
     return <div className="rounded-xl border border-slate-200 bg-white p-8 text-sm text-slate-500">Loading the form…</div>;
   }
-  if (formQuery.isError) {
+  if (formQuery.isError || defaultsQuery.isError) {
     return (
       <div className="rounded-xl border border-health-critical/30 bg-red-50 p-6 text-sm text-slate-700">
         <p className="font-semibold text-health-critical">This form could not be loaded.</p>
         <p className="mt-1 text-slate-600">
-          {formQuery.error instanceof ApiRequestError ? formQuery.error.message : 'Something went wrong.'}
+          {(formQuery.error ?? defaultsQuery.error)?.message ?? 'Something went wrong.'}
         </p>
-        <Button variant="outline" className="mt-4" onClick={() => navigate('/assets/new')}>
-          Back to sources
+        <Button variant="outline" className="mt-4" onClick={() => { void formQuery.refetch(); void defaultsQuery.refetch(); }}>
+          Retry loading
         </Button>
       </div>
     );
@@ -357,10 +362,10 @@ export function RegistrationForm({
             actions={
               onReview ? (
                 <>
-                  <Button variant="outline" onClick={() => navigate('/assets/new')} disabled={submitting}>
+                  <Button variant="outline" onClick={() => { void formQuery.refetch(); void defaultsQuery.refetch(); }} disabled={submitting}>
                     Cancel
                   </Button>
-                  <Button onClick={() => void submit()} disabled={submitting || validation?.valid !== true}>
+                  <Button onClick={() => void submit()} disabled={submitting}>
                     {submitting ? 'Registering…' : 'Register asset'}
                   </Button>
                 </>

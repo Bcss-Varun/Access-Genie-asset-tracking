@@ -2,7 +2,7 @@
   "name": "access-genie",
   "version": "1.0.0",
   "private": true,
-  "description": "Access Genie AI \u2014 Enterprise Asset Intelligence Platform (Express + MongoDB API, React + Vite client)",
+  "description": "Access Genie AI — Enterprise Asset Intelligence Platform (Express + MongoDB API, React + Vite client)",
   "type": "module",
   "engines": {
     "node": ">=20.19"
@@ -28,10 +28,16 @@
     "typecheck": "npm run build:shared && npm run typecheck --workspaces --if-present",
     "lint": "eslint .",
     "test": "node Testing/harness/isolation-tests.mjs && node Testing/harness/analytics-tests.mjs && node Testing/harness/admin-tests.mjs",
+    "test:stabilization": "npm run build:shared && node --import tsx --test Testing/harness/stabilization-tests.mjs",
+    "test:stabilization:ui": "npm run build:shared && AG_STAGE2_BROWSER=1 node --experimental-websocket --import tsx --test Testing/harness/stabilization-tests.mjs",
     "test:api": "node Testing/harness/api-tests.mjs",
     "test:analytics": "node Testing/harness/analytics-tests.mjs",
     "test:admin": "node Testing/harness/admin-tests.mjs",
-    "clean": "rimraf shared/dist backend/dist frontend/dist"
+    "clean": "rimraf shared/dist backend/dist frontend/dist",
+    "test:asset-journey": "npm run build:shared && node --experimental-websocket --import tsx --test Testing/harness/asset-journey-tests.mjs",
+    "test:cross-module": "npm run build:shared && node --experimental-websocket --import tsx --test Testing/harness/cross-module-tests.mjs",
+    "test:security": "npm run build && node --experimental-websocket --import tsx --test Testing/harness/security-deployment-tests.mjs",
+    "test:final": "npm run build && AG_STAGE2_BROWSER=1 node --experimental-websocket --import tsx --test Testing/harness/stabilization-tests.mjs && node --experimental-websocket --import tsx --test Testing/harness/asset-journey-tests.mjs && node --experimental-websocket --import tsx --test Testing/harness/cross-module-tests.mjs && node --experimental-websocket --import tsx --test Testing/harness/security-deployment-tests.mjs"
   },
   "devDependencies": {
     "@eslint/js": "^9.18.0",

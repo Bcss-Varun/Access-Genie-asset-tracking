@@ -137,7 +137,7 @@ export async function openIncident(input: OpenIncidentInput): Promise<IncidentDo
     await TrackingAlert.updateMany({ _id: { $in: input.alertIds } }, { $set: { incidentId: _id } });
   }
 
-  return incident.toJSON() as IncidentDoc;
+  return incident.toObject();
 }
 
 export async function setIncidentState(id: string, state: IncidentDoc['state']): Promise<IncidentDoc> {
@@ -192,7 +192,7 @@ export async function provisionDevice(input: ProvisionDeviceInput): Promise<Trac
     installedAt: now,
   });
 
-  return device.toJSON() as TrackingDeviceDoc;
+  return device.toObject();
 }
 
 /** Queue an action against a set of devices — reboot, firmware, replacement. */
@@ -235,7 +235,7 @@ export async function recordMovement(input: MovementInput): Promise<MovementTxnD
     verified: false,
   });
 
-  return txn.toJSON() as MovementTxnDoc;
+  return txn.toObject();
 }
 
 export async function updateMovement(id: string, patch: Record<string, unknown>): Promise<MovementTxnDoc> {
@@ -280,7 +280,7 @@ export async function startAudit(input: AuditInput): Promise<AuditSessionDoc> {
     progress: 0,
   });
 
-  return audit.toJSON() as AuditSessionDoc;
+  return audit.toObject();
 }
 
 export async function updateAudit(id: string, patch: Record<string, unknown>): Promise<AuditSessionDoc> {

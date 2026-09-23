@@ -1,3 +1,4 @@
+import { assertAssetVisible } from '../services/tenancy.service.js';
 import type { Request, Response } from 'express';
 import type { InspectionType } from '@access-genie/shared';
 import { validatedQuery } from '../middleware/validate.js';
@@ -16,6 +17,11 @@ import type {
 } from '../validators/inspection.validator.js';
 
 /** The caller's name is the actor on every audited write in this module. */
+async function assertInspection(req: Request) {
+  const row = await service.getInspection(req.params.id as string);
+  await assertAssetVisible(requireScope(req), row.assetId, 'Inspection');
+}
+
 const actorOf = (req: Request): string => req.auth?.user.name ?? 'system';
 
 // ── Templates ────────────────────────────────────────────────────────────────
@@ -32,7 +38,7 @@ export const getTemplate = asyncHandler(async (req: Request, res: Response) => {
 
 /** Which assets a template's scope resolves to — the schedule-from-template picker. */
 export const templateAssets = asyncHandler(async (req: Request, res: Response) => {
-  sendData(res, await service.templateAssets(req.params.id as string));
+  sendData(res, await service.templateAssets(req.params.id as string, requireScope(req)));
 });
 
 export const createTemplate = asyncHandler(async (req: Request, res: Response) => {
@@ -82,18 +88,21 @@ export const stats = asyncHandler(async (req: Request, res: Response) => {
 });
 
 export const facets = asyncHandler(async (req: Request, res: Response) => {
-  sendData(res, await service.getInspectionFacets());
+  sendData(res, await service.getInspectionFacets(requireScope(req)));
 });
 
 export const getOne = asyncHandler(async (req: Request, res: Response) => {
+  await assertInspection(req);
   sendData(res, await service.getInspection(req.params.id as string));
 });
 
 export const failures = asyncHandler(async (req: Request, res: Response) => {
+  await assertInspection(req);
   sendData(res, await service.getInspectionFailures(req.params.id as string));
 });
 
 export const create = asyncHandler(async (req: Request, res: Response) => {
+  await assertAssetVisible(requireScope(req), req.body.assetId);
   const inspection = await service.createInspection(req.body as CreateInspectionInput, actorOf(req));
   recordAudit(req, { action: 'inspection.create', target: inspection._id, category: 'Maintenance' });
   sendData(res, inspection, 201);
@@ -101,6 +110,7 @@ export const create = asyncHandler(async (req: Request, res: Response) => {
 
 export const createBulk = asyncHandler(async (req: Request, res: Response) => {
   const body = req.body as { templateId: string; assetIds: string[]; scheduledFor: string; assignedTo?: string; type?: InspectionType };
+  for (const id of body.assetIds) await assertAssetVisible(requireScope(req), id);
   const result = await service.createInspectionsBulk(body, actorOf(req));
   recordAudit(req, {
     action: 'inspection.create_bulk',
@@ -114,6 +124,7 @@ export const createBulk = asyncHandler(async (req: Request, res: Response) => {
 });
 
 export const update = asyncHandler(async (req: Request, res: Response) => {
+  await assertInspection(req);
   const id = req.params.id as string;
   const inspection = await service.updateInspection(id, req.body as Record<string, never>, actorOf(req));
   recordAudit(req, { action: 'inspection.update', target: id, category: 'Maintenance' });
@@ -121,6 +132,7 @@ export const update = asyncHandler(async (req: Request, res: Response) => {
 });
 
 export const assign = asyncHandler(async (req: Request, res: Response) => {
+  await assertInspection(req);
   const id = req.params.id as string;
   const { assignedTo } = req.body as { assignedTo: string };
   const inspection = await service.assignInspection(id, assignedTo, actorOf(req));
@@ -129,6 +141,7 @@ export const assign = asyncHandler(async (req: Request, res: Response) => {
 });
 
 export const start = asyncHandler(async (req: Request, res: Response) => {
+  await assertInspection(req);
   const id = req.params.id as string;
   const inspection = await service.startInspection(id, actorOf(req));
   recordAudit(req, { action: 'inspection.start', target: id, category: 'Maintenance' });
@@ -136,10 +149,12 @@ export const start = asyncHandler(async (req: Request, res: Response) => {
 });
 
 export const respond = asyncHandler(async (req: Request, res: Response) => {
+  await assertInspection(req);
   sendData(res, await service.respond(req.params.id as string, req.body as RespondInput, actorOf(req)));
 });
 
 export const complete = asyncHandler(async (req: Request, res: Response) => {
+  await assertInspection(req);
   const id = req.params.id as string;
   const inspection = await service.completeInspection(id, req.body as { notes?: string; performedBy?: string }, actorOf(req));
   recordAudit(req, {
@@ -153,6 +168,7 @@ export const complete = asyncHandler(async (req: Request, res: Response) => {
 
 /** Raise corrective work for one failed checkpoint. */
 export const raiseCorrective = asyncHandler(async (req: Request, res: Response) => {
+  await assertInspection(req);
   const id = req.params.id as string;
   const key = req.params.key as string;
   const result = await service.raiseCorrectiveWorkOrder(id, key, req.body as Record<string, never>, actorOf(req));
@@ -167,6 +183,7 @@ export const raiseCorrective = asyncHandler(async (req: Request, res: Response) 
 
 /** Raise corrective work for every failure that does not have one yet. */
 export const raiseAllCorrective = asyncHandler(async (req: Request, res: Response) => {
+  await assertInspection(req);
   const id = req.params.id as string;
   const result = await service.raiseAllCorrectiveWorkOrders(id, req.body as Record<string, never>, actorOf(req));
   recordAudit(req, {
@@ -179,6 +196,7 @@ export const raiseAllCorrective = asyncHandler(async (req: Request, res: Respons
 });
 
 export const remove = asyncHandler(async (req: Request, res: Response) => {
+  await assertInspection(req);
   const id = req.params.id as string;
   await service.deleteInspection(id);
   recordAudit(req, { action: 'inspection.delete', target: id, category: 'Maintenance' });

@@ -1,3 +1,7 @@
+import { requireScope } from '../middleware/scope.js';
+import { assertAssetVisible } from '../services/tenancy.service.js';
+import { assertTrackingRecord, assertTrackingFacility, assertGlobalTracking } from '../services/trackingScope.service.js';
+import { TrackingAlert, Incident, TrackingDevice, MovementTxn, AuditSession, TrackedZone } from '../models/index.js';
 import type { Request, Response } from 'express';
 import { asyncHandler } from '../utils/asyncHandler.js';
 import { ApiError } from '../utils/ApiError.js';
@@ -23,6 +27,7 @@ function actorOf(req: Request): string {
 // ── Alerts ───────────────────────────────────────────────────────────────────
 
 export const transitionAlert = asyncHandler(async (req: Request, res: Response) => {
+  await assertTrackingRecord(requireScope(req), await TrackingAlert.findById(req.params.id).lean());
   const id = req.params.id as string;
   const { to, note } = req.body as { to: ops.AlertTransition; note?: string };
 
@@ -33,6 +38,7 @@ export const transitionAlert = asyncHandler(async (req: Request, res: Response) 
 });
 
 export const transitionAlerts = asyncHandler(async (req: Request, res: Response) => {
+  for (const id of req.body.ids) await assertTrackingRecord(requireScope(req), await TrackingAlert.findById(id).lean());
   const { ids, to, note } = req.body as { ids: string[]; to: ops.AlertTransition; note?: string };
 
   const result = await ops.transitionAlerts(ids, to, actorOf(req), note);
@@ -49,6 +55,8 @@ export const transitionAlerts = asyncHandler(async (req: Request, res: Response)
 // ── Incidents ────────────────────────────────────────────────────────────────
 
 export const openIncident = asyncHandler(async (req: Request, res: Response) => {
+  assertTrackingFacility(requireScope(req), req.body.facility);
+  for (const id of req.body.alertIds) await assertTrackingRecord(requireScope(req), await TrackingAlert.findById(id).lean());
   const body = req.body as Omit<ops.OpenIncidentInput, 'commander'> & { commander?: string };
 
   // The person opening an incident commands it unless they name someone else —
@@ -60,6 +68,7 @@ export const openIncident = asyncHandler(async (req: Request, res: Response) => 
 });
 
 export const setIncidentState = asyncHandler(async (req: Request, res: Response) => {
+  await assertTrackingRecord(requireScope(req), await Incident.findById(req.params.id).lean());
   const id = req.params.id as string;
   const { state } = req.body as { state: 'Open' | 'Investigating' | 'Contained' | 'Resolved' | 'Closed' };
 
@@ -72,6 +81,7 @@ export const setIncidentState = asyncHandler(async (req: Request, res: Response)
 // ── Automation rules ─────────────────────────────────────────────────────────
 
 export const toggleAutomationRule = asyncHandler(async (req: Request, res: Response) => {
+  assertGlobalTracking(requireScope(req));
   const id = req.params.id as string;
   const { enabled } = req.body as { enabled: boolean };
 
@@ -88,6 +98,7 @@ export const toggleAutomationRule = asyncHandler(async (req: Request, res: Respo
 // ── Devices ──────────────────────────────────────────────────────────────────
 
 export const provisionDevice = asyncHandler(async (req: Request, res: Response) => {
+  assertTrackingFacility(requireScope(req), req.body.facility);
   const device = await ops.provisionDevice(req.body as ops.ProvisionDeviceInput);
 
   recordAudit(req, { action: 'tracking_device.provision', target: device._id, category: 'Configuration' });
@@ -95,6 +106,7 @@ export const provisionDevice = asyncHandler(async (req: Request, res: Response) 
 });
 
 export const bulkUpdateDevices = asyncHandler(async (req: Request, res: Response) => {
+  for (const id of req.body.ids) await assertTrackingRecord(requireScope(req), await TrackingDevice.findById(id).lean());
   const { ids, ...patch } = req.body as { ids: string[]; state?: string; replaceBy?: string };
 
   if (!Object.keys(patch).length) throw ApiError.badRequest('Nothing to change');
@@ -111,6 +123,7 @@ export const bulkUpdateDevices = asyncHandler(async (req: Request, res: Response
 });
 
 export const setCampaignState = asyncHandler(async (req: Request, res: Response) => {
+  assertGlobalTracking(requireScope(req));
   const id = req.params.id as string;
   const { state } = req.body as { state: string };
 
@@ -123,6 +136,7 @@ export const setCampaignState = asyncHandler(async (req: Request, res: Response)
 // ── Movements ────────────────────────────────────────────────────────────────
 
 export const createMovement = asyncHandler(async (req: Request, res: Response) => {
+  await assertAssetVisible(requireScope(req), req.body.assetId);
   const txn = await ops.recordMovement(req.body as ops.MovementInput);
 
   recordAudit(req, { action: 'movement.create', target: txn._id, category: 'Operations' });
@@ -130,6 +144,7 @@ export const createMovement = asyncHandler(async (req: Request, res: Response) =
 });
 
 export const updateMovement = asyncHandler(async (req: Request, res: Response) => {
+  await assertTrackingRecord(requireScope(req), await MovementTxn.findById(req.params.id).lean());
   const id = req.params.id as string;
   const txn = await ops.updateMovement(id, req.body as Record<string, unknown>);
 
@@ -140,6 +155,7 @@ export const updateMovement = asyncHandler(async (req: Request, res: Response) =
 // ── Audits ───────────────────────────────────────────────────────────────────
 
 export const startAudit = asyncHandler(async (req: Request, res: Response) => {
+  assertTrackingFacility(requireScope(req), req.body.facility);
   const body = req.body as Omit<ops.AuditInput, 'owner'>;
   const audit = await ops.startAudit({ ...body, owner: actorOf(req) });
 
@@ -148,6 +164,7 @@ export const startAudit = asyncHandler(async (req: Request, res: Response) => {
 });
 
 export const updateAudit = asyncHandler(async (req: Request, res: Response) => {
+  await assertTrackingRecord(requireScope(req), await AuditSession.findById(req.params.id).lean());
   const id = req.params.id as string;
   const patch = req.body as Record<string, unknown>;
 
@@ -163,6 +180,7 @@ export const updateAudit = asyncHandler(async (req: Request, res: Response) => {
 
 
 export const setZoneArmed = asyncHandler(async (req: Request, res: Response) => {
+  await assertTrackingRecord(requireScope(req), await TrackedZone.findById(req.params.id).lean());
   const id = req.params.id as string;
   const { armed } = req.body as { armed: boolean };
   const zone = await ops.setZoneArmed(id, armed);

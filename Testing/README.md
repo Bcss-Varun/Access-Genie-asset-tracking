@@ -15,6 +15,61 @@ QA artefacts and the automated harness that produces them. One module per cycle.
 `01` and `02` are written by `harness/report.mjs`. Edit the runners, not those
 two files.
 
+## Isolated stabilization regressions
+
+Stage 2 has a self-contained suite that does not use the running application or
+`backend/.env`:
+
+```bash
+npm run test:stabilization       # HTTP, database, permission and error-handling regressions
+npm run test:stabilization:ui    # same checks plus real Chrome browser flows
+```
+
+Both commands create a disposable loopback MongoDB with a unique port, load
+explicit test fixtures, start the API on a random local port and stop everything
+at completion. No live credentials are needed. The first run downloads the
+MongoDB binary into the operating system's temporary directory; later runs reuse
+it. MongoDB remains an explicit test dependency, never a runtime fallback.
+
+The UI command requires `google-chrome` on PATH. It runs an isolated Vite server
+with environment-file loading disabled and a unique Chrome profile. It tests
+account-recovery wording, gateway failure recovery, direct URL denial and an
+authorized registry reload. The non-UI command explicitly skips the browser group.
+The test process exits nonzero on failure, including fixture or cleanup failures.
+
+Stage 3 adds the isolated primary asset journey suite:
+
+```bash
+npm run test:asset-journey
+```
+
+It covers blank/template/clone registration, edit and reload, real CSV upload,
+validation and partial retries, import undo, QR binding, lifecycle and financial
+consistency, scope switches and delayed responses, denied edits, keyboard focus,
+registry pagination and mobile layouts. It uses the same disposable API/MongoDB
+approach, an isolated Vite instance and a unique Chrome profile. Screenshots are
+written to `Testing/evidence/stage3-*.png`.
+
+Stage 4 adds the isolated cross-module suite:
+
+```bash
+npm run test:cross-module
+```
+
+It covers tracking intake/presence and scope, PM/inspection/predictive work-order
+journeys, workforce, transfer/reservation/custody consistency, compliance/audits,
+report counts/CSV export, approval workflows, scoped notifications and loopback
+webhook outcomes. Browser checks exercise the PM form and representative module
+routes. It uses disposable services and never loads the running estate's `.env`.
+
+Run browser suites after the build has finished, with no concurrent source or
+shared-output changes: Vite hot reload can otherwise replace provider contexts
+while a test is in flight. These isolated commands are separate from the legacy
+live-database runners described below.
+
+Stage-by-stage scope, findings and validation are recorded in
+[STAGED-STABILIZATION.md](STAGED-STABILIZATION.md).
+
 ## Running the suite
 
 The app must be up (`npm run dev`) with a connected database and a seeded
@@ -70,3 +125,23 @@ records remained.
 
 - `results/*.json` — machine-readable results, the source for `01` and `02`
 - `evidence/*.png` — screenshots referenced by test cases and bug reports
+
+## Stage 5 — security and deployment
+
+Run `npm run test:security` for the isolated API/MongoDB/Chrome suite, including
+compiled production startup and failed startup. It overrides application
+credentials and database settings and never uses the running estate. Run builds
+before browser suites; rebuilding shared output during Vite tests triggers HMR.
+The deployment template and hosted verification steps are in
+[deployment/README.md](../deployment/README.md). Production TLS/proxy acceptance
+requires the actual host and certificates; local cookie-header tests do not
+substitute for that check.
+
+## Stage 6 — final isolated regression
+
+Run `npm run test:final` to build the application and execute the Stage 2 access
+and failure suite, primary asset/browser journey, cross-module suite and security
+deployment suite sequentially. The final verified run contains 103 passing tests.
+It creates disposable MongoDB/API/Vite/Chrome processes and does not use the live
+application estate. Current evidence and external acceptance limits are recorded
+in [STAGED-STABILIZATION.md](STAGED-STABILIZATION.md#stage-6-full-regression-and-final-review).

@@ -1,3 +1,4 @@
+import { locationClause, type VisibleScope } from './tenancy.service.js';
 import type { AnyBulkWriteOperation } from 'mongoose';
 import type { AssetHealth, Criticality } from '@access-genie/shared';
 import {
@@ -255,8 +256,8 @@ export function computeMetrics(asset: AssetDoc, ctx: MetricsContext): AssetMetri
  * force it. Writes only where a value actually changed, so a no-op sweep costs
  * one read and no writes.
  */
-export async function recomputeAllMetrics(): Promise<{ scanned: number; updated: number }> {
-  const [assets, ctx] = await Promise.all([Asset.find().lean<AssetDoc[]>(), loadMetricsContext()]);
+export async function recomputeAllMetrics(scope?: VisibleScope): Promise<{ scanned: number; updated: number }> {
+  const [assets, ctx] = await Promise.all([Asset.find(scope ? locationClause(scope) : {}).lean<AssetDoc[]>(), loadMetricsContext()]);
 
   const ops: AnyBulkWriteOperation<AssetDoc>[] = [];
   for (const asset of assets) {
@@ -291,7 +292,7 @@ export async function recomputeAllMetrics(): Promise<{ scanned: number; updated:
   }
 
   if (ops.length > 0) await Asset.bulkWrite(ops);
-  await recordDailySnapshot(assets, ctx);
+  if (!scope || scope.coversAll) await recordDailySnapshot(assets, ctx);
   return { scanned: assets.length, updated: ops.length };
 }
 

@@ -1,6 +1,6 @@
 import type { FilterQuery } from 'mongoose';
 import { ROLES, type ApiMeta, type PublicUser } from '@access-genie/shared';
-import { User, nextId, type UserDoc } from '../models/index.js';
+import { User, ScopeNodeModel, nextId, type UserDoc } from '../models/index.js';
 import { ApiError } from '../utils/ApiError.js';
 import { csvFilter, escapeRegex, parsePagination } from '../utils/query.js';
 import { buildMeta } from '../utils/response.js';
@@ -21,8 +21,8 @@ function deriveInitials(name: string): string {
   return (first + last).toUpperCase();
 }
 
-export async function listUsers(query: UserListQuery): Promise<{ items: PublicUser[]; meta: ApiMeta }> {
-  const filter: FilterQuery<UserDoc> = {};
+export async function listUsers(query: UserListQuery, scopeIds?: Set<string>, platform = false): Promise<{ items: PublicUser[]; meta: ApiMeta }> {
+  const filter: FilterQuery<UserDoc> = scopeIds && !platform ? { homeScopeId: { $in: [...scopeIds] }, $and: [{ roleId: { $ne: 'super_admin' } }] } : {};
 
   const roleId = csvFilter(query.roleId);
   if (roleId) filter.roleId = roleId;
@@ -55,6 +55,7 @@ export async function getUser(id: string): Promise<PublicUser> {
 }
 
 export async function createUser(input: CreateUserInput): Promise<PublicUser> {
+  if (!await ScopeNodeModel.exists({ _id: input.homeScopeId })) throw ApiError.badRequest('Home scope does not exist');
   const existing = await User.findOne({ email: input.email }).lean();
   if (existing) throw ApiError.conflict('A user with this email already exists');
 
@@ -88,16 +89,18 @@ export async function updateUser(id: string, input: UpdateUserInput, actorId: st
     throw ApiError.badRequest('You cannot change your own role');
   }
 
+  if (input.homeScopeId && !await ScopeNodeModel.exists({ _id: input.homeScopeId })) throw ApiError.badRequest('Home scope does not exist');
   const roleChanged = input.roleId !== undefined && input.roleId !== user.roleId;
   const suspended = input.status === 'suspended' && user.status !== 'suspended';
 
+  if (user.roleId === 'super_admin' && user.status === 'active' && (suspended || roleChanged) && await User.countDocuments({ roleId: 'super_admin', status: 'active' }) <= 1) throw ApiError.conflict('Cannot disable the last active super admin');
   Object.assign(user, input);
   if (input.name) user.initials = deriveInitials(input.name);
   await user.save();
 
   // A role change or a suspension must take effect now, not whenever the
   // user's existing sessions happen to expire.
-  if (roleChanged || suspended) await revokeAllForUser(id);
+  if (roleChanged || suspended || input.homeScopeId !== undefined || input.extraModules !== undefined) await revokeAllForUser(id);
 
   return user.toPublic();
 }

@@ -13,6 +13,7 @@ export interface RefreshTokenDoc {
   _id: Schema.Types.ObjectId;
   userId: string;
   tokenHash: string;
+  previousHashes: string[];
   expiresAt: Date;
   revokedAt?: Date;
   /** Set when rotation replaces this token — makes reuse detectable. */
@@ -27,6 +28,7 @@ const refreshTokenSchema = new Schema<RefreshTokenDoc>(
   {
     userId: { type: String, required: true, ref: 'User', index: true },
     tokenHash: { type: String, required: true, unique: true },
+    previousHashes: { type: [String], default: [], select: false },
     expiresAt: { type: Date, required: true },
     revokedAt: { type: Date },
     replacedByHash: { type: String },

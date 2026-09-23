@@ -1,4 +1,8 @@
-import { useMemo, useState } from 'react';
+import { useQuery } from '@tanstack/react-query';
+import { registrationApi } from '@/api/registration';
+import { parseAssetCsv } from '@/lib/csv';
+import { useRegistry } from '@/components/providers/RegistryProvider';
+import { useMemo, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { PageHeader, Badge, EmptyState } from '@/components/ui/primitives';
 import { Button } from '@/components/ui/Button';
@@ -9,7 +13,7 @@ import { useAuth } from '@/api/auth';
 import { useRefreshDataset } from '@/api/dataset';
 import { ApiRequestError } from '@/api/client';
 import { cn } from '@/lib/utils';
-import { ASSET_CATEGORIES } from '@access-genie/shared';
+import { ASSET_CATEGORIES, ASSET_STATUSES } from '@access-genie/shared';
 
 // ── Target fields ──────────────────────────────────────────────────────────────
 type TargetField = 'name' | 'serialNumber' | 'category' | 'custodian' | 'purchasePrice' | 'status' | 'ignore';
@@ -70,6 +74,28 @@ export default function AssetImportPage() {
   const refreshDataset = useRefreshDataset();
   // Deleting is admin-only on the API; the undo is hidden rather than refused.
   const canDelete = useAuth().can('admin');
+  const { assets } = useRegistry();
+  const defaults = useQuery({ queryKey: ['registration-defaults'], queryFn: registrationApi.defaults });
+  const [facilityId, setFacilityId] = useState('');
+  const facility = defaults.data?.facilities.find((f) => f.id === (facilityId || defaults.data?.location?.id));
+  const fileInput = useRef<HTMLInputElement>(null);
+  const importLock = useRef(false);
+  const successfulRows = useRef(new Map<number, string>());
+  const [failures, setFailures] = useState<string[]>([]);
+  const [fileError, setFileError] = useState('');
+  const [reading, setReading] = useState(false);
+  const loadFile = async (file?: File) => {
+    if (!file) return;
+    setReading(true); setFileError(''); setHeaders(null); setRows([]);
+    try {
+      if (!file.name.toLowerCase().endsWith('.csv')) throw new Error('Choose a .csv file.');
+      if (file.size > 5 * 1024 * 1024) throw new Error('The CSV must be 5 MB or smaller.');
+      const parsed = parseAssetCsv(new TextDecoder('utf-8', { fatal: true }).decode(await file.arrayBuffer()));
+      setHeaders(parsed.headers); setRows(parsed.rows); setMapping(parsed.headers.map(autoMap));
+      toast({ title: `${file.name} loaded`, description: `${parsed.rows.length} rows parsed`, tone: 'success' });
+    } catch (err) { setFileError(err instanceof Error ? err.message : 'Could not read the file.'); }
+    finally { setReading(false); if (fileInput.current) fileInput.current.value = ''; }
+  };
   const [step, setStep] = useState(0);
   const [headers, setHeaders] = useState<string[] | null>(null);
   const [rows, setRows] = useState<string[][]>([]);
@@ -90,6 +116,7 @@ export default function AssetImportPage() {
   const [undoing, setUndoing] = useState(false);
 
   const loadSample = () => {
+    setFileError('');
     setHeaders(SAMPLE_HEADERS);
     setRows(SAMPLE_ROWS);
     setMapping(SAMPLE_HEADERS.map(autoMap));
@@ -97,6 +124,7 @@ export default function AssetImportPage() {
   };
 
   const resetAll = () => {
+    successfulRows.current.clear(); setFailures([]); setFileError('');
     setStep(0);
     setHeaders(null);
     setRows([]);
@@ -184,8 +212,8 @@ export default function AssetImportPage() {
       const messages: string[] = [];
       let status: RowStatus = 'valid';
 
-      if (!name) {
-        messages.push('Missing name');
+      if (name.length < 2 || name.length > 120) {
+        messages.push('Name must be 2–120 characters');
         status = 'error';
       }
       if (serialNumber) {
@@ -195,19 +223,23 @@ export default function AssetImportPage() {
         } else {
           seenSerials.set(serialNumber, index);
         }
-      } else {
-        messages.push('Missing serial number');
-        if (status !== 'error') status = 'error';
       }
-      if (category && !KNOWN_CATEGORIES.includes(category)) {
+      if (serialNumber && (serialNumber.length < 2 || serialNumber.length > 64 || (!successfulRows.current.has(index) && assets.some((a) => a.serialNumber === serialNumber)))) {
+        messages.push('Invalid serial or already in the registry'); status = 'error';
+      }
+      if (!KNOWN_CATEGORIES.includes(category)) {
         messages.push(`Unknown category “${category}”`);
-        if (status === 'valid') status = 'warning';
+        status = 'error';
       }
+      const price = Number(val(row, 'purchasePrice') || 0);
+      if (!Number.isFinite(price) || price < 0) { messages.push('Price must be a nonnegative number'); status = 'error'; }
+      const assetStatus = val(row, 'status');
+      if (assetStatus && !(ASSET_STATUSES as readonly string[]).includes(assetStatus)) { messages.push('Unknown status'); status = 'error'; }
       if (messages.length === 0) messages.push('Ready to import');
       return { index, name, serialNumber, category, status, messages };
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [headers, rows, mapping]);
+  }, [headers, rows, mapping, assets]);
 
   const counts = useMemo(() => {
     return validated.reduce(
@@ -224,10 +256,11 @@ export default function AssetImportPage() {
   // ── Step gating ──────────────────────────────────────────────────────────────
   const mappedTargets = mapping.filter((m) => m !== 'ignore');
   const hasName = mappedTargets.includes('name');
-  const hasSerial = mappedTargets.includes('serialNumber');
+  const hasCategory = mappedTargets.includes('category');
+  const uniqueMapping = new Set(mappedTargets).size === mappedTargets.length;
   const canNext = (() => {
     if (step === 0) return !!headers && rows.length > 0;
-    if (step === 1) return hasName && hasSerial;
+    if (step === 1) return hasName && hasCategory && uniqueMapping && !!facility;
     if (step === 2) return importableCount > 0;
     return false;
   })();
@@ -242,48 +275,29 @@ export default function AssetImportPage() {
    * "142 imported" when 12 were rejected is worse than no wizard.
    */
   const doImport = async () => {
-    setImporting(true);
-    const importable = validated.filter((r) => r.status !== 'error');
-    const createdIds: string[] = [];
-    let ok = 0;
-    const failures: string[] = [];
-
-    for (const row of importable) {
-      const source = rows[row.index];
-      const custodian = val(source, 'custodian') || 'Unassigned';
-      const price = Number(val(source, 'purchasePrice').replace(/[^0-9.]/g, '')) || 0;
-      // An unrecognised category is a warning, not a rejection — the row still
-      // describes a real asset, so it lands under the closest known category
-      // and can be re-classified afterwards.
-      const category = KNOWN_CATEGORIES.includes(row.category) ? row.category : 'Compute';
-
-      try {
-        const created = await assetsApi.create({
-          name: row.name,
-          serialNumber: row.serialNumber,
-          category,
-          custodian,
-          purchasePrice: price,
-          purchaseDate: new Date().toISOString().slice(0, 10),
-          location: { id: 'LOC-RECEIVING', name: 'Receiving' },
-        });
-        createdIds.push(created.id);
-        ok += 1;
-      } catch (err) {
-        failures.push(`${row.name || `Row ${row.index + 1}`}: ${err instanceof ApiRequestError ? err.message : 'rejected'}`);
+    if (importLock.current || !facility) return;
+    importLock.current = true; setImporting(true);
+    const importable = validated.filter((r) => r.status !== 'error' && !successfulRows.current.has(r.index));
+    const rejected: string[] = [];
+    try {
+      for (const row of importable) {
+        const source = rows[row.index];
+        try {
+          const created = await assetsApi.create({
+            name: row.name, serialNumber: row.serialNumber, category: row.category,
+            custodian: val(source, 'custodian') || 'Unassigned',
+            purchasePrice: Number(val(source, 'purchasePrice') || 0),
+            status: val(source, 'status') || 'Active',
+            location: { id: facility.id, name: facility.name },
+          });
+          successfulRows.current.set(row.index, created.id);
+        } catch (err) { rejected.push(`Row ${row.index + 1} — ${row.name}: ${err instanceof Error ? err.message : 'rejected'}`); }
       }
-    }
-
-    await refreshDataset();
-    setImportedIds(createdIds);
-    setImported(ok);
-    setImporting(false);
-
-    toast({
-      title: failures.length ? `Imported ${ok} of ${importable.length}` : 'Import complete',
-      description: failures.length ? failures.slice(0, 3).join(' · ') : `${ok} assets are in the registry`,
-      tone: failures.length ? 'error' : 'success',
-    });
+      setImportedIds([...successfulRows.current.values()]);
+      setImported(successfulRows.current.size); setFailures(rejected);
+      await refreshDataset();
+      toast({ title: rejected.length ? 'Import needs attention' : 'Import complete', description: `${successfulRows.current.size} assets saved; ${rejected.length} failed.`, tone: rejected.length ? 'error' : 'success' });
+    } finally { importLock.current = false; setImporting(false); }
   };
 
   const th = 'px-4 py-2.5 text-left font-semibold uppercase tracking-wider text-[11px] text-slate-500';
@@ -297,7 +311,7 @@ export default function AssetImportPage() {
         breadcrumb={[{ label: 'Assets', href: '/assets' }, { label: 'Import' }]}
         actions={
           headers ? (
-            <Button variant="outline" onClick={resetAll}>Start over</Button>
+            <Button variant="outline" disabled={importing || reading} onClick={resetAll}>Start over</Button>
           ) : undefined
         }
       />
@@ -311,7 +325,7 @@ export default function AssetImportPage() {
               <li key={label} className="flex items-center gap-2 sm:gap-4 flex-1 last:flex-none">
                 <button
                   type="button"
-                  disabled={i > step}
+                  disabled={i > step || importing || imported !== null}
                   onClick={() => i < step && setStep(i)}
                   className={cn(
                     'flex items-center gap-2.5 min-w-0',
@@ -351,14 +365,17 @@ export default function AssetImportPage() {
         {/* ── STEP 1: Upload ─────────────────────────────────────────────────── */}
         {step === 0 && (
           <div className="p-6 space-y-6 overflow-auto">
+            <input ref={fileInput} type="file" accept=".csv,text/csv" aria-label="Upload asset CSV" className="sr-only" disabled={reading} onChange={(e) => void loadFile(e.target.files?.[0])} />
+            {reading && <p role="status">Reading CSV…</p>}
+            {fileError && <p role="alert" className="text-sm text-red-700">{fileError}</p>}
             <div
               onDragOver={(e) => { e.preventDefault(); setDragOver(true); }}
               onDragLeave={() => setDragOver(false)}
-              onDrop={(e) => { e.preventDefault(); setDragOver(false); loadSample(); }}
-              onClick={loadSample}
+              onDrop={(e) => { e.preventDefault(); setDragOver(false); if (!reading) void loadFile(e.dataTransfer.files[0]); }}
+              onClick={() => { if (!reading) fileInput.current?.click(); }}
               role="button"
               tabIndex={0}
-              onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); loadSample(); } }}
+              onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); if (!reading) fileInput.current?.click(); } }}
               className={cn(
                 'flex flex-col items-center justify-center rounded-xl border-2 border-dashed px-6 py-12 text-center cursor-pointer transition-colors',
                 dragOver ? 'border-primary-500 bg-primary-50' : 'border-slate-300 hover:border-primary-400 hover:bg-slate-50',
@@ -368,7 +385,7 @@ export default function AssetImportPage() {
               <p className="text-base font-semibold text-slate-800 font-heading">Drop a CSV here or click to browse</p>
               <p className="text-sm text-slate-500 mt-1">Supports .csv up to 5&nbsp;MB · UTF-8 encoded</p>
               <div className="mt-4">
-                <Button variant="outline" onClick={(e) => { e.stopPropagation(); loadSample(); }}>Use sample CSV</Button>
+                <Button variant="outline" disabled={reading} onClick={(e) => { e.stopPropagation(); loadSample(); }}>Use sample CSV</Button>
               </div>
             </div>
 
@@ -376,8 +393,8 @@ export default function AssetImportPage() {
               <EmptyState
                 icon="🗂️"
                 title="No file loaded yet"
-                description="Load the sample CSV to preview how the wizard maps and validates your data before committing it to the registry."
-                action={<Button onClick={loadSample}>Load sample CSV</Button>}
+                description="Choose your CSV file or use the sample to explore mapping and validation."
+                action={<Button disabled={reading} onClick={loadSample}>Load sample CSV</Button>}
               />
             ) : (
               <div>
@@ -414,7 +431,7 @@ export default function AssetImportPage() {
         {step === 1 && headers && (
           <div className="p-6 space-y-4 overflow-auto">
             <p className="text-sm text-slate-500">
-              Match each source column to a target field. Obvious matches are pre-selected. Name and Serial Number are required.
+              Match each source column to a target field. Obvious matches are pre-selected. Name, Category and an authorized site are required. Serial Number is optional. Each target can be mapped once.
             </p>
             <div className="grid gap-3 sm:grid-cols-2">
               {headers.map((h, ci) => {
@@ -427,6 +444,7 @@ export default function AssetImportPage() {
                     </div>
                     <span className="text-slate-300">→</span>
                     <select
+                      aria-label={`Map ${h}`}
                       value={mapping[ci]}
                       onChange={(e) => {
                         const next = [...mapping];
@@ -441,11 +459,19 @@ export default function AssetImportPage() {
                 );
               })}
             </div>
-            {(!hasName || !hasSerial) && (
+            <label className="block text-sm">Destination site
+              <select aria-label="Destination site" value={facility?.id ?? ''} onChange={(e) => setFacilityId(e.target.value)} className="ml-3 rounded border p-2">
+                <option value="">Select a site</option>
+                {defaults.data?.facilities.map((f) => <option key={f.id} value={f.id}>{f.name}</option>)}
+              </select>
+            </label>
+            {defaults.isError && <Button onClick={() => void defaults.refetch()}>Retry loading sites</Button>}
+            {!uniqueMapping && <p role="alert">Map each target field only once.</p>}
+            {(!hasName || !hasCategory) && (
               <div className="rounded-lg border border-amber-200 bg-amber-50 px-4 py-2.5 text-sm text-amber-800">
-                {!hasName && !hasSerial ? 'Map both Name and Serial Number to continue.'
+                {!hasName && !hasCategory ? 'Map both Name and Category to continue.'
                   : !hasName ? 'Map a column to Name to continue.'
-                  : 'Map a column to Serial Number to continue.'}
+                  : 'Map a column to Category to continue.'}
               </div>
             )}
           </div>
@@ -551,27 +577,29 @@ export default function AssetImportPage() {
                   </p>
                 )}
                 <div className="flex justify-center">
-                  <Button onClick={() => void doImport()} disabled={importableCount === 0 || importing}>
+                  <Button onClick={() => void doImport()} disabled={importableCount === 0 || importing || !facility}>
                     {importing ? 'Importing…' : `Import ${importableCount} asset${importableCount === 1 ? '' : 's'}`}
                   </Button>
                 </div>
               </div>
             ) : (
               <EmptyState
-                icon="✅"
+                icon={failures.length ? "⚠️" : "✅"}
                 title={`Imported ${imported} asset${imported === 1 ? '' : 's'}`}
                 description={
-                  counts.error > 0
+                  failures.length > 0 ? `${failures.length} rows failed. Saved rows will not be submitted again.` : counts.error > 0
                     ? `${counts.error} row${counts.error === 1 ? '' : 's'} with errors were excluded from this import.`
                     : 'All valid rows were added to the registry.'
                 }
                 action={
                   <div className="flex flex-col items-center gap-3">
+                    {failures.length > 0 && <><ul role="alert" className="text-left text-sm text-red-700">{failures.map((failure) => <li key={failure}>{failure}</li>)}</ul><Button disabled={importing} onClick={() => void doImport()}>{importing ? 'Retrying…' : 'Retry failed rows'}</Button></>}
+
                     <div className="flex items-center gap-2">
                       <Link to="/assets">
                         <Button>View asset registry</Button>
                       </Link>
-                      <Button variant="outline" onClick={resetAll}>Import another file</Button>
+                      <Button variant="outline" disabled={importing || reading} onClick={resetAll}>Import another file</Button>
                     </div>
                     {/* The escape hatch for a wrong mapping — offered here, while
                         the run is still in front of you, rather than leaving a
@@ -596,12 +624,12 @@ export default function AssetImportPage() {
         {/* ── Footer nav ─────────────────────────────────────────────────────── */}
         {imported === null && (
           <div className="border-t border-slate-200 px-5 py-3 flex items-center justify-between">
-            <Button variant="ghost" disabled={step === 0} onClick={() => setStep((s) => Math.max(0, s - 1))}>
+            <Button variant="ghost" disabled={step === 0 || importing || reading} onClick={() => setStep((s) => Math.max(0, s - 1))}>
               ← Back
             </Button>
             <span className="text-xs text-slate-400">Step {step + 1} of {STEPS.length}</span>
             {step < STEPS.length - 1 ? (
-              <Button disabled={!canNext} onClick={() => setStep((s) => Math.min(STEPS.length - 1, s + 1))}>
+              <Button disabled={!canNext || reading} onClick={() => setStep((s) => Math.min(STEPS.length - 1, s + 1))}>
                 Next →
               </Button>
             ) : (

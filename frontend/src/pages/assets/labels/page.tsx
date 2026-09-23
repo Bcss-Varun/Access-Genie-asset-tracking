@@ -4,8 +4,8 @@
 // The module exists because printing a label and binding a tag are the SAME
 // event and most systems treat them as two. Here they are one: a print run
 // mints the identity tag, binds it to the asset through the registry, and lands
-// it in the honest three-state model — Unlabelled · Bound · Verified. A QR
-// verifies on the scan that prints it; an RFID inlay waits to be heard.
+// it in the three-state model — Unlabelled · Bound · Verified. Printing
+// binds identity; verification is a separate operator action after scanning.
 //
 // One page, two tabs, because an operator labelling a rack of servers should
 // change what they are looking at, not walk back up the sidebar:
@@ -15,7 +15,7 @@
 //                  searchable by tag ID or asset and filterable by bind date.
 // ─────────────────────────────────────────────────────────────────────────────
 
-import { useCallback, useMemo, useState, useSyncExternalStore } from 'react';
+import { useCallback, useMemo, useRef, useState, useSyncExternalStore } from 'react';
 import { Link } from 'react-router-dom';
 import { useRegistry } from '@/components/providers/RegistryProvider';
 import { useToast } from '@/components/providers/ToastProvider';
@@ -25,11 +25,11 @@ import { Tabs, useTabs } from '@/components/tracking/shell';
 import type { LabelSpec } from '@/components/assets/LabelArtwork';
 import { encodeQr } from '@/lib/qr';
 import {
-  DEFAULT_TEMPLATE_ID, deviceById, deviceCanRun, identityStatus, labelTemplates, printDevices, templateById,
+  DEFAULT_TEMPLATE_ID, identityStatus, labelTemplates, templateById,
 } from '@/lib/label-data';
-import { mintTagId, scanUrlFor, takenTagIds, trackingTechLabel, verifiesOnPrint } from '@/lib/onboarding';
+import { mintTagId, scanUrlFor, takenTagIds } from '@/lib/onboarding';
 import { cn, relTime, nowMs } from '@/lib/utils';
-import { KIND_FOR_MEDIUM, encodesTag } from '@access-genie/shared';
+import { KIND_FOR_MEDIUM } from '@access-genie/shared';
 import type { LabelFieldKey, LabelMedium } from '@access-genie/shared';
 import type { RegisteredAsset, TagBinding } from '@access-genie/shared';
 import { categoryEmoji } from '@/lib/asset-categories';
@@ -70,22 +70,6 @@ const IDENTITY_TONE = { Verified: 'emerald', Bound: 'amber', Unlabelled: 'red' }
 // screen and still prints one card per label. Deterministic by asset id — a
 // cheap FNV-1a hash seeds a small LCG, so there is no hydration drift.
 
-function hashId(id: string): number {
-  let h = 2166136261;
-  for (let i = 0; i < id.length; i++) {
-    h ^= id.charCodeAt(i);
-    h = Math.imul(h, 16777619);
-  }
-  return h >>> 0;
-}
-function makeRng(seed: number): () => number {
-  let s = seed >>> 0 || 1;
-  return () => {
-    s = (Math.imul(s, 1664525) + 1013904223) >>> 0;
-    return s / 4294967296;
-  };
-}
-
 /** The three stock sizes on offer, and how each renders on screen. */
 const STOCK_SIZES = [
   { label: 'Small', key: 'sm' as const, card: 'p-3', code: 96, name: 'text-[11px]', meta: 'text-[9px]' },
@@ -104,127 +88,17 @@ const SHOW_ON_LABEL: { key: LabelFieldKey; label: string }[] = [
 ];
 
 function CodeGlyph({ id, format, px }: { id: string; format: LabelMedium; px: number }) {
-  const rng = useMemo(() => makeRng(hashId(id)), [id]);
-
-  const svg = useMemo(() => {
-    if (format === 'Barcode') {
-      // 1D-style barcode: deterministic variable-width bars.
-      const bars: { x: number; w: number }[] = [];
-      let x = 0;
-      while (x < 100) {
-        const w = 1 + Math.floor(rng() * 3);
-        if (rng() > 0.42) bars.push({ x, w });
-        x += w;
-      }
-      return (
-        <svg viewBox="0 0 100 100" width={px} height={px} shapeRendering="crispEdges" role="img" aria-label={`Barcode for ${id}`}>
-          <rect x="0" y="0" width="100" height="100" fill="#ffffff" />
-          {bars.map((b, i) => (
-            <rect key={i} x={b.x} y="8" width={b.w} height="72" fill="#0f172a" />
-          ))}
-        </svg>
-      );
-    }
-
-    if (format === 'RFID' || format === 'NFC') {
-      // Encoded inlay: a stylized antenna/chip motif (visual only).
-      const coils = 4 + (hashId(id) % 3);
-      const rings = Array.from({ length: coils }, (_, i) => 44 - i * 9);
-      return (
-        <svg viewBox="0 0 100 100" width={px} height={px} role="img" aria-label={`${format} tag for ${id}`}>
-          <rect x="0" y="0" width="100" height="100" fill="#ffffff" />
-          {rings.map((r, i) => (
-            <rect
-              key={i}
-              x={50 - r}
-              y={50 - r}
-              width={r * 2}
-              height={r * 2}
-              rx="6"
-              fill="none"
-              stroke="#0f172a"
-              strokeWidth={2}
-              opacity={0.55 + i * 0.12}
-            />
-          ))}
-          {/* chip */}
-          <rect x="42" y="42" width="16" height="16" rx="2" fill="#0f172a" />
-          <rect x="46" y="46" width="8" height="8" rx="1" fill="#ffffff" />
-          {/* lead */}
-          <rect x="49" y="4" width="2" height="10" fill="#0f172a" />
-          <rect x="49" y="86" width="2" height="10" fill="#0f172a" />
-        </svg>
-      );
-    }
-
-    // ── QR: a real, scannable code ──────────────────────────────────────────
-    // Everything above is illustrative artwork, which is fine for an inlay
-    // nobody decodes. This one gets pointed at by a phone, so it carries the
-    // asset's scan URL for real — see lib/qr.ts.
-    if (format === 'QR') {
-      const matrix = encodeQr(scanUrlFor(id), 'M');
-      const span = matrix.length + 8; // four modules of quiet zone each side
-      const unit = 100 / span;
-      return (
-        <svg
-          viewBox="0 0 100 100"
-          width={px}
-          height={px}
-          shapeRendering="crispEdges"
-          role="img"
-          aria-label={`QR code opening ${id}`}
-        >
-          <rect x="0" y="0" width="100" height="100" fill="#ffffff" />
-          {matrix.flatMap((row, r) =>
-            row.map((on, c) =>
-              on ? (
-                <rect
-                  key={`${r}-${c}`}
-                  x={(c + 4) * unit}
-                  y={(r + 4) * unit}
-                  width={unit + 0.02}
-                  height={unit + 0.02}
-                  fill="#0f172a"
-                />
-              ) : null,
-            ),
-          )}
-        </svg>
-      );
-    }
-
-    // Data Matrix — illustrative only.
-    const N = 16;
-    const cell = 100 / N;
-    const rects: React.ReactNode[] = [];
-    for (let r = 0; r < N; r++) {
-      for (let c = 0; c < N; c++) {
-        if (c === 0 || r === N - 1) {
-          rects.push(<rect key={`l-${r}-${c}`} x={c * cell} y={r * cell} width={cell} height={cell} fill="#0f172a" />);
-          continue;
-        }
-        if ((r === 0 || c === N - 1) && (r + c) % 2 === 0) {
-          rects.push(<rect key={`t-${r}-${c}`} x={c * cell} y={r * cell} width={cell} height={cell} fill="#0f172a" />);
-          continue;
-        }
-        if (rng() > 0.5) {
-          rects.push(<rect key={`${r}-${c}`} x={c * cell} y={r * cell} width={cell} height={cell} fill="#0f172a" />);
-        }
-      }
-    }
-    return (
-      <svg viewBox="0 0 100 100" width={px} height={px} shapeRendering="crispEdges" role="img" aria-label={`Data Matrix for ${id}`}>
-        <rect x="0" y="0" width="100" height="100" fill="#ffffff" />
-        {rects}
-      </svg>
-    );
-  }, [id, format, px, rng]);
-
-  return <div className="rounded-md border border-slate-200 bg-white p-1.5">{svg}</div>;
+  const matrix = useMemo(() => encodeQr(scanUrlFor(id), 'M'), [id]);
+  if (format !== 'QR') return <p className="text-xs text-amber-800">{format} output is unavailable. Choose QR for a scannable label.</p>;
+  const unit = 100 / (matrix.length + 8);
+  return <svg viewBox="0 0 100 100" width={px} height={px} shapeRendering="crispEdges" role="img" aria-label={`QR code opening ${id}`}>
+    <rect width="100" height="100" fill="white" />
+    {matrix.flatMap((row, r) => row.map((on, c) => on ? <rect key={`${r}-${c}`} x={(c + 4) * unit} y={(r + 4) * unit} width={unit + 0.02} height={unit + 0.02} fill="#0f172a" /> : null))}
+  </svg>;
 }
 
 export default function LabelPrintingPage() {
-  const { assets, addBinding, verifyBinding, patchAsset } = useRegistry();
+  const { assets, addBinding, verifyBinding } = useRegistry();
   const { toast } = useToast();
   const [tab, setTab] = useTabs<Tab>(TAB_KEYS, 'print');
 
@@ -283,12 +157,6 @@ export default function LabelPrintingPage() {
   const editSpec = (patch: Partial<LabelSpec>) => setDraft({ ...spec, ...patch });
   const [search, setSearch] = useState('');
 
-  // No device picker on this screen: a printed label goes through the browser
-  // print dialog, and silicon has to go to something that can actually write it.
-  // `device` is undefined until one has been registered — same reasoning as
-  // `template` above.
-  const device = deviceById(encodesTag(spec.medium) ? 'ENC-BLR-02' : 'PRN-DESK-01') ?? printDevices[0];
-
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
     if (!q) return assets;
@@ -298,80 +166,35 @@ export default function LabelPrintingPage() {
 
   /** How the sheet preview draws — falls back to Medium for template-only stocks. */
   const drawSpec = STOCK_SIZES.find((s) => s.key === spec.size) ?? STOCK_SIZES[1];
-  const compatible = device ? deviceCanRun(device, spec.medium) : false;
+  const printLock = useRef(false);
+  const [printing, setPrinting] = useState(false);
 
   // ── Printing ───────────────────────────────────────────────────────────────
 
   const taken = useMemo(() => takenTagIds(assets), [assets]);
 
-  /**
-   * The whole point of the module. A run does two things in one transaction:
-   * mint an identity tag for anything unlabelled and bind it through the registry
-   * so Asset 360, Tag coverage and the tracking map see it immediately — then
-   * sends the paper, on a device that is actually able to do the job.
-   */
-  const runPrint = () => {
-    if (!selectedAssets.length) return;
-    if (!device) {
-      toast({
-        title: 'No print device registered',
-        description: 'Ask an admin to add one under Administration before printing labels.',
-        tone: 'error',
-      });
-      return;
-    }
-    if (!compatible) {
-      toast({
-        title: `${device.name} cannot run this job`,
-        description: device.supports.includes(spec.medium)
-          ? `Device is ${device.state}. ${device.note ?? 'Pick another device or clear the fault first.'}`
-          : `Device does not support ${spec.medium}. Choose an encoder or change the medium.`,
-        tone: 'error',
-      });
-      return;
-    }
-
-    const kind = KIND_FOR_MEDIUM[spec.medium];
+  // Binding is durable before opening the browser dialog. Printing does not
+  // prove a physical label was produced or scanned.
+  const runPrint = async () => {
+    if (printLock.current || !selectedAssets.length || spec.medium !== 'QR') return;
+    printLock.current = true; setPrinting(true);
     const mint = new Set(taken);
-    let bound = 0;
-
-    for (const asset of selectedAssets) {
-      const status = identity(asset);
-      if (status.binding) continue; // reprint — the tag it already carries stands
-      const tagId = mintTagId(kind, mint);
-      mint.add(tagId);
-      const binding: TagBinding = {
-        id: `TB-${asset.id}-${asset.onboarding.bindings.length + 1}`,
-        tagId,
-        kind,
-        role: 'identity',
-        // A QR is verified by the scan that prints it; silicon has to be heard
-        // by a reader first, so it lands in Bound and waits (docs/21 M7).
-        state: verifiesOnPrint(kind) ? 'Verified' : 'Bound',
-        boundAt: new Date(nowMs()).toISOString(),
-        verifiedAt: verifiesOnPrint(kind) ? new Date(nowMs()).toISOString() : undefined,
-      };
-      addBinding(asset.id, binding);
-      // Only claim the tracking technology if nothing else already owns it — a
-      // QR label must not overwrite the BLE beacon the asset is located by.
-      if (!asset.trackingTech) patchAsset(asset.id, { trackingTech: trackingTechLabel(kind) });
-      bound++;
-    }
-
-    const total = selectedAssets.length;
-    const desktop = device.kind === 'Desktop printer';
-
-    if (desktop && typeof window !== 'undefined') window.print();
-
-    const encoded = encodesTag(spec.medium);
-    toast({
-      title: desktop ? `${total} label${total === 1 ? '' : 's'} sent to your printer` : `${total} label${total === 1 ? '' : 's'} sent to ${device.name}`,
-      description: bound
-        ? `${bound} ${encoded ? 'tag' : 'QR identity'}${bound === 1 ? '' : 's'} bound${
-          encoded ? ' — awaiting first read' : ' and verified'}`
-        : 'Reprint — existing tags kept',
-      tone: 'success',
-    });
+    try {
+      for (const asset of selectedAssets) {
+        if (identity(asset).binding) continue;
+        const kind = KIND_FOR_MEDIUM[spec.medium];
+        const tagId = mintTagId(kind, mint); mint.add(tagId);
+        const saved = await addBinding(asset.id, {
+          id: `TB-${asset.id}-${asset.onboarding.bindings.length + 1}`, tagId, kind,
+          role: 'identity', state: 'Bound', boundAt: new Date(nowMs()).toISOString(),
+        });
+        if (!saved) return;
+      }
+      // Allow the persisted tag IDs to render before the print snapshot.
+      await new Promise<void>((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => resolve())));
+      window.print();
+      toast({ title: 'Print dialog opened', description: 'Tags saved. Verify each label after printing and scanning.', tone: 'info' });
+    } finally { printLock.current = false; setPrinting(false); }
   };
 
   // ── Tag coverage ───────────────────────────────────────────────────────────
@@ -423,9 +246,9 @@ export default function LabelPrintingPage() {
     setBoundTo('');
   };
 
-  const markVerified = (asset: RegisteredAsset, binding: TagBinding) => {
-    verifyBinding(asset.id, binding.id);
-    toast({ title: 'First read received', description: `${binding.tagId} · ${asset.name}`, tone: 'success' });
+  const markVerified = async (asset: RegisteredAsset, binding: TagBinding) => {
+    if (!await verifyBinding(asset.id, binding.id)) return;
+    toast({ title: 'Tag marked verified', description: `${binding.tagId} · ${asset.name}`, tone: 'success' });
   };
 
   const labelAndPrint = (ids: string[]) => {
@@ -441,6 +264,9 @@ export default function LabelPrintingPage() {
         @media print {
           @page { margin: 8mm; }
           body { background: #ffffff !important; }
+          body #root, body #root > div, #main, #main > div { height: auto !important; overflow: visible !important; }
+          .app-sidebar, .app-header, .app-skip { display: none !important; }
+          #main { padding: 0 !important; }
           .no-print { display: none !important; }
           .print-plain { border: 0 !important; box-shadow: none !important; background: transparent !important; padding: 0 !important; }
           .print-sheet { position: static !important; }
@@ -451,7 +277,7 @@ export default function LabelPrintingPage() {
       <div className="no-print space-y-5">
         <PageHeader
           title="Label Printing"
-          subtitle="Generate scannable QR, barcode, or RFID-encoded labels for your assets."
+          subtitle="Print scannable QR labels and manage identity bindings. Barcode and RFID output require an encoder integration."
           breadcrumb={[{ label: 'Assets', href: '/assets' }, { label: 'Labels' }]}
           actions={
             <>
@@ -463,21 +289,12 @@ export default function LabelPrintingPage() {
               */}
               <Button
                 variant="outline"
-                disabled={!selectedAssets.length}
-                onClick={() => {
-                  toast({
-                    title: 'Opening the print dialog',
-                    description: 'Choose "Save as PDF" as the destination to get a file.',
-                    tone: 'info',
-                  });
-                  // Deferred a frame so the toast paints before the modal print
-                  // dialog blocks the main thread.
-                  requestAnimationFrame(() => window.print());
-                }}
+                disabled={!selectedAssets.length || printing || spec.medium !== 'QR'}
+                onClick={() => void runPrint()}
               >
                 Save as PDF
               </Button>
-              <Button onClick={runPrint} disabled={!selectedAssets.length}>
+              <Button onClick={() => void runPrint()} disabled={!selectedAssets.length || printing || spec.medium !== 'QR'}>
                 🖨 Print {selectedAssets.length > 0 ? `(${selectedAssets.length})` : ''}
               </Button>
             </>
@@ -799,7 +616,7 @@ export default function LabelPrintingPage() {
                       <td className={td}>
                         <Badge tone={IDENTITY_TONE[status.state]}>{status.state}</Badge>
                         {status.state === 'Bound' && (
-                          <div className="mt-0.5 text-[11px] text-amber-700">Never scanned since printing</div>
+                          <div className="mt-0.5 text-[11px] text-amber-700">Awaiting scan verification</div>
                         )}
                       </td>
                       <td className={cn(td, 'font-mono text-[13px] text-slate-700')}>
@@ -818,7 +635,7 @@ export default function LabelPrintingPage() {
                         <div className="flex justify-end gap-1.5">
                           {status.state === 'Bound' && status.binding && (
                             <Button size="sm" variant="outline" onClick={() => markVerified(asset, status.binding!)}>
-                              Mark scanned
+                              Mark verified
                             </Button>
                           )}
                           <Button size="sm" variant={status.state === 'Unlabelled' ? 'primary' : 'ghost'} onClick={() => labelAndPrint([asset.id])}>

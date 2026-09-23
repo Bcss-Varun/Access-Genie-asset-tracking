@@ -52,6 +52,7 @@ type TabKey = (typeof TAB_KEYS)[number];
 
 /** The queue buckets by lifecycle, plus the two roll-ups people actually ask for. */
 type StateFilter = 'all' | 'open' | AlertLifecycle;
+const STATE_FILTERS: StateFilter[] = ['all', 'open', ...OPEN_ALERT_STATES, 'Resolved', 'Closed'];
 
 const PRIORITIES: readonly ('All' | AlertPriority)[] = ['All', 'P1', 'P2', 'P3', 'P4'];
 
@@ -139,10 +140,6 @@ function SlaCell({ alert }: { alert: TrackingAlert }) {
 type AlertPatch = Partial<Pick<TrackingAlert, 'state' | 'assignee' | 'ackAt' | 'resolvedAt' | 'incidentId' | 'timeline'>>;
 
 export default function TrackingAlertsPage() {
-  // Derived per render: the dataset is fetched, so a value computed once at
-  // module scope would never see a refetch.
-    const STATE_FILTERS: StateFilter[] = ['all', 'open', ...OPEN_ALERT_STATES, 'Resolved', 'Closed'];
-
   const { session } = useSession();
   const { toast } = useToast();
   const { run } = useMutate();

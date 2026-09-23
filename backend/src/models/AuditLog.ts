@@ -8,6 +8,7 @@ import { baseSchemaPlugin } from '../utils/mongoose.js';
  */
 export interface AuditDoc {
   _id: Schema.Types.ObjectId;
+  scopeId?: string;
   actor: string;
   action: string;
   target: string;
@@ -19,6 +20,7 @@ export interface AuditDoc {
 
 const auditSchema = new Schema<AuditDoc>(
   {
+    scopeId: { type: String, index: true },
     actor: { type: String, required: true, index: true },
     action: { type: String, required: true },
     target: { type: String, required: true, index: true },

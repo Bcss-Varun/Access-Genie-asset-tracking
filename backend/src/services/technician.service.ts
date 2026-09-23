@@ -1,3 +1,4 @@
+import { assertLocationVisible, locationClause, type VisibleScope } from './tenancy.service.js';
 import { ScopeNodeModel, Technician, WorkOrder, nextId, type TechnicianDoc } from '../models/index.js';
 import { ApiError } from '../utils/ApiError.js';
 import type { CreateTechnicianInput, UpdateTechnicianInput } from '../validators/technician.validator.js';
@@ -18,11 +19,12 @@ async function resolveLocation(locationId: string): Promise<{ id: string; name: 
   return { id: node._id, name: node.name };
 }
 
-export async function listTechnicians(): Promise<TechnicianDoc[]> {
-  return Technician.find().sort({ name: 1 }).lean();
+export async function listTechnicians(scope: VisibleScope): Promise<TechnicianDoc[]> {
+  return Technician.find(locationClause(scope)).sort({ name: 1 }).lean();
 }
 
-export async function createTechnician(input: CreateTechnicianInput): Promise<TechnicianDoc> {
+export async function createTechnician(input: CreateTechnicianInput, scope: VisibleScope): Promise<TechnicianDoc> {
+  assertLocationVisible(scope, input.locationId);
   const location = await resolveLocation(input.locationId);
 
   const existing = await Technician.findOne({ email: input.email.toLowerCase() }).lean();
@@ -45,9 +47,11 @@ export async function createTechnician(input: CreateTechnicianInput): Promise<Te
   return technician.toObject();
 }
 
-export async function updateTechnician(id: string, input: UpdateTechnicianInput): Promise<TechnicianDoc> {
+export async function updateTechnician(id: string, input: UpdateTechnicianInput, scope: VisibleScope): Promise<TechnicianDoc> {
   const technician = await Technician.findById(id);
   if (!technician) throw ApiError.notFound('Technician');
+  assertLocationVisible(scope, technician.location.id, 'Technician');
+  if (input.locationId) assertLocationVisible(scope, input.locationId);
 
   const { locationId, onLeaveUntil, ...rest } = input;
   const defined = Object.fromEntries(Object.entries(rest).filter(([, v]) => v !== undefined));

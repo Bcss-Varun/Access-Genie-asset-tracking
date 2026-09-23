@@ -2,32 +2,10 @@ import type { AnalyticsScopeOption, RoleId, ScopeLevel } from '@access-genie/sha
 import { ScopeNodeModel, type ScopeNodeDoc } from '../models/index.js';
 import { ApiError } from '../utils/ApiError.js';
 
-/**
- * Who may see which slice of the estate, resolved once per request.
- *
- * Analytics is the one module where the scope tree is a **permission boundary**
- * rather than a convenience filter. Everywhere else in this platform the
- * switcher is a courtesy — `shared/platform.ts` says so explicitly — because
- * those screens show records a user could reach by other means anyway. A
- * report is different: it aggregates, it exports, and an aggregate over
- * somebody else's facility leaks that facility whether or not the individual
- * rows are shown. So this module refuses the widening rather than performing
- * it, and does so on the server, where a hand-crafted query cannot get past it.
- *
- * The rule, stated plainly:
- *
- *   • Org-wide roles (Super Admin, Organization Admin, Executive) resolve to
- *     the root of the tree — the whole organisation, every facility.
- *   • Everyone else resolves to their own `homeScopeId` and everything beneath
- *     it. A facility manager's root *is* their facility.
- *
- * A requested facility outside the permitted root is a 403, not a silent
- * fallback to the permitted one: quietly answering a different question than
- * the one asked is the wrong direction to fail in.
- */
-
-/** Roles whose remit is the organisation, not a site within it. */
-const ORG_WIDE_ROLES: RoleId[] = ['super_admin', 'org_admin', 'executive'];
+/** Analytics uses the same home-scope boundary as asset reads. Only platform
+ * administrators may widen to the tree root; a missing home never widens access. */
+/** Platform-wide roles. Organization and executive roles retain their home scope. */
+const ORG_WIDE_ROLES: RoleId[] = ['super_admin'];
 
 export interface ScopeIdentity {
   roleId: RoleId;
@@ -191,7 +169,7 @@ export async function resolveAnalyticsScope(
   const orgWide = ORG_WIDE_ROLES.includes(identity.roleId);
   const root = orgWide
     ? treeRoot(rows)
-    : (byId.get(identity.homeScopeId) ?? treeRoot(rows));
+    : byId.get(identity.homeScopeId);
 
   if (!root) throw ApiError.badRequest('The location hierarchy has no root — analytics cannot resolve a scope.');
 

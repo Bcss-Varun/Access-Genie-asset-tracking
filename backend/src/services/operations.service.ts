@@ -1,3 +1,5 @@
+import { assertAssetVisible, assertLocationVisible, assetClause, type VisibleScope } from './tenancy.service.js';
+import { updateAsset } from './asset.service.js';
 import type { TransferStatus } from '@access-genie/shared';
 import {
   Asset,
@@ -7,12 +9,31 @@ import {
   Transfer,
   WorkOrder,
   nextId,
-  type ScopeNodeDoc,
   type TransferDoc,
 } from '../models/index.js';
 import { ApiError } from '../utils/ApiError.js';
 import { logger } from '../config/logger.js';
 import { openIfRequired, openRequestFor, type Decider } from './approval.service.js';
+
+async function transferDestination(scope: VisibleScope, to: string) {
+  const [place, zone] = to.split(' · ');
+  const matches = await ScopeNodeModel.find({ name: zone || place }).lean();
+  const candidates = matches.filter(row => {
+    if (!zone) return row.name === place;
+    let cursor = scope.byId.get(row._id);
+    const seen = new Set<string>();
+    while (cursor && !seen.has(cursor._id)) {
+      seen.add(cursor._id);
+      if (cursor.name === place) return true;
+      cursor = cursor.parentId ? scope.byId.get(cursor.parentId) : undefined;
+    }
+    return false;
+  });
+  if (candidates.length !== 1) throw ApiError.badRequest('Choose an unambiguous destination from the location hierarchy.');
+  const destination = candidates[0]!;
+  assertLocationVisible(scope, destination._id, 'Destination');
+  return { id: destination._id, name: place!, ...(zone ? { zone } : {}) };
+}
 
 /**
  * Transfers and reservations.
@@ -42,10 +63,13 @@ export interface CreateTransferInput {
 export async function createTransfer(
   input: CreateTransferInput,
   requester: Decider,
+  scope: VisibleScope,
 ): Promise<TransferDoc> {
+  await assertAssetVisible(scope, input.assetId);
   const asset = await Asset.findById(input.assetId).lean();
   if (!asset) throw ApiError.notFound('Asset');
 
+  await transferDestination(scope, input.to);
   const from = [asset.location?.name, asset.location?.zone].filter(Boolean).join(' · ');
   if (from === input.to) throw ApiError.badRequest('The asset is already there.');
 
@@ -101,9 +125,12 @@ export async function advanceTransfer(
   id: string,
   status: TransferStatus,
   actor: string,
+  scope: VisibleScope,
 ): Promise<TransferDoc> {
   const transfer = await Transfer.findById(id);
   if (!transfer) throw ApiError.notFound('Transfer');
+  await assertAssetVisible(scope, transfer.assetId, 'Transfer');
+  const destination = status === 'Received' ? await transferDestination(scope, transfer.to) : undefined;
 
   const allowed = TRANSFER_FLOW[transfer.status];
   if (!allowed.includes(status)) {
@@ -150,49 +177,16 @@ export async function advanceTransfer(
     const landsWith = transfer.newCustodian || transfer.requester;
     transfer.custodian = landsWith;
 
-    /**
-     * The move is the point of the request: complete it on the asset itself, or
-     * the transfer says "Received" while the registry still shows the old place.
-     *
-     * `location.id` has to move with `location.name`. Writing the name alone —
-     * which is what this did — left the asset displaying its new home while
-     * still carrying the id of its old one, and `location.id` is what scope
-     * filtering and each role's visibility are resolved against. The result was
-     * an asset that looked moved on every screen and was still, as far as
-     * access control was concerned, in the facility it had left.
-     */
-    const [place, zone] = transfer.to.split(' · ');
-    const destination = await ScopeNodeModel.findOne({ name: place }).lean<ScopeNodeDoc>();
+    await updateAsset(scope, transfer.assetId, { location: destination!, custodian: landsWith }, actor);
 
-    await Asset.updateOne(
-      { _id: transfer.assetId },
-      {
-        $set: {
-          custodian: landsWith,
-          'location.name': place,
-          // Only when the destination is a real node. A free-text destination
-          // that matches nothing is still recorded as the displayed name, but
-          // it must not silently reassign the asset to some other scope.
-          ...(destination ? { 'location.id': destination._id } : {}),
-          ...(zone ? { 'location.zone': zone } : {}),
-        },
-      },
-    );
-
-    if (!destination) {
-      logger.warn('Transfer received to a destination that is not a scope node', {
-        transfer: transfer._id,
-        to: transfer.to,
-      });
-    }
   }
 
   await transfer.save();
   return transfer.toObject();
 }
 
-export async function listTransfers() {
-  return Transfer.find().sort({ requestedAt: -1 }).lean();
+export async function listTransfers(scope: VisibleScope) {
+  return Transfer.find(await assetClause(scope)).sort({ requestedAt: -1 }).lean();
 }
 
 /**
@@ -243,7 +237,8 @@ export interface CreateReservationInput {
   purpose?: string;
 }
 
-export async function createReservation(input: CreateReservationInput) {
+export async function createReservation(input: CreateReservationInput, scope: VisibleScope) {
+  await assertAssetVisible(scope, input.assetId);
   const asset = await Asset.findById(input.assetId).lean();
   if (!asset) throw ApiError.notFound('Asset');
   if (input.endDay < input.startDay) throw ApiError.badRequest('A booking cannot end before it starts.');
@@ -287,9 +282,10 @@ export async function createReservation(input: CreateReservationInput) {
   return created.toObject();
 }
 
-export async function cancelReservation(id: string) {
+export async function cancelReservation(id: string, scope: VisibleScope) {
   const reservation = await Reservation.findById(id);
   if (!reservation) throw ApiError.notFound('Reservation');
+  await assertAssetVisible(scope, reservation.assetId, 'Reservation');
   if (reservation.status === 'Returned') throw ApiError.conflict('That booking has already been returned.');
 
   reservation.status = 'Cancelled';
@@ -297,6 +293,6 @@ export async function cancelReservation(id: string) {
   return reservation.toObject();
 }
 
-export async function listReservations() {
-  return Reservation.find().sort({ startDay: 1 }).lean();
+export async function listReservations(scope: VisibleScope) {
+  return Reservation.find(await assetClause(scope)).sort({ startDay: 1 }).lean();
 }

@@ -213,7 +213,7 @@ export const createAssetSchema = z.object({
  * dialog that does it can now pass the reason through.
  */
 export const updateAssetSchema = partialUpdate(createAssetSchema.omit({ id: true }))
-  .extend({ note: z.string().trim().max(300).optional() });
+  .extend({ note: z.string().trim().max(300).optional(), warrantyExpiry: isoDateString.nullable().optional() });
 
 /**
  * A change applied to a selection.

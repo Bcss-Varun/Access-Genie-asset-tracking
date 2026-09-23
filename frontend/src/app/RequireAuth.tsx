@@ -1,5 +1,6 @@
 import { Navigate, Outlet, useLocation } from 'react-router-dom';
-import type { ModuleKey } from '@access-genie/shared';
+import type { ReactNode } from 'react';
+import { canAccessRoute } from './route-access';
 import { useAuth } from '@/api/auth';
 import { ErrorState } from '@/components/ui/primitives';
 
@@ -34,17 +35,18 @@ export function RequireAuth() {
  * Gate for a module's routes. The API refuses these requests anyway; this turns
  * what would be a wall of 403 error states into one clear explanation.
  */
-export function RequireModule({ module }: { module: ModuleKey }) {
-  const { can } = useAuth();
+export function RequireModule({ children }: { children: ReactNode }) {
+  const { session } = useAuth();
+  const { pathname } = useLocation();
 
-  if (!can(module)) {
+  if (!session || !canAccessRoute(pathname, session.modules)) {
     return (
       <ErrorState
         title="You do not have access to this module"
-        description={`Your role does not include the "${module}" grant. An organization admin can change that under Users & Roles.`}
+        description="Your role does not include access to this page. Contact your organization administrator, or choose another page from the navigation."
       />
     );
   }
 
-  return <Outlet />;
+  return <>{children}</>;
 }

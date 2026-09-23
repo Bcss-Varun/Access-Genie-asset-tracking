@@ -1,3 +1,5 @@
+import { requireScope } from '../middleware/scope.js';
+import { assertAssetVisible } from '../services/tenancy.service.js';
 import type { Request, Response } from 'express';
 import { asyncHandler } from '../utils/asyncHandler.js';
 import { sendData } from '../utils/response.js';
@@ -16,8 +18,8 @@ import { regenerateInsights } from '../services/insightEngine.service.js';
  */
 
 export const recompute = asyncHandler(async (req: Request, res: Response) => {
-  const metrics = await recomputeAllMetrics();
-  const insights = await regenerateInsights();
+  const metrics = await recomputeAllMetrics(requireScope(req));
+  const insights = await regenerateInsights(requireScope(req));
 
   recordAudit(req, {
     action: 'intelligence.recompute',
@@ -31,6 +33,7 @@ export const recompute = asyncHandler(async (req: Request, res: Response) => {
 
 /** Why one asset scores the way it does — the explainability view. */
 export const explain = asyncHandler(async (req: Request, res: Response) => {
+  await assertAssetVisible(requireScope(req), req.params.id as string);
   const result = await explainAsset(req.params.id as string);
   if (!result) throw ApiError.notFound('Asset');
   sendData(res, result);

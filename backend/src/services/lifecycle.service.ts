@@ -11,6 +11,7 @@ import { LIFECYCLE_APPROVAL_REQUIRED, LIFECYCLE_FLOW, LIFECYCLE_ROLE_MATRIX, LIF
 import { Activity, Asset, LifecycleTransition, PmSchedule, nextId, type AssetDoc, type LifecycleTransitionDoc } from '../models/index.js';
 import { ApiError } from '../utils/ApiError.js';
 import { notify, notifyRoles } from './notification.service.js';
+import { assetClause, locationClause, type VisibleScope } from './tenancy.service.js';
 
 /**
  * The lifecycle workflow engine — the one place `Asset.lifecycleStage` is
@@ -27,6 +28,12 @@ import { notify, notifyRoles } from './notification.service.js';
 
 const HEALTH_ATTENTION_FLOOR = 45;
 const WARRANTY_ATTENTION_DAYS = 30;
+
+async function scopedAsset(scope: VisibleScope, assetId: string): Promise<AssetDoc> {
+  const asset = await Asset.findOne({ _id: assetId, ...locationClause(scope) }).lean<AssetDoc>();
+  if (!asset) throw ApiError.notFound('Asset');
+  return asset;
+}
 
 function daysUntil(date: Date | undefined, now: Date): number | null {
   if (!date) return null;
@@ -74,6 +81,7 @@ export async function applyLifecycleTransition(
   });
 
   await notify({
+    scopeId: asset.location?.id,
     title: `${asset.name} → ${toStage}`,
     body: `${asset._id} moved from ${fromStage} to ${toStage}${opts.automated ? ' (automated)' : ` by ${opts.actor}`}.`,
     category: 'Lifecycle',
@@ -88,13 +96,13 @@ export async function applyLifecycleTransition(
  * approves it.
  */
 export async function requestStageChange(
+  scope: VisibleScope,
   assetId: string,
   input: RequestStageChangeInput,
   actor: string,
   role: RoleId,
 ): Promise<{ status: 'Applied' | 'Pending'; asset?: AssetDoc; transition: LifecycleTransitionDoc }> {
-  const asset = await Asset.findById(assetId).lean<AssetDoc>();
-  if (!asset) throw ApiError.notFound('Asset');
+  const asset = await scopedAsset(scope, assetId);
 
   const from = asset.lifecycleStage;
   const allowed = LIFECYCLE_FLOW[from] ?? [];
@@ -129,6 +137,7 @@ export async function requestStageChange(
     });
 
     await notifyRoles(eligible, {
+      scopeId: asset.location?.id,
       title: `Approval needed: ${asset.name} → ${input.toStage}`,
       body: `${actor} requested ${asset._id} move to ${input.toStage}. Reason: ${input.reason}`,
       category: 'Approval',
@@ -157,6 +166,7 @@ export async function requestStageChange(
  * names.
  */
 export async function decideStageChange(
+  scope: VisibleScope,
   transitionId: string,
   decision: ApprovalDecision,
   actor: string,
@@ -164,6 +174,7 @@ export async function decideStageChange(
 ): Promise<LifecycleTransitionDoc> {
   const transition = await LifecycleTransition.findById(transitionId);
   if (!transition) throw ApiError.notFound('Lifecycle transition');
+  const asset = await scopedAsset(scope, transition.assetId);
   if (transition.status !== 'Pending') {
     throw ApiError.badRequest(`This request is already ${transition.status.toLowerCase()}.`);
   }
@@ -192,6 +203,7 @@ export async function decideStageChange(
     });
   } else {
     await notify({
+      scopeId: asset.location?.id,
       title: `Rejected: ${transition.assetName} → ${transition.toStage}`,
       body: `${actor} rejected the request from ${transition.requester}.`,
       category: 'Approval',
@@ -201,12 +213,14 @@ export async function decideStageChange(
   return transition.toObject();
 }
 
-export async function listTransitions(assetId: string): Promise<LifecycleTransitionDoc[]> {
+export async function listTransitions(scope: VisibleScope, assetId: string): Promise<LifecycleTransitionDoc[]> {
+  await scopedAsset(scope, assetId);
   return LifecycleTransition.find({ assetId }).sort({ requestedAt: -1 }).lean();
 }
 
 /** Apply one target stage across a selection. Partial success, same shape as `bulkUpdateAssets`. */
 export async function bulkStageChange(
+  scope: VisibleScope,
   ids: string[],
   input: RequestStageChangeInput,
   actor: string,
@@ -218,7 +232,7 @@ export async function bulkStageChange(
 
   for (const id of ids) {
     try {
-      const result = await requestStageChange(id, input, actor, role);
+      const result = await requestStageChange(scope, id, input, actor, role);
       if (result.status === 'Applied') updated.push(id);
       else pendingApproval.push(id);
     } catch (err) {
@@ -230,7 +244,7 @@ export async function bulkStageChange(
 }
 
 /** The Board View's per-column aggregates. */
-export async function getLifecycleBoard(): Promise<LifecycleBoardColumn[]> {
+export async function getLifecycleBoard(scope: VisibleScope): Promise<LifecycleBoardColumn[]> {
   const now = new Date();
   const attentionCutoff = new Date(now.getTime() + WARRANTY_ATTENTION_DAYS * 86_400_000);
 
@@ -242,6 +256,7 @@ export async function getLifecycleBoard(): Promise<LifecycleBoardColumn[]> {
     criticalCount: number;
     requiringAttention: number;
   }>([
+    { $match: locationClause(scope) },
     {
       $group: {
         _id: '$lifecycleStage',
@@ -282,9 +297,12 @@ export async function getLifecycleBoard(): Promise<LifecycleBoardColumn[]> {
 }
 
 /** The enterprise KPI row (§7). */
-export async function getLifecycleKpis(): Promise<LifecycleKpis> {
+export async function getLifecycleKpis(scope: VisibleScope): Promise<LifecycleKpis> {
   const now = new Date();
   const warrantyWindow = new Date(now.getTime() + WARRANTY_ATTENTION_DAYS * 86_400_000);
+
+  const locations = locationClause(scope);
+  const assets = await assetClause(scope);
 
   const [
     inService,
@@ -297,15 +315,16 @@ export async function getLifecycleKpis(): Promise<LifecycleKpis> {
     requiringApproval,
     totals,
   ] = await Promise.all([
-    Asset.countDocuments({ lifecycleStage: 'Assigned / In Service' }),
-    PmSchedule.countDocuments({ nextDue: { $lte: now } }),
-    Asset.countDocuments({ warrantyExpiry: { $gte: now, $lte: warrantyWindow } }),
-    Asset.countDocuments({ lifecycleStage: 'Returned' }),
-    Asset.countDocuments({ lifecycleStage: 'Retired' }),
-    Asset.countDocuments({ lifecycleStage: 'Disposed' }),
-    Asset.countDocuments({ lifecycleStage: 'Available' }),
-    LifecycleTransition.countDocuments({ status: 'Pending' }),
+    Asset.countDocuments({ ...locations, lifecycleStage: 'Assigned / In Service' }),
+    PmSchedule.countDocuments({ ...assets, nextDue: { $lte: now } }),
+    Asset.countDocuments({ ...locations, warrantyExpiry: { $gte: now, $lte: warrantyWindow } }),
+    Asset.countDocuments({ ...locations, lifecycleStage: 'Returned' }),
+    Asset.countDocuments({ ...locations, lifecycleStage: 'Retired' }),
+    Asset.countDocuments({ ...locations, lifecycleStage: 'Disposed' }),
+    Asset.countDocuments({ ...locations, lifecycleStage: 'Available' }),
+    LifecycleTransition.countDocuments({ ...assets, status: 'Pending' }),
     Asset.aggregate<{ _id: null; avgHealth: number; value: number; avgAgeMs: number }>([
+      { $match: locations },
       {
         $group: {
           _id: null,
@@ -377,6 +396,7 @@ export async function raiseLifecycleAlerts(): Promise<{
 
   if (warrantyExpiring > 0) {
     await notify({
+      platformOnly: true,
       category: 'Warranty',
       title: `${warrantyExpiring} asset${warrantyExpiring === 1 ? '' : 's'} with warranty expiring soon`,
       body: `Warranty runs out within ${WARRANTY_ATTENTION_DAYS} days on ${warrantyExpiring} asset${warrantyExpiring === 1 ? '' : 's'}.`,
@@ -384,6 +404,7 @@ export async function raiseLifecycleAlerts(): Promise<{
   }
   if (maintenanceDue > 0) {
     await notify({
+      platformOnly: true,
       category: 'Maintenance',
       title: `${maintenanceDue} maintenance schedule${maintenanceDue === 1 ? '' : 's'} due`,
       body: `${maintenanceDue} preventive maintenance schedule${maintenanceDue === 1 ? '' : 's'} fell due.`,
@@ -391,6 +412,7 @@ export async function raiseLifecycleAlerts(): Promise<{
   }
   if (idle > 0) {
     await notify({
+      platformOnly: true,
       category: 'Lifecycle',
       title: `${idle} in-service asset${idle === 1 ? '' : 's'} idle`,
       body: `No activity recorded in over ${IDLE_DAYS} days on ${idle} in-service asset${idle === 1 ? '' : 's'}.`,
@@ -398,6 +420,7 @@ export async function raiseLifecycleAlerts(): Promise<{
   }
   if (unassigned > 0) {
     await notify({
+      platformOnly: true,
       category: 'Lifecycle',
       title: `${unassigned} asset${unassigned === 1 ? '' : 's'} awaiting assignment`,
       body: `${unassigned} asset${unassigned === 1 ? '' : 's'} have sat Available for over ${UNASSIGNED_DAYS} days with nobody assigned.`,

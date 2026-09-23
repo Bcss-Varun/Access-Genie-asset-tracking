@@ -2,7 +2,7 @@ import { createHash, randomBytes } from 'node:crypto';
 import jwt, { type JwtPayload, type SignOptions } from 'jsonwebtoken';
 import type { RoleId, UserSession } from '@access-genie/shared';
 import { env } from '../config/env.js';
-import { RefreshToken } from '../models/index.js';
+import { RefreshToken, User } from '../models/index.js';
 import { ApiError } from '../utils/ApiError.js';
 
 export interface AccessTokenClaims extends JwtPayload {
@@ -10,6 +10,7 @@ export interface AccessTokenClaims extends JwtPayload {
   roleId: RoleId;
   /** Token type, so a refresh token can never be replayed as an access token. */
   typ: 'access';
+  sid: string;
 }
 
 /** Refresh tokens are opaque random strings, not JWTs — see issueRefreshToken. */
@@ -29,10 +30,10 @@ export function ttlToSeconds(ttl: string): number {
   return value * multiplier;
 }
 
-export function signAccessToken(userId: string, roleId: RoleId): { token: string; expiresIn: number } {
+export function signAccessToken(userId: string, roleId: RoleId, sessionId: string): { token: string; expiresIn: number } {
   const expiresIn = ttlToSeconds(env.JWT_ACCESS_TTL);
   const options: SignOptions = { expiresIn, issuer: 'access-genie', audience: 'access-genie-web' };
-  const token = jwt.sign({ sub: userId, roleId, typ: 'access' }, env.JWT_ACCESS_SECRET, options);
+  const token = jwt.sign({ sub: userId, roleId, typ: 'access', sid: sessionId }, env.JWT_ACCESS_SECRET, options);
   return { token, expiresIn };
 }
 
@@ -41,8 +42,10 @@ export function verifyAccessToken(token: string): AccessTokenClaims {
     const claims = jwt.verify(token, env.JWT_ACCESS_SECRET, {
       issuer: 'access-genie',
       audience: 'access-genie-web',
+      algorithms: ['HS256'],
     }) as AccessTokenClaims;
 
+    if (typeof claims.sub !== 'string' || typeof claims.sid !== 'string' || !/^[a-f0-9]{24}$/.test(claims.sid)) throw ApiError.unauthorized('Session must be renewed');
     if (claims.typ !== 'access') throw ApiError.unauthorized('Wrong token type');
     return claims;
   } catch (err) {
@@ -63,11 +66,11 @@ export function verifyAccessToken(token: string): AccessTokenClaims {
 export async function issueRefreshToken(
   userId: string,
   context: { userAgent?: string; ip?: string } = {},
-): Promise<{ token: string; expiresAt: Date }> {
+): Promise<{ token: string; expiresAt: Date; sessionId: string }> {
   const token = randomBytes(REFRESH_BYTES).toString('base64url');
   const expiresAt = new Date(Date.now() + ttlToSeconds(env.JWT_REFRESH_TTL) * 1000);
 
-  await RefreshToken.create({
+  const record = await RefreshToken.create({
     userId,
     tokenHash: hashToken(token),
     expiresAt,
@@ -75,7 +78,7 @@ export async function issueRefreshToken(
     ip: context.ip,
   });
 
-  return { token, expiresAt };
+  return { token, expiresAt, sessionId: String(record._id) };
 }
 
 /**
@@ -85,34 +88,30 @@ export async function issueRefreshToken(
  * falls out of `revokedAt` already being set.
  */
 export async function rotateRefreshToken(
-  token: string,
-  context: { userAgent?: string; ip?: string } = {},
-): Promise<{ userId: string; token: string; expiresAt: Date }> {
-  const tokenHash = hashToken(token);
-  const record = await RefreshToken.findOne({ tokenHash });
-
-  if (!record) throw ApiError.unauthorized('Invalid refresh token');
-  if (record.revokedAt) throw ApiError.unauthorized('Refresh token has been used or revoked');
-  if (record.expiresAt.getTime() < Date.now()) throw ApiError.unauthorized('Refresh token expired');
-
-  const next = await issueRefreshToken(record.userId, context);
-
-  record.revokedAt = new Date();
-  record.replacedByHash = hashToken(next.token);
-  await record.save();
-
-  return { userId: record.userId, ...next };
+  token: string, context: { userAgent?: string; ip?: string } = {},
+): Promise<{ userId: string; token: string; expiresAt: Date; sessionId: string }> {
+  const next = randomBytes(REFRESH_BYTES).toString('base64url');
+  const expiresAt = new Date(Date.now() + ttlToSeconds(env.JWT_REFRESH_TTL) * 1000);
+  // Atomic compare-and-swap: only one caller can consume the current hash.
+  // The document ID remains stable for access-token revocation and device lists.
+  const record = await RefreshToken.findOneAndUpdate({ tokenHash: hashToken(token),
+    revokedAt: { $exists: false }, expiresAt: { $gt: new Date() } }, {
+    $set: { tokenHash: hashToken(next), expiresAt, ...context },
+    $push: { previousHashes: { $each: [hashToken(token)], $slice: -8 } },
+  }, { new: true });
+  if (!record) throw ApiError.unauthorized('Refresh token is expired, used or revoked');
+  return { userId: record.userId, token: next, expiresAt, sessionId: String(record._id) };
 }
 
 export async function revokeRefreshToken(token: string): Promise<void> {
-  await RefreshToken.updateOne(
-    { tokenHash: hashToken(token), revokedAt: { $exists: false } },
-    { $set: { revokedAt: new Date() } },
-  );
+  // A logout racing a rotation must still end that session.
+  await RefreshToken.updateOne({ $or: [{ tokenHash: hashToken(token) }, { previousHashes: hashToken(token) }],
+    revokedAt: { $exists: false } }, { $set: { revokedAt: new Date() } });
 }
 
 /** Log out every device for a user. */
 export async function revokeAllForUser(userId: string): Promise<number> {
+  await User.updateOne({ _id: userId }, { $inc: { authVersion: 1 } });
   const result = await RefreshToken.updateMany(
     { userId, revokedAt: { $exists: false } },
     { $set: { revokedAt: new Date() } },

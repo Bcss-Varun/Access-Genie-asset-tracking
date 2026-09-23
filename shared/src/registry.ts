@@ -87,7 +87,7 @@ export interface PmSchedule {
   frequency: PmFrequency;
   type: WorkOrderType;
   nextDue: string;
-  lastDone: string;
+  lastDone?: string;
   estHours: number;
   compliancePct: number;
   assignedTeam: string;

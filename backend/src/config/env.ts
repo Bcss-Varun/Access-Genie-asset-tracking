@@ -22,7 +22,9 @@ const envSchema = z.object({
   /** Interface to bind. `0.0.0.0` accepts external traffic; `127.0.0.1` does not. */
   HOST: z.string().min(1).default('0.0.0.0'),
   /** Version prefix every route is mounted under. */
-  API_PREFIX: z.string().startsWith('/').default('/api/v1'),
+  API_PREFIX: z.string().regex(/^\/[A-Za-z0-9_-]+(?:\/[A-Za-z0-9_-]+)*$/).default('/api/v1'),
+  TRUST_PROXY_HOPS: z.coerce.number().int().min(0).max(10).default(0),
+  ENABLE_DEMO_PERSONAS: boolish.default(false),
   LOG_LEVEL: z.enum(['debug', 'info', 'warn', 'error']).optional(),
 
   // ── CORS ───────────────────────────────────────────────────────────────────
@@ -43,8 +45,8 @@ const envSchema = z.object({
   // ── Auth ───────────────────────────────────────────────────────────────────
   JWT_ACCESS_SECRET: z.string().min(32, 'JWT_ACCESS_SECRET must be at least 32 characters'),
   JWT_REFRESH_SECRET: z.string().min(32, 'JWT_REFRESH_SECRET must be at least 32 characters'),
-  JWT_ACCESS_TTL: z.string().regex(/^\d+[smhd]?$/, 'Use a value like 15m, 2h or 900').default('15m'),
-  JWT_REFRESH_TTL: z.string().regex(/^\d+[smhd]?$/, 'Use a value like 7d, 24h or 604800').default('7d'),
+  JWT_ACCESS_TTL: z.string().regex(/^[1-9]\d*[smhd]?$/, 'Use a value like 15m, 2h or 900').default('15m'),
+  JWT_REFRESH_TTL: z.string().regex(/^[1-9]\d*[smhd]?$/, 'Use a value like 7d, 24h or 604800').default('7d'),
   BCRYPT_ROUNDS: z.coerce.number().int().min(4).max(15).default(10),
 
   // ── Refresh cookie ─────────────────────────────────────────────────────────
@@ -74,7 +76,7 @@ const envSchema = z.object({
    */
   SMTP_URL: z.string().url().optional(),
   ADMIN_EMAIL: z.string().regex(/^\S+@\S+\.\S+$/, 'ADMIN_EMAIL must be an email address').default('raj@bcss.in'),
-  ADMIN_PASSWORD: z.string().min(8, 'ADMIN_PASSWORD must be at least 8 characters').default('raj@bcss'),
+  ADMIN_PASSWORD: z.string().min(8, 'ADMIN_PASSWORD must be at least 8 characters').optional(),
   ADMIN_NAME: z.string().min(1).default('Raj'),
   /** Name of the root scope node the admin's `homeScopeId` points at. */
   ADMIN_ORG_NAME: z.string().min(1).default('Access Genie'),
@@ -163,6 +165,31 @@ if (env.isProd) {
 
   if (fatal.length) {
     console.error(`\n✖ Refusing to start in production:\n${fatal.map((f) => `  • ${f}`).join('\n')}\n`);
+    process.exit(1);
+  }
+}
+
+if ((env.cookieSameSite === 'none' && !env.cookieSecure) || env.corsOrigins.includes('*') || (env.isProd && env.ENABLE_DEMO_PERSONAS)) {
+  console.error('Invalid cookie, credentialed CORS, or production demo-persona configuration.');
+  process.exit(1);
+}
+
+for (const lifetime of [env.JWT_ACCESS_TTL, env.JWT_REFRESH_TTL]) {
+  const unit = lifetime.match(/[smhd]$/)?.[0] ?? 's';
+  const seconds = parseInt(lifetime, 10) * ({ s: 1, m: 60, h: 3600, d: 86400 }[unit] ?? 1);
+  if (!Number.isSafeInteger(seconds) || seconds > 366 * 86400) {
+    console.error('Token lifetimes must be positive and at most 366 days.');
+    process.exit(1);
+  }
+}
+for (const origin of env.corsOrigins) {
+  try {
+    const url = new URL(origin);
+    if (!['http:', 'https:'].includes(url.protocol) || url.username || url.password || url.origin !== origin || !url.hostname.includes('.')) {
+      if (!(url.origin === origin && ['localhost', '127.0.0.1', '[::1]'].includes(url.hostname))) throw new Error('origin');
+    }
+  } catch {
+    console.error('CORS_ORIGIN must contain HTTP(S) origins without paths or credentials.');
     process.exit(1);
   }
 }

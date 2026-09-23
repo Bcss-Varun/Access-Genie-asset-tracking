@@ -1,3 +1,4 @@
+import { assetClause, locationClause, type VisibleScope } from './tenancy.service.js';
 import type { PmFrequency } from '@access-genie/shared';
 import { Asset, PmSchedule, WorkOrder, nextId, type AssetDoc, type PmScheduleDoc } from '../models/index.js';
 import { logger } from '../config/logger.js';
@@ -76,7 +77,7 @@ async function hasOpenOrder(assetId: string, type: string, titlePrefix?: string)
   const existing = await WorkOrder.findOne({
     assetId,
     type,
-    status: { $ne: 'Completed' },
+    status: { $nin: ['Completed', 'Cancelled'] },
     ...(titlePrefix ? { title: new RegExp(`^${titlePrefix.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}`) } : {}),
   })
     .select('_id')
@@ -94,16 +95,16 @@ export interface AutomationResult {
  * Raise the orders that are due, and advance the schedules that produced them.
  *
  * The schedule is advanced only when an order actually exists for the
- * occurrence — including when one was already open. Advancing unconditionally
+ * occurrence. An already-open job leaves later due occurrences visible. Advancing unconditionally
  * would let a missed occurrence disappear silently, which is exactly the
  * failure preventive maintenance exists to prevent.
  */
-export async function raiseDueMaintenance(): Promise<AutomationResult> {
+export async function raiseDueMaintenance(scope?: VisibleScope): Promise<AutomationResult> {
   const now = new Date();
   const result: AutomationResult = { pmRaised: 0, conditionRaised: 0, schedulesAdvanced: 0 };
 
   // ── Scheduled ─────────────────────────────────────────────────────────────
-  const due = await PmSchedule.find({ nextDue: { $lte: now } }).lean<PmScheduleDoc[]>();
+  const due = await PmSchedule.find({ ...(scope ? await assetClause(scope) : {}), nextDue: { $lte: now } }).lean<PmScheduleDoc[]>();
 
   for (const pm of due) {
     const asset = await Asset.findById(pm.assetId).lean<AssetDoc>();
@@ -114,7 +115,8 @@ export async function raiseDueMaintenance(): Promise<AutomationResult> {
     const titlePrefix = `${pm.title} —`;
     const alreadyOpen = await hasOpenOrder(pm.assetId, pm.type, titlePrefix);
 
-    if (!alreadyOpen) {
+    if (alreadyOpen) continue;
+    {
       const dueDate = new Date(pm.nextDue);
       await WorkOrder.create({
         _id: await nextId('workOrder', 'WO'),
@@ -154,7 +156,7 @@ export async function raiseDueMaintenance(): Promise<AutomationResult> {
 
     await PmSchedule.updateOne(
       { _id: pm._id },
-      { $set: { lastDone: pm.lastDone ?? now, nextDue: advance(new Date(pm.nextDue), pm.frequency) } },
+      { $set: { nextDue: advance(new Date(pm.nextDue), pm.frequency) } },
     );
     result.schedulesAdvanced++;
   }
@@ -167,6 +169,7 @@ export async function raiseDueMaintenance(): Promise<AutomationResult> {
     // Health is already materialised by the metrics pass, so this is a plain
     // query rather than a recomputation.
     const degraded = await Asset.find({
+      ...(scope ? locationClause(scope) : {}),
       healthScore: { $lte: CONDITION_HEALTH_FLOOR },
       status: { $nin: ['End_Of_Life'] },
     }).lean<AssetDoc[]>();

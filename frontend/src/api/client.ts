@@ -1,5 +1,7 @@
 import axios, { AxiosError, type AxiosInstance, type InternalAxiosRequestConfig } from 'axios';
-import type { ApiFailure, ApiMeta, ApiResponse } from '@access-genie/shared';
+import type { ApiFailure, ApiMeta, ApiResponse, AuthPayload } from '@access-genie/shared';
+import { ApiRequestError, toApiError } from './errors';
+export { ApiRequestError } from './errors';
 
 const BASE_URL = import.meta.env.VITE_API_URL ?? '/api/v1';
 const TIMEOUT_MS = Number(import.meta.env.VITE_API_TIMEOUT ?? 20_000);
@@ -47,15 +49,15 @@ http.interceptors.request.use((config) => {
  * because refresh tokens rotate, and ten racing rotations would invalidate
  * each other and log the user out.
  */
-let refreshPromise: Promise<string> | null = null;
+let refreshPromise: Promise<AuthPayload> | null = null;
 
-async function refreshAccessToken(): Promise<string> {
+export async function refreshAuth(): Promise<AuthPayload> {
   refreshPromise ??= axios
-    .post<ApiResponse<{ accessToken: string }>>(`${BASE_URL}/auth/refresh`, null, { withCredentials: true })
+    .post<ApiResponse<AuthPayload>>(`${BASE_URL}/auth/refresh`, null, { withCredentials: true, timeout: TIMEOUT_MS })
     .then((res) => {
       if (!res.data.success) throw new Error('Refresh rejected');
       setAccessToken(res.data.data.accessToken);
-      return res.data.data.accessToken;
+      return res.data.data;
     })
     .finally(() => {
       refreshPromise = null;
@@ -80,7 +82,7 @@ http.interceptors.response.use(
 
     if (shouldRefresh && request) {
       try {
-        const token = await refreshAccessToken();
+        const { accessToken: token } = await refreshAuth();
         request._retried = true;
         request.headers.Authorization = `Bearer ${token}`;
         return await http.request(request);
@@ -99,77 +101,6 @@ http.interceptors.response.use(
     return Promise.reject(toApiError(error));
   },
 );
-
-/**
- * A normalized error every screen can render without inspecting axios
- * internals: `message` is always safe to show, `code` is switchable, and
- * `fieldErrors` maps straight onto form inputs.
- */
-export class ApiRequestError extends Error {
-  readonly code: string;
-  readonly status: number;
-  readonly fieldErrors: Record<string, string>;
-  readonly requestId?: string;
-
-  constructor(message: string, code: string, status: number, fieldErrors: Record<string, string> = {}, requestId?: string) {
-    super(message);
-    this.name = 'ApiRequestError';
-    this.code = code;
-    this.status = status;
-    this.fieldErrors = fieldErrors;
-    this.requestId = requestId;
-  }
-}
-
-/** Whether a body is one the API wrote, rather than a proxy's own error page. */
-function isApiEnvelope(payload: unknown): payload is ApiFailure {
-  return typeof payload === 'object' && payload !== null && 'success' in payload;
-}
-
-function toApiError(error: AxiosError<ApiFailure>): ApiRequestError {
-  const payload = error.response?.data;
-
-  if (payload && !payload.success) {
-    const fieldErrors = Object.fromEntries((payload.error.details ?? []).map((d) => [d.path, d.message]));
-    return new ApiRequestError(
-      payload.error.message,
-      payload.error.code,
-      error.response?.status ?? 500,
-      fieldErrors,
-      payload.requestId,
-    );
-  }
-
-  if (error.code === 'ECONNABORTED') {
-    return new ApiRequestError('The request timed out. Check your connection and try again.', 'TIMEOUT', 0);
-  }
-
-  /**
-   * No response, or a response the API did not write, both mean the same thing:
-   * the request never reached it.
-   *
-   * `errorHandler` answers *every* failure with the `{ success: false }`
-   * envelope — the rate limiter included — so an error body without one came
-   * from whatever sits in front of the API, not from the API. In development
-   * that is the Vite proxy, which answers a refused connection with a plain
-   * 500; in production it is the reverse proxy, answering 502 or 504.
-   *
-   * The distinction matters most on the sign-in form, which was the one place
-   * this went wrong: with the API down, the proxy's 500 fell through to
-   * "Something went wrong", which on a password field reads as *wrong
-   * password*. People retype credentials that were correct all along instead
-   * of starting the server.
-   */
-  if (!error.response || !isApiEnvelope(payload)) {
-    return new ApiRequestError(
-      'Cannot reach the Access Genie API. Is the server running?',
-      'NETWORK_ERROR',
-      error.response?.status ?? 0,
-    );
-  }
-
-  return new ApiRequestError('Something went wrong.', 'INTERNAL_ERROR', error.response.status);
-}
 
 // ── Typed helpers ────────────────────────────────────────────────────────────
 // Every endpoint returns the `{ success, data }` envelope; these unwrap it so

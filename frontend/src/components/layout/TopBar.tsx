@@ -72,11 +72,11 @@ export function TopBar({ onOpenNav, onOpenPalette }: { onOpenNav: () => void; on
   }
 
   return (
-    <header className="h-14 shrink-0 border-b border-slate-200 bg-white/95 backdrop-blur flex items-center gap-3 px-4">
+    <header className="h-14 shrink-0 border-b border-slate-200 bg-white/95 backdrop-blur flex items-center gap-1 px-2 sm:gap-3 sm:px-4">
       <button
         type="button"
         onClick={onOpenNav}
-        className="md:hidden -ml-1 p-2 rounded-lg text-slate-500 hover:bg-slate-100"
+        className="md:hidden shrink-0 -ml-1 p-1.5 rounded-lg text-slate-500 hover:bg-slate-100"
         aria-label="Open navigation"
       >
         ☰
@@ -92,16 +92,16 @@ export function TopBar({ onOpenNav, onOpenPalette }: { onOpenNav: () => void; on
           aria-haspopup="listbox"
           aria-expanded={scopeOpen}
           className={cn(
-            'flex items-center gap-2 rounded-lg border border-slate-200 px-3 py-1.5 text-sm hover:bg-slate-50 transition-colors',
+            'flex items-center gap-1 sm:gap-2 rounded-lg border border-slate-200 px-2 sm:px-3 py-1.5 text-sm hover:bg-slate-50 transition-colors',
             scopeOpen && 'bg-slate-50',
           )}
         >
-          <span className="text-slate-400" aria-hidden>{isSwitching ? '⏳' : '🌐'}</span>
+          <span className="hidden sm:inline text-slate-400" aria-hidden>{isSwitching ? '⏳' : '🌐'}</span>
           <span className="text-left leading-tight">
             <span className="block text-[10px] uppercase tracking-wide text-slate-400">
               {SCOPE_LEVEL_LABEL[scope.level] ?? scope.level}
             </span>
-            <span className="block font-medium text-slate-800 max-w-[10rem] truncate">{scope.name}</span>
+            <span className="block font-medium text-slate-800 max-w-20 sm:max-w-[10rem] truncate">{scope.name}</span>
           </span>
           <span className={cn('text-slate-300 transition-transform', scopeOpen && 'rotate-180')} aria-hidden>▾</span>
         </button>
@@ -149,17 +149,18 @@ export function TopBar({ onOpenNav, onOpenPalette }: { onOpenNav: () => void; on
       <button
         type="button"
         onClick={onOpenPalette}
-        className="flex items-center gap-2 flex-1 max-w-md mx-auto rounded-lg border border-slate-200 bg-slate-50/60 px-3 py-1.5 text-sm text-slate-400 hover:bg-slate-100 transition-colors"
+        aria-label="Search workspace"
+        className="flex shrink-0 items-center gap-2 md:flex-1 max-w-md ml-auto md:mx-auto rounded-lg border border-slate-200 bg-slate-50/60 px-3 py-1.5 text-sm text-slate-400 hover:bg-slate-100 transition-colors"
       >
         <span aria-hidden>🔍</span>
-        <span className="flex-1 text-left truncate">Search or ask Copilot…</span>
-        <Kbd>⌘K</Kbd>
+        <span className="hidden md:block flex-1 text-left truncate">Search or ask Copilot…</span>
+        <span className="hidden md:inline"><Kbd>⌘K</Kbd></span>
       </button>
 
       <button
         type="button"
         onClick={() => setScanOpen(true)}
-        className="p-2 rounded-lg text-slate-500 hover:bg-slate-100 transition-colors"
+        className="shrink-0 p-1.5 sm:p-2 rounded-lg text-slate-500 hover:bg-slate-100 transition-colors"
         aria-label="Scan QR / RFID tag"
         title="Scan QR / RFID tag"
       >
@@ -169,7 +170,7 @@ export function TopBar({ onOpenNav, onOpenPalette }: { onOpenNav: () => void; on
       <button
         type="button"
         onClick={toggleTheme}
-        className="p-2 rounded-lg text-slate-500 hover:bg-slate-100 transition-colors"
+        className="hidden sm:inline-flex shrink-0 p-1.5 sm:p-2 rounded-lg text-slate-500 hover:bg-slate-100 transition-colors"
         aria-label={`Switch to ${theme === 'dark' ? 'light' : 'dark'} mode`}
         title={`Switch to ${theme === 'dark' ? 'light' : 'dark'} mode`}
       >
@@ -178,7 +179,7 @@ export function TopBar({ onOpenNav, onOpenPalette }: { onOpenNav: () => void; on
 
       <Link
         to="/notifications"
-        className="relative p-2 rounded-lg text-slate-500 hover:bg-slate-100 transition-colors"
+        className="relative shrink-0 p-1.5 sm:p-2 rounded-lg text-slate-500 hover:bg-slate-100 transition-colors"
         aria-label={`Notifications${unread ? ` (${unread} unread)` : ''}`}
       >
         🔔
@@ -195,6 +196,7 @@ export function TopBar({ onOpenNav, onOpenPalette }: { onOpenNav: () => void; on
           type="button"
           onClick={() => setMenuOpen((open) => !open)}
           className="flex items-center gap-2 rounded-lg p-1 pr-2 hover:bg-slate-100 transition-colors"
+          aria-label="Account menu"
           aria-haspopup="menu"
           aria-expanded={menuOpen}
         >

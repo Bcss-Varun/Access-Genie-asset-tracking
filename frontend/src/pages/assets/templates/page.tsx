@@ -16,7 +16,7 @@ import { categoryEmoji } from '@/lib/asset-categories';
 export default function TemplatesPage() {
   const { toast } = useToast();
   const qc = useQueryClient();
-  const { data, isLoading } = useQuery({
+  const { data, isLoading, isError, refetch } = useQuery({
     queryKey: ['templates', 'all'],
     queryFn: () => templatesApi.list({ status: 'all' }),
   });
@@ -50,6 +50,8 @@ export default function TemplatesPage() {
 
       {isLoading ? (
         <div className="rounded-xl border border-slate-200 bg-white p-8 text-sm text-slate-500">Loading templates…</div>
+      ) : isError ? (
+        <div role="alert"><p>Templates could not be loaded.</p><Button onClick={() => void refetch()}>Retry</Button></div>
       ) : templates.length === 0 ? (
         <EmptyState
           variant="empty"

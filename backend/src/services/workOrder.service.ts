@@ -1,3 +1,4 @@
+import { locationClause } from './tenancy.service.js';
 import type { PipelineStage } from 'mongoose';
 import {
   ACTIVE_WORK_ORDER_TYPES,
@@ -24,7 +25,6 @@ import {
   Technician,
   User,
   WorkOrder,
-  nextId,
   type ScopeNodeDoc,
   type WorkOrderDoc,
 } from '../models/index.js';
@@ -486,8 +486,8 @@ export async function getWorkOrderFacets(scope: VisibleScope): Promise<WorkOrder
       },
     ]).exec(),
     loadHierarchy(),
-    Technician.find({ active: true }).select('name').sort({ name: 1 }).lean<{ name: string }[]>(),
-    User.find({ status: 'active' }).select('name').sort({ name: 1 }).lean<{ name: string }[]>(),
+    Technician.find({ active: true, ...locationClause(scope) }).select('name').sort({ name: 1 }).lean<{ name: string }[]>(),
+    User.find({ status: 'active', ...(scope.coversAll ? {} : { homeScopeId: { $in: [...scope.ids] } }) }).select('name').sort({ name: 1 }).lean<{ name: string }[]>(),
   ]);
 
   const facet = rows[0];

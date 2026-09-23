@@ -212,11 +212,11 @@ export async function getDataset(
     can('alerts', 'compliance', 'workspace') ? Alert.find(byAsset).sort({ createdAt: -1 }).limit(ALERT_LIMIT).lean() : empty,
     can('alerts', 'compliance') ? AlertRule.find().sort({ name: 1 }).lean() : empty,
     // A notification is addressed to a person, or broadcast to everyone.
-    Notification.find({ $or: [{ userId }, { userId: { $exists: false } }] })
+    Notification.find({ userId })
       .sort({ at: -1 })
       .limit(NOTIFICATION_LIMIT)
       .lean(),
-    can('compliance', 'admin') ? AuditLog.find().sort({ timestamp: -1 }).limit(AUDIT_LIMIT).lean() : empty,
+    can('compliance', 'admin') ? AuditLog.find(scope.coversAll ? {} : { scopeId: { $in: [...scope.ids] } }).sort({ timestamp: -1 }).limit(AUDIT_LIMIT).lean() : empty,
 
     can('tracking') ? Zone.find().lean() : empty,
     can('tracking') ? Sensor.find(byAsset).sort({ _id: 1 }).lean() : empty,
@@ -231,15 +231,15 @@ export async function getDataset(
     can('analytics') ? Report.find().sort({ name: 1 }).lean() : empty,
     can('operations', 'compliance') ? CycleCount.find().sort({ date: -1 }).lean() : empty,
     can('compliance') ? Certification.find(byAsset).sort({ expiresAt: 1 }).lean() : empty,
-    can('admin') ? Integration.find().sort({ name: 1 }).lean() : empty,
-    can('admin') ? ApprovalWorkflow.find().sort({ name: 1 }).lean() : empty,
+    can('admin') && scope.coversAll ? Integration.find().sort({ name: 1 }).lean() : empty,
+    can('admin') ? ApprovalWorkflow.find(scope.coversAll ? {} : { scopeId: { $in: [...scope.ids] } }).sort({ name: 1 }).lean() : empty,
 
     // The people directory and the location tree. Available to every session,
     // not just administrators: they are what the custodian pickers, the scope
     // switcher and the assignment fields are populated from, so gating them
     // would break ordinary screens rather than protect anything — the sensitive
     // part of a user record (its password hash) never leaves the model.
-    User.find({ status: 'active' }).sort({ name: 1 }).lean(),
+    User.find({ status: 'active', ...(scope.coversAll ? {} : { homeScopeId: { $in: [...scope.ids] }, roleId: { $ne: 'super_admin' } }) }).sort({ name: 1 }).lean(),
     ScopeNodeModel.find().lean(),
 
     can('operations', 'assets') ? Transfer.find(byAsset).sort({ requestedAt: -1 }).lean() : empty,
@@ -247,14 +247,14 @@ export async function getDataset(
     can('operations', 'maintenance') ? Technician.find(technicianFilter).sort({ name: 1 }).lean() : empty,
 
     // Platform administration and governance.
-    can('admin') ? Team.find().sort({ name: 1 }).lean() : empty,
-    can('admin', 'system') ? ApiKey.find().sort({ createdAt: -1 }).lean() : empty,
-    can('admin') ? Webhook.find().sort({ url: 1 }).lean() : empty,
+    can('admin') && scope.coversAll ? Team.find().sort({ name: 1 }).lean() : empty,
+    can('admin', 'system') && scope.coversAll ? ApiKey.find().sort({ createdAt: -1 }).lean() : empty,
+    can('admin') && scope.coversAll ? Webhook.find().sort({ url: 1 }).lean() : empty,
     // A passkey is personal: only ever the signed-in user's own.
     Passkey.find({ userId }).sort({ added: -1 }).lean(),
-    can('admin') ? Backup.find().sort({ when: -1 }).lean() : empty,
-    can('admin') ? Invoice.find().sort({ date: -1 }).lean() : empty,
-    can('analytics', 'admin') ? ExportJob.find().sort({ at: -1 }).lean() : empty,
+    can('admin') && scope.coversAll ? Backup.find().sort({ when: -1 }).lean() : empty,
+    can('admin') && scope.coversAll ? Invoice.find().sort({ date: -1 }).lean() : empty,
+    can('analytics', 'admin') && scope.coversAll ? ExportJob.find().sort({ at: -1 }).lean() : empty,
     SupportTicket.find().sort({ updated: -1 }).lean(),
     can('alerts', 'compliance') ? EscalationPolicy.find().sort({ name: 1 }).lean() : empty,
     can('alerts', 'compliance') ? OnCallShift.find().sort({ order: 1 }).lean() : empty,

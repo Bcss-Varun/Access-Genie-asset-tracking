@@ -32,7 +32,7 @@ import {
   type ScopeNodeDoc,
 } from '../models/index.js';
 import { ApiError } from '../utils/ApiError.js';
-import type { VisibleScope } from './tenancy.service.js';
+import { assetClause, locationClause, type VisibleScope } from './tenancy.service.js';
 import { logger } from '../config/logger.js';
 import { markEstateChanged } from './derivation.scheduler.js';
 import { descendantIds } from './scopeFilter.service.js';
@@ -511,7 +511,7 @@ export async function deleteTemplate(id: string): Promise<{ deleted: boolean; de
  * a union, not an intersection, because the three are alternative ways of
  * saying "this kind of thing", not filters that stack.
  */
-export async function templateAssets(id: string): Promise<{ id: string; name: string; category: string; location: string }[]> {
+export async function templateAssets(id: string, scope: VisibleScope): Promise<{ id: string; name: string; category: string; location: string }[]> {
   const template = await InspectionTemplate.findById(id).lean<InspectionTemplateDoc>();
   if (!template) throw ApiError.notFound('Inspection template');
 
@@ -531,7 +531,7 @@ export async function templateAssets(id: string): Promise<{ id: string; name: st
     filter.$or = clauses;
   }
 
-  const assets = await Asset.find(filter)
+  const assets = await Asset.find({ $and: [filter, locationClause(scope)] })
     .select('name category location.name')
     .sort({ name: 1 })
     .limit(500)
@@ -617,7 +617,7 @@ export async function getInspectionStats(
 }
 
 /** Filter-bar options, counted from the records that exist. */
-export async function getInspectionFacets(): Promise<InspectionFacets> {
+export async function getInspectionFacets(scope: VisibleScope): Promise<InspectionFacets> {
   const [rows, hierarchy, roster, users, templates] = await Promise.all([
     Inspection.aggregate<{
       byFacility: { _id: string | null; count: number }[];
@@ -626,6 +626,7 @@ export async function getInspectionFacets(): Promise<InspectionFacets> {
       byType: { _id: InspectionType; count: number }[];
       byStatus: { _id: InspectionStatus; count: number }[];
     }>([
+      { $match: await assetClause(scope) },
       { $lookup: { from: ASSET_COLLECTION, localField: 'assetId', foreignField: '_id', as: '__asset' } },
       { $unwind: { path: '$__asset', preserveNullAndEmptyArrays: true } },
       {
@@ -639,8 +640,8 @@ export async function getInspectionFacets(): Promise<InspectionFacets> {
       },
     ]).exec(),
     loadHierarchy(),
-    Technician.find({ active: true }).select('name').sort({ name: 1 }).lean<{ name: string }[]>(),
-    User.find({ status: 'active' }).select('name').sort({ name: 1 }).lean<{ name: string }[]>(),
+    Technician.find({ active: true, ...locationClause(scope) }).select('name').sort({ name: 1 }).lean<{ name: string }[]>(),
+    User.find({ status: 'active', ...(scope.coversAll ? {} : { homeScopeId: { $in: [...scope.ids] } }) }).select('name').sort({ name: 1 }).lean<{ name: string }[]>(),
     InspectionTemplate.find().select('name').sort({ name: 1 }).lean<{ _id: string; name: string }[]>(),
   ]);
 

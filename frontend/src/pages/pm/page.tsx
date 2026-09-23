@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { allPmSchedules } from '@/lib/dataset';
+import { allPmSchedules, allWorkOrders } from '@/lib/dataset';
 import type { PmSchedule, PmFrequency } from '@access-genie/shared';
 import { PageHeader, Badge, KpiCard, EmptyState } from '@/components/ui/primitives';
 import { Button } from '@/components/ui/Button';
@@ -23,9 +23,6 @@ const freqTone = (f: PmFrequency): Tone =>
         : f === 'Annual' ? 'slate'
           : 'red';
 
-const complianceHex = (pct: number): string =>
-  pct >= 95 ? '#10b981' : pct >= 80 ? '#f59e0b' : '#ef4444';
-
 // Due-date label — relTime clamps the future to "0s ago", so we compute both directions here.
 function dueLabel(iso: string): { text: string; overdue: boolean } {
   const diffDays = Math.round((Date.parse(iso) - nowMs()) / DAY);
@@ -35,19 +32,9 @@ function dueLabel(iso: string): { text: string; overdue: boolean } {
   return { text: `in ${diffDays}d`, overdue: false };
 }
 
-// ── compliance meter ──────────────────────────────────────────────────────────
-function ComplianceBar({ pct }: { pct: number }) {
-  return (
-    <div className="flex items-center gap-2 min-w-[7rem]">
-      <div className="h-1.5 flex-1 rounded-full bg-slate-200 overflow-hidden">
-        <div
-          className="h-full rounded-full"
-          style={{ width: `${Math.max(0, Math.min(100, pct))}%`, backgroundColor: complianceHex(pct) }}
-        />
-      </div>
-      <span className="text-xs font-medium text-slate-600 tabular-nums w-9 text-right">{pct}%</span>
-    </div>
-  );
+function completions(pm: PmSchedule): number {
+  return allWorkOrders.filter(order => order.assetId === pm.assetId && order.status === 'Completed'
+    && order.description?.includes(`schedule ${pm.id}`)).length;
 }
 
 const FREQUENCIES: PmFrequency[] = ['Monthly', 'Quarterly', 'Semi-Annual', 'Annual', 'Usage-based'];
@@ -66,9 +53,7 @@ export default function PmSchedulesPage() {
     return d >= 0 && d <= 7 * DAY;
   }).length;
   const overdue = allPmSchedules.filter((p) => Date.parse(p.nextDue) < nowMs()).length;
-  const avgCompliance = Math.round(
-    allPmSchedules.reduce((sum, p) => sum + p.compliancePct, 0) / (total || 1),
-  );
+  const completedPlans = allPmSchedules.filter(plan => completions(plan) > 0).length;
 
   // ── filtered rows ─────────────────────────────────────────────────────────────
   const rows = useMemo(
@@ -143,7 +128,7 @@ export default function PmSchedulesPage() {
         <KpiCard label="Total PM Plans" value={total} sub="Active schedules" accent />
         <KpiCard label="Due Soon" value={dueSoon} sub="Next 7 days" tone="amber" />
         <KpiCard label="Overdue" value={overdue} sub="Past next-due date" tone="red" />
-        <KpiCard label="Avg Compliance" value={`${avgCompliance}%`} sub="Fleet PM adherence" tone="emerald" />
+        <KpiCard label="Plans serviced" value={completedPlans} sub="With recorded completed work" tone="emerald" />
       </div>
 
       {/* ── Frequency filter chips ──────────────────────────────────────────────── */}
@@ -188,7 +173,7 @@ export default function PmSchedulesPage() {
                 <th className="px-4 py-3 font-semibold">Asset</th>
                 <th className="px-4 py-3 font-semibold">Frequency</th>
                 <th className="px-4 py-3 font-semibold">Next Due</th>
-                <th className="px-4 py-3 font-semibold">Compliance</th>
+                <th className="px-4 py-3 font-semibold">Completed work</th>
                 <th className="px-4 py-3 font-semibold">Assigned Team</th>
                 <th className="px-4 py-3 font-semibold text-right">Action</th>
               </tr>
@@ -217,7 +202,7 @@ export default function PmSchedulesPage() {
                         {due.text}
                       </span>
                     </td>
-                    <td className="px-4 py-3"><ComplianceBar pct={p.compliancePct} /></td>
+                    <td className="px-4 py-3">{completions(p)}</td>
                     <td className="px-4 py-3 text-slate-600 whitespace-nowrap">{p.assignedTeam}</td>
                     <td className="px-4 py-3 text-right">
                       <div className="flex items-center justify-end gap-1">

@@ -1,4 +1,5 @@
-import { useState } from 'react';
+import { useToast } from '@/components/providers/ToastProvider';
+import { useRef, useState } from 'react';
 import { LIFECYCLE_APPROVAL_REQUIRED, LIFECYCLE_FLOW, type Asset, type LifecycleStage } from '@access-genie/shared';
 import { FormDialog, Field, Select, TextArea, optionsFrom } from '@/components/ui/FormDialog';
 import { useMutate } from '@/api/mutate';
@@ -22,6 +23,9 @@ type Props =
   | { mode: 'bulk'; assetIds: string[]; initialStage?: LifecycleStage; onClose: () => void; onDone?: () => void };
 
 export function ChangeStageDialog(props: Props) {
+  const lock = useRef(false);
+  const { toast } = useToast();
+  const [failed, setFailed] = useState<{ id: string; reason: string }[]>([]);
   const { run, isPending } = useMutate();
   const [toStage, setToStage] = useState<LifecycleStage>(() =>
     props.mode === 'single'
@@ -40,26 +44,33 @@ export function ChangeStageDialog(props: Props) {
   const noLegalMove = props.mode === 'single' && options.length === 0;
 
   const submit = async () => {
-    const input = { toStage, reason: reason.trim(), comments: comments.trim() || undefined };
+    if (lock.current) return;
+    lock.current = true;
+    try {
+      const input = { toStage, reason: reason.trim(), comments: comments.trim() || undefined };
 
-    if (props.mode === 'single') {
-      const result = await run(lifecycleApi.requestStageChange(props.asset.id, input), {
-        success: needsApproval ? 'Stage change submitted for approval' : 'Stage updated',
-        successDetail: needsApproval
-          ? `${props.asset.name} will move to ${toStage} once approved.`
-          : `${props.asset.name} → ${toStage}`,
-        describe: 'change that asset’s stage',
-      });
-      if (result) props.onDone?.();
-    } else {
-      const result = await run(lifecycleApi.bulkStageChange({ ids: props.assetIds, ...input }), {
-        success: 'Bulk stage change submitted',
-        successDetail: needsApproval ? `Applied where automatic; the rest await approval.` : `Requested for ${props.assetIds.length} assets.`,
-        describe: 'change those assets’ stage',
-      });
-      if (result) props.onDone?.();
-    }
-    props.onClose();
+      if (props.mode === 'single') {
+        const result = await run(lifecycleApi.requestStageChange(props.asset.id, input), {
+          success: needsApproval ? 'Stage change submitted for approval' : 'Stage updated',
+          successDetail: needsApproval
+            ? `${props.asset.name} will move to ${toStage} once approved.`
+            : `${props.asset.name} → ${toStage}`,
+          describe: 'change that asset’s stage',
+        });
+        if (!result) return;
+        props.onDone?.();
+      } else {
+        const result = await run(lifecycleApi.bulkStageChange({ ids: failed.length ? failed.map((f) => f.id) : props.assetIds, ...input }), {
+          describe: 'change those assets’ stage',
+        });
+        if (!result) return;
+        setFailed(result.failed);
+        toast({ title: `${result.updated.length} updated; ${result.pendingApproval.length} awaiting approval; ${result.failed.length} failed`, tone: result.failed.length ? 'error' : 'success' });
+        if (result.failed.length) return;
+        props.onDone?.();
+      }
+      props.onClose();
+    } finally { lock.current = false; }
   };
 
   return (
@@ -77,6 +88,7 @@ export function ChangeStageDialog(props: Props) {
       onSubmit={() => void submit()}
       onCancel={props.onClose}
     >
+      {failed.length > 0 && <ul role="alert" className="text-sm text-red-700">{failed.map((f) => <li key={f.id}>{f.id}: {f.reason}</li>)}</ul>}
       {noLegalMove ? (
         <p className="rounded-lg bg-slate-50 px-3 py-2 text-xs text-slate-600">
           {props.mode === 'single' ? props.asset.lifecycleStage : 'This stage'} is a terminal stage — it cannot

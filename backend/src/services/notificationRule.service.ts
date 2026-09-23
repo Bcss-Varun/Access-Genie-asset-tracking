@@ -1,3 +1,4 @@
+import { resolveVisibleScope } from './tenancy.service.js';
 import type {
   NotificationChannel,
   NotificationEvent,
@@ -111,7 +112,17 @@ async function resolveRecipients(rule: NotificationRuleDoc, payload: EventPayloa
     }
   }
 
-  return [...ids];
+  const allowed: string[] = [];
+  for (const id of ids) {
+    const user = await User.findOne({ _id: id, status: 'active' }).lean();
+    if (!user) continue;
+    if (payload.scopeId && user.roleId !== 'super_admin') {
+      const scope = await resolveVisibleScope({ roleId: user.roleId, homeScopeId: user.homeScopeId });
+      if (!scope.ids.has(payload.scopeId)) continue;
+    }
+    allowed.push(id);
+  }
+  return allowed;
 }
 
 // ── Throttle and quiet hours ─────────────────────────────────────────────────
@@ -221,7 +232,7 @@ export async function fireEvent(
       }
 
       for (const userId of recipients) {
-        await notify({ title, body, category: 'Automation', userId });
+        await notify({ title, body, category: 'Automation', userId, scopeId: payload.scopeId });
       }
 
       await NotificationRule.updateOne(

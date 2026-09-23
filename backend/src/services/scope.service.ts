@@ -1,3 +1,4 @@
+import { User } from '../models/User.js';
 import type { ScopeLevel, ScopeNode } from '@access-genie/shared';
 import { Asset, ScopeNodeModel, buildScopeTree, nextId, type ScopeNodeDoc } from '../models/index.js';
 import { ApiError } from '../utils/ApiError.js';
@@ -203,5 +204,6 @@ export async function deleteScopeNode(id: string): Promise<void> {
     throw ApiError.conflict(`${assets} asset(s) are located here — move them before deleting this scope`);
   }
 
+  if (await User.exists({ homeScopeId: id })) throw ApiError.conflict('Move users assigned to this scope before deleting it');
   await ScopeNodeModel.deleteOne({ _id: id });
 }

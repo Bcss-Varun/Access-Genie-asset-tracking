@@ -1,3 +1,4 @@
+import { resetDatasetScope } from './dataset';
 import { createContext, use, useCallback, useEffect, useMemo, useState, type ReactNode } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { hasModule, type ModuleKey, type Session } from '@access-genie/shared';
@@ -71,6 +72,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     setSessionExpiredHandler(() => {
       setSession(null);
+      resetDatasetScope();
       queryClient.clear();
     });
   }, [queryClient]);
@@ -85,6 +87,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         return { mfaRequired: true as const, challengeToken: result.challengeToken };
       }
 
+      resetDatasetScope();
       setAccessToken(result.accessToken);
       setSession({ user: result.user, role: result.role, modules: result.modules });
       queryClient.clear();
@@ -96,6 +99,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const verifyMfa = useCallback(
     async (challengeToken: string, code: string) => {
       const auth = await authApi.verifyMfa(challengeToken, code);
+      resetDatasetScope();
       setAccessToken(auth.accessToken);
       setSession({ user: auth.user, role: auth.role, modules: auth.modules });
       queryClient.clear();
@@ -111,6 +115,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       // to be logged out, and the refresh cookie expires on its own regardless.
       setAccessToken(null);
       setSession(null);
+      resetDatasetScope();
       queryClient.clear();
     }
   }, [queryClient]);

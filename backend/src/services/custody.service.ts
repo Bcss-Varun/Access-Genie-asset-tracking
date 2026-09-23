@@ -1,5 +1,5 @@
 import type { CustodyAction } from '@access-genie/shared';
-import { Activity, Asset, CustodyRecord, type CustodyDoc } from '../models/index.js';
+import { Activity, Asset, AssetPresence, CustodyRecord, type CustodyDoc } from '../models/index.js';
 import { nextId } from '../models/Counter.js';
 import { ApiError } from '../utils/ApiError.js';
 import { applyLifecycleTransition } from './lifecycle.service.js';
@@ -50,6 +50,7 @@ export async function recordCustody(input: CheckoutInput, actor: string): Promis
   // other action puts it in someone's hands.
   const custodian = input.action === 'Checked In' ? 'Unassigned' : input.holder;
   await Asset.updateOne({ _id: asset._id }, { $set: { custodian } });
+  await AssetPresence.updateOne({ _id: asset._id }, { $set: { custodian, custody: input.action === 'Checked Out' ? 'Checked Out' : 'In Place' } });
 
   await Activity.create({
     assetId: asset._id,

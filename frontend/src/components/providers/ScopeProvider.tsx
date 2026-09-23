@@ -2,7 +2,7 @@ import { createContext, useContext, useState, useCallback, useMemo } from 'react
 import { useQueryClient } from '@tanstack/react-query';
 import type { ScopeNode } from '@access-genie/shared';
 import { scopeTree, findScope } from '@/lib/rbac';
-import { DATASET_KEY, getActiveScope, setActiveScope } from '@/api/dataset';
+import { DATASET_KEY, datasetOptions, getActiveScope, setActiveScope } from '@/api/dataset';
 
 /**
  * Which part of the organisation is in view.
@@ -49,14 +49,13 @@ export function ScopeProvider({ children }: { children: React.ReactNode }) {
       if (!findScope(id) || id === scopeId) return;
 
       setScopeIdState(id);
+      void queryClient.cancelQueries({ queryKey: DATASET_KEY });
       setActiveScope(id === scopeTree.id ? null : id);
       setSwitching(true);
 
-      // Refetch rather than invalidate: the screens read module bindings that
-      // are only rewritten when the payload lands, so an invalidation would
-      // leave them showing the previous site until the request happened to
-      // resolve. This settles once the new payload has hydrated.
-      void queryClient.refetchQueries({ queryKey: DATASET_KEY }).finally(() => setSwitching(false));
+      // Fetch the exact selection. The dataset gate waits for its new query;
+      // older queries keep their original scope and cannot hydrate this one.
+      void queryClient.fetchQuery(datasetOptions()).catch(() => { /* The dataset gate displays the error and retry. */ }).finally(() => setSwitching(false));
     },
     [queryClient, scopeId],
   );

@@ -4,6 +4,7 @@ import { asyncHandler } from '../utils/asyncHandler.js';
 import { sendData } from '../utils/response.js';
 import { ApiError } from '../utils/ApiError.js';
 import { recordAudit } from '../services/audit.service.js';
+import { requireScope } from '../middleware/scope.js';
 import * as service from '../services/lifecycle.service.js';
 import type { BulkTransitionInput, DecideInput, TransitionInput } from '../validators/lifecycle.validator.js';
 
@@ -13,22 +14,22 @@ function actorOf(req: Request): { actor: string; role: RoleId } {
   return { actor: req.auth.user.name, role: req.auth.roleId };
 }
 
-export const board = asyncHandler(async (_req: Request, res: Response) => {
-  sendData(res, await service.getLifecycleBoard());
+export const board = asyncHandler(async (req: Request, res: Response) => {
+  sendData(res, await service.getLifecycleBoard(requireScope(req)));
 });
 
-export const kpis = asyncHandler(async (_req: Request, res: Response) => {
-  sendData(res, await service.getLifecycleKpis());
+export const kpis = asyncHandler(async (req: Request, res: Response) => {
+  sendData(res, await service.getLifecycleKpis(requireScope(req)));
 });
 
 export const history = asyncHandler(async (req: Request, res: Response) => {
-  sendData(res, await service.listTransitions(req.params.id as string));
+  sendData(res, await service.listTransitions(requireScope(req), req.params.id as string));
 });
 
 export const transition = asyncHandler(async (req: Request, res: Response) => {
   const id = req.params.id as string;
   const { actor, role } = actorOf(req);
-  const result = await service.requestStageChange(id, req.body as TransitionInput, actor, role);
+  const result = await service.requestStageChange(requireScope(req), id, req.body as TransitionInput, actor, role);
 
   recordAudit(req, {
     action: result.status === 'Applied' ? 'lifecycle.transition' : 'lifecycle.transition_requested',
@@ -44,7 +45,7 @@ export const decide = asyncHandler(async (req: Request, res: Response) => {
   const { actor, role } = actorOf(req);
   const { decision } = req.body as DecideInput;
 
-  const transition = await service.decideStageChange(id, decision, actor, role);
+  const transition = await service.decideStageChange(requireScope(req), id, decision, actor, role);
   recordAudit(req, { action: `lifecycle.${decision.toLowerCase()}`, target: id, category: 'Lifecycle' });
   sendData(res, transition);
 });
@@ -53,7 +54,7 @@ export const bulkTransition = asyncHandler(async (req: Request, res: Response) =
   const { actor, role } = actorOf(req);
   const { ids, ...input } = req.body as BulkTransitionInput;
 
-  const result = await service.bulkStageChange(ids, input, actor, role);
+  const result = await service.bulkStageChange(requireScope(req), ids, input, actor, role);
   recordAudit(req, {
     action: 'lifecycle.bulk_transition',
     target: `${ids.length} assets`,

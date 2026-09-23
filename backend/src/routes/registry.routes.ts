@@ -336,11 +336,13 @@ router.get(
 router.get('/approvals/:id', validate({ params: idParamSchema }), approvalController.getRequest);
 router.post(
   '/approvals/:id/decide',
+  requireModule('operations', 'assets'),
   validate({ params: idParamSchema, body: decideSchema }),
   approvalController.decideRequest,
 );
 router.post(
   '/approvals/:id/cancel',
+  requireModule('operations', 'assets'),
   validate({ params: idParamSchema, body: cancelSchema }),
   approvalController.cancelRequest,
 );

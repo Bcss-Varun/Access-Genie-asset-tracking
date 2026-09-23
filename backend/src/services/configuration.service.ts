@@ -1,4 +1,3 @@
-import mongoose from 'mongoose';
 import {
   Backup,
   OrgSettings,
@@ -101,40 +100,9 @@ export async function deletePasskey(id: string, userId: string): Promise<void> {
 }
 
 // ── Backups ──────────────────────────────────────────────────────────────────
-/**
- * Size of the estate at this moment, so the row reports something true.
- *
- * `db.stats()` is the real answer and is used when the driver will give it. It
- * will not on a shared-tier Atlas cluster, where `dbStats` is not granted — so
- * rather than failing the whole request over a display string, the row falls
- * back to a document count. A snapshot with an approximate size is far more
- * useful than no snapshot.
- */
-async function estimateSize(): Promise<string> {
-  try {
-    const stats = await mongoose.connection.db?.stats();
-    const bytes = stats?.dataSize ?? 0;
-    if (bytes > 0) {
-      return bytes > 1_048_576 ? `${(bytes / 1_048_576).toFixed(1)} MB` : `${Math.max(1, Math.round(bytes / 1024))} KB`;
-    }
-  } catch {
-    /* fall through to the count */
-  }
-
-  const collections = Object.values(mongoose.connection.models);
-  const counts = await Promise.all(collections.map((m) => m.estimatedDocumentCount().catch(() => 0)));
-  const documents = counts.reduce((sum, n) => sum + n, 0);
-  return `${documents.toLocaleString()} documents`;
-}
-
+/** No backup artifact exists until a real database backup provider is configured. */
 export async function createBackup(): Promise<BackupDoc> {
-  const created = await Backup.create({
-    _id: await nextId('backup', 'BK'),
-    when: new Date(),
-    size: await estimateSize(),
-    status: 'Complete',
-  });
-  return created.toObject();
+  throw new ApiError(501, 'BAD_REQUEST', 'Backup creation is unavailable. Configure and verify database backups with your database operator.');
 }
 
 /**

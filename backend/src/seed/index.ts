@@ -46,6 +46,7 @@ function initialsFor(name: string): string {
 }
 
 async function seed(): Promise<void> {
+  if (!env.ADMIN_PASSWORD) throw new Error('Set ADMIN_PASSWORD explicitly before seeding');
   await connectDb();
 
   if (FRESH) {
@@ -94,7 +95,7 @@ async function seed(): Promise<void> {
   await syncCounter('user', 1);
 
   logger.info('Seed complete');
-  logger.info(`Sign in as ${env.ADMIN_EMAIL} with the password: ${env.ADMIN_PASSWORD}`);
+  logger.info(`Sign in as ${env.ADMIN_EMAIL} with the configured ADMIN_PASSWORD`);
 }
 
 seed()

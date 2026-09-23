@@ -28,7 +28,7 @@ import {
   type ScopeNodeDoc,
 } from '../models/index.js';
 import { ApiError } from '../utils/ApiError.js';
-import type { VisibleScope } from './tenancy.service.js';
+import { assetClause, type VisibleScope } from './tenancy.service.js';
 import { logger } from '../config/logger.js';
 import { markEstateChanged } from './derivation.scheduler.js';
 import { descendantIds } from './scopeFilter.service.js';
@@ -381,7 +381,7 @@ export async function getPredictiveAlertStats(
  * sources are returned only where alerts exist — offering a cut that can only
  * ever return nothing is noise.
  */
-export async function getPredictiveAlertFacets(): Promise<PredictiveAlertFacets> {
+export async function getPredictiveAlertFacets(scope: VisibleScope): Promise<PredictiveAlertFacets> {
   const [rows, hierarchy] = await Promise.all([
     PredictiveAlert.aggregate<{
       bySeverity: { _id: PredictiveSeverity; count: number }[];
@@ -391,6 +391,7 @@ export async function getPredictiveAlertFacets(): Promise<PredictiveAlertFacets>
       byAsset: { _id: string; name: string; count: number }[];
       byLocation: { _id: string | null; count: number }[];
     }>([
+      { $match: await assetClause(scope) },
       { $lookup: { from: ASSET_COLLECTION, localField: 'assetId', foreignField: '_id', as: '__asset' } },
       { $unwind: { path: '$__asset', preserveNullAndEmptyArrays: true } },
       {

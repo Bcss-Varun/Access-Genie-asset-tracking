@@ -1,6 +1,6 @@
 import type { FilterQuery } from 'mongoose';
 import type { ApiMeta } from '@access-genie/shared';
-import { Activity, Asset, CustodyRecord, Insight, LifecycleTransition, Transfer, WorkOrder, healthStatusFor, nextId, type AssetDoc } from '../models/index.js';
+import { Activity, Asset, CustodyRecord, Insight, LifecycleTransition, Transfer, WorkOrder, healthStatusFor, type AssetDoc } from '../models/index.js';
 import { ApiError } from '../utils/ApiError.js';
 import { mintId } from './numbering.service.js';
 import { logger } from '../config/logger.js';
@@ -188,6 +188,19 @@ export async function updateAsset(
     ...(input.warrantyExpiry ? { warrantyExpiry: new Date(input.warrantyExpiry) } : {}),
     ...(input.telemetry ? { telemetry: { ...input.telemetry, lastPing: new Date(input.telemetry.lastPing) } } : {}),
   });
+
+  // Registration and edit screens expose the same purchase facts. Keep their
+  // embedded commercial representation in sync for depreciation consumers.
+  if (asset.onboarding) {
+    const commercial = asset.onboarding.commercial as { purchasePrice?: number; purchaseDate?: Date; warrantyEnd?: Date };
+    if (input.purchasePrice !== undefined) commercial.purchasePrice = input.purchasePrice;
+    else if (input.onboarding?.commercial.purchasePrice !== undefined) asset.purchasePrice = commercial.purchasePrice!;
+    if (input.purchaseDate) commercial.purchaseDate = new Date(input.purchaseDate);
+    else if (input.onboarding?.commercial.purchaseDate) asset.purchaseDate = new Date(input.onboarding.commercial.purchaseDate);
+    if (input.warrantyExpiry !== undefined) commercial.warrantyEnd = input.warrantyExpiry ? new Date(input.warrantyExpiry) : undefined;
+    else if (input.onboarding?.commercial.warrantyEnd) asset.warrantyExpiry = new Date(input.onboarding.commercial.warrantyEnd);
+  }
+  if (input.warrantyExpiry === null) asset.warrantyExpiry = undefined;
 
   await asset.save();
 

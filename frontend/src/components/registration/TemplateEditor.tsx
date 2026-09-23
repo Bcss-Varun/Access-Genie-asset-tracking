@@ -1,6 +1,6 @@
-import { useMemo, useState } from 'react';
+import { useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   ASSET_CATEGORIES,
   FIELD_TYPES,
@@ -47,12 +47,14 @@ interface CustomDraft {
 
 export function TemplateEditor({ existing }: { existing?: AssetTemplate }) {
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const { toast } = useToast();
 
   const [name, setName] = useState(existing?.name ?? '');
   const [description, setDescription] = useState(existing?.description ?? '');
   const [icon, setIcon] = useState(existing?.icon ?? '📋');
   const [category, setCategory] = useState<AssetCategory>(existing?.category ?? 'Compute');
+  const saveLock = useRef(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -73,7 +75,7 @@ export function TemplateEditor({ existing }: { existing?: AssetTemplate }) {
   const [addingTo, setAddingTo] = useState<SectionKey | null>(null);
   const [step, setStep] = useState(0);
 
-  const { data: catalog, isLoading } = useQuery({
+  const { data: catalog, isLoading, isError, refetch } = useQuery({
     queryKey: ['field-catalog'],
     queryFn: () => registrationApi.catalog(),
   });
@@ -124,6 +126,7 @@ export function TemplateEditor({ existing }: { existing?: AssetTemplate }) {
   const requiredCount = chosenEntries.filter(([, s]) => s.required).length;
 
   const save = async () => {
+    if (saveLock.current) return;
     setError(null);
     if (name.trim().length < 2) {
       setError('Give the template a name of at least two characters.');
@@ -149,17 +152,22 @@ export function TemplateEditor({ existing }: { existing?: AssetTemplate }) {
       })),
     };
 
+    saveLock.current = true;
     setSaving(true);
     try {
       const saved = existing ? await templatesApi.update(existing.id, body) : await templatesApi.create(body);
+      await Promise.all([queryClient.invalidateQueries({ queryKey: ['templates'] }), queryClient.invalidateQueries({ queryKey: ['registration-form'] })]);
       toast({ title: `“${saved.name}” saved`, description: `${chosenCount} fields, ${requiredCount} required.`, tone: 'success' });
       navigate('/assets/templates');
     } catch (err) {
       setError(err instanceof ApiRequestError ? err.message : 'The template could not be saved.');
     } finally {
+      saveLock.current = false;
       setSaving(false);
     }
   };
+
+  if (isError) return <div role="alert" className="rounded-xl border border-red-200 p-6"><p>Could not load the field catalogue.</p><Button onClick={() => void refetch()}>Retry</Button></div>;
 
   if (isLoading || !catalog) {
     return <div className="rounded-xl border border-slate-200 bg-white p-8 text-sm text-slate-500">Loading the field catalogue…</div>;
@@ -202,7 +210,7 @@ export function TemplateEditor({ existing }: { existing?: AssetTemplate }) {
   const section = onBasics ? undefined : sectionSteps.find((s) => s.key === current.key);
   const goto = (i: number) => {
     setStep(Math.max(0, Math.min(steps.length - 1, i)));
-    window.scrollTo({ top: 0, behavior: 'smooth' });
+    document.getElementById('main')?.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
   return (

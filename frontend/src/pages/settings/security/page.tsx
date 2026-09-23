@@ -1,3 +1,4 @@
+import { useAuth } from '@/api/auth';
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import type { Passkey } from '@access-genie/shared';
@@ -23,6 +24,7 @@ const th = 'px-4 py-3 text-left font-semibold uppercase tracking-wider text-[11p
 const td = 'px-4 py-3.5';
 
 export default function SecuritySettingsPage() {
+  const { logout } = useAuth();
   const { run, isPending } = useMutate();
   const { toast } = useToast();
   const { refresh } = useSession();
@@ -67,7 +69,7 @@ export default function SecuritySettingsPage() {
 
     const ok = await run(authApi.changePassword(current, next), {
       success: 'Password updated',
-      successDetail: 'Other devices stay signed in — revoke them below if that is not what you want.',
+      successDetail: 'All sessions have ended. Sign in again with your new password.',
       describe: 'change your password',
     });
     if (!ok) return;
@@ -75,12 +77,13 @@ export default function SecuritySettingsPage() {
     setCurrent('');
     setNext('');
     setConfirm('');
+    await logout();
   };
 
   const addPasskey = async () => {
     const ok = await run(passkeysApi.create({ name: passkeyName.trim() || 'This device' }), {
-      success: 'Authenticator registered',
-      describe: 'register that authenticator',
+      success: 'Device label saved',
+      describe: 'save that device label',
     });
     if (!ok) return;
     setPasskeyName('');
@@ -91,7 +94,7 @@ export default function SecuritySettingsPage() {
     if (!removingPasskey) return;
     await run(passkeysApi.remove(removingPasskey.id), {
       success: 'Removed',
-      successDetail: `${removingPasskey.name} can no longer be used.`,
+      successDetail: `The label ${removingPasskey.name} was removed. Active sessions are unchanged.`,
       describe: 'remove that authenticator',
     });
     setRemovingPasskey(null);
@@ -101,7 +104,7 @@ export default function SecuritySettingsPage() {
     <div className="h-full flex flex-col space-y-6">
       <PageHeader
         title="Security"
-        subtitle="Protect your account with a strong password, MFA and passkeys."
+        subtitle="Protect your account with a strong password and authenticator-app MFA."
         breadcrumb={[{ label: 'Settings', href: '/settings/profile' }, { label: 'Security' }]}
       />
 
@@ -180,19 +183,19 @@ export default function SecuritySettingsPage() {
       <div className="glass-panel rounded-xl overflow-hidden">
         <div className="flex items-center justify-between px-4 py-3 border-b border-slate-200">
           <div>
-            <h3 className="font-heading font-semibold text-slate-800">Registered devices</h3>
+            <h3 className="font-heading font-semibold text-slate-800">Saved device labels</h3>
             <p className="mt-0.5 text-xs text-slate-400">
               Devices you have named for this account. WebAuthn is not wired to a relying party here, so these are a
               record rather than a sign-in method — the second factor is the authenticator app above.
             </p>
           </div>
           <Button variant="outline" size="sm" onClick={() => setDialog('add-passkey')}>
-            Register device
+            Add device label
           </Button>
         </div>
         <div className="divide-y divide-slate-100">
           {passkeys.length === 0 && (
-            <EmptyState icon="🔑" title="No devices registered" description="Name a device to keep track of where this account is used." />
+            <EmptyState icon="🔑" title="No device labels saved" description="Name a device to keep track of where this account is used." />
           )}
           {passkeys.map((pk) => (
             <div key={pk.id} className="flex items-center justify-between px-4 py-3.5">
@@ -266,9 +269,9 @@ export default function SecuritySettingsPage() {
       {dialog === 'add-passkey' && (
         <FormDialog
           icon="🔑"
-          title="Register a device"
+          title="Save a device label"
           description="A name you will recognise, so an unfamiliar entry stands out."
-          submitLabel="Register"
+          submitLabel="Save label"
           busy={isPending}
           onSubmit={() => void addPasskey()}
           onCancel={() => setDialog(null)}

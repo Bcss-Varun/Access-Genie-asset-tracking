@@ -1,5 +1,6 @@
+import { useSyncExternalStore } from 'react';
 import { useQuery, useQueryClient, type UseQueryResult } from '@tanstack/react-query';
-import { apiGet } from '@/api/client';
+import { http, ApiRequestError } from '@/api/client';
 import { hydrate, type Dataset } from '@/lib/dataset';
 
 /**
@@ -17,9 +18,8 @@ export const DATASET_KEY = ['dataset'] as const;
  * Which site the payload is narrowed to.
  *
  * Module-level rather than React state, for the same reason the dataset itself
- * is: `fetchDataset` is called from the query function and from the router's
- * loader path, neither of which sits inside the provider tree. The scope
- * provider is the only thing that writes it.
+ * is: query functions hydrate shared module bindings. Scope changes and
+ * session changes advance a generation so obsolete responses cannot hydrate.
  *
  * `null` means the whole organisation — the server treats an absent `?scope=`
  * as "everything", so the root selection sends nothing rather than sending the
@@ -27,16 +27,23 @@ export const DATASET_KEY = ['dataset'] as const;
  */
 const SCOPE_STORAGE_KEY = 'ag.scope';
 let activeScopeId: string | null = readStoredScope();
+let generation = 0;
+const listeners = new Set<() => void>();
+const subscribe = (listener: () => void) => { listeners.add(listener); return () => { listeners.delete(listener); }; };
+export function resetDatasetScope(): void { setActiveScope(null); }
+export function useDatasetIdentity(): string { return useSyncExternalStore(subscribe, () => `${generation}:${activeScopeId ?? ''}`); }
+
 
 function readStoredScope(): string | null {
   try {
     return window.localStorage.getItem(SCOPE_STORAGE_KEY);
   } catch {
-    // Private browsing, or storage disabled. Falling back to the whole estate
-    // is the safe direction: it shows more, never less than the user expects.
+    // Without local storage, the API returns the signed-in user’s allowed estate.
     return null;
   }
 }
+
+export function getDatasetGeneration(): number { return generation; }
 
 export function getActiveScope(): string | null {
   return activeScopeId;
@@ -44,33 +51,38 @@ export function getActiveScope(): string | null {
 
 export function setActiveScope(id: string | null): void {
   activeScopeId = id;
+  generation += 1;
   try {
     if (id) window.localStorage.setItem(SCOPE_STORAGE_KEY, id);
     else window.localStorage.removeItem(SCOPE_STORAGE_KEY);
   } catch {
     // Not fatal — the selection simply will not survive a reload.
   }
+  listeners.forEach((listener) => listener());
 }
 
-export async function fetchDataset(): Promise<Dataset> {
-  const path = activeScopeId ? `/dataset?scope=${encodeURIComponent(activeScopeId)}` : '/dataset';
-  const data = await apiGet<Dataset>(path);
-  hydrate(data);
-  return data;
+export function datasetOptions() {
+  const scope = activeScopeId;
+  const version = generation;
+  return {
+    // A selection gets a fresh query, even when revisiting an earlier site.
+    // Legacy module bindings cannot safely display a cached, unhydrated scope.
+    queryKey: [...DATASET_KEY, scope, version],
+    queryFn: async ({ signal }: { signal: AbortSignal }): Promise<Dataset> => {
+      const { data: response } = await http.get('/dataset', { params: scope ? { scope } : undefined, signal });
+      if (!response.success) throw new ApiRequestError(response.error.message, response.error.code, 200);
+      const data = response.data as Dataset;
+      if (!signal.aborted && scope === activeScopeId && version === generation) hydrate(data);
+      return data;
+    },
+    staleTime: 5 * 60_000,
+    gcTime: 5 * 60_000,
+  };
 }
 
 export function useDataset(): UseQueryResult<Dataset> {
-  return useQuery({
-    // The scope is part of the identity of this payload: two scopes are two
-    // different datasets, and caching them under one key would hand a screen
-    // the previous site's rows while the new ones were still in flight.
-    queryKey: [...DATASET_KEY, activeScopeId],
-    queryFn: fetchDataset,
-    // The dataset backs whole screens, so refetching it is disruptive; it is
-    // invalidated explicitly after a write instead (see `useRefreshDataset`).
-    staleTime: 5 * 60_000,
-    gcTime: 30 * 60_000,
-  });
+  useDatasetIdentity();
+  return useQuery(datasetOptions());
 }
 
 /**

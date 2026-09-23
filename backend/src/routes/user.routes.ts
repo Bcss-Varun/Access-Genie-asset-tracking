@@ -5,6 +5,7 @@ import { idParamSchema, listQuerySchema } from '../validators/common.js';
 import {
   createUserSchema,
   roleGrantsSchema,
+  rolePermissionsSchema,
   setUserPasswordSchema,
   updateUserSchema,
   userListQuerySchema,
@@ -22,7 +23,7 @@ router.get('/roles', validate({ query: listQuerySchema.partial() }), controller.
 // administrator roles rather than to the admin module grant.
 router.patch(
   '/roles/:id',
-  requireRole('super_admin', 'org_admin'),
+  requireRole('super_admin'),
   validate({ params: idParamSchema, body: roleGrantsSchema }),
   controller.updateRoleGrants,
 );
@@ -30,13 +31,13 @@ router.patch(
 // a role may open, versus what it may do once inside one.
 router.patch(
   '/roles/:id/permissions',
-  requireRole('super_admin', 'org_admin'),
-  validate({ params: idParamSchema }),
+  requireRole('super_admin'),
+  validate({ params: idParamSchema, body: rolePermissionsSchema }),
   controller.setRolePermissions,
 );
 router.post(
   '/roles/:id/reset',
-  requireRole('super_admin', 'org_admin'),
+  requireRole('super_admin'),
   validate({ params: idParamSchema }),
   controller.resetRoleGrants,
 );

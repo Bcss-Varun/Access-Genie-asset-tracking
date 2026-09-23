@@ -214,3 +214,5 @@ export {
 export * from './approval.js';
 export * from './numbering.js';
 export * from './notificationRule.js';
+
+export { MfaChallenge } from './MfaChallenge.js';

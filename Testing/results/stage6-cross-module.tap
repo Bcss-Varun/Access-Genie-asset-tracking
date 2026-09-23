@@ -1,0 +1,167 @@
+TAP version 13
+# Subtest: observation intake refuses a foreign asset and does not write presence
+ok 1 - observation intake refuses a foreign asset and does not write presence
+  ---
+  duration_ms: 5593.040688
+  ...
+# Subtest: PM schedules cannot be created for a foreign asset
+ok 2 - PM schedules cannot be created for a foreign asset
+  ---
+  duration_ms: 35.81343
+  ...
+# Subtest: inspection create and detail reads enforce the asset estate
+ok 3 - inspection create and detail reads enforce the asset estate
+  ---
+  duration_ms: 120.559776
+  ...
+# Subtest: transfer and reservation creation refuse foreign assets
+ok 4 - transfer and reservation creation refuse foreign assets
+  ---
+  duration_ms: 23.285495
+  ...
+# Subtest: workforce queue omits foreign and cancelled work
+ok 5 - workforce queue omits foreign and cancelled work
+  ---
+  duration_ms: 54.06714
+  ...
+# Subtest: intelligence explanation refuses foreign asset identifiers
+ok 6 - intelligence explanation refuses foreign asset identifiers
+  ---
+  duration_ms: 16.765986
+  ...
+# Subtest: asset edits preserve observed zone, timestamp and position
+ok 7 - asset edits preserve observed zone, timestamp and position
+  ---
+  duration_ms: 48.112018
+  ...
+# Subtest: an older observation cannot rewind the latest sighting
+ok 8 - an older observation cannot rewind the latest sighting
+  ---
+  duration_ms: 12.95801
+  ...
+# Subtest: lifecycle notifications are delivered only to users who can see the asset
+ok 9 - lifecycle notifications are delivered only to users who can see the asset
+  ---
+  duration_ms: 74.082408
+  ...
+# Subtest: batch observation preflight prevents partial writes across facilities
+ok 10 - batch observation preflight prevents partial writes across facilities
+  ---
+  duration_ms: 15.333734
+  ...
+# Subtest: tracking workspace, counts and device actions stay within the selected estate
+ok 11 - tracking workspace, counts and device actions stay within the selected estate
+  ---
+  duration_ms: 89.905038
+  ...
+# Subtest: new registry records do not invent presence or healthy hardware
+ok 12 - new registry records do not invent presence or healthy hardware
+  ---
+  duration_ms: 70.249674
+  ...
+# Subtest: concurrent old and new observations preserve latest sighting; coordinate-free reads clear old position
+ok 13 - concurrent old and new observations preserve latest sighting; coordinate-free reads clear old position
+  ---
+  duration_ms: 39.182645
+  ...
+# Subtest: PM automation raises only due work in scope and does not duplicate open occurrences
+ok 14 - PM automation raises only due work in scope and does not duplicate open occurrences
+  ---
+  duration_ms: 64.005217
+  ...
+# Subtest: inspection failure produces one corrective order and completed work leaves the field queue
+ok 15 - inspection failure produces one corrective order and completed work leaves the field queue
+  ---
+  duration_ms: 225.014578
+  ...
+# Subtest: reservation overlap is rejected, cancellation persists, and foreign lists stay private
+ok 16 - reservation overlap is rejected, cancellation persists, and foreign lists stay private
+  ---
+  duration_ms: 60.83873
+  ...
+# Subtest: transfer approval, receipt and custody agree after a real location move
+ok 17 - transfer approval, receipt and custody agree after a real location move
+  ---
+  duration_ms: 139.987522
+  ...
+# Subtest: AI recomputation changes only selected assets and leaves foreign findings intact
+ok 18 - AI recomputation changes only selected assets and leaves foreign findings intact
+  ---
+  duration_ms: 48.446637
+  ...
+# Subtest: compliance finding resolution persists and refuses foreign reads and writes
+ok 19 - compliance finding resolution persists and refuses foreign reads and writes
+  ---
+  duration_ms: 54.811575
+  ...
+# Subtest: audit evidence and finding closure remain linked to compliance
+ok 20 - audit evidence and finding closure remain linked to compliance
+  ---
+  duration_ms: 98.189924
+  ...
+# Subtest: saved report, preview and CSV export agree with the scoped registry
+ok 21 - saved report, preview and CSV export agree with the scoped registry
+  ---
+  duration_ms: 57.613919
+  ...
+# Subtest: admin workflow blocks direct approval and releases the transfer after authorized approval
+ok 22 - admin workflow blocks direct approval and releases the transfer after authorized approval
+  ---
+  duration_ms: 79.113728
+  ...
+# Subtest: notification delivery records successful and failed loopback webhooks independently
+ok 23 - notification delivery records successful and failed loopback webhooks independently
+  ---
+  duration_ms: 12.184078
+  ...
+# Subtest: tracking alert acknowledgement persists while foreign mutations and counts remain isolated
+ok 24 - tracking alert acknowledgement persists while foreign mutations and counts remain isolated
+  ---
+  duration_ms: 37.754301
+  ...
+# [BABEL] Note: The code generator has deoptimised the styling of /tmp/ag-stage4-browser-kMHvz6/vite-cache/deps/react-dom_client.js?v=8705f7ce as it exceeds the max of 500KB.
+# Subtest: browser PM action opens a real prefilled form and persists a work order through reload
+ok 25 - browser PM action opens a real prefilled form and persists a work order through reload
+  ---
+  duration_ms: 3095.075299
+  ...
+# Subtest: remaining module routes load without uncaught exceptions or foreign asset names
+ok 26 - remaining module routes load without uncaught exceptions or foreign asset names
+  ---
+  duration_ms: 5852.083764
+  ...
+# Subtest: predictive alert triage preserves manual provenance and reuses its corrective work order
+ok 27 - predictive alert triage preserves manual provenance and reuses its corrective work order
+  ---
+  duration_ms: 114.858816
+  ...
+# Subtest: latest observed coordinates drive the live map and future readings are rejected
+ok 28 - latest observed coordinates drive the live map and future readings are rejected
+  ---
+  duration_ms: 36.600499
+  ...
+# Subtest: custody changes update the registry and observed custody without refreshing last seen
+ok 29 - custody changes update the registry and observed custody without refreshing last seen
+  ---
+  duration_ms: 26.022055
+  ...
+# Subtest: technician roster mutations and lists remain facility scoped
+ok 30 - technician roster mutations and lists remain facility scoped
+  ---
+  duration_ms: 53.617375
+  ...
+# Uncaught browser errors: []
+# Subtest: explicit asset and mismatched tag are refused before recording a sighting
+ok 31 - explicit asset and mismatched tag are refused before recording a sighting
+  ---
+  duration_ms: 9.426283
+  ...
+1..31
+# tests 31
+# suites 0
+# pass 31
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 17448.381704

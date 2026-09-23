@@ -3,6 +3,7 @@ import { Outlet, useLocation } from 'react-router-dom';
 import { Sidebar } from './Sidebar';
 import { TopBar } from './TopBar';
 import { CommandPalette } from './CommandPalette';
+import { RequireModule } from '@/app/RequireAuth';
 
 /** The authenticated application chrome: rail, top bar, and the routed page. */
 export function AppShell() {
@@ -30,20 +31,20 @@ export function AppShell() {
     <div className="flex h-screen overflow-hidden bg-background">
       <a
         href="#main"
-        className="sr-only focus:not-sr-only focus:absolute focus:z-[200] focus:top-2 focus:left-2 focus:bg-white focus:px-3 focus:py-2 focus:rounded-lg focus:shadow"
+        className="app-skip sr-only focus:not-sr-only focus:absolute focus:z-[200] focus:top-2 focus:left-2 focus:bg-white focus:px-3 focus:py-2 focus:rounded-lg focus:shadow"
       >
         Skip to content
       </a>
 
-      <div className="hidden md:block shrink-0">
+      <div className="app-sidebar hidden md:block shrink-0">
         <Sidebar />
       </div>
 
-      <div className="flex flex-col flex-1 overflow-hidden">
-        <TopBar onOpenNav={() => setNavOpen(true)} onOpenPalette={() => setPaletteOpen(true)} />
-        <main id="main" className="flex-1 overflow-y-auto p-6">
+      <div className="flex min-w-0 flex-col flex-1 overflow-hidden">
+        <div className="app-header"><TopBar onOpenNav={() => setNavOpen(true)} onOpenPalette={() => setPaletteOpen(true)} /></div>
+        <main id="main" className="min-w-0 flex-1 overflow-y-auto p-3 sm:p-6">
           <div className="max-w-7xl mx-auto h-full">
-            <Outlet />
+            <RequireModule><Outlet /></RequireModule>
           </div>
         </main>
       </div>

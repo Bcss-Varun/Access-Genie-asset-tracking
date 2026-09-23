@@ -1,0 +1,137 @@
+TAP version 13
+# Subtest: lifecycle board respects descendants, explicit selection and empty scopes
+ok 1 - lifecycle board respects descendants, explicit selection and empty scopes
+  ---
+  duration_ms: 4543.060181
+  ...
+# Subtest: lifecycle KPIs restrict assets, maintenance and approval records to the same scope
+ok 2 - lifecycle KPIs restrict assets, maintenance and approval records to the same scope
+  ---
+  duration_ms: 38.961545
+  ...
+# Subtest: a caller cannot widen lifecycle scope by naming another facility
+ok 3 - a caller cannot widen lifecycle scope by naming another facility
+  ---
+  duration_ms: 11.348431
+  ...
+# Subtest: foreign and nonexistent history and clone records are indistinguishable
+ok 4 - foreign and nonexistent history and clone records are indistinguishable
+  ---
+  duration_ms: 95.141641
+  ...
+# Subtest: foreign lifecycle request leaves asset and history unchanged
+ok 5 - foreign lifecycle request leaves asset and history unchanged
+  ---
+  duration_ms: 22.715175
+  ...
+# Subtest: foreign approval and rejection cannot modify a pending request or asset
+ok 6 - foreign approval and rejection cannot modify a pending request or asset
+  ---
+  duration_ms: 32.7639
+  ...
+# Subtest: mixed-scope bulk transition changes only authorized records and persists history
+ok 7 - mixed-scope bulk transition changes only authorized records and persists history
+  ---
+  duration_ms: 114.192692
+  ...
+# Subtest: authorized approval persists the stage, while self-approval and repeat decisions are refused
+ok 8 - authorized approval persists the stage, while self-approval and repeat decisions are refused
+  ---
+  duration_ms: 161.431916
+  ...
+# Subtest: read-only action grants deny both creation entry points without inserting records
+ok 9 - read-only action grants deny both creation entry points without inserting records
+  ---
+  duration_ms: 36.180275
+  ...
+# Subtest: read-only action overrides cannot request, bulk-change or approve lifecycle stages
+ok 10 - read-only action overrides cannot request, bulk-change or approve lifecycle stages
+  ---
+  duration_ms: 30.759878
+  ...
+# Subtest: finance retains disposal approval when granted Assets but cannot edit or approve other stages
+ok 11 - finance retains disposal approval when granted Assets but cannot edit or approve other stages
+  ---
+  duration_ms: 138.994557
+  ...
+# Subtest: per-user module grants retain action defaults without expanding another user’s access
+ok 12 - per-user module grants retain action defaults without expanding another user’s access
+  ---
+  duration_ms: 195.710178
+  ...
+# Subtest: missing module and missing/invalid token are denied on the repaired routes
+ok 13 - missing module and missing/invalid token are denied on the repaired routes
+  ---
+  duration_ms: 36.330757
+  ...
+# Subtest: registration cannot reference a foreign clone source even when values are supplied directly
+ok 14 - registration cannot reference a foreign clone source even when values are supplied directly
+  ---
+  duration_ms: 17.078085
+  ...
+# Subtest: authorized registration persists and can be read again by API and database
+ok 15 - authorized registration persists and can be read again by API and database
+  ---
+  duration_ms: 78.056239
+  ...
+# Subtest: configured database retains records across application reconnects
+ok 16 - configured database retains records across application reconnects
+  ---
+  duration_ms: 103.500464
+  ...
+# Subtest: unavailable configured database fails without creating or seeding a fallback
+ok 17 - unavailable configured database fails without creating or seeding a fallback
+  ---
+  duration_ms: 1092.191046
+  ...
+# Subtest: API errors preserve validation details and request IDs
+ok 18 - API errors preserve validation details and request IDs
+  ---
+  duration_ms: 0.44782
+  ...
+# Subtest: gateway HTML, malformed JSON and absent responses produce safe errors
+ok 19 - gateway HTML, malformed JSON and absent responses produce safe errors
+  ---
+  duration_ms: 0.331418
+  ...
+# Subtest: direct-route policy blocks restricted modules and preserves shared/personal workflows
+ok 20 - direct-route policy blocks restricted modules and preserves shared/personal workflows
+  ---
+  duration_ms: 0.320937
+  ...
+# [BABEL] Note: The code generator has deoptimised the styling of /tmp/ag-stage2-browser-Fn9qh5/vite-cache/deps/react-dom_client.js?v=f6b94c33 as it exceeds the max of 500KB.
+# Subtest: browser: recovery, direct URL denial and permitted navigation
+    # Subtest: password recovery shows the supported path and no false send action
+    ok 1 - password recovery shows the supported path and no false send action
+      ---
+      duration_ms: 1639.349809
+      ...
+    # Subtest: gateway HTML produces a recoverable login error instead of a JavaScript crash
+    ok 2 - gateway HTML produces a recoverable login error instead of a JavaScript crash
+      ---
+      duration_ms: 436.730586
+      ...
+    # Subtest: restricted user can sign in, but direct asset/admin/tracking URLs are denied
+    ok 3 - restricted user can sign in, but direct asset/admin/tracking URLs are denied
+      ---
+      duration_ms: 2109.639976
+      ...
+    # Subtest: authorized user can reopen the asset registry after a full reload
+    ok 4 - authorized user can reopen the asset registry after a full reload
+      ---
+      duration_ms: 818.708765
+      ...
+    1..4
+ok 21 - browser: recovery, direct URL denial and permitted navigation
+  ---
+  duration_ms: 5885.91538
+  ...
+1..21
+# tests 25
+# suites 0
+# pass 25
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 13363.880986

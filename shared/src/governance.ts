@@ -64,7 +64,7 @@ export interface RolePermissions {
  * table of six roles × eleven modules is a table nobody keeps correct. The
  * deployment overrides what it disagrees with; this is only the starting point.
  */
-export function defaultActionsFor(roleId: RoleId): PermissionAction[] {
+export function defaultActionsFor(roleId: RoleId, module?: ModuleKey): PermissionAction[] {
   switch (roleId) {
     case 'super_admin':
     case 'org_admin':
@@ -77,7 +77,10 @@ export function defaultActionsFor(roleId: RoleId): PermissionAction[] {
     case 'security_officer':
       return ['view', 'create', 'edit'];
     case 'executive':
-      return ['view'];
+      // Finance can decide disposal requests when granted Assets. The lifecycle
+      // role matrix still restricts which stages it may approve. This does not
+      // grant the module itself, and stored action overrides still take priority.
+      return module === 'assets' ? ['view', 'approve'] : ['view'];
     default:
       return ['view'];
   }

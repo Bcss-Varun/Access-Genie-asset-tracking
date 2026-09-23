@@ -141,7 +141,7 @@ export const emailProvider: DeliveryProvider = {
       return [
         {
           status: 'skipped',
-          error: 'No mail transport is configured (set SMTP_URL). The in-app notification was still recorded.',
+          error: 'Email delivery is unavailable: no mail transport is installed. The in-app notification was recorded.',
         },
       ];
     }

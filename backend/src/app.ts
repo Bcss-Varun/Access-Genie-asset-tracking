@@ -7,6 +7,7 @@ import morgan from 'morgan';
 import { dbStatus } from './config/db.js';
 import { env } from './config/env.js';
 import { apiLimiter, errorHandler, notFoundHandler, requestId } from './middleware/index.js';
+import { ApiError } from './utils/ApiError.js';
 import routes from './routes/index.js';
 
 /**
@@ -21,11 +22,20 @@ export function createApp(): Express {
 
   // Behind a load balancer, `req.ip` is only correct with this set — and the
   // rate limiter keys on `req.ip`.
-  app.set('trust proxy', 1);
+  app.set('trust proxy', env.TRUST_PROXY_HOPS);
   app.disable('x-powered-by');
 
   app.use(requestId);
   app.use(helmet());
+
+  app.use((req, _res, next) => {
+    const origin = req.get('origin');
+    const sameOrigin = origin === `${req.protocol}://${req.get('host')}`;
+    if (origin && !['GET', 'HEAD', 'OPTIONS'].includes(req.method) && !sameOrigin && !env.isOriginAllowed(origin)) {
+      return next(ApiError.forbidden('Request origin is not allowed'));
+    }
+    next();
+  });
 
   app.use(
     cors({

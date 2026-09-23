@@ -1,3 +1,6 @@
+import { requireScope } from '../middleware/scope.js';
+import { assertAssetVisible } from '../services/tenancy.service.js';
+import { assertTrackingRecord, assertTrackingFacility, assertGlobalTracking } from '../services/trackingScope.service.js';
 import type { Request, Response } from 'express';
 import { validatedQuery } from '../middleware/validate.js';
 import { asyncHandler } from '../utils/asyncHandler.js';
@@ -10,36 +13,40 @@ import { Gateway, Sensor, nextId } from '../models/index.js';
 import type { CreateGeofenceInput, CreateSensorInput, SensorListQuery } from '../validators/tracking.validator.js';
 
 // ── Workspace ────────────────────────────────────────────────────────────────
-export const workspace = asyncHandler(async (_req: Request, res: Response) => {
-  sendData(res, await workspaceService.getTrackingWorkspace());
+export const workspace = asyncHandler(async (req: Request, res: Response) => {
+  sendData(res, await workspaceService.getTrackingWorkspace(requireScope(req)));
 });
 
 /** Just the badge number, for the chrome — far cheaper than the whole workspace. */
-export const openAlertCount = asyncHandler(async (_req: Request, res: Response) => {
-  sendData(res, { open: await workspaceService.countOpenTrackingAlerts() });
+export const openAlertCount = asyncHandler(async (req: Request, res: Response) => {
+  sendData(res, { open: await workspaceService.countOpenTrackingAlerts(requireScope(req)) });
 });
 
 // ── Live map ─────────────────────────────────────────────────────────────────
-export const live = asyncHandler(async (_req: Request, res: Response) => {
-  sendData(res, await trackingService.getLiveMap());
+export const live = asyncHandler(async (req: Request, res: Response) => {
+  sendData(res, await trackingService.getLiveMap(requireScope(req)));
 });
 
 export const movement = asyncHandler(async (req: Request, res: Response) => {
+  await assertAssetVisible(requireScope(req), req.params.id as string);
   sendData(res, await trackingService.getMovementTrail(req.params.id as string));
 });
 
 // ── Devices ──────────────────────────────────────────────────────────────────
-export const listSensors = asyncHandler(async (_req: Request, res: Response) => {
+export const listSensors = asyncHandler(async (req: Request, res: Response) => {
   const query = validatedQuery<SensorListQuery>(res);
-  const { items, meta } = await trackingService.listSensors(query);
+  const { items, meta } = await trackingService.listSensors(query, requireScope(req));
   sendList(res, items, meta);
 });
 
 export const getSensor = asyncHandler(async (req: Request, res: Response) => {
+  await assertTrackingRecord(requireScope(req), await Sensor.findById(req.params.id).lean());
   sendData(res, await trackingService.getSensor(req.params.id as string));
 });
 
 export const createSensor = asyncHandler(async (req: Request, res: Response) => {
+  if (req.body.assetId) await assertAssetVisible(requireScope(req), req.body.assetId);
+  else assertTrackingFacility(requireScope(req), req.body.facility);
   const actor = req.auth?.user.name ?? 'system';
   const sensor = await trackingService.createSensor(req.body as CreateSensorInput, actor);
 
@@ -48,6 +55,7 @@ export const createSensor = asyncHandler(async (req: Request, res: Response) => 
 });
 
 export const deleteSensor = asyncHandler(async (req: Request, res: Response) => {
+  await assertTrackingRecord(requireScope(req), await Sensor.findById(req.params.id).lean());
   const id = req.params.id as string;
   await trackingService.deleteSensor(id);
 
@@ -56,11 +64,12 @@ export const deleteSensor = asyncHandler(async (req: Request, res: Response) => 
 });
 
 // ── Gateways ─────────────────────────────────────────────────────────────────
-export const listGateways = asyncHandler(async (_req: Request, res: Response) => {
+export const listGateways = asyncHandler(async (req: Request, res: Response) => {
   sendData(res, await Gateway.find().sort({ name: 1 }).lean());
 });
 
 export const createGateway = asyncHandler(async (req: Request, res: Response) => {
+  assertGlobalTracking(requireScope(req));
   const _id = await nextId('gateway', 'GW');
   const gateway = await Gateway.create({ ...req.body, _id, lastSeen: new Date() });
   recordAudit(req, {
@@ -73,6 +82,7 @@ export const createGateway = asyncHandler(async (req: Request, res: Response) =>
 });
 
 export const updateGateway = asyncHandler(async (req: Request, res: Response) => {
+  assertGlobalTracking(requireScope(req));
   const id = req.params.id as string;
   const gateway = await Gateway.findByIdAndUpdate(id, { $set: req.body }, { new: true, runValidators: true });
   if (!gateway) throw ApiError.notFound('Gateway');
@@ -81,6 +91,7 @@ export const updateGateway = asyncHandler(async (req: Request, res: Response) =>
 });
 
 export const deleteGateway = asyncHandler(async (req: Request, res: Response) => {
+  assertGlobalTracking(requireScope(req));
   const id = req.params.id as string;
 
   // Sensors report *through* a gateway. Removing one while devices still point
@@ -103,17 +114,19 @@ export const deleteGateway = asyncHandler(async (req: Request, res: Response) =>
 });
 
 // ── Geofences ────────────────────────────────────────────────────────────────
-export const listGeofences = asyncHandler(async (_req: Request, res: Response) => {
+export const listGeofences = asyncHandler(async (req: Request, res: Response) => {
   sendData(res, await trackingService.listGeofences());
 });
 
 export const createGeofence = asyncHandler(async (req: Request, res: Response) => {
+  assertGlobalTracking(requireScope(req));
   const geofence = await trackingService.createGeofence(req.body as CreateGeofenceInput);
   recordAudit(req, { action: 'geofence.create', target: geofence._id, category: 'Tracking' });
   sendData(res, geofence, 201);
 });
 
 export const updateGeofence = asyncHandler(async (req: Request, res: Response) => {
+  assertGlobalTracking(requireScope(req));
   const id = req.params.id as string;
   const geofence = await trackingService.updateGeofence(id, req.body as Partial<CreateGeofenceInput>);
 
@@ -122,6 +135,7 @@ export const updateGeofence = asyncHandler(async (req: Request, res: Response) =
 });
 
 export const deleteGeofence = asyncHandler(async (req: Request, res: Response) => {
+  assertGlobalTracking(requireScope(req));
   const id = req.params.id as string;
   await trackingService.deleteGeofence(id);
 

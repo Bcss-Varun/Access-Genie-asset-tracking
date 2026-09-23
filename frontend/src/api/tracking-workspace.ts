@@ -1,5 +1,6 @@
 import { useQuery, useQueryClient, type UseQueryResult } from '@tanstack/react-query';
-import { apiGet } from '@/api/client';
+import { http, ApiRequestError } from '@/api/client';
+import { getActiveScope, getDatasetGeneration, useDatasetIdentity } from '@/api/dataset';
 import { hydrateTracking, type TrackingWorkspace } from '@/lib/tracking-data';
 
 /**
@@ -15,18 +16,21 @@ import { hydrateTracking, type TrackingWorkspace } from '@/lib/tracking-data';
  */
 export const TRACKING_KEY = ['tracking', 'workspace'] as const;
 
-export async function fetchTrackingWorkspace(): Promise<TrackingWorkspace> {
-  const data = await apiGet<TrackingWorkspace>('/tracking/workspace');
-  hydrateTracking(data);
+export async function fetchTrackingWorkspace(signal?: AbortSignal, scope = getActiveScope(), generation = getDatasetGeneration()): Promise<TrackingWorkspace> {
+  const { data: response } = await http.get('/tracking/workspace', { params: scope ? { scope } : undefined, signal });
+  if (!response.success) throw new ApiRequestError(response.error.message, response.error.code, 200);
+  const data = response.data as TrackingWorkspace;
+  if (!signal?.aborted && scope === getActiveScope() && generation === getDatasetGeneration()) hydrateTracking(data);
   return data;
 }
 
 export function useTrackingWorkspace(): UseQueryResult<TrackingWorkspace> {
+  const identity = useDatasetIdentity();
+  const scope = getActiveScope();
+  const generation = getDatasetGeneration();
   return useQuery({
-    queryKey: TRACKING_KEY,
-    queryFn: fetchTrackingWorkspace,
-    // Tracking is the one genuinely live surface in the product: positions,
-    // alert states and device health all move while you are looking at them.
+    queryKey: [...TRACKING_KEY, identity],
+    queryFn: ({ signal }) => fetchTrackingWorkspace(signal, scope, generation),
     staleTime: 30_000,
     refetchInterval: 60_000,
   });

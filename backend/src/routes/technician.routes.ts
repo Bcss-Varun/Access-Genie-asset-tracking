@@ -12,7 +12,7 @@ import { createTechnicianSchema, updateTechnicianSchema } from '../validators/te
  */
 const router = Router();
 
-router.use(requireModule('operations', 'maintenance'));
+router.use('/technicians', requireModule('operations', 'maintenance'));
 
 router.get('/technicians', controller.list);
 router.post('/technicians', validate({ body: createTechnicianSchema }), controller.create);

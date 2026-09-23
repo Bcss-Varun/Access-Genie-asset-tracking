@@ -1,5 +1,5 @@
 import type { AuthPayload, Persona, Session, UserSession } from '@access-genie/shared';
-import { apiGet, apiPost } from '@/api/client';
+import { apiGet, apiPost, refreshAuth } from '@/api/client';
 
 /**
  * What `/auth/login` returns when the account has a second factor.
@@ -26,7 +26,7 @@ export const authApi = {
   login: (email: string, password: string) => apiPost<LoginResult>('/auth/login', { email, password }),
 
   /** Exchanges the httpOnly refresh cookie for a fresh access token. */
-  refresh: () => apiPost<AuthPayload>('/auth/refresh'),
+  refresh: refreshAuth,
 
   logout: () => apiPost<{ loggedOut: boolean }>('/auth/logout'),
 

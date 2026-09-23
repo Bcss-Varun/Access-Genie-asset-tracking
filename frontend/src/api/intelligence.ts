@@ -1,3 +1,4 @@
+import { getActiveScope } from '@/api/dataset';
 import type { AssetHealth } from '@access-genie/shared';
 import { apiGet, apiPost } from '@/api/client';
 
@@ -24,5 +25,5 @@ export interface RecomputeResult {
 
 export const intelligenceApi = {
   explain: (assetId: string) => apiGet<AssetExplanation>(`/intelligence/explain/${assetId}`),
-  recompute: () => apiPost<RecomputeResult>('/intelligence/recompute'),
+  recompute: () => apiPost<RecomputeResult>(`/intelligence/recompute${getActiveScope() ? `?scope=${encodeURIComponent(getActiveScope()!)}` : ''}`),
 };

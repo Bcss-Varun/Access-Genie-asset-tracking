@@ -1,3 +1,4 @@
+import { assetClause, assertAssetVisible, type VisibleScope } from './tenancy.service.js';
 import { Asset, Inspection, WorkOrder, type AssetDoc } from '../models/index.js';
 import { ApiError } from '../utils/ApiError.js';
 import { recordObservation } from './observation.service.js';
@@ -45,18 +46,19 @@ const PRIORITY_RANK: Record<string, number> = { Critical: 0, High: 1, Medium: 2,
  * queue: an unassigned critical job is the single most likely thing to be
  * missed, and hiding it until a planner touches it is how it gets missed.
  */
-export async function fieldQueue(assignee?: string): Promise<FieldTask[]> {
+export async function fieldQueue(scope: VisibleScope, assignee?: string): Promise<FieldTask[]> {
   const assignedFilter = assignee
     ? { $or: [{ assignedTo: assignee }, { assignedTo: { $in: ['', 'Unassigned'] } }] }
     : {};
 
   const [orders, inspections, presence] = await Promise.all([
-    WorkOrder.find({ status: { $ne: 'Completed' }, ...assignedFilter }).lean(),
+    WorkOrder.find({ ...await assetClause(scope), status: { $nin: ['Completed', 'Cancelled'] }, ...assignedFilter }).lean(),
     Inspection.find({
+      ...await assetClause(scope),
       status: { $in: ['Scheduled', 'In Progress'] },
       ...(assignee ? { $or: [{ assignedTo: assignee }, { assignedTo: { $in: ['', 'Unassigned'] } }] } : {}),
     }).lean(),
-    AssetPresence.find().select('_id zone lastSeen').lean(),
+    AssetPresence.find(await assetClause(scope, '_id')).select('_id zone lastSeen').lean(),
   ]);
 
   const presenceById = new Map(presence.map((p) => [p._id, p]));
@@ -142,7 +144,8 @@ export interface ScanResult {
  * screen never offers something that would be refused — no "check in" on an
  * asset nobody has out.
  */
-export async function scanAsset(assetId: string, actor: string, zone?: string): Promise<ScanResult> {
+export async function scanAsset(scope: VisibleScope, assetId: string, actor: string, zone?: string): Promise<ScanResult> {
+  await assertAssetVisible(scope, assetId);
   const asset = await Asset.findById(assetId).lean<AssetDoc>();
   if (!asset) throw ApiError.notFound('Asset');
 
@@ -155,7 +158,7 @@ export async function scanAsset(assetId: string, actor: string, zone?: string): 
 
   const [presence, tasks] = await Promise.all([
     AssetPresence.findById(assetId).lean(),
-    fieldQueue(),
+    fieldQueue(scope),
   ]);
 
   const openTasks = tasks.filter((t) => t.assetId === assetId);

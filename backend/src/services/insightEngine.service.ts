@@ -1,3 +1,4 @@
+import { locationClause, assetClause, type VisibleScope } from './tenancy.service.js';
 import type { InsightSeverity, InsightType } from '@access-genie/shared';
 import { Asset, Insight, nextId, type AssetDoc } from '../models/index.js';
 import { computeMetrics, loadMetricsContext, type MetricsContext } from './metrics.service.js';
@@ -167,10 +168,10 @@ export interface InsightSweepResult {
  * saying an asset is missing, still sitting on the dashboard a week after it
  * was found, is worse than no insight at all.
  */
-export async function regenerateInsights(): Promise<InsightSweepResult> {
-  const [assets, ctx] = await Promise.all([Asset.find().lean<AssetDoc[]>(), loadMetricsContext()]);
+export async function regenerateInsights(scope?: VisibleScope): Promise<InsightSweepResult> {
+  const [assets, ctx] = await Promise.all([Asset.find(scope ? locationClause(scope) : {}).lean<AssetDoc[]>(), loadMetricsContext()]);
 
-  const existing = await Insight.find({ status: 'open' }).lean();
+  const existing = await Insight.find({ status: 'open', ...(scope ? await assetClause(scope) : {}) }).lean();
   const openByKey = new Map(existing.map((i) => [`${i.type}::${i.assetId ?? ''}`, i]));
   const stillValid = new Set<string>();
 

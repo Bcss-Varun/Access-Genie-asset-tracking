@@ -1,8 +1,11 @@
+import { assetClause, locationClause, type VisibleScope } from './tenancy.service.js';
+import { trackingClause } from './trackingScope.service.js';
 import type { FilterQuery } from 'mongoose';
 import type { ApiMeta, LiveMapPayload } from '@access-genie/shared';
 import {
   Activity,
   Asset,
+  AssetPresence,
   Gateway,
   Geofence,
   Sensor,
@@ -22,19 +25,21 @@ import type { CreateGeofenceInput, CreateSensorInput, SensorListQuery } from '..
  * would quadruple the poll traffic for no benefit, since none of the four is
  * useful without the others.
  */
-export async function getLiveMap(): Promise<LiveMapPayload> {
+export async function getLiveMap(scope: VisibleScope): Promise<LiveMapPayload> {
+  const sightings = await AssetPresence.find({ ...await assetClause(scope, '_id'), position: { $exists: true } }).lean();
+  const sightingById = new Map(sightings.map(row => [row._id, row]));
   const [zones, geofences, assets, byTech, sensorStats] = await Promise.all([
     Zone.find().sort({ name: 1 }).lean(),
     Geofence.find().sort({ name: 1 }).lean(),
-    Asset.find({ mapPosition: { $exists: true } })
+    Asset.find({ ...locationClause(scope), _id: { $in: sightings.map(row => row._id) } })
       .select('name category status healthStatus trackingTech trackingId mapPosition location.zone telemetry.lastPing')
       .lean(),
     Asset.aggregate<{ _id: string | null; count: number }>([
-      { $match: { trackingTech: { $exists: true, $ne: null } } },
+      { $match: { ...locationClause(scope), trackingTech: { $exists: true, $ne: null } } },
       { $group: { _id: '$trackingTech', count: { $sum: 1 } } },
       { $sort: { count: -1 } },
     ]),
-    Sensor.aggregate<{ _id: string; count: number }>([{ $group: { _id: '$status', count: { $sum: 1 } } }]),
+    Sensor.aggregate<{ _id: string; count: number }>([{ $match: await trackingClause(scope) },{ $group: { _id: '$status', count: { $sum: 1 } } }]),
   ]);
 
   const breaches24h = geofences.reduce((sum, g) => sum + g.breaches24h, 0);
@@ -59,7 +64,7 @@ export async function getLiveMap(): Promise<LiveMapPayload> {
       // `mapPosition` is optional on the model but required on the payload —
       // filter rather than coerce, so a half-configured asset is simply absent
       // from the map instead of pinned at (0,0).
-      .filter((a) => a.mapPosition)
+      .filter((a) => sightingById.get(a._id)?.position)
       .map((a) => ({
         id: a._id,
         name: a.name,
@@ -68,9 +73,9 @@ export async function getLiveMap(): Promise<LiveMapPayload> {
         healthStatus: a.healthStatus,
         trackingTech: a.trackingTech,
         trackingId: a.trackingId,
-        mapPosition: a.mapPosition!,
-        zone: a.location?.zone,
-        lastPing: a.telemetry?.lastPing?.toISOString(),
+        mapPosition: { x: sightingById.get(a._id)!.position!.x, y: sightingById.get(a._id)!.position!.y },
+        zone: sightingById.get(a._id)!.zone,
+        lastPing: sightingById.get(a._id)!.lastSeen.toISOString(),
       })),
     stats: {
       tracked: assets.length,
@@ -85,7 +90,7 @@ export async function getLiveMap(): Promise<LiveMapPayload> {
 // ── Sensors ──────────────────────────────────────────────────────────────────
 const SENSOR_SORTABLE = ['name', 'kind', 'status', 'batteryLevel', 'signalStrength', 'lastReading', 'createdAt'];
 
-export async function listSensors(query: SensorListQuery): Promise<{ items: SensorDoc[]; meta: ApiMeta }> {
+export async function listSensors(query: SensorListQuery, scope: VisibleScope): Promise<{ items: SensorDoc[]; meta: ApiMeta }> {
   const filter: FilterQuery<SensorDoc> = {};
 
   const kind = csvFilter(query.kind);
@@ -104,7 +109,7 @@ export async function listSensors(query: SensorListQuery): Promise<{ items: Sens
   }
 
   const pagination = parsePagination(query, SENSOR_SORTABLE, '-lastReading');
-  return paginate(Sensor, filter, pagination);
+  return paginate(Sensor, { $and: [filter, await trackingClause(scope)] }, pagination);
 }
 
 /**
@@ -176,6 +181,7 @@ export async function deleteSensor(id: string): Promise<void> {
   const sensor = await Sensor.findByIdAndDelete(id);
   if (!sensor) throw ApiError.notFound('Device');
   await Gateway.findByIdAndUpdate(sensor.gatewayId, { $inc: { connectedDevices: -1 } });
+  if (sensor.assetId && sensor.tagId) await Asset.updateOne({ _id: sensor.assetId, trackingId: sensor.tagId }, { $unset: { trackingId: '', trackingTech: '' } });
 }
 
 // ── Geofences ────────────────────────────────────────────────────────────────

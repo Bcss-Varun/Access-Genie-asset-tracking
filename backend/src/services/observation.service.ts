@@ -1,3 +1,4 @@
+import { assertAssetVisible, type VisibleScope } from './tenancy.service.js';
 import type { LocationPrecision, PresenceState } from '@access-genie/shared';
 import {
   Asset,
@@ -76,6 +77,10 @@ async function resolveAsset(input: ObservationInput) {
   if (input.assetId) {
     const asset = await Asset.findById(input.assetId).lean();
     if (!asset) throw ApiError.notFound('Asset');
+    if (input.tagId && input.tagId !== asset.trackingId) {
+      const binding = await Sensor.exists({ tagId: input.tagId, assetId: asset._id });
+      if (!binding) throw ApiError.badRequest('The tag is not bound to this asset.');
+    }
     return { asset, tagId: input.tagId ?? asset.trackingId };
   }
 
@@ -87,7 +92,7 @@ async function resolveAsset(input: ObservationInput) {
   }
 
   const direct = await Asset.findOne({
-    $or: [{ trackingId: tagId }, { 'onboarding.bindings.tagId': tagId }],
+    trackingId: tagId,
   }).lean();
   if (direct) return { asset: direct, tagId };
 
@@ -96,8 +101,9 @@ async function resolveAsset(input: ObservationInput) {
 
 /** Record an unrecognised tag rather than discarding the sighting. */
 async function recordUnknown(tagId: string, input: ObservationInput, at: Date): Promise<void> {
-  const existing = await UnknownDetection.findOne({ tagId });
+  const existing = await UnknownDetection.findOne({ tagId, facility: input.facility ?? 'Unknown' });
   if (existing) {
+    if (existing.lastSeen >= at) return;
     existing.lastSeen = at;
     existing.seenCount = (existing.seenCount ?? 0) + 1;
     if (input.zone) existing.zone = input.zone;
@@ -142,7 +148,29 @@ export interface ObservationResult {
  * Recording every read would bury the movement that matters under thousands of
  * identical rows.
  */
-export async function recordObservation(input: ObservationInput): Promise<ObservationResult> {
+const observationsInFlight = new Map<string, Promise<unknown>>();
+export async function recordObservation(input: ObservationInput, scope?: VisibleScope): Promise<ObservationResult> {
+  if (input.at && new Date(input.at).getTime() > Date.now() + 5 * 60_000) throw ApiError.badRequest('Observation time is more than five minutes in the future.');
+  const resolved = await resolveAsset(input);
+  if (scope) await authorizeObservation(scope, input);
+  const key = resolved.asset?._id ?? `${input.facility}:${resolved.tagId}`;
+  const prior = observationsInFlight.get(key) ?? Promise.resolve();
+  const next = prior.catch(() => undefined).then(() => applyObservation(input));
+  observationsInFlight.set(key, next);
+  try { return await next; }
+  finally { if (observationsInFlight.get(key) === next) observationsInFlight.delete(key); }
+}
+
+export async function authorizeObservation(scope: VisibleScope, input: ObservationInput): Promise<void> {
+  const { asset } = await resolveAsset(input);
+  if (asset) await assertAssetVisible(scope, asset._id);
+  if (!scope.coversAll && (input.facility || !asset)) {
+    const candidates = scope.rows.filter(node => node.level === 'facility' && node.name === input.facility);
+    if (candidates.length !== 1 || !scope.ids.has(candidates[0]!._id)) throw ApiError.notFound('Facility');
+  }
+}
+
+async function applyObservation(input: ObservationInput): Promise<ObservationResult> {
   const at = input.at ? new Date(input.at) : new Date();
   const { asset, tagId } = await resolveAsset(input);
 
@@ -157,19 +185,23 @@ export async function recordObservation(input: ObservationInput): Promise<Observ
 
   const assetId = String(asset._id);
   const previous = await AssetPresence.findById(assetId).lean();
+  if (previous && previous.lastSeen >= at) return {
+    accepted: true, assetId, assetName: asset.name, zone: previous.zone,
+    state: presenceStateFor(previous.lastSeen), reason: 'Ignored an observation older than or equal to the latest sighting',
+  };
   const movedZone = previous?.zone !== zone;
 
   // Where it is *supposed* to be. Assigned location, not observed — the gap
   // between the two is exactly what makes an asset "misplaced".
   const homeZone = previous?.homeZone || asset.location?.zone || asset.location?.name || zone;
 
-  await AssetPresence.updateOne(
-    { _id: assetId },
+  try { await AssetPresence.updateOne(
+    { _id: assetId, $or: [{ lastSeen: { $lt: at } }, { lastSeen: { $exists: false } }] },
     {
       $set: {
         assetName: asset.name,
         category: asset.category,
-        state: 'Online',
+        state: presenceStateFor(at),
         facility,
         zone,
         precision: profile.precision,
@@ -179,10 +211,18 @@ export async function recordObservation(input: ObservationInput): Promise<Observ
         movingNow: movedZone,
         ...(input.position ? { position: input.position } : {}),
       },
+      ...(!input.position ? { $unset: { position: '' } } : {}),
       $setOnInsert: { homeZone, custody: 'In Place' },
     },
     { upsert: true },
   );
+
+  } catch (error) {
+    if (!(error && typeof error === 'object' && 'code' in error && error.code === 11000)) throw error;
+    const latest = await AssetPresence.findById(assetId).lean();
+    if (!latest) throw error;
+    return { accepted: true, assetId, assetName: asset.name, zone: latest.zone, state: presenceStateFor(latest.lastSeen), reason: 'A newer observation already exists' };
+  }
 
   // Only a change of zone is movement worth remembering.
   if (movedZone) {
@@ -202,12 +242,14 @@ export async function recordObservation(input: ObservationInput): Promise<Observ
     await AssetJourney.updateOne(
       { _id: assetId },
       {
-        $set: { assetName: asset.name, windowTo: at },
+        $set: { assetName: asset.name },
+        $max: { windowTo: at },
         $setOnInsert: { windowFrom: at, distanceM: 0, gaps: 0 },
         $push: {
           stops: {
             $each: [{ at, zone, facility, dwellMin: 0, precision: profile.precision }],
             // A rolling window — a journey is for reading, not an archive.
+            $sort: { at: 1 },
             $slice: -50,
           },
         },
@@ -222,7 +264,7 @@ export async function recordObservation(input: ObservationInput): Promise<Observ
         {
           $set: { assetName: asset.name },
           $push: {
-            points: { $each: [{ ...input.position, timestamp: at, label: zone }], $slice: -100 },
+            points: { $each: [{ ...input.position, timestamp: at, label: zone }], $sort: { timestamp: 1 }, $slice: -100 },
           },
         },
         { upsert: true },
@@ -267,18 +309,19 @@ export async function recordObservation(input: ObservationInput): Promise<Observ
     assetId,
     assetName: asset.name,
     zone,
-    state: 'Online',
+    state: presenceStateFor(at),
     misplaced: zone !== homeZone,
     ...(breached.length > 0 ? { geofencesBreached: breached } : {}),
   };
 }
 
 /** Batch ingest — what a gateway actually posts, one payload per sweep. */
-export async function recordObservations(inputs: ObservationInput[]): Promise<ObservationResult[]> {
+export async function recordObservations(inputs: ObservationInput[], scope?: VisibleScope): Promise<ObservationResult[]> {
+  if (scope) for (const input of inputs) await authorizeObservation(scope, input);
   const results: ObservationResult[] = [];
   // Sequential on purpose: two reads of the same asset in one batch must apply
   // in order, or the older one can win the `lastSeen` race.
-  for (const input of inputs) results.push(await recordObservation(input));
+  for (const input of inputs) results.push(await recordObservation(input, scope));
   return results;
 }
 
@@ -289,7 +332,7 @@ export async function recordObservations(inputs: ObservationInput[]): Promise<Ob
  * is a real place an asset can be, and the tracking workspace should not need
  * its own parallel list of them.
  */
-export async function observableZones(): Promise<{ id: string; name: string; facility: string }[]> {
+export async function observableZones(scope: VisibleScope): Promise<{ id: string; name: string; facility: string }[]> {
   const nodes = await ScopeNodeModel.find({ level: { $in: ['zone', 'building', 'floor'] } }).lean();
   const byId = new Map(nodes.map((n) => [n._id, n]));
   const facilities = await ScopeNodeModel.find({ level: 'facility' }).lean();
@@ -304,5 +347,5 @@ export async function observableZones(): Promise<{ id: string; name: string; fac
     return 'Unassigned';
   };
 
-  return nodes.map((n) => ({ id: n._id, name: n.name, facility: facilityOf(n) }));
+  return nodes.filter(n => scope.coversAll || scope.ids.has(n._id)).map((n) => ({ id: n._id, name: n.name, facility: facilityOf(n) }));
 }

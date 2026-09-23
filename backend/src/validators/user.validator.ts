@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { MODULE_KEYS, ROLE_IDS } from '@access-genie/shared';
+import { MODULE_KEYS, ROLE_IDS, PERMISSION_ACTIONS } from '@access-genie/shared';
 import { csvString, listQuerySchema } from './common.js';
 
 export const userListQuerySchema = listQuerySchema.extend({
@@ -62,3 +62,7 @@ export const roleGrantsSchema = z.object({
 
 export type RoleGrantsInput = z.infer<typeof roleGrantsSchema>;
 
+
+export const rolePermissionsSchema = z.object({
+  permissions: z.partialRecord(z.enum(MODULE_KEYS), z.array(z.enum(PERMISSION_ACTIONS))),
+});

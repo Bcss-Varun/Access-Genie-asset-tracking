@@ -1,3 +1,4 @@
+import { ApiError } from '../utils/ApiError.js';
 import { Router } from 'express';
 import { z } from 'zod';
 import { attachScope, requireAuth, requireModule, validate } from '../middleware/index.js';
@@ -61,6 +62,17 @@ router.use(requireAuth);
  * below therefore has `req.scope`, and a new one cannot ship without it.
  */
 router.use(attachScope);
+// Legacy platform resources have no tenant ownership. Only the platform operator
+// may read their sensitive contents or change their global configuration.
+const platformResources = /^\/(api-keys|integrations|webhooks|backups|invoices|teams|support-tickets|exports)(?:\/|$)/i;
+const globalConfiguration = /^\/(org-settings|numbering-rules|alert-rules|escalation-policies|notification-rules)(?:\/|$)/i;
+router.use((req, _res, next) => {
+  if (req.auth?.roleId !== 'super_admin' && (platformResources.test(req.path)
+    || (globalConfiguration.test(req.path) && !['GET', 'HEAD', 'OPTIONS'].includes(req.method)))) {
+    return next(ApiError.forbidden('This shared platform resource requires a platform administrator'));
+  }
+  next();
+});
 
 // ── Workspace ────────────────────────────────────────────────────────────────
 router.get('/dashboard/summary', requireModule('workspace'), dashboardController.summary);

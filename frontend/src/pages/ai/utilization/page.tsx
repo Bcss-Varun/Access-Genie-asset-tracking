@@ -4,7 +4,6 @@ import { allAssets, allInsights } from '@/lib/dataset';
 import { cn, formatMoney, relTime } from '@/lib/utils';
 import { Button } from '@/components/ui/Button';
 import { PageHeader, Badge, KpiCard, EmptyState } from '@/components/ui/primitives';
-import { useToast } from '@/components/providers/ToastProvider';
 
 const IDLE_THRESHOLD = 20;
 const OVER_THRESHOLD = 90;
@@ -33,7 +32,6 @@ function barColor(util: number): string {
 }
 
 export default function UtilizationPage() {
-  const { toast } = useToast();
 
   const assets = useMemo(
     () =>
@@ -216,13 +214,7 @@ export default function UtilizationPage() {
                     <span className="font-semibold text-slate-700">Confidence</span>
                     <span className="tabular-nums">{ins.confidence}%</span>
                   </div>
-                  <Button
-                    onClick={() =>
-                      toast({ title: 'Transfer initiated', description: `${ins.assetName ?? ins.title} · ${formatMoney(ins.impactInr ?? 0)} opportunity`, tone: 'success' })
-                    }
-                  >
-                    Initiate Transfer
-                  </Button>
+                  <Link to="/asset-movement"><Button>Review transfer options</Button></Link>
                 </div>
               </article>
             ))}

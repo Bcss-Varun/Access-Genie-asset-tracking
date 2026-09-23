@@ -1,5 +1,6 @@
-import { useState, useEffect } from 'react';
-import { Link, useParams } from 'react-router-dom';
+import { financialStateFor } from '@/lib/financials';
+import { useState } from 'react';
+import { Link, useParams, useSearchParams } from 'react-router-dom';
 import { useNavigate } from 'react-router-dom';
 import {
   getWorkOrdersForAsset,
@@ -392,7 +393,9 @@ export default function AssetProfilePage() {
 
   const { run, isPending } = useMutate();
 
-  const [activeTab, setActiveTab] = useState<TabKey>('overview');
+  const [searchParams, setSearchParams] = useSearchParams();
+  const requestedTab = searchParams.get('tab');
+  const activeTab: TabKey = TABS.some((t) => t.k === requestedTab) ? requestedTab as TabKey : 'overview';
   const [timelineFilter, setTimelineFilter] = useState<string>('All');
   const [dialog, setDialog] = useState<DialogKey>(null);
   // Read straight from the hydrated dataset rather than held in local state:
@@ -400,17 +403,8 @@ export default function AssetProfilePage() {
   // appears because the source of truth changed, not because a setter ran.
   const workOrders = getWorkOrdersForAsset(id);
 
-  // Deep-link: read ?tab= on mount, keep URL in sync on switch (client-only, no Suspense needed).
-  useEffect(() => {
-    const q = new URLSearchParams(window.location.search).get('tab');
-    if (q && TABS.some((t) => t.k === q)) setActiveTab(q as TabKey);
-  }, []);
-
   const goTab = (k: TabKey) => {
-    setActiveTab(k);
-    const url = new URL(window.location.href);
-    url.searchParams.set('tab', k);
-    window.history.replaceState(null, '', url.toString());
+    setSearchParams((previous) => { const next = new URLSearchParams(previous); next.set('tab', k); return next; });
   };
 
   const notify = (title: string, tone: 'default' | 'success' | 'info' = 'success') =>
@@ -457,9 +451,10 @@ export default function AssetProfilePage() {
   if (tel?.vibration !== undefined) tiles.push({ emoji: '📳', label: 'Vibration', value: `${tel.vibration} mm/s` });
   if (tel?.humidity !== undefined) tiles.push({ emoji: '💧', label: 'Humidity', value: `${tel.humidity}%` });
 
+  const computedBookValue = financialStateFor(asset).state?.bookValue;
   const retained =
-    asset.purchasePrice && asset.bookValue !== undefined
-      ? Math.min(100, Math.round((asset.bookValue / asset.purchasePrice) * 100))
+    asset.purchasePrice && computedBookValue !== undefined
+      ? Math.min(100, Math.round((computedBookValue / asset.purchasePrice) * 100))
       : 0;
   const warrantyDays = asset.warrantyExpiry ? daysUntil(asset.warrantyExpiry) : null;
   const warrantyExpired = warrantyDays !== null && warrantyDays < 0;
@@ -600,7 +595,7 @@ export default function AssetProfilePage() {
         Category: asset.category,
         Purchased: formatDate(asset.purchaseDate),
         'Purchase price': asset.purchasePrice,
-        'Book value': asset.bookValue ?? '',
+        'Book value': computedBookValue ?? '',
         Depreciation: asset.depreciationMethod ?? '',
         'Age (years)': ageYears,
         'Warranty expiry': asset.warrantyExpiry ? formatDate(asset.warrantyExpiry) : '',
@@ -1450,16 +1445,12 @@ export default function AssetProfilePage() {
                     <div className="rounded-lg border border-slate-200 p-4">
                       <div className="text-xs text-slate-500">Purchase Price</div>
                       <div className="text-2xl font-heading font-bold mt-1">{formatMoney(asset.purchasePrice)}</div>
-                      <div className="text-xs text-slate-400 mt-1">${asset.purchasePrice.toLocaleString()}</div>
                     </div>
                     <div className="rounded-lg border border-slate-200 p-4">
                       <div className="text-xs text-slate-500">Book Value</div>
                       <div className="text-2xl font-heading font-bold mt-1 text-primary-600">
-                        {asset.bookValue !== undefined ? formatMoney(asset.bookValue) : '—'}
+                        {computedBookValue !== undefined ? formatMoney(computedBookValue) : '—'}
                       </div>
-                      {asset.bookValue !== undefined && (
-                        <div className="text-xs text-slate-400 mt-1">${asset.bookValue.toLocaleString()}</div>
-                      )}
                     </div>
                     <div className="rounded-lg border border-slate-200 p-4">
                       <div className="text-xs text-slate-500">Asset Age</div>
@@ -1468,7 +1459,7 @@ export default function AssetProfilePage() {
                     </div>
                   </div>
 
-                  {asset.bookValue !== undefined && (
+                  {computedBookValue !== undefined && (
                     <div className="rounded-lg border border-slate-200 p-4">
                       <div className="flex items-center justify-between text-sm mb-2">
                         <span className="font-medium">Value Retained</span>
@@ -1478,7 +1469,7 @@ export default function AssetProfilePage() {
                         <div className="h-full rounded-full bg-health-good" style={{ width: `${retained}%` }} />
                       </div>
                       <div className="flex justify-between mt-2 text-xs text-slate-500">
-                        <span>Depreciated {formatMoney(asset.purchasePrice - asset.bookValue)}</span>
+                        <span>Depreciated {formatMoney(asset.purchasePrice - computedBookValue)}</span>
                         <span>{asset.depreciationMethod ?? '—'}</span>
                       </div>
                     </div>

@@ -34,7 +34,7 @@ router.get('/registration/catalog', registration.catalog);
 router.get('/registration/defaults', registration.defaults);
 router.get('/registration/form', registration.form);
 router.post('/registration/validate', validate({ body: registrationDraftSchema }), registration.validateDraft);
-router.post('/registration', validate({ body: registrationDraftSchema }), registration.register);
+router.post('/registration', requirePermission('assets', 'create'), validate({ body: registrationDraftSchema }), registration.register);
 
 // ─── Templates ──────────────────────────────────────────────────────────────
 // Also ahead of `/:id`, for the same reason. Authoring a template is an

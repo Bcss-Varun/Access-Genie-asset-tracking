@@ -18,6 +18,7 @@ export function recordAudit(
 
   void AuditLog.create({
     actor,
+    scopeId: req.auth?.user.homeScopeId,
     action: input.action,
     target: input.target,
     category: input.category,

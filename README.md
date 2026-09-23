@@ -48,7 +48,9 @@ access-genie/
 
 ## Running it
 
-Node 20.19+, and a MongoDB connection string. There is no local database.
+Node 20.19+, and a MongoDB connection string. The API uses only the configured database;
+connection failure stops startup. It never substitutes a temporary database or seeds demo records automatically.
+The isolated regression harness explicitly starts its own temporary MongoDB.
 
 ```bash
 npm install                              # installs all three packages
@@ -82,7 +84,7 @@ starts empty, and everything on every screen from then on is something you put t
 
 | Email | Password | Role |
 |---|---|---|
-| `ADMIN_EMAIL` (`raj@bcss.in`) | `ADMIN_PASSWORD` (`raj@bcss`) | Super Admin — every module |
+| Configured `ADMIN_EMAIL` | Explicitly configured `ADMIN_PASSWORD` (no default) | Super Admin — every module |
 
 Both are variables in `backend/.env`, so a deployment owns its own credentials rather than inheriting
 the ones checked in here. Change them before deploying anywhere that matters.
@@ -105,6 +107,8 @@ environment anyone treats as real.
 | `npm run build` | compile all three packages |
 | `npm run typecheck` | `tsc --noEmit` across the workspace |
 | `npm run lint` | ESLint across the workspace |
+| `npm run test:stabilization` | isolated API/database/access-control regressions |
+| `npm run test:stabilization:ui` | isolated regressions plus Chrome browser checks |
 | `npm run seed` | create (or reset) the administrator — nothing else |
 | `npm run seed:fresh` | wipe every seeded collection first, then the administrator |
 | `npm run seed:demo` | *opt-in*: load the prototype's demo estate on top |
@@ -245,3 +249,6 @@ marked as such in the source.
 
 Product blueprint and PRD: [`docs/`](./docs) — start at
 [docs/00-master-blueprint.md](./docs/00-master-blueprint.md).
+
+Production setup and verification: [deployment runbook](deployment/README.md).
+Session, permission, MFA and configuration regression: `npm run test:security`.

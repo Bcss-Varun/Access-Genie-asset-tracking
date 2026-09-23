@@ -1,3 +1,5 @@
+import { assetClause, locationClause, type VisibleScope } from './tenancy.service.js';
+import { facilityClause, trackingClause, trackingFacilities } from './trackingScope.service.js';
 import {
   Asset,
   AssetJourney,
@@ -76,13 +78,14 @@ export interface TrackingWorkspacePayload {
  * record with no matching scope node is kept as well, so a database seeded with
  * the demo estate reads exactly as before.
  */
-async function facilitiesForWorkspace(): Promise<Record<string, unknown>[]> {
+async function facilitiesForWorkspace(scope: VisibleScope): Promise<Record<string, unknown>[]> {
   const [scopeFacilities, stored, assetCounts] = await Promise.all([
-    ScopeNodeModel.find({ level: 'facility' }).sort({ name: 1 }).lean(),
-    TrackedFacility.find().sort({ name: 1 }).lean(),
+    ScopeNodeModel.find({ level: 'facility', ...(scope.coversAll ? {} : { name: { $in: trackingFacilities(scope) } }) }).sort({ name: 1 }).lean(),
+    TrackedFacility.find(facilityClause(scope, 'name')).sort({ name: 1 }).lean(),
     // `location.name` carries the facility name (see the registration flow), so
     // this is the live count of assets sitting anywhere in each site.
     Asset.aggregate<{ _id: string; count: number }>([
+      { $match: locationClause(scope) },
       { $group: { _id: '$location.name', count: { $sum: 1 } } },
     ]),
   ]);
@@ -115,7 +118,9 @@ async function facilitiesForWorkspace(): Promise<Record<string, unknown>[]> {
   return [...derived, ...orphans].sort((a, b) => String(a.name).localeCompare(String(b.name)));
 }
 
-export async function getTrackingWorkspace(): Promise<TrackingWorkspacePayload> {
+export async function getTrackingWorkspace(scope: VisibleScope): Promise<TrackingWorkspacePayload> {
+  const visibleZones = await TrackedZone.find(facilityClause(scope)).select('_id').lean();
+  const visibleRooms = await InventoryRoom.find(facilityClause(scope)).select('_id').lean();
   const [
     facilities,
     zones,
@@ -135,25 +140,25 @@ export async function getTrackingWorkspace(): Promise<TrackingWorkspacePayload> 
     firmwareCampaigns,
     events,
   ] = await Promise.all([
-    facilitiesForWorkspace(),
-    TrackedZone.find().sort({ facility: 1, name: 1 }).lean(),
-    AssetPresence.find().sort({ assetName: 1 }).lean(),
-    AssetJourney.find().lean(),
-    InventoryRoom.find().sort({ facility: 1, name: 1 }).lean(),
-    Rack.find().sort({ name: 1 }).lean(),
-    AuditSession.find().sort({ dueAt: 1 }).lean(),
-    MovementTxn.find().sort({ at: -1 }).lean(),
-    UnknownDetection.find().sort({ lastSeen: -1 }).lean(),
-    InventoryException.find().sort({ detectedAt: -1 }).lean(),
-    TrackingAlert.find().sort({ raisedAt: -1 }).lean(),
-    Incident.find().sort({ openedAt: -1 }).lean(),
-    AutomationRule.find().sort({ name: 1 }).lean(),
-    TrackingDevice.find().sort({ facility: 1, name: 1 }).lean(),
-    CoverageCell.find().lean(),
-    FirmwareCampaign.find().sort({ name: 1 }).lean(),
+    facilitiesForWorkspace(scope),
+    TrackedZone.find(facilityClause(scope)).sort({ facility: 1, name: 1 }).lean(),
+    AssetPresence.find(await assetClause(scope, '_id')).sort({ assetName: 1 }).lean(),
+    AssetJourney.find(await assetClause(scope, '_id')).lean(),
+    InventoryRoom.find(facilityClause(scope)).sort({ facility: 1, name: 1 }).lean(),
+    Rack.find(scope.coversAll ? {} : { roomId: { $in: visibleRooms.map(row => row._id) } }).sort({ name: 1 }).lean(),
+    AuditSession.find(facilityClause(scope)).sort({ dueAt: 1 }).lean(),
+    MovementTxn.find(await assetClause(scope)).sort({ at: -1 }).lean(),
+    UnknownDetection.find(facilityClause(scope)).sort({ lastSeen: -1 }).lean(),
+    InventoryException.find(await assetClause(scope)).sort({ detectedAt: -1 }).lean(),
+    TrackingAlert.find(await trackingClause(scope)).sort({ raisedAt: -1 }).lean(),
+    Incident.find(facilityClause(scope)).sort({ openedAt: -1 }).lean(),
+    AutomationRule.find(scope.coversAll ? {} : { _id: { $in: [] } }).sort({ name: 1 }).lean(),
+    TrackingDevice.find(await trackingClause(scope)).sort({ facility: 1, name: 1 }).lean(),
+    CoverageCell.find(scope.coversAll ? {} : { _id: { $in: visibleZones.map(row => row._id) } }).lean(),
+    FirmwareCampaign.find(scope.coversAll ? {} : { _id: { $in: [] } }).sort({ name: 1 }).lean(),
     // The activity feed is the one unbounded collection here, so it is the one
     // that gets a ceiling.
-    TrackingEvent.find().sort({ at: -1 }).limit(200).lean(),
+    TrackingEvent.find(await assetClause(scope)).sort({ at: -1 }).limit(200).lean(),
   ]);
 
   return {
@@ -190,6 +195,6 @@ export async function getTrackingWorkspace(): Promise<TrackingWorkspacePayload> 
 }
 
 /** Open tracking alerts — the number badged on the sidebar's tracking row. */
-export async function countOpenTrackingAlerts(): Promise<number> {
-  return TrackingAlert.countDocuments({ state: { $in: OPEN_TRACKING_ALERT_STATES } });
+export async function countOpenTrackingAlerts(scope: VisibleScope): Promise<number> {
+  return TrackingAlert.countDocuments({ ...await trackingClause(scope), state: { $in: OPEN_TRACKING_ALERT_STATES } });
 }

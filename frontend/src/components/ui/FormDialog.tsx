@@ -14,7 +14,7 @@
 // so every open starts clean and there is no reset effect to forget.
 // ─────────────────────────────────────────────────────────────────────────────
 
-import { useEffect, type FormEvent, type ReactNode } from 'react';
+import { useEffect, useRef, type FormEvent, type ReactNode } from 'react';
 import { Button } from '@/components/ui/Button';
 
 const WIDTHS = {
@@ -54,9 +54,16 @@ export function FormDialog({
   onCancel: () => void;
   children: ReactNode;
 }) {
+  const formRef = useRef<HTMLFormElement>(null);
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (e.key === 'Escape' && !busy) onCancel();
+      if (e.key === 'Tab') {
+        const controls = [...(formRef.current?.querySelectorAll<HTMLElement>('button:not(:disabled), input:not(:disabled), select:not(:disabled), textarea:not(:disabled), a[href], [tabindex="0"]') ?? [])].filter((el) => el.getClientRects().length);
+        const first = controls[0], last = controls.at(-1);
+        if (e.shiftKey && (document.activeElement === first || !formRef.current?.contains(document.activeElement))) { e.preventDefault(); last?.focus(); }
+        else if (!e.shiftKey && (document.activeElement === last || !formRef.current?.contains(document.activeElement))) { e.preventDefault(); first?.focus(); }
+      }
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
@@ -74,6 +81,7 @@ export function FormDialog({
       <div className="absolute inset-0 bg-slate-900/40 backdrop-blur-sm" onClick={() => !busy && onCancel()} />
 
       <form
+        ref={formRef}
         onSubmit={submit}
         className={`relative my-auto w-full ${WIDTHS[width]} rounded-2xl border border-slate-200 bg-white shadow-2xl`}
       >

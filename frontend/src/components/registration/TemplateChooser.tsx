@@ -16,7 +16,7 @@ import { cn } from '@/lib/utils';
  */
 export function TemplateChooser({ onPick }: { onPick: (id: string) => void }) {
   const [q, setQ] = useState('');
-  const { data, isLoading, isError } = useQuery({
+  const { data, isLoading, isError, refetch } = useQuery({
     queryKey: ['templates', 'active'],
     queryFn: () => templatesApi.list({ status: 'active' }),
   });
@@ -31,7 +31,7 @@ export function TemplateChooser({ onPick }: { onPick: (id: string) => void }) {
   if (isError) {
     return (
       <div className="rounded-xl border border-health-critical/30 bg-red-50 p-6 text-sm text-slate-700">
-        Templates could not be loaded.
+        <p>Templates could not be loaded.</p><Button onClick={() => void refetch()}>Retry</Button>
       </div>
     );
   }

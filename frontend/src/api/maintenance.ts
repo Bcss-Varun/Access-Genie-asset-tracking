@@ -1,3 +1,4 @@
+import { getActiveScope } from '@/api/dataset';
 import type {
   Certification,
   CycleCount,
@@ -54,7 +55,7 @@ export const pmApi = {
    * raising a second one, so running this twice does not double the queue.
    */
   runAutomation: () =>
-    apiPost<{ pmRaised: number; conditionRaised: number; schedulesAdvanced: number }>('/pm-schedules/run-automation'),
+    apiPost<{ pmRaised: number; conditionRaised: number; schedulesAdvanced: number }>(`/pm-schedules/run-automation${getActiveScope() ? `?scope=${encodeURIComponent(getActiveScope()!)}` : ''}`),
 };
 
 export const inspectionsApi = {

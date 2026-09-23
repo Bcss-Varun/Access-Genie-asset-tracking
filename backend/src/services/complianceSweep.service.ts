@@ -42,7 +42,7 @@ export interface ComplianceSweepResult {
   notified: number;
 }
 
-async function raiseComplianceRecord(cert: CertificationDoc, kind: 'Expired' | 'Expiring', now: Date): Promise<void> {
+async function raiseComplianceRecord(cert: CertificationDoc, kind: 'Expired' | 'Expiring'): Promise<void> {
   const asset = await Asset.findById(cert.assetId).lean();
   const scopeId = asset?.location.id;
   const severity = kind === 'Expired' ? 'Critical' : 'Medium';
@@ -132,7 +132,7 @@ export async function sweepCertificationExpiry(now = new Date()): Promise<Compli
           at: now,
           read: false,
         });
-        await raiseComplianceRecord(cert, 'Expired', now);
+        await raiseComplianceRecord(cert, 'Expired');
         notified += 1;
       } catch (err: unknown) {
         // A failed notification must not roll back a status that is now correct.
@@ -152,7 +152,7 @@ export async function sweepCertificationExpiry(now = new Date()): Promise<Compli
 
     for (const cert of upcoming) {
       try {
-        await raiseComplianceRecord(cert, 'Expiring', now);
+        await raiseComplianceRecord(cert, 'Expiring');
       } catch (err: unknown) {
         logger.error('Certificate expiring-soon finding failed', {
           certificate: cert._id,

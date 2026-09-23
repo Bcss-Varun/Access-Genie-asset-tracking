@@ -186,8 +186,9 @@ async function roleView(roleId: RoleId): Promise<RoleView> {
  *
  * Resolution order, and the reason for each step:
  *
- *   1. No module grant at all → no actions. A module you cannot enter has no
- *      actions to hold.
+ *   1. No role or per-user module grant → no actions. A module you cannot
+ *      enter has no actions to hold. Per-user grants use the same role defaults
+ *      and explicit action overrides as role-level module grants.
  *   2. A stored override for that module → exactly that list, including an empty
  *      one, which legitimately means "reachable, nothing permitted".
  *   3. Otherwise → the role's defaults from `shared/governance.ts`. This is what
@@ -197,11 +198,15 @@ async function roleView(roleId: RoleId): Promise<RoleView> {
  * a deployment that narrows it locks every administrator out of the screen that
  * would let them undo it.
  */
-export async function grantedActions(roleId: RoleId, module: ModuleKey): Promise<PermissionAction[]> {
+export async function grantedActions(
+  roleId: RoleId,
+  module: ModuleKey,
+  extraModules: readonly ModuleKey[] = [],
+): Promise<PermissionAction[]> {
   if (roleId === 'super_admin') return [...ALL_ACTIONS];
 
   const modules = await grantedModules(roleId);
-  if (!modules.includes(module)) return [];
+  if (!modules.includes(module) && !extraModules.includes(module)) return [];
 
   const rows = await RoleGrant.findById(roleId).lean<RoleGrantDoc>();
   const stored = rows?.actions?.[module];
@@ -209,7 +214,7 @@ export async function grantedActions(roleId: RoleId, module: ModuleKey): Promise
     return stored.filter((a): a is PermissionAction => (PERMISSION_ACTIONS as readonly string[]).includes(a));
   }
 
-  return defaultActionsFor(roleId);
+  return defaultActionsFor(roleId, module);
 }
 
 /** The whole matrix for a role — what the Roles screen renders and edits. */

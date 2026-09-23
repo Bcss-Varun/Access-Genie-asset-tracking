@@ -1,3 +1,4 @@
+import { requireScope } from '../middleware/scope.js';
 import type { Request, Response } from 'express';
 import { asyncHandler } from '../utils/asyncHandler.js';
 import { sendData } from '../utils/response.js';
@@ -15,7 +16,7 @@ import type { ObservationBatchInput, ObservationInput } from '../validators/obse
  */
 
 export const record = asyncHandler(async (req: Request, res: Response) => {
-  const result = await service.recordObservation(req.body as ObservationInput);
+  const result = await service.recordObservation(req.body as ObservationInput, requireScope(req));
   // 202: the sighting was taken, but an unrecognised tag is not a failure —
   // it is logged as an unknown detection and the caller is told why.
   sendData(res, result, result.accepted ? 201 : 202);
@@ -23,7 +24,7 @@ export const record = asyncHandler(async (req: Request, res: Response) => {
 
 export const recordBatch = asyncHandler(async (req: Request, res: Response) => {
   const { observations } = req.body as ObservationBatchInput;
-  const results = await service.recordObservations(observations);
+  const results = await service.recordObservations(observations, requireScope(req));
 
   sendData(res, {
     accepted: results.filter((r) => r.accepted).length,
@@ -33,6 +34,6 @@ export const recordBatch = asyncHandler(async (req: Request, res: Response) => {
 });
 
 /** The places a reader may report — derived from the location hierarchy. */
-export const zones = asyncHandler(async (_req: Request, res: Response) => {
-  sendData(res, await service.observableZones());
+export const zones = asyncHandler(async (req: Request, res: Response) => {
+  sendData(res, await service.observableZones(requireScope(req)));
 });

@@ -43,7 +43,7 @@ export default function EditAssetPage() {
           { label: 'Edit' },
         ]}
       />
-      <AssetForm mode="edit" asset={asset} />
+      <AssetForm key={id} mode="edit" asset={asset} />
     </div>
   );
 }

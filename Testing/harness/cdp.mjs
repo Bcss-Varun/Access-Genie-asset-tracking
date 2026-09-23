@@ -14,6 +14,7 @@
 // can assert that a screen rendered *and* that nothing threw behind it.
 
 import { spawn } from 'node:child_process';
+import { once } from 'node:events';
 import { mkdirSync } from 'node:fs';
 import { writeFile } from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
@@ -27,14 +28,14 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 export class Browser {
   constructor(proc, wsUrl) { this.proc = proc; this.wsUrl = wsUrl; }
 
-  static async launch({ port = 9333, width = 1440, height = 900 } = {}) {
+  static async launch({ port = 9333, width = 1440, height = 900, userDataDir = '/tmp/ag-qa-chrome' } = {}) {
     const proc = spawn('google-chrome', [
       '--headless=new',
       `--remote-debugging-port=${port}`,
       '--no-sandbox', '--disable-gpu', '--disable-dev-shm-usage',
       '--hide-scrollbars', '--mute-audio',
       `--window-size=${width},${height}`,
-      '--user-data-dir=/tmp/ag-qa-chrome',
+      `--user-data-dir=${userDataDir}`,
       'about:blank',
     ], { stdio: ['ignore', 'pipe', 'pipe'] });
 
@@ -58,7 +59,13 @@ export class Browser {
     return p;
   }
 
-  async close() { this.proc.kill('SIGKILL'); }
+  async close() {
+    if (this.proc.exitCode !== null || this.proc.signalCode !== null) return;
+    const closed = once(this.proc, 'close');
+    this.proc.kill('SIGTERM');
+    const timeout = setTimeout(() => this.proc.kill('SIGKILL'), 5000).unref();
+    try { await closed; } finally { clearTimeout(timeout); }
+  }
 }
 
 class Page {
@@ -121,7 +128,7 @@ class Page {
       this.ws.send(JSON.stringify({ id, method, params }));
       setTimeout(() => {
         if (this.pending.has(id)) { this.pending.delete(id); reject(new Error(`CDP timeout: ${method}`)); }
-      }, 45000);
+      }, 45000).unref();
     });
   }
 

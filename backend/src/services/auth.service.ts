@@ -1,12 +1,13 @@
-import { randomBytes } from 'node:crypto';
+import { MfaChallenge } from '../models/MfaChallenge.js';
+import { randomBytes, createHash } from 'node:crypto';
 import bcrypt from 'bcryptjs';
 import { ROLES, type AuthPayload, type Persona } from '@access-genie/shared';
 import { User } from '../models/index.js';
 import { env } from '../config/env.js';
-import { generateRecoveryCodes, generateSecret, otpauthUri, verifyCode } from './totp.service.js';
+import { generateRecoveryCodes, generateSecret, otpauthUri, verifyCode, matchingStep } from './totp.service.js';
 import { ApiError } from '../utils/ApiError.js';
 import { issueRefreshToken, revokeAllForUser, rotateRefreshToken, signAccessToken } from './token.service.js';
-import { grantedModules } from './roleGrant.service.js';
+import { grantedActions, grantedModules } from './roleGrant.service.js';
 
 interface ClientContext {
   userAgent?: string;
@@ -24,15 +25,18 @@ interface ClientContext {
 async function toAuthPayload(
   user: { id: string; roleId: keyof typeof ROLES } & Record<string, unknown>,
   publicUser: AuthPayload['user'],
+  sessionId: string,
 ): Promise<AuthPayload> {
-  const { token, expiresIn } = signAccessToken(user.id, user.roleId);
+  const { token, expiresIn } = signAccessToken(user.id, user.roleId, sessionId);
   // Same union `requireAuth` applies on every later request (see
   // middleware/auth.ts) — computed independently here because sign-in builds
   // this payload before any request goes through that middleware, and without
   // it the navigation shown at login would omit a per-user grant until the
   // next page load happened to re-resolve it.
   const roleModules = await grantedModules(user.roleId);
-  const modules = Array.from(new Set([...roleModules, ...(publicUser.extraModules ?? [])]));
+  const candidates = Array.from(new Set([...roleModules, ...(publicUser.extraModules ?? [])]));
+  const allowed = await Promise.all(candidates.map(async module => (await grantedActions(user.roleId, module, publicUser.extraModules)).includes('view')));
+  const modules = candidates.filter((_module, index) => allowed[index]);
 
   return {
     user: publicUser,
@@ -76,7 +80,7 @@ export async function login(email: string, password: string, context: ClientCont
   // issued and `lastLoginAt` is not stamped until the second factor lands —
   // otherwise a stolen password would show up as a successful sign-in.
   if (user.mfaEnabled) {
-    return { mfaRequired: true, challengeToken: issueChallenge(user.id) };
+    return { mfaRequired: true, challengeToken: await issueChallenge(user.id, user.authVersion ?? 0) };
   }
 
   user.lastLoginAt = new Date();
@@ -85,7 +89,7 @@ export async function login(email: string, password: string, context: ClientCont
   const refresh = await issueRefreshToken(user.id, context);
 
   return {
-    auth: await toAuthPayload({ id: user.id, roleId: user.roleId }, user.toPublic()),
+    auth: await toAuthPayload({ id: user.id, roleId: user.roleId }, user.toPublic(), refresh.sessionId),
     refreshToken: refresh.token,
     refreshExpiresAt: refresh.expiresAt,
   };
@@ -100,10 +104,10 @@ export async function refresh(
   const user = await User.findById(rotated.userId);
 
   if (!user) throw ApiError.unauthorized('Account no longer exists');
-  if (user.status !== 'active') throw ApiError.forbidden('This account is suspended');
+  if (user.status !== 'active') { await revokeAllForUser(user._id); throw ApiError.forbidden('This account is suspended'); }
 
   return {
-    auth: await toAuthPayload({ id: user.id, roleId: user.roleId }, user.toPublic()),
+    auth: await toAuthPayload({ id: user.id, roleId: user.roleId }, user.toPublic(), rotated.sessionId),
     refreshToken: rotated.token,
     refreshExpiresAt: rotated.expiresAt,
   };
@@ -133,6 +137,7 @@ export async function changePassword(
  * persona is a real account and still has to log in with a password.
  */
 export async function listPersonas(): Promise<Persona[]> {
+  if (!env.ENABLE_DEMO_PERSONAS || env.isProd) return [];
   const users = await User.find({ status: 'active' }).sort({ createdAt: 1 }).lean();
 
   return users.map((u) => ({
@@ -161,21 +166,11 @@ export async function listPersonas(): Promise<Persona[]> {
 
 /** A challenge token binds a verified password to the second factor. */
 const MFA_CHALLENGE_TTL_MS = 5 * 60_000;
-const mfaChallenges = new Map<string, { userId: string; expiresAt: number }>();
-
-/** Drop expired challenges whenever one is issued — the map stays tiny. */
-function sweepChallenges(now: number): void {
-  for (const [token, challenge] of mfaChallenges) {
-    if (challenge.expiresAt <= now) mfaChallenges.delete(token);
-  }
-}
-
-function issueChallenge(userId: string): string {
-  const now = Date.now();
-  sweepChallenges(now);
-
+const challengeHash = (token: string) => createHash('sha256').update(token).digest('hex');
+async function issueChallenge(userId: string, authVersion: number): Promise<string> {
   const token = randomBytes(32).toString('base64url');
-  mfaChallenges.set(token, { userId, expiresAt: now + MFA_CHALLENGE_TTL_MS });
+  await MfaChallenge.create({ tokenHash: challengeHash(token), userId, authVersion,
+    expiresAt: new Date(Date.now() + MFA_CHALLENGE_TTL_MS), attempts: 0 });
   return token;
 }
 
@@ -190,8 +185,8 @@ export async function beginMfaSetup(userId: string): Promise<MfaSetup> {
   if (user.mfaEnabled) throw ApiError.conflict('Multi-factor authentication is already enabled');
 
   const secret = generateSecret();
-  user.mfaSecret = secret;
-  await user.save();
+  const updated = await User.updateOne({ _id: userId, mfaEnabled: { $ne: true } }, { $set: { mfaSecret: secret } });
+  if (!updated.modifiedCount) throw ApiError.conflict('Multi-factor authentication was changed. Reload and try again');
 
   return { secret, otpauthUri: otpauthUri(secret, user.email, env.ADMIN_ORG_NAME || 'Access Genie') };
 }
@@ -208,11 +203,10 @@ export async function completeMfaSetup(userId: string, code: string): Promise<{ 
   }
 
   const recoveryCodes = generateRecoveryCodes();
-  user.mfaEnabled = true;
-  // Hashed, like passwords: a recovery code is a credential, and a database
-  // dump should not hand over eight working ones per account.
-  user.mfaRecoveryCodes = await Promise.all(recoveryCodes.map((c) => bcrypt.hash(c, env.BCRYPT_ROUNDS)));
-  await user.save();
+  const hashes = await Promise.all(recoveryCodes.map((c) => bcrypt.hash(c, env.BCRYPT_ROUNDS)));
+  const enabled = await User.updateOne({ _id: userId, mfaEnabled: { $ne: true }, mfaSecret: user.mfaSecret },
+    { $set: { mfaEnabled: true, mfaRecoveryCodes: hashes, mfaLastStep: matchingStep(user.mfaSecret, code) }, $inc: { authVersion: 1 } });
+  if (!enabled.modifiedCount) throw ApiError.conflict('Setup changed. Reload and try again');
 
   return { recoveryCodes };
 }
@@ -223,10 +217,9 @@ export async function disableMfa(userId: string, password: string): Promise<void
   if (!user) throw ApiError.notFound('User');
   if (!(await user.comparePassword(password))) throw ApiError.unauthorized('That password is not correct');
 
-  user.mfaEnabled = false;
-  user.mfaSecret = undefined;
-  user.mfaRecoveryCodes = [];
-  await user.save();
+  await User.updateOne({ _id: userId, passwordHash: user.passwordHash }, {
+    $set: { mfaEnabled: false, mfaRecoveryCodes: [] }, $unset: { mfaSecret: 1, mfaLastStep: 1 }, $inc: { authVersion: 1 },
+  });
 }
 
 /** Fresh recovery codes, replacing the old set. */
@@ -237,8 +230,10 @@ export async function regenerateRecoveryCodes(userId: string, password: string):
   if (!(await user.comparePassword(password))) throw ApiError.unauthorized('That password is not correct');
 
   const codes = generateRecoveryCodes();
-  user.mfaRecoveryCodes = await Promise.all(codes.map((c) => bcrypt.hash(c, env.BCRYPT_ROUNDS)));
-  await user.save();
+  const hashes = await Promise.all(codes.map((c) => bcrypt.hash(c, env.BCRYPT_ROUNDS)));
+  const updated = await User.updateOne({ _id: userId, mfaEnabled: true, passwordHash: user.passwordHash },
+    { $set: { mfaRecoveryCodes: hashes }, $inc: { authVersion: 1 } });
+  if (!updated.modifiedCount) throw ApiError.conflict('Account security changed. Reload and try again');
 
   return codes;
 }
@@ -260,40 +255,31 @@ export async function verifyMfa(
   code: string,
   context: ClientContext,
 ): Promise<{ auth: AuthPayload; refreshToken: string; refreshExpiresAt: Date }> {
-  const challenge = mfaChallenges.get(challengeToken);
-  if (!challenge || challenge.expiresAt <= Date.now()) {
-    mfaChallenges.delete(challengeToken);
-    throw ApiError.unauthorized('That sign-in attempt has expired. Start again.');
+  const challenge = await MfaChallenge.findOneAndUpdate({ tokenHash: challengeHash(challengeToken),
+    expiresAt: { $gt: new Date() }, attempts: { $lt: 5 } }, { $inc: { attempts: 1 } }, { new: true });
+  if (!challenge) throw ApiError.unauthorized('That sign-in attempt has expired. Start again.');
+  const user = await User.findById(challenge.userId).select('+mfaSecret +mfaRecoveryCodes +mfaLastStep');
+  if (!user || user.status !== 'active' || !user.mfaEnabled || user.authVersion !== challenge.authVersion) {
+    throw ApiError.unauthorized('That sign-in attempt is no longer valid. Start again.');
   }
-
-  const user = await User.findById(challenge.userId).select('+mfaSecret +mfaRecoveryCodes');
-  if (!user) throw ApiError.unauthorized('Account no longer exists');
-  if (user.status !== 'active') throw ApiError.forbidden('This account is suspended');
-
   const cleaned = code.trim().toUpperCase();
-  let accepted = Boolean(user.mfaSecret && verifyCode(user.mfaSecret, code));
-
-  if (!accepted && user.mfaRecoveryCodes.length > 0) {
-    for (let i = 0; i < user.mfaRecoveryCodes.length; i++) {
-      if (await bcrypt.compare(cleaned, user.mfaRecoveryCodes[i] as string)) {
-        user.mfaRecoveryCodes.splice(i, 1);
-        accepted = true;
-        break;
-      }
-    }
+  const step = user.mfaSecret ? matchingStep(user.mfaSecret, code) : null;
+  let recoveryHash: string | undefined;
+  if (step === null) {
+    for (const hash of user.mfaRecoveryCodes) if (await bcrypt.compare(cleaned, hash)) { recoveryHash = hash; break; }
   }
-
-  if (!accepted) throw ApiError.unauthorized('That code is not valid');
-
-  // Burned on success, so a captured challenge cannot be replayed.
-  mfaChallenges.delete(challengeToken);
-
-  user.lastLoginAt = new Date();
-  await user.save();
-
+  if (step === null && !recoveryHash) throw ApiError.unauthorized('That code is not valid');
+  // Claim this challenge once across processes before issuing credentials.
+  const claimed = await MfaChallenge.findOneAndDelete({ _id: challenge._id });
+  if (!claimed) throw ApiError.unauthorized('That sign-in attempt was already used');
+  const used = await User.updateOne({ _id: user._id, authVersion: challenge.authVersion === 0 ? { $in: [0, null] } : challenge.authVersion, mfaEnabled: true,
+    ...(recoveryHash ? { mfaRecoveryCodes: recoveryHash } : { $or: [{ mfaLastStep: { $lt: step } }, { mfaLastStep: { $exists: false } }] }),
+  }, recoveryHash ? { $pull: { mfaRecoveryCodes: recoveryHash }, $set: { lastLoginAt: new Date() } }
+    : { $set: { mfaLastStep: step, lastLoginAt: new Date() } });
+  if (!used.modifiedCount) throw ApiError.unauthorized('That code was already used. Start again with a fresh code.');
   const refresh = await issueRefreshToken(user.id, context);
   return {
-    auth: await toAuthPayload({ id: user.id, roleId: user.roleId }, user.toPublic()),
+    auth: await toAuthPayload({ id: user.id, roleId: user.roleId }, user.toPublic(), refresh.sessionId),
     refreshToken: refresh.token,
     refreshExpiresAt: refresh.expiresAt,
   };

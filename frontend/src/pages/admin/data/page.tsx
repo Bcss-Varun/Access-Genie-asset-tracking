@@ -6,7 +6,6 @@ import { PageHeader, Badge, EmptyState } from '@/components/ui/primitives';
 import { Button } from '@/components/ui/Button';
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 import { useToast } from '@/components/providers/ToastProvider';
-import { useMutate } from '@/api/mutate';
 import { backupsApi, downloadCsv } from '@/api/configuration';
 import { ApiRequestError } from '@/api/client';
 import { relTime } from '@/lib/utils';
@@ -90,7 +89,7 @@ function tables(): { key: string; label: string; rows: () => Record<string, unkn
   ];
 }
 
-/** Every collection, as one JSON document. */
+/** Accessible dataset records, as one JSON document. This is not a database backup. */
 function tenantJson(): string {
   const bundle: Record<string, unknown> = { exportedAt: new Date().toISOString(), observedAt: data.observedAt };
   for (const t of tables()) bundle[t.key] = t.rows();
@@ -99,7 +98,6 @@ function tenantJson(): string {
 
 export default function DataPage() {
   const { toast } = useToast();
-  const { run, isPending } = useMutate();
   const [restoring, setRestoring] = useState<Backup | null>(null);
   const [busy, setBusy] = useState(false);
 
@@ -137,15 +135,8 @@ export default function DataPage() {
     anchor.remove();
     setTimeout(() => URL.revokeObjectURL(url), 1_000);
 
-    toast({ title: 'Tenant export downloaded', description: 'Every collection, as one JSON document.', tone: 'success' });
+    toast({ title: 'Tenant export downloaded', description: 'Accessible dataset records, as one JSON document. This is not a database backup.', tone: 'success' });
   };
-
-  const runBackup = () =>
-    void run(backupsApi.create(), {
-      success: 'Snapshot recorded',
-      successDetail: 'Listed below with the size of the estate at this moment.',
-      describe: 'record that snapshot',
-    });
 
   /**
    * Not routed through `useMutate`: the server always refuses, and the refusal
@@ -214,12 +205,11 @@ export default function DataPage() {
           <div className="text-2xl">🛡️</div>
           <h3 className="mt-2 font-heading font-semibold text-slate-900">Snapshots</h3>
           <p className="mt-1 flex-1 text-sm text-slate-500">
-            Records a point in time with the size of the estate at that moment. Restoring one is done against the
-            database, not from here.
+            Backup creation is unavailable. Configure and verify backups through your database operator. Legacy rows below are metadata and do not prove a restorable backup exists.
           </p>
           <div className="mt-4">
-            <Button size="sm" disabled={isPending} onClick={runBackup}>
-              {isPending ? 'Recording…' : 'Take snapshot'}
+            <Button size="sm" disabled>
+              Backup unavailable
             </Button>
           </div>
         </div>
@@ -234,8 +224,7 @@ export default function DataPage() {
           <EmptyState
             icon="🛡️"
             title="No snapshots yet"
-            description="Take one before a bulk import or a migration, so there is a marked point to compare against."
-            action={<Button onClick={runBackup} disabled={isPending}>Take snapshot</Button>}
+            description="Use your database backup provider to create and verify a restorable backup."
           />
         ) : (
           <div className="overflow-x-auto">
@@ -256,7 +245,7 @@ export default function DataPage() {
                     <td className="px-5 py-3 text-slate-600">{relTime(b.when)}</td>
                     <td className="px-5 py-3 text-right tabular-nums text-slate-700">{b.size}</td>
                     <td className="px-5 py-3">
-                      <Badge tone="emerald">{b.status}</Badge>
+                      <Badge tone="slate">Unverified legacy record</Badge>
                     </td>
                     <td className="px-5 py-3 text-right">
                       <Button size="sm" variant="ghost" onClick={() => setRestoring(b)}>

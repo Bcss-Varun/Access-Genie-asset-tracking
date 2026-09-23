@@ -23,7 +23,8 @@ export default function NewAssetPage() {
   const [params, setParams] = useSearchParams();
   const navigate = useNavigate();
 
-  const source = (params.get('source') ?? '') as AddAssetSource | '';
+  const requestedSource = params.get('source') ?? '';
+  const source = (['blank', 'template', 'clone', 'import'].includes(requestedSource) ? requestedSource : '') as AddAssetSource | '';
   const templateId = params.get('templateId') ?? undefined;
   const cloneOf = params.get('cloneOf') ?? undefined;
 
@@ -58,18 +59,18 @@ export default function NewAssetPage() {
 
       {!source && <SourcePicker />}
 
-      {source === 'blank' && <RegistrationForm source="blank" />}
+      {source === 'blank' && <RegistrationForm key="blank" source="blank" />}
 
       {source === 'template' &&
         (templateId ? (
-          <RegistrationForm source="template" templateId={templateId} />
+          <RegistrationForm key={templateId} source="template" templateId={templateId} />
         ) : (
           <TemplateChooser onPick={(id) => setParams({ source: 'template', templateId: id })} />
         ))}
 
       {source === 'clone' &&
         (cloneOf ? (
-          <CloneStep cloneOf={cloneOf} />
+          <CloneStep key={cloneOf} cloneOf={cloneOf} />
         ) : (
           <CloneChooser onPick={(id) => setParams({ source: 'clone', cloneOf: id })} />
         ))}

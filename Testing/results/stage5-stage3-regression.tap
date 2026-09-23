@@ -1,0 +1,117 @@
+TAP version 13
+# [BABEL] Note: The code generator has deoptimised the styling of /tmp/ag-stage3-browser-Dpx2Co/vite-cache/deps/react-dom_client.js?v=2067c808 as it exceeds the max of 500KB.
+# Subtest: sign in, dashboard and registry are navigable
+ok 1 - sign in, dashboard and registry are navigable
+  ---
+  duration_ms: 12202.674632
+  ...
+# Subtest: blank registration validates, prevents duplicate submits, persists and opens detail
+ok 2 - blank registration validates, prevents duplicate submits, persists and opens detail
+  ---
+  duration_ms: 2586.05216
+  ...
+# Subtest: editing a tag and submitting by keyboard persists the draft tag
+ok 3 - editing a tag and submitting by keyboard persists the draft tag
+  ---
+  duration_ms: 1720.081403
+  ...
+# Subtest: asset detail tab responds to browser back navigation
+ok 4 - asset detail tab responds to browser back navigation
+  ---
+  duration_ms: 1041.990059
+  ...
+# Subtest: import opens a real file picker instead of substituting sample records
+ok 5 - import opens a real file picker instead of substituting sample records
+  ---
+  duration_ms: 884.793333
+  ...
+# Subtest: failed lifecycle save keeps the entered reason available for retry
+ok 6 - failed lifecycle save keeps the entered reason available for retry
+  ---
+  duration_ms: 1463.379207
+  ...
+# Subtest: CSV parser preserves quoted content and rejects malformed records
+ok 7 - CSV parser preserves quoted content and rejects malformed records
+  ---
+  duration_ms: 24.189709
+  ...
+# Subtest: real CSV upload validates rows, preserves mapped status, and retries only failed writes
+ok 8 - real CSV upload validates rows, preserves mapped status, and retries only failed writes
+  ---
+  duration_ms: 3110.588728
+  ...
+# Subtest: template authoring, registration and cloning preserve provenance and clear unique identity
+ok 9 - template authoring, registration and cloning preserve provenance and clear unique identity
+  ---
+  duration_ms: 3720.379381
+  ...
+# Subtest: registration rejects missing fields, retries validation outages and handles invalid source links
+ok 10 - registration rejects missing fields, retries validation outages and handles invalid source links
+  ---
+  duration_ms: 2180.594512
+  ...
+# Subtest: QR label binding waits for persistence, survives reload, and does not invent a scan
+ok 11 - QR label binding waits for persistence, survives reload, and does not invent a scan
+  ---
+  duration_ms: 3064.127405
+  ...
+# Subtest: lifecycle approval and financial values remain consistent with saved asset data
+ok 12 - lifecycle approval and financial values remain consistent with saved asset data
+  ---
+  duration_ms: 2067.051517
+  ...
+# Subtest: switching A to B to A and an empty scope cannot reuse another scope dataset
+ok 13 - switching A to B to A and an empty scope cannot reuse another scope dataset
+  ---
+  duration_ms: 3930.073505
+  ...
+# Subtest: registry search and mobile primary pages remain usable without document overflow
+ok 14 - registry search and mobile primary pages remain usable without document overflow
+  ---
+  duration_ms: 3619.075469
+  ...
+# Subtest: dataset gateway error provides a working retry and no uncaught browser exception
+ok 15 - dataset gateway error provides a working retry and no uncaught browser exception
+  ---
+  duration_ms: 3692.40015
+  ...
+# Subtest: late scope responses cannot overwrite the currently selected estate
+ok 16 - late scope responses cannot overwrite the currently selected estate
+  ---
+  duration_ms: 3273.610612
+  ...
+# Subtest: template, clone and defaults failures show recovery controls
+ok 17 - template, clone and defaults failures show recovery controls
+  ---
+  duration_ms: 14532.729764
+  ...
+# Subtest: read-only asset edits fail visibly and preserve the saved record and entered draft
+ok 18 - read-only asset edits fail visibly and preserve the saved record and entered draft
+  ---
+  duration_ms: 2469.477454
+  ...
+# Subtest: CSV without serial numbers imports and undo removes only the newly imported records
+ok 19 - CSV without serial numbers imports and undo removes only the newly imported records
+  ---
+  duration_ms: 1395.453955
+  ...
+# Subtest: lifecycle dialog contains keyboard focus and supports Escape
+ok 20 - lifecycle dialog contains keyboard focus and supports Escape
+  ---
+  duration_ms: 629.052122
+  ...
+# Uncaught browser errors: []
+# Subtest: registry pagination, sorting and page selection operate on the visible rows
+ok 21 - registry pagination, sorting and page selection operate on the visible rows
+  ---
+  duration_ms: 731.975389
+  ...
+1..21
+# tests 21
+# suites 0
+# pass 21
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 69572.005225

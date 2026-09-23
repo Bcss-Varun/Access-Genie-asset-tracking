@@ -20,6 +20,7 @@ import {
 import { Asset, AssetTemplate, ScopeNodeModel, nextId, type AssetTemplateDoc, type UserDoc } from '../models/index.js';
 import { ApiError } from '../utils/ApiError.js';
 import type { RegistrationDraftInput } from '../validators/registration.validator.js';
+import { locationClause, type VisibleScope } from './tenancy.service.js';
 
 /** A field the form is asking for, with the decision about whether it is required. */
 export interface ResolvedField {
@@ -412,8 +413,8 @@ export async function registrationDefaults(user: Pick<UserDoc, 'name' | 'homeSco
  * `clearedFields` rather than silently omitted, so the form can say *these are
  * the five things you have to type* instead of leaving the user to notice.
  */
-export async function clonePrefill(assetId: string): Promise<ClonePrefill> {
-  const asset = await Asset.findById(assetId).lean();
+export async function clonePrefill(scope: VisibleScope, assetId: string): Promise<ClonePrefill> {
+  const asset = await Asset.findOne({ _id: assetId, ...locationClause(scope) }).lean();
   if (!asset) throw ApiError.notFound('Asset');
 
   const values: Record<string, string | number | boolean | null> = {};

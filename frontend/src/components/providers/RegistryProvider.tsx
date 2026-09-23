@@ -7,18 +7,16 @@
 // nothing — the draft is waiting on its own Asset 360 page tomorrow, not just
 // until the next reload.
 //
-// Writes are optimistic. A registration flow is a sequence of small edits and a
-// round trip between each one would make the whole thing feel like filing a
-// form; instead the local copy updates immediately, the request goes out, and a
-// failure rolls the change back and says so. The dataset query is invalidated
-// after each write so every other screen sees the same asset.
+// Writes are serialized per asset and published after the API accepts them.
+// A failure keeps the last saved value and reports the error. Dataset queries
+// are invalidated after each write so other screens see the saved asset too.
 // ─────────────────────────────────────────────────────────────────────────────
 
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import type { Asset, AssetOnboarding, RegisteredAsset, TagBinding } from '@access-genie/shared';
 import { allAssets, allDocs, allSensors } from '@/lib/dataset';
 import { getClassTemplate } from '@/lib/asset-classes';
-import { roleForKind } from '@/lib/onboarding';
+import { roleForKind, trackingTechLabel } from '@/lib/onboarding';
 import { nowMs } from '@/lib/utils';
 import { assetsApi } from '@/api/assets';
 import { useDataset, useRefreshDataset } from '@/api/dataset';
@@ -32,16 +30,6 @@ import { useToast } from './ToastProvider';
  * put *something* in `classId` for assets that predate the registration flow.
  */
 const classIdForCategory = (): string => '';
-
-/** Department implied by the custodian — asked once, derived thereafter. */
-function departmentFor(custodian: string): string {
-  if (/network/i.test(custodian)) return 'Network Engineering';
-  if (/storage/i.test(custodian)) return 'Infrastructure';
-  if (/design/i.test(custodian)) return 'Design';
-  if (/field|ops/i.test(custodian)) return 'IT Operations';
-  if (/security/i.test(custodian)) return 'Security';
-  return 'IT Operations';
-}
 
 /**
  * Reconstruct a registration record for an asset that predates the flow.
@@ -77,7 +65,6 @@ function inferOnboarding(asset: Asset): AssetOnboarding {
     registeredBy: 'Data migration',
     activatedAt: asset.purchaseDate,
     attributes: {},
-    department: departmentFor(asset.custodian),
     locationConfirmed: true,
     trackingIntent: bindings.length ? 'bound' : tpl.trackingExpected ? 'pending' : 'not-tracked',
     bindings,
@@ -88,13 +75,10 @@ function inferOnboarding(asset: Asset): AssetOnboarding {
     commercial: {
       ownership: 'Owned',
       purchaseDate: asset.purchaseDate,
-      commissionDate: asset.purchaseDate,
       purchasePrice: asset.purchasePrice,
-      vendor: asset.manufacturer ? `${asset.manufacturer} India Pvt Ltd` : 'Redington India Ltd',
       warrantyStart: asset.purchaseDate,
       warrantyEnd: asset.warrantyExpiry,
-      depreciationMethod: asset.depreciationMethod ?? tpl.depreciationMethod,
-      usefulLifeYears: tpl.usefulLifeYears,
+      depreciationMethod: asset.depreciationMethod,
     },
     documents: allDocs
       .filter((d) => d.assetId === asset.id)
@@ -123,14 +107,14 @@ interface RegistryValue {
    * label, in the URL and behind the scan code.
    */
   register: (asset: RegisteredAsset) => Promise<RegisteredAsset | null>;
-  patchAsset: (id: string, patch: Partial<Asset>) => void;
-  patchOnboarding: (id: string, patch: Partial<AssetOnboarding>) => void;
-  addBinding: (id: string, binding: TagBinding) => void;
-  verifyBinding: (id: string, bindingId: string) => void;
-  retireBinding: (id: string, bindingId: string) => void;
-  setState: (id: string, state: AssetOnboarding['state']) => void;
+  patchAsset: (id: string, patch: Partial<Asset>) => Promise<boolean>;
+  patchOnboarding: (id: string, patch: Partial<AssetOnboarding>) => Promise<boolean>;
+  addBinding: (id: string, binding: TagBinding) => Promise<boolean>;
+  verifyBinding: (id: string, bindingId: string) => Promise<boolean>;
+  retireBinding: (id: string, bindingId: string) => Promise<boolean>;
+  setState: (id: string, state: AssetOnboarding['state']) => Promise<boolean>;
   /** Void a mis-registration — soft, reversible, stream preserved. */
-  voidAsset: (id: string) => void;
+  voidAsset: (id: string) => Promise<boolean>;
   /**
    * Delete a mis-registration outright.
    *
@@ -153,6 +137,8 @@ const RegistryContext = createContext<RegistryValue | null>(null);
 
 export function RegistryProvider({ children }: { children: React.ReactNode }) {
   const [assets, setAssets] = useState<RegisteredAsset[]>(fromDataset);
+  const currentAssets = useRef(assets);
+  const pendingWrites = useRef(new Map<string, Promise<boolean>>());
   const [sessionIds, setSessionIds] = useState<string[]>([]);
   const refreshDataset = useRefreshDataset();
   const { toast } = useToast();
@@ -175,40 +161,39 @@ export function RegistryProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     if (dataUpdatedAt !== syncedAt.current) {
       syncedAt.current = dataUpdatedAt;
-      setAssets(fromDataset());
+      const next = fromDataset();
+      currentAssets.current = next;
+      setAssets(next);
     }
   }, [dataUpdatedAt]);
 
-  /**
-   * Apply an edit locally, then persist it.
-   *
-   * On failure the previous value is restored, so the screen never keeps
-   * showing an edit the server rejected.
-   */
+  // Serialize edits to one asset. Compute outside React state updaters, which
+  // can run later or more than once. Only publish changes the API has saved.
   const commit = useCallback(
-    (id: string, fn: (a: RegisteredAsset) => RegisteredAsset, describe: string) => {
-      let previous: RegisteredAsset | undefined;
-      let updated: RegisteredAsset | undefined;
-
-      setAssets((list) =>
-        list.map((a) => {
-          if (a.id !== id) return a;
-          previous = a;
-          updated = fn(a);
-          return updated;
-        }),
-      );
-
-      if (!updated) return;
-      const { id: _id, createdAt: _c, updatedAt: _u, ...body } = updated;
-
-      assetsApi
-        .update(id, body as Record<string, unknown>)
-        .then(() => refreshDataset())
-        .catch((err: Error) => {
-          setAssets((list) => list.map((a) => (a.id === id && previous ? previous : a)));
-          toast({ title: `Could not ${describe}`, description: err.message, tone: 'error' });
-        });
+    (id: string, fn: (a: RegisteredAsset) => RegisteredAsset, describe: string): Promise<boolean> => {
+      const previousWrite = pendingWrites.current.get(id) ?? Promise.resolve(true);
+      const write = previousWrite.then(async () => {
+        const previous = currentAssets.current.find((a) => a.id === id);
+        if (!previous) return false;
+        const updated = fn(previous);
+        const body = Object.fromEntries(Object.entries(updated).filter(([key, value]) =>
+          !['id', 'createdAt', 'updatedAt'].includes(key) && value !== previous[key as keyof RegisteredAsset],
+        ));
+        try {
+          const saved = await assetsApi.update(id, body);
+          const stored = { ...saved, onboarding: (saved as RegisteredAsset).onboarding ?? updated.onboarding } as RegisteredAsset;
+          currentAssets.current = currentAssets.current.map((a) => a.id === id ? stored : a);
+          setAssets(currentAssets.current);
+          await refreshDataset();
+          return true;
+        } catch (err) {
+          toast({ title: `Could not ${describe}`, description: err instanceof Error ? err.message : 'Please retry.', tone: 'error' });
+          return false;
+        }
+      });
+      pendingWrites.current.set(id, write);
+      void write.finally(() => { if (pendingWrites.current.get(id) === write) pendingWrites.current.delete(id); });
+      return write;
     },
     [refreshDataset, toast],
   );
@@ -280,6 +265,7 @@ export function RegistryProvider({ children }: { children: React.ReactNode }) {
           (a) => ({
             ...a,
             // The identity binding is what the registry and scan-to-open show.
+            trackingTech: a.trackingTech ?? trackingTechLabel(binding.kind),
             trackingId: binding.role === 'identity' || !a.trackingId ? binding.tagId : a.trackingId,
             onboarding: {
               ...a.onboarding,
@@ -317,6 +303,7 @@ export function RegistryProvider({ children }: { children: React.ReactNode }) {
             const live = bindings.filter((b) => !b.retiredAt);
             return {
               ...a,
+              trackingId: live.find((b) => b.role === 'identity')?.tagId ?? live[0]?.tagId ?? '',
               onboarding: { ...a.onboarding, bindings, trackingIntent: live.length ? 'bound' : 'pending' },
             };
           },

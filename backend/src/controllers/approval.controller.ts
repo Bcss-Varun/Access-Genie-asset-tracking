@@ -1,3 +1,4 @@
+import { requireScope } from '../middleware/scope.js';
 import type { Request, Response } from 'express';
 import type { ApprovalRequestStatus, ApprovalTrigger, ApprovalWorkflow as ApprovalWorkflowView } from '@access-genie/shared';
 import { asyncHandler } from '../utils/asyncHandler.js';
@@ -57,13 +58,14 @@ async function toView(doc: ApprovalWorkflowDoc): Promise<ApprovalWorkflowView> {
 
 // ── Workflows ────────────────────────────────────────────────────────────────
 
-export const listWorkflows = asyncHandler(async (_req: Request, res: Response) => {
-  const rows = await ApprovalWorkflow.find().sort({ trigger: 1, name: 1 }).lean<ApprovalWorkflowDoc[]>();
+export const listWorkflows = asyncHandler(async (req: Request, res: Response) => {
+  const rows = await ApprovalWorkflow.find(req.auth?.roleId === 'super_admin' ? {} : { scopeId: { $in: [...requireScope(req).ids] } }).sort({ trigger: 1, name: 1 }).lean<ApprovalWorkflowDoc[]>();
   sendData(res, await Promise.all(rows.map(toView)));
 });
 
 export const createWorkflow = asyncHandler(async (req: Request, res: Response) => {
   const body = req.body as CreateWorkflowInput;
+  if (req.auth?.roleId !== 'super_admin' && (!body.scopeId || !requireScope(req).ids.has(body.scopeId))) throw ApiError.forbidden('Workflow scope is outside your estate');
 
   if (body.scopeId) {
     const node = await ScopeNodeModel.findById(body.scopeId).lean();
@@ -83,6 +85,11 @@ export const createWorkflow = asyncHandler(async (req: Request, res: Response) =
 export const updateWorkflow = asyncHandler(async (req: Request, res: Response) => {
   const id = req.params.id as string;
   const body = req.body as UpdateWorkflowInput;
+  if (req.auth?.roleId !== 'super_admin') {
+    const existing = await ApprovalWorkflow.findById(id).lean();
+    if (!existing?.scopeId || !requireScope(req).ids.has(existing.scopeId)) throw ApiError.notFound('Approval workflow');
+    if ('scopeId' in body && (!body.scopeId || !requireScope(req).ids.has(body.scopeId))) throw ApiError.forbidden('Workflow scope is outside your estate');
+  }
 
   if (body.scopeId) {
     const node = await ScopeNodeModel.findById(body.scopeId).lean();
@@ -101,7 +108,7 @@ export const removeWorkflow = asyncHandler(async (req: Request, res: Response) =
 
   // Requests already raised keep their copied steps and stay readable, so a
   // deleted workflow does not erase the history of what it approved.
-  const doc = await ApprovalWorkflow.findByIdAndDelete(id).lean();
+  const doc = await ApprovalWorkflow.findOneAndDelete({ _id: id, ...(req.auth?.roleId === 'super_admin' ? {} : { scopeId: { $in: [...requireScope(req).ids] } }) }).lean();
   if (!doc) throw ApiError.notFound('Approval workflow');
 
   recordAudit(req, { action: 'approval_workflow.delete', target: id, category: 'Configuration' });
@@ -159,6 +166,6 @@ export const cancelRequest = asyncHandler(async (req: Request, res: Response) =>
 });
 
 /** Who can be named as an approver — active users with their roles. */
-export const listApprovers = asyncHandler(async (_req: Request, res: Response) => {
-  sendData(res, await approvals.approverCandidates());
+export const listApprovers = asyncHandler(async (req: Request, res: Response) => {
+  sendData(res, await approvals.approverCandidates(req.auth?.roleId === 'super_admin' ? undefined : requireScope(req).ids));
 });
