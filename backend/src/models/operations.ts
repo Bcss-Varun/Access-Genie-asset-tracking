@@ -27,6 +27,12 @@ export interface TransferDoc {
   from: string;
   to: string;
   requester: string;
+  /**
+   * The requesting user's id — what "approver ≠ requester" is checked against.
+   * `requester` stays for display; a name is editable by its owner and so
+   * cannot carry a segregation-of-duties rule. Optional for older rows.
+   */
+  requesterId?: string;
   approver: string;
   status: TransferStatus;
   requestedAt: Date;
@@ -52,6 +58,7 @@ const transferSchema = new Schema<TransferDoc>(
     from: { type: String, required: true },
     to: { type: String, required: true },
     requester: { type: String, required: true },
+    requesterId: String,
     approver: { type: String, default: '' },
     status: { type: String, required: true, enum: TRANSFER_STATUSES, default: 'Pending', index: true },
     requestedAt: { type: Date, required: true, index: true },

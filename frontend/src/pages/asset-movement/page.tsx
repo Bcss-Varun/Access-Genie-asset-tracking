@@ -11,11 +11,11 @@ import { useMutate } from '@/api/mutate';
 import { useRefreshDataset } from '@/api/dataset';
 import { operationsApi } from '@/api/operations';
 import { custodyApi } from '@/api/catalog';
-import { allAssets, allTransfers, allCustody, getWorkOrdersForAsset } from '@/lib/dataset';
+import { allAssets, allTransfers, allCustody, allReservations, getWorkOrdersForAsset } from '@/lib/dataset';
 import { flattenScope, allUsers } from '@/lib/rbac';
 import { previousCustodyHolder } from '@/lib/field-ops';
 import { relTime, formatDateTime, cn } from '@/lib/utils';
-import { ASSET_CATEGORIES, ASSET_STATUSES } from '@access-genie/shared';
+import { ASSET_CATEGORIES, ASSET_STATUSES, compareIds } from '@access-genie/shared';
 import type { Transfer, TransferStatus, CustodyRecord } from '@access-genie/shared';
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -439,7 +439,13 @@ function TransferDetailDrawer({ transfer, batch, onClose }: { transfer: Transfer
 // ═════════════════════════════════════════════════════════════════════════════
 function TransfersTab() {
   const { run } = useMutate();
-  const [transfers, setTransfers] = useState<Transfer[]>(allTransfers);
+  // Derived from the dataset on every render, with optimistic status changes
+  // laid over it. This was `useState(allTransfers)` — a copy taken once at
+  // mount — so a transfer raised from the wizard or the bulk import on this
+  // very screen refreshed the dataset and still never appeared in the table
+  // (nor in its counters) until the user navigated away and back.
+  const [optimistic, setOptimistic] = useState<Record<string, TransferStatus>>({});
+  const transfers: Transfer[] = allTransfers.map((t) => (optimistic[t.id] && optimistic[t.id] !== t.status ? { ...t, status: optimistic[t.id]! } : t));
   const [creating, setCreating] = useState<'single' | 'import' | null>(null);
   const [selected, setSelected] = useState<Transfer | null>(null);
 
@@ -459,14 +465,14 @@ function TransfersTab() {
   }, [transfers]);
 
   function advance(t: Transfer, status: TransferStatus, verb: string) {
-    const before = transfers;
-    setTransfers((prev) => prev.map((x) => (x.id === t.id ? { ...x, status } : x)));
+    setOptimistic((prev) => ({ ...prev, [t.id]: status }));
+    const clear = () => setOptimistic((prev) => { const next = { ...prev }; delete next[t.id]; return next; });
     void run(operationsApi.advanceTransfer(t.id, status), {
       success: `${t.id} ${verb}`,
       describe: `${verb} that transfer`,
-      rollback: () => setTransfers(before),
+      rollback: clear,
       refreshTracking: status === 'Received',
-    });
+    }).then((saved) => { if (saved) clear(); });
   }
 
   const open = transfers.filter((t) => !['Received', 'Completed', 'Rejected', 'Cancelled'].includes(t.status)).length;
@@ -564,7 +570,11 @@ function CustodyTab() {
   const [returnCondition, setReturnCondition] = useState(CONDITIONS[0]!);
   const [issues, setIssues] = useState('');
 
-  const [log, setLog] = useState<CustodyRecord[]>(() => [...allCustody].sort((a, b) => Date.parse(b.at) - Date.parse(a.at)));
+  // Read from the dataset each render (newest first) rather than copied into
+  // state at mount: every write here re-reads the dataset, so the new row
+  // arrives from the source of truth, and a custody change made on any other
+  // screen is not missing from this log.
+  const log: CustodyRecord[] = [...allCustody].sort((a, b) => Date.parse(b.at) - Date.parse(a.at) || compareIds(b.id, a.id));
 
   function switchMode(next: 'out' | 'in') {
     setMode(next);
@@ -580,7 +590,6 @@ function CustodyTab() {
     const note = [openWorkOrders[0] && `Related WO: ${openWorkOrders[0].id}.`, purpose.trim() && `Purpose: ${purpose.trim()}.`, `Condition: ${condition}.`].filter(Boolean).join(' ');
     const record = await run(custodyApi.record({ assetId: asset.id, holder, action: 'Checked Out', note }), { success: 'Checked out', successDetail: `${asset.name} → ${holder}`, describe: 'check that asset out' });
     if (!record) return;
-    setLog((prev) => [record, ...prev]);
     setNewCustodian('');
     setPurpose('');
   }
@@ -593,7 +602,6 @@ function CustodyTab() {
     const note = [openWorkOrders[0] && `Related WO: ${openWorkOrders[0].id}.`, `Return condition: ${returnCondition}.`, issues.trim() && `Issues: ${issues.trim()}.`].filter(Boolean).join(' ');
     const record = await run(custodyApi.record({ assetId: asset.id, holder: tech, action: 'Checked In', note }), { success: 'Checked in', successDetail: `${asset.name} returned by ${tech}`, describe: 'check that asset in' });
     if (!record) return;
-    setLog((prev) => [record, ...prev]);
     setIssues('');
     setAssetId(checkedOutAssets.filter((a) => a.id !== asset.id)[0]?.id ?? '');
   }
@@ -679,7 +687,73 @@ function CustodyTab() {
 }
 
 // ═════════════════════════════════════════════════════════════════════════════
-const MOVEMENT_TABS = ['transfers', 'custody'] as const;
+// Reservations tab
+// ═════════════════════════════════════════════════════════════════════════════
+const DAY_NAMES = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+
+/**
+ * Bookings against assets.
+ *
+ * Reservations were stored by the API, refused on clashes, and shipped in the
+ * dataset — and then shown nowhere, so a booking was invisible to everybody
+ * including the person who made it. Live ones first, by the day they start.
+ */
+function ReservationsTab() {
+  const { run, isPending } = useMutate();
+  const rows = [...allReservations].sort((a, b) => {
+    const live = (s: string) => (s === 'Cancelled' || s === 'Returned' ? 1 : 0);
+    return live(a.status) - live(b.status) || a.startDay - b.startDay || compareIds(b.id, a.id);
+  });
+
+  return (
+    <div className="glass-panel rounded-xl overflow-hidden">
+      <table className="w-full text-left text-sm whitespace-nowrap">
+        <thead className="bg-slate-50 border-b border-slate-200 text-slate-500 font-semibold uppercase tracking-wider text-xs">
+          <tr>
+            <th className="px-6 py-4">Booking</th>
+            <th className="px-6 py-4">Asset</th>
+            <th className="px-6 py-4">Reserved by</th>
+            <th className="px-6 py-4">Window</th>
+            <th className="px-6 py-4">Status</th>
+            <th className="px-6 py-4 text-right">Action</th>
+          </tr>
+        </thead>
+        <tbody className="divide-y divide-slate-100">
+          {rows.map((r) => (
+            <tr key={r.id} className="hover:bg-slate-50 transition-colors">
+              <td className="px-6 py-4 font-mono text-xs text-slate-500">{r.id}</td>
+              <td className="px-6 py-4">
+                <Link to={`/assets/${r.assetId}?tab=custody`} className="font-medium text-slate-800 hover:text-primary-600">{r.assetName}</Link>
+                {r.purpose && <div className="text-[11px] text-slate-400 max-w-xs truncate">{r.purpose}</div>}
+              </td>
+              <td className="px-6 py-4 text-slate-600">{r.reservedBy}</td>
+              <td className="px-6 py-4 text-xs text-slate-600">
+                {DAY_NAMES[r.startDay] ?? r.startDay} {r.startLabel} → {DAY_NAMES[r.endDay] ?? r.endDay} {r.endLabel}
+              </td>
+              <td className="px-6 py-4"><Badge tone={r.status === 'Cancelled' ? 'slate' : 'primary'}>{r.status}</Badge></td>
+              <td className="px-6 py-4 text-right">
+                {(r.status === 'Confirmed' || r.status === 'Pending') && (
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    disabled={isPending}
+                    onClick={() => void run(operationsApi.cancelReservation(r.id), { success: `${r.id} cancelled`, describe: 'cancel that booking' })}
+                  >
+                    Cancel
+                  </Button>
+                )}
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+      {rows.length === 0 && <EmptyState icon="📅" title="No reservations" description="Bookings made against assets appear here." />}
+    </div>
+  );
+}
+
+// ═════════════════════════════════════════════════════════════════════════════
+const MOVEMENT_TABS = ['transfers', 'custody', 'reservations'] as const;
 
 export default function AssetMovementPage() {
   const [tab, setTab] = useTabs(MOVEMENT_TABS, 'transfers');
@@ -698,12 +772,13 @@ export default function AssetMovementPage() {
         tabs={[
           { key: 'transfers', label: 'Transfers', count: openTransfers, tone: openTransfers > 0 ? 'amber' : undefined },
           { key: 'custody', label: 'Custody & Check-out' },
+          { key: 'reservations', label: 'Reservations', count: allReservations.filter((r) => r.status === 'Confirmed' || r.status === 'Pending').length },
         ]}
         value={tab}
         onChange={setTab}
       />
 
-      {tab === 'transfers' ? <TransfersTab /> : <CustodyTab />}
+      {tab === 'transfers' ? <TransfersTab /> : tab === 'custody' ? <CustodyTab /> : <ReservationsTab />}
     </div>
   );
 }

@@ -14,7 +14,7 @@ export const list = asyncHandler(async (req: Request, res: Response) => {
 });
 
 export const stats = asyncHandler(async (req: Request, res: Response) => {
-  sendData(res, await alertService.getAlertStats());
+  sendData(res, await alertService.getAlertStats(requireScope(req)));
 });
 
 export const getOne = asyncHandler(async (req: Request, res: Response) => {
@@ -22,7 +22,8 @@ export const getOne = asyncHandler(async (req: Request, res: Response) => {
 });
 
 export const create = asyncHandler(async (req: Request, res: Response) => {
-  const alert = await alertService.createAlert(req.body as CreateAlertInput);
+  const actor = req.auth?.user.name ?? 'system';
+  const alert = await alertService.createAlert(requireScope(req), req.body as CreateAlertInput, actor);
   recordAudit(req, { action: 'alert.create', target: alert._id, category: 'Alerts' });
   sendData(res, alert, 201);
 });
@@ -35,7 +36,7 @@ function transition(next: 'Acknowledged' | 'Escalated' | 'Resolved', action: str
     const id = req.params.id as string;
     const { note } = (req.body ?? {}) as { note?: string };
 
-    const alert = await alertService.transitionAlert(id, next, actor, note);
+    const alert = await alertService.transitionAlert(requireScope(req), id, next, actor, note);
 
     recordAudit(req, { action, target: id, category: 'Alerts' });
     sendData(res, alert);
@@ -51,7 +52,7 @@ export const assign = asyncHandler(async (req: Request, res: Response) => {
   const id = req.params.id as string;
   const { assignee } = req.body as { assignee: string };
 
-  const alert = await alertService.assignAlert(id, assignee, actor);
+  const alert = await alertService.assignAlert(requireScope(req), id, assignee, actor);
 
   recordAudit(req, { action: 'alert.assign', target: id, category: 'Alerts', metadata: { assignee } });
   sendData(res, alert);
@@ -61,7 +62,7 @@ export const acknowledgeMany = asyncHandler(async (req: Request, res: Response) 
   const actor = req.auth?.user.name ?? 'system';
   const { ids } = req.body as { ids: string[] };
 
-  const modified = await alertService.acknowledgeMany(ids, actor);
+  const modified = await alertService.acknowledgeMany(requireScope(req), ids, actor);
 
   recordAudit(req, { action: 'alert.acknowledge_bulk', target: ids.join(','), category: 'Alerts', metadata: { count: modified } });
   sendData(res, { acknowledged: modified });

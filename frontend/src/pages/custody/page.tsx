@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { allCustody } from '@/lib/dataset';
-import type { CustodyAction } from '@access-genie/shared';
+import { compareIds, type CustodyAction } from '@access-genie/shared';
 import { PageHeader, KpiCard, Badge, EmptyState } from '@/components/ui/primitives';
 import { cn, relTime } from '@/lib/utils';
 
@@ -16,10 +16,17 @@ const isException = (holder: string, by: string) =>
 export default function CustodyPage() {
   const [filter, setFilter] = useState<'All' | CustodyAction>('All');
 
-  const records = [...allCustody].sort((a, b) => Date.parse(b.at) - Date.parse(a.at));
+  // Newest first; the id breaks ties between rows written in the same instant.
+  const records = [...allCustody].sort((a, b) => Date.parse(b.at) - Date.parse(a.at) || compareIds(b.id, a.id));
   const filtered = filter === 'All' ? records : records.filter((r) => r.action === filter);
 
-  const checkedOut = records.filter((r) => r.action === 'Checked Out').length;
+  // "Currently in the field" is a statement about assets, not about rows: an
+  // asset counts while its *latest* custody event is a check-out. Counting
+  // every Checked Out row ever written kept an asset in the field forever after
+  // it had been checked back in.
+  const latestByAsset = new Map<string, (typeof records)[number]>();
+  for (const r of records) if (!latestByAsset.has(r.assetId)) latestByAsset.set(r.assetId, r);
+  const checkedOut = [...latestByAsset.values()].filter((r) => r.action === 'Checked Out').length;
   const exceptions = records.filter((r) => isException(r.holder, r.by)).length;
 
   const chipCls = (active: boolean) =>

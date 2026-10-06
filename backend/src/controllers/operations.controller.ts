@@ -8,16 +8,10 @@ import { recordAudit } from '../services/audit.service.js';
 import * as service from '../services/operations.service.js';
 import type { Decider } from '../services/approval.service.js';
 
-/** The signed-in user's name — the requester or approver on the record. */
-function actorOf(req: Request): string {
-  if (!req.auth) throw ApiError.unauthorized();
-  return req.auth.user.name;
-}
-
 /**
- * The full identity, for anything that has to decide *authority* rather than
- * just stamp a name — the approval engine needs the role and home scope to work
- * out who may sign a step off.
+ * The full identity. Records display the name; authority is decided on the id
+ * (a transfer's approver must not be its requester) and, in the approval
+ * engine, on the role and home scope.
  */
 function deciderOf(req: Request): Decider {
   if (!req.auth) throw ApiError.unauthorized();
@@ -44,7 +38,7 @@ export const advanceTransfer = asyncHandler(async (req: Request, res: Response) 
   const id = req.params.id as string;
   const { status } = req.body as { status: TransferStatus };
 
-  const transfer = await service.advanceTransfer(id, status, actorOf(req), requireScope(req));
+  const transfer = await service.advanceTransfer(id, status, deciderOf(req), requireScope(req));
   recordAudit(req, { action: `transfer.${status.toLowerCase().replace(' ', '_')}`, target: id, category: 'Asset' });
   sendData(res, transfer);
 });

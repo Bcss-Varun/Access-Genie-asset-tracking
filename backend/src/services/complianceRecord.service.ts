@@ -48,23 +48,33 @@ export async function listComplianceRecords(
   if (query.assetId) filter.assetId = query.assetId;
   if (query.q) filter.$text = { $search: query.q };
 
-  // A finding is visible if its asset is in the caller's estate, or it carries
-  // no asset at all (an org-level finding is visible to whoever can see the
-  // module — narrowing further would need a scope-node containment check this
-  // collection does not need yet).
+  // A finding is visible if its asset is in the caller's estate, or — for a
+  // finding with no asset — if the node it was raised against is. It used to
+  // be "or it carries no asset at all", which handed every site-level finding
+  // in the organisation to every facility manager: Pune's policy gaps were in
+  // Hyderabad's queue, counted in Hyderabad's KPIs, and closable from there.
   if (!scope.coversAll) {
     const assetIds = (await assetClause(scope)).assetId;
-    filter.$or = [{ assetId: assetIds }, { assetId: { $exists: false } }];
+    filter.$or = [
+      { assetId: assetIds },
+      { assetId: { $exists: false }, scopeId: { $in: [...scope.ids] } },
+    ];
   }
 
   const pagination = parsePagination(query, SORTABLE, '-createdAt');
   return paginate(ComplianceRecord, filter, pagination);
 }
 
+/** The read rule above, for a single record: by its asset, else by its node. */
+async function assertRecordVisible(scope: VisibleScope, record: Pick<ComplianceRecordDoc, 'assetId' | 'scopeId'>) {
+  if (record.assetId) await assertAssetVisible(scope, record.assetId, 'Compliance record');
+  else assertLocationVisible(scope, record.scopeId, 'Compliance record');
+}
+
 export async function getComplianceRecord(scope: VisibleScope, id: string): Promise<ComplianceRecordDoc> {
   const record = await ComplianceRecord.findById(id).lean<ComplianceRecordDoc>();
   if (!record) throw ApiError.notFound('Compliance record');
-  if (record.assetId) await assertAssetVisible(scope, record.assetId, 'Compliance record');
+  await assertRecordVisible(scope, record);
   return record;
 }
 
@@ -90,6 +100,9 @@ export async function createComplianceRecord(
     ...input,
     _id,
     assetName,
+    // Stored for asset findings too (the sweep already does), so a finding
+    // keeps its site even if the asset later moves or is retired.
+    scopeId: effectiveScopeId,
     dueDate: input.dueDate ? new Date(input.dueDate) : undefined,
     status: 'Open',
     source: 'Manual',
@@ -115,7 +128,7 @@ export async function updateComplianceRecord(
 ): Promise<ComplianceRecordDoc> {
   const record = await ComplianceRecord.findById(id);
   if (!record) throw ApiError.notFound('Compliance record');
-  if (record.assetId) await assertAssetVisible(scope, record.assetId, 'Compliance record');
+  await assertRecordVisible(scope, record);
 
   Object.assign(record, patch);
   if (patch.dueDate) record.dueDate = new Date(patch.dueDate);
@@ -132,7 +145,7 @@ export async function resolveComplianceRecord(
 ): Promise<ComplianceRecordDoc> {
   const record = await ComplianceRecord.findById(id);
   if (!record) throw ApiError.notFound('Compliance record');
-  if (record.assetId) await assertAssetVisible(scope, record.assetId, 'Compliance record');
+  await assertRecordVisible(scope, record);
   if (record.status === 'Resolved' || record.status === 'Waived') {
     throw ApiError.badRequest(`Finding is already ${record.status}`);
   }

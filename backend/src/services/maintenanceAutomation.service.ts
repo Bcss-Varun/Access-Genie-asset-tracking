@@ -2,6 +2,7 @@ import { assetClause, locationClause, type VisibleScope } from './tenancy.servic
 import type { PmFrequency } from '@access-genie/shared';
 import { Asset, PmSchedule, WorkOrder, nextId, type AssetDoc, type PmScheduleDoc } from '../models/index.js';
 import { logger } from '../config/logger.js';
+import { onWorkOrderRaised } from './workOrder.service.js';
 
 /**
  * Automated work orders.
@@ -63,6 +64,9 @@ const INTERVAL_DAYS: Record<PmFrequency, number> = {
   'Usage-based': 30,
 };
 
+/** Who the trail names for orders nobody raised by hand. */
+const AUTOMATION_ACTOR = 'Maintenance automation';
+
 /** Health at or below which an asset earns a predictive order on its own. */
 const CONDITION_HEALTH_FLOOR = 45;
 
@@ -116,10 +120,25 @@ export async function raiseDueMaintenance(scope?: VisibleScope): Promise<Automat
     const alreadyOpen = await hasOpenOrder(pm.assetId, pm.type, titlePrefix);
 
     if (alreadyOpen) continue;
-    {
-      const dueDate = new Date(pm.nextDue);
+
+    // Claim the occurrence before raising it. Two passes can be in here at
+    // once — the button on /pm, the debounced pass a write schedules, the
+    // ten-minute clock — and both would see "due, nothing open" and both raise
+    // it: two orders for one service. Rolling `nextDue` forward only if it still
+    // holds the value this pass read makes exactly one of them the owner; the
+    // loser finds the schedule already moved and skips it.
+    const dueDate = new Date(pm.nextDue);
+    const claimed = await PmSchedule.findOneAndUpdate(
+      { _id: pm._id, nextDue: pm.nextDue },
+      { $set: { nextDue: advance(dueDate, pm.frequency) } },
+      { new: true },
+    ).lean();
+    if (!claimed) continue;
+
+    const workOrderId = await nextId('workOrder', 'WO');
+    try {
       await WorkOrder.create({
-        _id: await nextId('workOrder', 'WO'),
+        _id: workOrderId,
         title: `${titlePrefix} ${dueDate.toISOString().slice(0, 10)}`,
         assetId: pm.assetId,
         assetName: asset.name,
@@ -145,20 +164,31 @@ export async function raiseDueMaintenance(scope?: VisibleScope): Promise<Automat
             from: null,
             to: 'New',
             at: now,
-            actor: 'Maintenance automation',
+            actor: AUTOMATION_ACTOR,
             note: `Raised from preventive schedule ${pm._id}`,
           },
         ],
         createdAt: now,
       });
-      result.pmRaised++;
+    } catch (err) {
+      // Hand the occurrence back rather than lose it: the claim moved the
+      // schedule on, and an occurrence advanced past without an order is the
+      // silent miss this whole function exists to prevent.
+      await PmSchedule.updateOne({ _id: pm._id, nextDue: claimed.nextDue }, { $set: { nextDue: pm.nextDue } });
+      throw err;
     }
-
-    await PmSchedule.updateOne(
-      { _id: pm._id },
-      { $set: { nextDue: advance(new Date(pm.nextDue), pm.frequency) } },
-    );
+    result.pmRaised++;
     result.schedulesAdvanced++;
+
+    // The same consequences as an order raised by hand: on the asset's
+    // timeline, and an in-service asset moves to Maintenance.
+    await onWorkOrderRaised({
+      assetId: pm.assetId,
+      workOrderId,
+      title: `${titlePrefix} ${dueDate.toISOString().slice(0, 10)}`,
+      actor: AUTOMATION_ACTOR,
+      activity: `Work order ${workOrderId} raised from preventive schedule ${pm._id}: ${pm.title}`,
+    });
   }
 
   // ── Condition ─────────────────────────────────────────────────────────────

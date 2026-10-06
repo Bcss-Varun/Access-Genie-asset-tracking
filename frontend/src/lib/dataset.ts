@@ -19,6 +19,7 @@
 // ─────────────────────────────────────────────────────────────────────────────
 
 import type {
+  AssetPresence,
   ActivityEvent,
   AIInsight,
   Alert,
@@ -82,11 +83,14 @@ import type {
   UnknownDetection,
 } from '@access-genie/shared';
 
+import { compareIds } from '@access-genie/shared';
 import { hydrateDirectory } from './rbac';
 
 /** The wire shape of `GET /dataset`. */
 export interface Dataset {
   assets: Asset[];
+  /** Where each asset was last observed — same rows as the tracking workspace. */
+  presence?: AssetPresence[];
   groups: AssetGroup[];
   documents: AssetDoc[];
   activity: ActivityEvent[];
@@ -198,6 +202,7 @@ export let allHelpCategories: HelpCategory[] = [];
 export let allUnknownTagReads: UnknownDetection[] = [];
 export let allInspectionTemplates: InspectionTemplate[] = [];
 export let allReportSubscriptions: ReportSubscription[] = [];
+export let allPresence: AssetPresence[] = [];
 
 /**
  * The organisation's own record.
@@ -284,6 +289,7 @@ export function hydrate(next: Dataset): void {
   allUnknownTagReads = next.unknownTagReads ?? [];
   allInspectionTemplates = next.inspectionTemplates ?? [];
   allReportSubscriptions = next.reportSubscriptions ?? [];
+  allPresence = next.presence ?? [];
   if (next.orgSettings) orgSettings = next.orgSettings;
   utilizationDowntimeSeries = next.utilizationDowntime ?? [];
   categoryBreakdown = next.categoryBreakdown ?? [];
@@ -296,6 +302,10 @@ export function hydrate(next: Dataset): void {
 
 // ── Lookups ──────────────────────────────────────────────────────────────────
 export const getAssetById = (id: string): Asset | undefined => allAssets.find((a) => a.id === id);
+
+/** The latest sighting of an asset, if it has ever been observed. */
+export const getPresenceForAsset = (assetId: string): AssetPresence | undefined =>
+  allPresence.find((p) => p.assetId === assetId);
 
 export const getWorkOrdersForAsset = (assetId: string): WorkOrder[] =>
   allWorkOrders.filter((wo) => wo.assetId === assetId);
@@ -317,12 +327,14 @@ export const getDocsForAsset = (assetId: string): AssetDoc[] => allDocs.filter((
 export const getCustodyForAsset = (assetId: string): CustodyRecord[] =>
   allCustody
     .filter((c) => c.assetId === assetId)
-    .sort((a, b) => Date.parse(b.at) - Date.parse(a.at));
+    // Rows written in the same millisecond (a move and its automation) keep
+    // newest-first by their minted id.
+    .sort((a, b) => Date.parse(b.at) - Date.parse(a.at) || compareIds(b.id, a.id));
 
 export const getLifecycleHistoryForAsset = (assetId: string): LifecycleTransition[] =>
   allLifecycleTransitions
     .filter((t) => t.assetId === assetId)
-    .sort((a, b) => Date.parse(b.requestedAt) - Date.parse(a.requestedAt));
+    .sort((a, b) => Date.parse(b.requestedAt) - Date.parse(a.requestedAt) || compareIds(b.id, a.id));
 
 export const getGateway = (id: string): Gateway | undefined => allGateways.find((g) => g.id === id);
 export const getSensor = (id: string): Sensor | undefined => allSensors.find((s) => s.id === id);

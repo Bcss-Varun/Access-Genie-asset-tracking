@@ -1,6 +1,6 @@
 import { useState } from 'react';
-import { Link } from 'react-router-dom';
-import { flattenScope } from '@/lib/rbac';
+import { useQueryClient } from '@tanstack/react-query';
+import { flattenScope, scopeTree } from '@/lib/rbac';
 import type { ScopeLevel, ScopeNode } from '@access-genie/shared';
 import { PageHeader, Badge, KpiCard } from '@/components/ui/primitives';
 import { Button } from '@/components/ui/Button';
@@ -34,7 +34,9 @@ export default function AdminOrgPage() {
   // is `admin` on the API — offered here only to roles that hold the grant.
   const canEdit = useAuth().can('admin');
   const { run, isPending } = useMutate();
+  const queryClient = useQueryClient();
   const [addingTo, setAddingTo] = useState<ScopeNode | null>(null);
+  const [addingFacility, setAddingFacility] = useState(false);
   const [pendingDelete, setPendingDelete] = useState<ScopeNode | null>(null);
 
   const rows = flattenScope();
@@ -51,11 +53,27 @@ export default function AdminOrgPage() {
         subtitle="The scope hierarchy — Org ▸ Region ▸ Facility ▸ Building ▸ Zone — that governs data access."
         breadcrumb={[{ label: 'Administration', href: '/admin/org' }, { label: 'Org & Structure' }]}
         actions={
+          // This used to link to /admin/facilities — which the router now
+          // redirects straight back here, so the button reloaded this screen and
+          // never offered a form. Facilities are added in place instead.
           canEdit ? (
-            <Link to="/admin/facilities"><Button>+ Add Facility</Button></Link>
+            <Button onClick={() => setAddingFacility((open) => !open)}>
+              {addingFacility ? 'Cancel' : '+ Add Facility'}
+            </Button>
           ) : undefined
         }
       />
+
+      {addingFacility && (
+        <div className="glass-panel rounded-xl p-5">
+          <AddScopeForm
+            parent={scopeTree}
+            only="facility"
+            onAdded={() => setAddingFacility(false)}
+            onCancel={() => setAddingFacility(false)}
+          />
+        </div>
+      )}
 
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         <KpiCard label="Facilities" value={facilities} sub="Active sites" tone="emerald" accent />
@@ -161,6 +179,8 @@ export default function AdminOrgPage() {
             void run(scopeApi.remove(target.id), {
               success: `${target.name} removed`,
               describe: `remove ${target.name}`,
+              // The asset forms' site list — see AddScopeForm for why it needs naming.
+              refresh: () => queryClient.invalidateQueries({ queryKey: ['registration-defaults'] }),
             }).then(() => setPendingDelete(null));
           }}
           onCancel={() => setPendingDelete(null)}

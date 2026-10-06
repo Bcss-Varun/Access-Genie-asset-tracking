@@ -7,6 +7,26 @@ import {
 } from '@access-genie/shared';
 import { baseSchemaPlugin } from '../utils/mongoose.js';
 
+/**
+ * One entry in an alert's own trail.
+ *
+ * The detail screen used to *derive* a timeline from the current status — so
+ * every acknowledged alert was credited to the same fixture person, and an
+ * alert resolved straight from Acknowledged showed an escalation that never
+ * happened. Recording each step as it happens is the only way the screen can
+ * answer "who did what, when" truthfully.
+ */
+export interface AlertHistoryEntry {
+  action: 'raised' | 'acknowledged' | 'escalated' | 'resolved' | 'assigned';
+  by: string;
+  at: Date;
+  /** The previous status, for transitions. */
+  from?: AlertStatus;
+  /** The new owner, for assignments. */
+  assignee?: string;
+  note?: string;
+}
+
 export interface AlertDoc {
   _id: string; // ALT-501
   title: string;
@@ -23,6 +43,10 @@ export interface AlertDoc {
   acknowledgedAt?: Date;
   resolvedBy?: string;
   resolvedAt?: Date;
+  escalatedBy?: string;
+  escalatedAt?: Date;
+  /** Every step, oldest first — see {@link AlertHistoryEntry}. */
+  history?: AlertHistoryEntry[];
   createdAt: Date;
   updatedAt: Date;
 }
@@ -43,6 +67,24 @@ const alertSchema = new Schema<AlertDoc>(
     acknowledgedAt: { type: Date },
     resolvedBy: { type: String },
     resolvedAt: { type: Date },
+    escalatedBy: { type: String },
+    escalatedAt: { type: Date },
+    history: {
+      type: [
+        new Schema<AlertHistoryEntry>(
+          {
+            action: { type: String, required: true, enum: ['raised', 'acknowledged', 'escalated', 'resolved', 'assigned'] },
+            by: { type: String, required: true },
+            at: { type: Date, required: true },
+            from: { type: String, enum: ALERT_STATUSES },
+            assignee: String,
+            note: String,
+          },
+          { _id: false },
+        ),
+      ],
+      default: undefined,
+    },
   },
   { timestamps: true },
 );

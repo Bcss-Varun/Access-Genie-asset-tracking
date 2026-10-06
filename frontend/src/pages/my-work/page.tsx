@@ -4,9 +4,10 @@ import { PageHeader, Badge, EmptyState, MetricCard } from '@/components/ui/primi
 import { FieldActionButtons, SlaChip } from '@/components/workforce/WorkOrderActions';
 import { useSession } from '@/components/providers/SessionProvider';
 import { allWorkOrders, allTransfers, getAssetById } from '@/lib/dataset';
+import { useDataVersion } from '@/api/dataset';
 import { fieldStageLabel } from '@/lib/field-ops';
 import { nowMs, relTime, isOverdue } from '@/lib/utils';
-import type { WorkOrder, WorkOrderPriority } from '@access-genie/shared';
+import { compareIds, type WorkOrder, type WorkOrderPriority } from '@access-genie/shared';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // My Work — the signed-in technician's personal work queue for today: what is
@@ -25,19 +26,36 @@ export default function MyWorkPage() {
   const canMaintain = session.modules.includes('maintenance') || session.modules.includes('operations');
   const isApprover = ['super_admin', 'org_admin', 'facility_manager', 'maintenance_manager'].includes(session.role.id);
 
+  // `allWorkOrders` is a module binding that each dataset re-read replaces, so
+  // the memos key on the data version too. Keyed on the person alone, the queue
+  // froze at first render: a job accepted or completed from this very screen
+  // kept its old stage, and stayed listed after it was closed.
+  const dataVersion = useDataVersion();
+
   // Work orders: match by name, else fall back to open ones for a role that
-  // actually does field work — an executive with no personal queue sees none.
+  // oversees field work — an executive with no personal queue sees none.
+  // A technician never falls back: their page is their own queue, and the
+  // fallback turned finishing the last job into "11 assigned to you", every one
+  // of them somebody else's, each with Accept and Complete buttons on it.
+  // A queue, so most urgent first; the id number breaks ties so WO-9 sits
+  // before WO-10 rather than wherever the payload happened to put it.
+  const ownQueueOnly = session.role.id === 'technician';
   const workOrders = useMemo<WorkOrder[]>(() => {
     const isOpen = (w: WorkOrder) => w.status !== 'Completed' && w.status !== 'Cancelled';
     const mine = allWorkOrders.filter((w) => w.assignedTo === user.name && isOpen(w));
-    const base = mine.length > 0 ? mine : canMaintain ? allWorkOrders.filter(isOpen) : [];
-    return [...base].sort((a, b) => PRIORITY_RANK[b.priority] - PRIORITY_RANK[a.priority] || Date.parse(a.dueDate) - Date.parse(b.dueDate));
-  }, [user.name, canMaintain]);
+    const base = mine.length > 0 || ownQueueOnly ? mine : canMaintain ? allWorkOrders.filter(isOpen) : [];
+    return [...base].sort(
+      (a, b) =>
+        PRIORITY_RANK[b.priority] - PRIORITY_RANK[a.priority] ||
+        Date.parse(a.dueDate) - Date.parse(b.dueDate) ||
+        compareIds(a.id, b.id),
+    );
+  }, [user.name, canMaintain, ownQueueOnly, dataVersion]);
 
   const approvals = useMemo(() => {
     if (!isApprover) return [];
     return allTransfers.filter((t) => t.status === 'Pending' && t.requester !== user.name);
-  }, [isApprover, user.name]);
+  }, [isApprover, user.name, dataVersion]);
 
   const today = new Date(nowMs()).toISOString().slice(0, 10);
   const dueToday = workOrders.filter((w) => w.dueDate.slice(0, 10) === today).length;

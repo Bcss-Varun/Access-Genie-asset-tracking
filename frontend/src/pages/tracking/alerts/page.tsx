@@ -43,6 +43,7 @@ import type {
 } from '@access-genie/shared';
 import { nowMs, cn, formatMoney, relTime } from '@/lib/utils';
 import { downloadCsv } from '@/api/configuration';
+import { useDataVersion } from '@/api/dataset';
 
 const TAB_KEYS = ['queue', 'incidents', 'automation', 'analytics'] as const;
 
@@ -179,17 +180,24 @@ export default function TrackingAlertsPage() {
 
   // ── Live data: authored alerts with this session's edits laid over the top ──
 
-  const allAlerts = useMemo(() => trackingAlerts.map((a) => ({ ...a, ...patches[a.id] })), [patches]);
+  const dataVersion = useDataVersion();
+  const allAlerts = useMemo(() => trackingAlerts.map((a) => ({ ...a, ...patches[a.id] })), [patches, dataVersion]);
   const liveById = useMemo(() => new Map(allAlerts.map((a) => [a.id, a])), [allAlerts]);
   const scoped = useMemo(() => {
     const ids = new Set(alertsForFacility(scope).map((a) => a.id));
     return allAlerts.filter((a) => ids.has(a.id));
-  }, [allAlerts, scope]);
+  }, [allAlerts, scope, dataVersion]);
 
   const facilityName = useMemo(() => (scope === 'all' ? null : facilityBySlug(scope)?.name ?? null), [scope]);
   const allIncidents = useMemo(
-    () => [...createdIncidents, ...incidents].map((i) => ({ ...i, state: incidentStates[i.id] ?? i.state })),
-    [createdIncidents, incidentStates],
+    // Created-this-session incidents only until the workspace returns them;
+    // listing both showed every new incident twice.
+    () => {
+      const known = new Set(incidents.map((i) => i.id));
+      return [...createdIncidents.filter((i) => !known.has(i.id)), ...incidents]
+        .map((i) => ({ ...i, state: incidentStates[i.id] ?? i.state }));
+    },
+    [createdIncidents, incidentStates, dataVersion],
   );
   const scopedIncidents = useMemo(
     () => allIncidents.filter((i) => !facilityName || i.facility === facilityName),

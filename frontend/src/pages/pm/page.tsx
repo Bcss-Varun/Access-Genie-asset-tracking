@@ -8,7 +8,8 @@ import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 import { PmScheduleDialog } from '@/components/maintenance/PmScheduleDialog';
 import { useToast } from '@/components/providers/ToastProvider';
 import { useMutate } from '@/api/mutate';
-import { pmApi } from '@/api/maintenance';
+import { isRaisedFromSchedule, pmApi } from '@/api/maintenance';
+import { useDataVersion } from '@/api/dataset';
 import { cn, nowMs } from '@/lib/utils';
 
 // ── token helpers ─────────────────────────────────────────────────────────────
@@ -34,7 +35,7 @@ function dueLabel(iso: string): { text: string; overdue: boolean } {
 
 function completions(pm: PmSchedule): number {
   return allWorkOrders.filter(order => order.assetId === pm.assetId && order.status === 'Completed'
-    && order.description?.includes(`schedule ${pm.id}`)).length;
+    && isRaisedFromSchedule(order, pm.id)).length;
 }
 
 const FREQUENCIES: PmFrequency[] = ['Monthly', 'Quarterly', 'Semi-Annual', 'Annual', 'Usage-based'];
@@ -56,9 +57,14 @@ export default function PmSchedulesPage() {
   const completedPlans = allPmSchedules.filter(plan => completions(plan) > 0).length;
 
   // ── filtered rows ─────────────────────────────────────────────────────────────
+  // Keyed on the data version as well as the filter: `allPmSchedules` is a
+  // module binding each dataset re-read replaces, and keyed on the filter alone
+  // a schedule created from this page's own dialog never reached the table
+  // (while the KPI above it, computed on every render, did count it).
+  const dataVersion = useDataVersion();
   const rows = useMemo(
     () => allPmSchedules.filter((p) => freqs.size === 0 || freqs.has(p.frequency)),
-    [freqs],
+    [freqs, dataVersion],
   );
 
   const toggleFreq = (f: PmFrequency) =>

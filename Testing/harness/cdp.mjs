@@ -15,7 +15,7 @@
 
 import { spawn } from 'node:child_process';
 import { once } from 'node:events';
-import { mkdirSync } from 'node:fs';
+import { existsSync, mkdirSync } from 'node:fs';
 import { writeFile } from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
 import path from 'node:path';
@@ -25,11 +25,15 @@ mkdirSync(SHOT_DIR, { recursive: true });
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
+// `google-chrome` is the Linux name; macOS ships the binary inside the app bundle.
+const MAC_CHROME = '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome';
+const CHROME = process.env.CHROME_PATH || (existsSync(MAC_CHROME) ? MAC_CHROME : 'google-chrome');
+
 export class Browser {
   constructor(proc, wsUrl) { this.proc = proc; this.wsUrl = wsUrl; }
 
   static async launch({ port = 9333, width = 1440, height = 900, userDataDir = '/tmp/ag-qa-chrome' } = {}) {
-    const proc = spawn('google-chrome', [
+    const proc = spawn(CHROME, [
       '--headless=new',
       `--remote-debugging-port=${port}`,
       '--no-sandbox', '--disable-gpu', '--disable-dev-shm-usage',

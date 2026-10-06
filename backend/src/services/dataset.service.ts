@@ -1,4 +1,4 @@
-import type { ModuleKey } from '@access-genie/shared';
+import { compareIds, newestFirst, type ModuleKey } from '@access-genie/shared';
 import {
   Activity,
   ApiKey,
@@ -24,6 +24,7 @@ import {
   Asset,
   AssetDocument,
   AssetGroup,
+  AssetPresence,
   AuditLog,
   Certification,
   CustodyRecord,
@@ -56,6 +57,7 @@ import type { VisibleScope } from './tenancy.service.js';
 import { getOrgSettings } from './configuration.service.js';
 import { getScopedAggregates } from './dashboard.service.js';
 import { aliasId } from '../utils/response.js';
+import { presenceStateFor } from './observation.service.js';
 
 /**
  * The reference dataset the application screens read.
@@ -138,6 +140,9 @@ export async function getDataset(
   // never has to branch on which slices it was allowed to receive.
   const empty = Promise.resolve([]);
 
+  // Registers come back newest first, IDs compared by number (see
+  // shared/ordering.ts): a string sort on `_id` put AST-10 between AST-1 and
+  // AST-2, so what someone had just created landed mid-list or on page two.
   const [
     assets,
     groups,
@@ -192,15 +197,16 @@ export async function getDataset(
     inspectionTemplates,
     reportSubscriptions,
     orgSettings,
+    presence,
   ] = await Promise.all([
-    can('assets') ? Asset.find(assetFilter).sort({ _id: 1 }).lean() : empty,
+    can('assets') ? Asset.find(assetFilter).sort({ createdAt: -1 }).lean().then((rows) => rows.sort(newestFirst)) : empty,
     can('assets') ? AssetGroup.find().sort({ name: 1 }).lean() : empty,
     can('assets') ? AssetDocument.find(byAsset).sort({ uploadedAt: -1 }).lean() : empty,
     can('assets', 'workspace') ? Activity.find(byAsset).sort({ timestamp: -1 }).limit(ACTIVITY_LIMIT).lean() : empty,
     can('compliance', 'assets') ? CustodyRecord.find(byAsset).sort({ at: -1 }).lean() : empty,
     can('assets') ? LifecycleTransition.find(byAsset).sort({ requestedAt: -1 }).limit(LIFECYCLE_LIMIT).lean() : empty,
 
-    can('maintenance') ? WorkOrder.find(byAsset).sort({ _id: 1 }).lean() : empty,
+    can('maintenance') ? WorkOrder.find(byAsset).sort({ createdAt: -1 }).lean().then((rows) => rows.sort(newestFirst)) : empty,
     can('maintenance') ? PmSchedule.find(byAsset).sort({ nextDue: 1 }).lean() : empty,
     can('maintenance') ? Inspection.find(byAsset).sort({ dueDate: 1 }).lean() : empty,
 
@@ -219,12 +225,12 @@ export async function getDataset(
     can('compliance', 'admin') ? AuditLog.find(scope.coversAll ? {} : { scopeId: { $in: [...scope.ids] } }).sort({ timestamp: -1 }).limit(AUDIT_LIMIT).lean() : empty,
 
     can('tracking') ? Zone.find().lean() : empty,
-    can('tracking') ? Sensor.find(byAsset).sort({ _id: 1 }).lean() : empty,
+    can('tracking') ? Sensor.find(byAsset).lean().then((rows) => rows.sort((a, b) => compareIds(a._id, b._id))) : empty,
     // Gateways and geofences describe the building, not the assets in it. They
     // are left whole: a reader does not belong to the equipment it happens to
     // see, and hiding the estate's infrastructure inside a site view would make
     // the tracking screens unusable from anywhere but the org root.
-    can('tracking') ? Gateway.find().sort({ _id: 1 }).lean() : empty,
+    can('tracking') ? Gateway.find().lean().then((rows) => rows.sort((a, b) => compareIds(a._id, b._id))) : empty,
     can('tracking') ? Geofence.find().sort({ name: 1 }).lean() : empty,
     can('tracking') ? MovementTrail.find(byAssetKey).lean() : empty,
 
@@ -276,6 +282,10 @@ export async function getDataset(
     can('maintenance') ? InspectionTemplate.find({ active: true }).sort({ name: 1 }).lean() : empty,
     can('analytics') ? ReportSubscription.find().sort({ reportName: 1 }).lean() : empty,
     getOrgSettings(),
+    // Where each asset was last *observed* — the same rows the tracking
+    // workspace reads. Asset 360 and the registry sit outside that workspace,
+    // so without this they could not say where a tagged asset was last seen.
+    can('assets', 'tracking') ? AssetPresence.find(byAssetKey).lean() : empty,
   ]);
 
   // The aggregate figures the charts read — a utilization/downtime trend and
@@ -357,6 +367,11 @@ export async function getDataset(
     inspectionTemplates,
     reportSubscriptions,
     orgSettings,
+    // State is derived from the clock at read time, as in the workspace.
+    presence: aliasId(
+      (presence as { _id: string; lastSeen: Date }[]).map((p) => ({ ...p, state: presenceStateFor(p.lastSeen) })),
+      'assetId',
+    ),
     // The whole tree, always — the switcher has to offer every site regardless
     // of which one is selected, or you could narrow to a facility and have no
     // way back out. Counts are computed rather than read from the stored

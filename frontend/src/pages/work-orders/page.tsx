@@ -12,7 +12,7 @@ import { fieldStageLabel, slaStatus, STAGE_TONE, SLA_STATUSES, type SlaStatus } 
 import { rosterNames, SKILLS } from '@/lib/technicians';
 import { relTime, isOverdue, cn } from '@/lib/utils';
 import { ACTIVE_WORK_ORDER_SOURCES, ACTIVE_WORK_ORDER_TYPES, WORK_ORDER_PRIORITIES, WORK_ORDER_STATUSES, WORK_ORDER_TYPES } from '@access-genie/shared';
-import type { ActiveWorkOrderSource, ActiveWorkOrderType, WorkOrder, WorkOrderPriority } from '@access-genie/shared';
+import { compareIds, type ActiveWorkOrderSource, type ActiveWorkOrderType, type WorkOrder, type WorkOrderPriority } from '@access-genie/shared';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Work Orders — the field-job register: every job, who has it, where the asset
@@ -193,7 +193,12 @@ export default function WorkOrdersPage() {
       const needle = q.trim().toLowerCase();
       return w.id.toLowerCase().includes(needle) || w.title.toLowerCase().includes(needle) || w.assetName.toLowerCase().includes(needle);
     })
-    .sort((a, b) => PRIORITY_RANK[b.priority]! - PRIORITY_RANK[a.priority]! || Date.parse(a.dueDate) - Date.parse(b.dueDate));
+    // A work queue: most urgent, then soonest due, then the id number — so two
+    // equal jobs read WO-9, WO-10 rather than in whatever order the payload had.
+    .sort((a, b) =>
+      PRIORITY_RANK[b.priority]! - PRIORITY_RANK[a.priority]!
+      || Date.parse(a.dueDate) - Date.parse(b.dueDate)
+      || compareIds(a.id, b.id));
 
   const open = allWorkOrders.filter((w) => w.status === 'New').length;
   const assigned = allWorkOrders.filter((w) => w.status === 'Assigned').length;

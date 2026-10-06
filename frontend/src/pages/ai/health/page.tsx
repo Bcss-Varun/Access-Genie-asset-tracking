@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { getHealthMatrix } from '@/lib/dataset';
 import { PageHeader, KpiCard, Badge } from '@/components/ui/primitives';
 import { cn } from '@/lib/utils';
+import { useDataVersion } from '@/api/dataset';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Color tokens (mirror globals.css health tokens — kept as literals so SVG fills
@@ -160,7 +161,8 @@ function MeterBar({ value, color }: { value: number; color: string }) {
 // Page
 // ─────────────────────────────────────────────────────────────────────────────
 export default function HealthRiskPage() {
-  const matrix = useMemo(() => getHealthMatrix(), []);
+  const dataVersion = useDataVersion();
+  const matrix = useMemo(() => getHealthMatrix(), [dataVersion]);
 
   const [sortBy, setSortBy] = useState<SortKey>('risk');
   const [filter, setFilter] = useState<FilterKey>('all');

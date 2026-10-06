@@ -27,11 +27,20 @@ export default function NewAssetPage() {
   const source = (['blank', 'template', 'clone', 'import'].includes(requestedSource) ? requestedSource : '') as AddAssetSource | '';
   const templateId = params.get('templateId') ?? undefined;
   const cloneOf = params.get('cloneOf') ?? undefined;
+  const resume = params.get('resume');
 
   // Bulk import is a screen of its own; the card here is a signpost to it.
   useEffect(() => {
     if (source === 'import') navigate('/assets/import', { replace: true });
   }, [source, navigate]);
+
+  // `?resume=<id>` was linked from Asset 360 and the registry but never read,
+  // so "Finish setup" opened a blank wizard and registering created a second
+  // asset. The asset already exists; finishing it is an edit of that record.
+  // Kept as a redirect so bookmarked and shared links still land correctly.
+  useEffect(() => {
+    if (resume) navigate(`/assets/${encodeURIComponent(resume)}/edit`, { replace: true });
+  }, [resume, navigate]);
 
   const subtitle =
     source === 'blank'

@@ -10,6 +10,8 @@ import { optionsFrom } from '@/components/ui/FormDialog';
 import { ChangeStageDialog } from '@/components/lifecycle/ChangeStageDialog';
 import { BulkAssignDialog, BulkMaintenanceDialog } from '@/components/lifecycle/BulkActionDialogs';
 import { downloadCsv } from '@/api/configuration';
+import { useDataVersion } from '@/api/dataset';
+import { usePendingStageChanges } from '@/api/lifecycle';
 import { cn, formatMoney, formatDate, nowMs } from '@/lib/utils';
 import { categoryEmoji } from '@/lib/asset-categories';
 
@@ -77,6 +79,12 @@ export default function LifecyclePage() {
   const [bulkAction, setBulkAction] = useState<'stage' | 'disposal' | 'assign' | 'maintenance' | null>(null);
 
   const live = useMemo(() => assets.filter((a) => !a.onboarding?.voidedAt), [assets]);
+  // The KPI row also reads PM schedules, which change without any asset changing.
+  const dataVersion = useDataVersion();
+  // Pending requests come from the approvals queue, not the dataset's
+  // lifecycle slice: that slice is the newest 200 transitions estate-wide, so
+  // an older request still waiting on someone silently dropped out of the count.
+  const pendingQueue = usePendingStageChanges();
 
   // ── KPIs — §7, computed over the whole (unfiltered) fleet ─────────────────
   const kpis = useMemo(() => {
@@ -101,9 +109,10 @@ export default function LifecyclePage() {
         ? Math.round((live.reduce((sum, a) => sum + (now - Date.parse(a.purchaseDate)), 0) / live.length / (365.25 * 86_400_000)) * 10) / 10
         : 0,
       portfolioValue: Math.round(live.reduce((sum, a) => sum + (a.bookValue ?? 0), 0)),
-      requiringApproval: allLifecycleTransitions.filter((t) => t.status === 'Pending').length,
+      requiringApproval: pendingQueue.data?.length ?? allLifecycleTransitions.filter((t) => t.status === 'Pending').length,
     };
-  }, [live]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- dataVersion stands in for the module bindings read above
+  }, [live, dataVersion, pendingQueue.data]);
 
   // ── Board columns — §3, always over the whole fleet ────────────────────────
   const boardColumns = useMemo(() => {

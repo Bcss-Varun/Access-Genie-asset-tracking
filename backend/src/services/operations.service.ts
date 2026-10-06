@@ -86,6 +86,7 @@ export async function createTransfer(
     from: from || 'Unassigned',
     to: input.to,
     requester: requester.name,
+    requesterId: requester.id,
     approver: '',
     status: 'Pending',
     requestedAt: new Date(),
@@ -124,9 +125,10 @@ export async function createTransfer(
 export async function advanceTransfer(
   id: string,
   status: TransferStatus,
-  actor: string,
+  by: Pick<Decider, 'id' | 'name'>,
   scope: VisibleScope,
 ): Promise<TransferDoc> {
+  const actor = by.name;
   const transfer = await Transfer.findById(id);
   if (!transfer) throw ApiError.notFound('Transfer');
   await assertAssetVisible(scope, transfer.assetId, 'Transfer');
@@ -141,7 +143,11 @@ export async function advanceTransfer(
     );
   }
 
-  if ((status === 'Approved' || status === 'Rejected') && actor === transfer.requester) {
+  // Compared by user id. The name is a fallback for rows older than the id
+  // field only: a display name is editable by its owner (PATCH /auth/me), so a
+  // name comparison let a requester rename themselves and approve their own move.
+  const isRequester = transfer.requesterId ? transfer.requesterId === by.id : actor === transfer.requester;
+  if ((status === 'Approved' || status === 'Rejected') && isRequester) {
     throw ApiError.forbidden('A transfer cannot be approved by the person who requested it.');
   }
 

@@ -1,5 +1,6 @@
 import { Link, useParams } from 'react-router-dom';
 import { getPmSchedule, getAssetById, allWorkOrders } from '@/lib/dataset';
+import { isRaisedFromSchedule } from '@/api/maintenance';
 import type { PmSchedule, PmFrequency } from '@access-genie/shared';
 import { PageHeader, Badge, EmptyState } from '@/components/ui/primitives';
 import { Button } from '@/components/ui/Button';
@@ -50,7 +51,7 @@ export default function PmDetailPage() {
   const asset = getAssetById(pm.assetId);
   const due = dueLabel(pm.nextDue);
   const history = allWorkOrders.filter(w => w.assetId === pm.assetId && w.status === 'Completed'
-    && w.description?.includes(`schedule ${pm.id}`) && w.completedAt)
+    && isRaisedFromSchedule(w, pm.id) && w.completedAt)
     .sort((a, b) => Date.parse(b.completedAt!) - Date.parse(a.completedAt!))
     .map(w => ({ iso: w.completedAt!, result: 'Completed', tech: w.assignedTo,
       hours: w.laborLog.reduce((total, entry) => total + entry.hours, 0) }));

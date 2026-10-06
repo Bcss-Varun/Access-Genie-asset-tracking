@@ -109,7 +109,7 @@ export const toggleChecklist = asyncHandler(async (req: Request, res: Response) 
 
 export const remove = asyncHandler(async (req: Request, res: Response) => {
   const id = req.params.id as string;
-  await workOrderService.deleteWorkOrder(requireScope(req), id);
+  await workOrderService.deleteWorkOrder(requireScope(req), id, req.auth?.user.name ?? 'system');
 
   recordAudit(req, { action: 'work_order.delete', target: id, category: 'Maintenance' });
   res.status(204).send();

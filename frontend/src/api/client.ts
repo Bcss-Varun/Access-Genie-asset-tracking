@@ -77,19 +77,28 @@ http.interceptors.response.use(
     const status = error.response?.status;
     const code = error.response?.data?.error?.code;
 
-    const isAuthEndpoint = request?.url?.includes('/auth/');
+    // Only the endpoints that *establish* a session are exempt. `/auth/me`,
+    // sessions, MFA setup and change-password are ordinary authenticated calls,
+    // and excluding every `/auth/` URL left the profile and security screens
+    // failing with TOKEN_EXPIRED until some other request refreshed the token.
+    const isAuthEndpoint = /\/auth\/(login|refresh|logout|mfa\/verify)\b/.test(request?.url ?? '');
     const shouldRefresh = status === 401 && !request?._retried && !isAuthEndpoint;
 
     if (shouldRefresh && request) {
+      let token: string;
       try {
-        const { accessToken: token } = await refreshAuth();
-        request._retried = true;
-        request.headers.Authorization = `Bearer ${token}`;
-        return await http.request(request);
+        ({ accessToken: token } = await refreshAuth());
       } catch {
         setAccessToken(null);
         onSessionExpired?.();
+        return Promise.reject(toApiError(error));
       }
+      // Outside the try: the retried request's own failure — a validation
+      // error, a 409, a timeout — is that request's answer. Catching it here
+      // used to sign the user out over a form error after an idle tab.
+      request._retried = true;
+      request.headers.Authorization = `Bearer ${token}`;
+      return http.request(request);
     }
 
     // A 401 we could not refresh past means the session is genuinely over.

@@ -43,6 +43,7 @@ import type {
 import { cn, formatDate, formatMoney, relTime } from '@/lib/utils';
 import { downloadCsv } from '@/api/configuration';
 import { alertsApi } from '@/api/alerts';
+import { useDataVersion } from '@/api/dataset';
 
 const TAB_KEYS = ['rooms', 'movements', 'audits', 'exceptions'] as const;
 type TabKey = (typeof TAB_KEYS)[number];
@@ -297,24 +298,32 @@ export default function InventoryControlPage() {
   }, []);
 
   const facility = scope === 'all' ? null : facilityBySlug(scope) ?? null;
-  const kpis = useMemo(() => trackingKpis(scope), [scope]);
+  const dataVersion = useDataVersion();
+  const kpis = useMemo(() => trackingKpis(scope), [scope, dataVersion]);
 
   const rooms = useMemo<InventoryRoom[]>(() => roomsForFacility(scope).map((r) => {
     const p = roomPatch[r.id];
     return p ? { ...r, lastVerified: p.lastVerified ?? r.lastVerified, autoVerify: p.autoVerify ?? r.autoVerify } : r;
-  }), [scope, roomPatch]);
+  }), [scope, roomPatch, dataVersion]);
 
   const txns = useMemo<MovementTxn[]>(() => {
     const inScope = (t: MovementTxn) => !facility || t.location.startsWith(facility.short) || t.location.includes(facility.name);
     // Patches apply to what was raised in this session too, so approving a
     // release you just requested actually moves it.
-    return [...extraTxns, ...movementTxns].map((t) => ({ ...t, ...txnPatch[t.id] })).filter(inScope);
-  }, [facility, txnPatch, extraTxns]);
+    // Raised-this-session rows only until the workspace returns them; listing
+    // both showed every new movement twice.
+    const known = new Set(movementTxns.map((t) => t.id));
+    return [...extraTxns.filter((t) => !known.has(t.id)), ...movementTxns].map((t) => ({ ...t, ...txnPatch[t.id] })).filter(inScope);
+  }, [facility, txnPatch, extraTxns, dataVersion]);
 
-  const audits = useMemo<AuditSession[]>(() => [
-    ...extraAudits.filter((a) => !facility || a.facility === facility.name),
-    ...auditsForFacility(scope),
-  ].map((a) => ({ ...a, ...auditPatch[a.id] })), [scope, facility, auditPatch, extraAudits]);
+  const audits = useMemo<AuditSession[]>(() => {
+    const scoped = auditsForFacility(scope);
+    const known = new Set(scoped.map((a) => a.id));
+    return [
+      ...extraAudits.filter((a) => !known.has(a.id) && (!facility || a.facility === facility.name)),
+      ...scoped,
+    ].map((a) => ({ ...a, ...auditPatch[a.id] }));
+  }, [scope, facility, auditPatch, extraAudits, dataVersion]);
 
   /** Exceptions and unidentified tags, normalised into one worklist. */
   const queue = useMemo<QueueRow[]>(() => {
@@ -349,7 +358,7 @@ export default function InventoryControlPage() {
       });
 
     return [...fromExceptions, ...fromUnknown].sort((a, b) => Date.parse(b.at) - Date.parse(a.at));
-  }, [facility, excPatch, unkPatch]);
+  }, [facility, excPatch, unkPatch, dataVersion]);
 
   const isCleared = (r: QueueRow) => ['Resolved', 'Registered', 'Ignored', 'Matched'].includes(r.state);
   const liveQueue = useMemo(() => queue.filter((r) => showCleared || !isCleared(r)), [queue, showCleared]);

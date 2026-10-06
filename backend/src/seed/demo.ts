@@ -464,6 +464,8 @@ export async function seedDemo(options: { fresh?: boolean; skipConnect?: boolean
     ['movementTxn', movementTxns.map((m) => m.id)],
     ['auditSession', auditSessions.map((a) => a.id)],
     ['trackingDevice', trackingDevices.map((d) => d.id)],
+    // Breaches open tracking alerts at runtime (geofence.service.ts).
+    ['trackingAlert', trackingAlerts.map((a) => a.id)],
   ];
 
   for (const [name, ids] of sequences) {

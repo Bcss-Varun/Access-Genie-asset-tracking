@@ -9,7 +9,7 @@ import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 import { EditUserDialog } from '@/components/admin/EditUserDialog';
 import { ChangePasswordDialog } from '@/components/admin/ChangePasswordDialog';
 import { useMutate } from '@/api/mutate';
-import { adminApi } from '@/api/users';
+import { adminApi, useUserRecord } from '@/api/users';
 import { useSession } from '@/components/providers/SessionProvider';
 
 const tierTone: Record<string, 'primary' | 'emerald' | 'amber' | 'slate'> = {
@@ -32,7 +32,11 @@ export default function UserDetailPage() {
   const [changingPassword, setChangingPassword] = useState(false);
   const [deleting, setDeleting] = useState(false);
 
-  const user = allUsers.find((u) => u.id === id);
+  // The account itself, suspended or not. The dataset directory holds active
+  // people only, so suspending somebody from this screen used to replace it with
+  // "not found" — with the Reactivate button on the page that just vanished.
+  const record = useUserRecord(id);
+  const user = record.user ?? allUsers.find((u) => u.id === id);
   const isSelf = session.user.id === id;
   // The server also refuses this to anyone but a super admin — matched here so
   // the button isn't offered only to fail with a 403 on click.

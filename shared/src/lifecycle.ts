@@ -39,6 +39,8 @@ export interface LifecycleTransition {
   reason: string;
   comments?: string;
   requester: string;
+  /** Who requested it, by user id — what separation of duties compares; names can be edited. */
+  requesterId?: string;
   status: TransitionStatus;
   approvals: LifecycleApproval[];
   documentIds: string[];

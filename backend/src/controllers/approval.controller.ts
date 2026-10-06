@@ -14,6 +14,7 @@ import {
 } from '../models/index.js';
 import * as approvals from '../services/approval.service.js';
 import { applyApprovalOutcome } from '../services/operations.service.js';
+import { applyDisposalApproval } from '../services/lifecycle.service.js';
 import type {
   CreateWorkflowInput,
   DecideInput,
@@ -145,6 +146,11 @@ export const decideRequest = asyncHandler(async (req: Request, res: Response) =>
   // rather than cast so a new terminal status has to be handled here explicitly.
   if ((settled === 'Approved' || settled === 'Rejected') && request.subjectType === 'asset_transfer') {
     await applyApprovalOutcome(request.subjectId, settled, actor.name);
+  }
+  // A disposal chain holds a pending lifecycle transition; settling the chain
+  // settles the transition, which is what moves the asset to Disposed.
+  if ((settled === 'Approved' || settled === 'Rejected') && request.subjectType === 'asset_disposal') {
+    await applyDisposalApproval(request.subjectId, settled, actor.name);
   }
 
   recordAudit(req, {

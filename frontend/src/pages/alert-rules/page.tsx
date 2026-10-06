@@ -1,5 +1,8 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
+import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
+import { alertRulesApi } from '@/api/catalog';
+import { useSession } from '@/components/providers/SessionProvider';
 import { allAlertRules } from '@/lib/dataset';
 import type { AlertRule } from '@access-genie/shared';
 import { PageHeader, Badge, KpiCard, EmptyState } from '@/components/ui/primitives';
@@ -13,8 +16,19 @@ type Tone = 'slate' | 'primary' | 'emerald' | 'amber' | 'red';
 const severityTone: Record<Severity, Tone> = { Critical: 'red', Warning: 'amber', Info: 'primary' };
 
 export default function AlertRulesPage() {
-  const { run } = useMutate();
-  const [rules, setRules] = useState<AlertRule[]>(allAlertRules);
+  const { run, isPending } = useMutate();
+  const { session } = useSession();
+  // Writes to this shared, platform-wide resource are a platform administrator's
+  // (the API refuses everyone else), so the destructive control is offered only there.
+  const canDelete = session.role.id === 'super_admin';
+  const [deleting, setDeleting] = useState<AlertRule | null>(null);
+  /*
+   * Read from the dataset on every render, with any in-flight toggle laid over
+   * it. This was `useState(allAlertRules)` — a copy taken at mount, which never
+   * saw a rule created, toggled or removed anywhere else until a remount.
+   */
+  const [pendingEnabled, setPendingEnabled] = useState<Record<string, boolean>>({});
+  const rules: AlertRule[] = allAlertRules.map((r) => (r.id in pendingEnabled ? { ...r, enabled: pendingEnabled[r.id] } : r));
 
   const enabledCount = rules.filter((r) => r.enabled).length;
   const triggered = rules.reduce((sum, r) => sum + r.triggered24h, 0);
@@ -24,14 +38,28 @@ export default function AlertRulesPage() {
     if (!rule) return;
     const next = !rule.enabled;
 
-    setRules((prev) => prev.map((r) => (r.id === id ? { ...r, enabled: next } : r)));
+    setPendingEnabled((prev) => ({ ...prev, [id]: next }));
 
     void run(alertsApi.toggleRule(id, next), {
       success: next ? 'Rule enabled' : 'Rule disabled',
       successDetail: rule.name,
       describe: `${next ? 'enable' : 'disable'} that rule`,
-      rollback: () => setRules((prev) => prev.map((r) => (r.id === id ? { ...r, enabled: !next } : r))),
+    }).finally(() =>
+      setPendingEnabled((prev) => {
+        const rest = { ...prev };
+        delete rest[id];
+        return rest;
+      }),
+    );
+  }
+
+  async function remove(rule: AlertRule) {
+    const ok = await run(alertRulesApi.remove(rule.id), {
+      success: 'Rule deleted',
+      successDetail: rule.name,
+      describe: 'delete that rule',
     });
+    if (ok !== null) setDeleting(null);
   }
 
   return (
@@ -67,6 +95,7 @@ export default function AlertRulesPage() {
                   <th className="px-4 py-3">Channels</th>
                   <th className="px-4 py-3">Triggered 24h</th>
                   <th className="px-4 py-3 text-right">Enabled</th>
+                  {canDelete && <th className="px-4 py-3"><span className="sr-only">Actions</span></th>}
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
@@ -114,12 +143,30 @@ export default function AlertRulesPage() {
                         </button>
                       </div>
                     </td>
+                    {canDelete && (
+                      <td className="px-4 py-3 align-top text-right">
+                        <Button variant="ghost" size="sm" onClick={() => setDeleting(r)}>
+                          Delete
+                        </Button>
+                      </td>
+                    )}
                   </tr>
                 ))}
               </tbody>
             </table>
           </div>
         </div>
+      )}
+
+      {deleting && (
+        <ConfirmDialog
+          title={`Delete ${deleting.name}?`}
+          description="The rule stops evaluating immediately. Alerts it already raised stay in the Alert Center."
+          confirmLabel="Delete"
+          busy={isPending}
+          onConfirm={() => void remove(deleting)}
+          onCancel={() => setDeleting(null)}
+        />
       )}
     </div>
   );

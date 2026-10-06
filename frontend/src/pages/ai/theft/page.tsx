@@ -8,6 +8,7 @@ import { useToast } from '@/components/providers/ToastProvider';
 import { useMutate } from '@/api/mutate';
 import { alertsApi } from '@/api/alerts';
 import { assetsApi } from '@/api/assets';
+import { useDataVersion } from '@/api/dataset';
 
 interface RiskItem {
   assetId: string;
@@ -73,10 +74,11 @@ function buildRiskItems(): RiskItem[] {
 }
 
 export default function TheftPage() {
+  const dataVersion = useDataVersion();
   const { toast } = useToast();
   const { run, isPending } = useMutate();
   const [acted, setActed] = useState<Set<string>>(new Set());
-  const items = useMemo(buildRiskItems, []);
+  const items = useMemo(buildRiskItems, [dataVersion]);
 
   /** Raise a critical alert, which is what actually puts this in front of somebody. */
   const startRecovery = async (item: RiskItem) => {

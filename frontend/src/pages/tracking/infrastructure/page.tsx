@@ -40,6 +40,7 @@ import type {
 } from '@access-genie/shared';
 import { nowMs, cn, formatDate, relTime } from '@/lib/utils';
 import { downloadCsv } from '@/api/configuration';
+import { useDataVersion } from '@/api/dataset';
 
 const TAB_KEYS = ['tags', 'gateways', 'readers', 'health'] as const;
 type TabKey = (typeof TAB_KEYS)[number];
@@ -176,17 +177,28 @@ export default function TrackingInfrastructurePage() {
     if (p.get('battery') === 'low') setLowBatteryOnly(true);
   }, [setTab]);
 
+  const dataVersion = useDataVersion();
   const facilityName = useMemo(() => TRACKED_FACILITIES.find((f) => f.slug === scope)?.name ?? null, [scope]);
-  const kpis = useMemo(() => trackingKpis(scope), [scope]);
+  const kpis = useMemo(() => trackingKpis(scope), [scope, dataVersion]);
+
+  /**
+   * Devices provisioned this session that the workspace has not returned yet.
+   * The write re-reads the workspace before it resolves, so normally this is
+   * empty — listing `added` unconditionally showed every new device twice.
+   */
+  const pending = useMemo(() => {
+    const known = new Set(trackingDevices.map((d) => d.id));
+    return added.filter((d) => !known.has(d.id));
+  }, [added, dataVersion]);
 
   /** The estate in scope — session-provisioned devices sit at the top. */
   const fleet = useMemo(() => {
-    const mine = added.filter((d) => !facilityName || d.facility === facilityName);
+    const mine = pending.filter((d) => !facilityName || d.facility === facilityName);
     return [...mine, ...devicesForFacility(scope)];
-  }, [added, facilityName, scope]);
+  }, [pending, facilityName, scope, dataVersion]);
 
-  const resolve = (id: string) => added.find((d) => d.id === id) ?? deviceById(id);
-  const kidsOf = (id: string) => [...added.filter((d) => d.parentId === id), ...childDevices(id)];
+  const resolve = (id: string) => pending.find((d) => d.id === id) ?? deviceById(id);
+  const kidsOf = (id: string) => [...pending.filter((d) => d.parentId === id), ...childDevices(id)];
 
   const counts = useMemo(() => ({
     total: fleet.length,
@@ -420,8 +432,8 @@ export default function TrackingInfrastructurePage() {
 
   const zoneOptions = useMemo(() => zonesForFacility(form.facility), [form.facility]);
   const parentOptions = useMemo(
-    () => [...added, ...trackingDevices].filter((d) => d.facility === form.facility && PARENT_ROLES.includes(d.role)),
-    [added, form.facility],
+    () => [...pending, ...trackingDevices].filter((d) => d.facility === form.facility && PARENT_ROLES.includes(d.role)),
+    [pending, form.facility, dataVersion],
   );
 
   /** Open the form already pointed at the building you are looking at. */

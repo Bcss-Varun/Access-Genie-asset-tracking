@@ -10,7 +10,7 @@ import { InviteUserDialog } from '@/components/admin/InviteUserDialog';
 import { EditUserDialog } from '@/components/admin/EditUserDialog';
 import AdminRolesPanel from '@/pages/admin/roles/page';
 import { useMutate } from '@/api/mutate';
-import { adminApi } from '@/api/users';
+import { adminApi, useUserDirectory } from '@/api/users';
 import { useSession } from '@/components/providers/SessionProvider';
 import { cn } from '@/lib/utils';
 
@@ -87,8 +87,11 @@ export default function AdminUsersPage() {
   // create, edit or role change until the component happened to re-render for
   // an unrelated reason. Filtering a user list on every render is cheap enough
   // that there is nothing to memoise for.
+  // Suspended accounts included — see useUserDirectory. The dataset's active
+  // directory stands in only until the first response.
+  const people = useUserDirectory() ?? allUsers;
   const q = query.trim().toLowerCase();
-  const filtered = allUsers.filter((u) => {
+  const filtered = people.filter((u) => {
     if (roleFilter !== 'all' && u.roleId !== roleFilter) return false;
     if (statusFilter !== 'all' && u.status !== statusFilter) return false;
     if (facilityFilter !== 'all' && u.homeScopeId !== facilityFilter) return false;
@@ -104,7 +107,7 @@ export default function AdminUsersPage() {
   };
 
   const tiers: Record<string, number> = {};
-  for (const u of allUsers) {
+  for (const u of people) {
     const tier = roles[u.roleId].tier;
     tiers[tier] = (tiers[tier] ?? 0) + 1;
   }
@@ -133,7 +136,7 @@ export default function AdminUsersPage() {
                 : 'border-transparent text-slate-500 hover:text-slate-700',
             )}
           >
-            {key === 'people' ? `People (${allUsers.length})` : 'Roles & permissions'}
+            {key === 'people' ? `People (${people.length})` : 'Roles & permissions'}
           </button>
         ))}
       </div>
@@ -143,7 +146,7 @@ export default function AdminUsersPage() {
       {tab === 'people' && (
       <>
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        <KpiCard label="Total Users" value={allUsers.length} sub="With platform access" tone="primary" accent />
+        <KpiCard label="Total Users" value={people.length} sub="With platform access" tone="primary" accent />
         <KpiCard label="Management" value={tiers['Management'] ?? 0} sub="Managers & admins" tone="emerald" />
         <KpiCard label="Field" value={tiers['Field'] ?? 0} sub="Technicians & officers" tone="amber" />
         <KpiCard label="Platform / Tenant" value={(tiers['Platform'] ?? 0) + (tiers['Tenant Admin'] ?? 0)} sub="Admin tiers" tone="slate" />

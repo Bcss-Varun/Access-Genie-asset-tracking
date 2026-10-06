@@ -21,6 +21,8 @@ import {
 import {
   Activity,
   Asset,
+  Inspection,
+  PredictiveAlert,
   ScopeNodeModel,
   Technician,
   User,
@@ -214,7 +216,7 @@ async function matchStages(scope: VisibleScope, query: Partial<WorkOrderListQuer
     if (ids) stages.push({ $match: { '__asset.location.id': { $in: ids } } });
   }
 
-  stages.push({ $addFields: { __priorityRank: PRIORITY_RANK_EXPR, __statusRank: STATUS_RANK_EXPR } });
+  stages.push({ $addFields: { __priorityRank: PRIORITY_RANK_EXPR, __statusRank: STATUS_RANK_EXPR, __seq: SEQ_EXPR } });
 
   return stages;
 }
@@ -246,6 +248,15 @@ const STATUS_RANK_EXPR = {
   },
 };
 
+/**
+ * The number at the end of the business ID (`WO-107` → 107), for tie-breaks.
+ * Sorting the string `_id` put WO-10 ahead of WO-3; IDs shaped by a numbering
+ * rule without a numeric tail fall back to 0 and are ordered by `_id` after it.
+ */
+const SEQ_EXPR = {
+  $convert: { input: { $arrayElemAt: [{ $split: ['$_id', '-'] }, -1] }, to: 'long', onError: 0, onNull: 0 },
+};
+
 /** Map a sortable field onto the expression that actually orders it correctly. */
 const SORT_FIELD_ALIASES: Record<string, string> = {
   priority: '__priorityRank',
@@ -257,8 +268,10 @@ function sortStage(sort: Record<string, 1 | -1 | import('mongoose').SortOrder>):
   for (const [field, direction] of Object.entries(sort)) {
     out[SORT_FIELD_ALIASES[field] ?? field] = direction === -1 || direction === 'desc' ? -1 : 1;
   }
-  // `_id` breaks ties so paging is stable: without it, two orders sharing a due
-  // date can swap places between page 1 and page 2 and one is never seen.
+  // The ID breaks ties so paging is stable: without it, two orders sharing a
+  // due date can swap places between page 1 and page 2 and one is never seen.
+  // By its number first, so WO-9 comes before WO-10.
+  out.__seq = 1;
   out._id = 1;
   return out;
 }
@@ -311,6 +324,7 @@ type JoinedWorkOrder = WorkOrderDoc & {
   __asset?: { location?: { id?: string; name?: string } };
   __priorityRank?: number;
   __statusRank?: number;
+  __seq?: number;
 };
 
 /**
@@ -323,7 +337,7 @@ type JoinedWorkOrder = WorkOrderDoc & {
  */
 function present(rows: JoinedWorkOrder[], hierarchy: Hierarchy): WorkOrderDoc[] {
   return rows.map((row) => {
-    const { __asset, __priorityRank, __statusRank, ...rest } = row;
+    const { __asset, __priorityRank, __statusRank, __seq, ...rest } = row;
     return { ...rest, placement: placementFor(hierarchy, __asset?.location) } as WorkOrderDoc;
   });
 }
@@ -630,6 +644,130 @@ function normalizeAssignee(value: string | undefined | null): string {
   return trimmed;
 }
 
+/**
+ * Refuse a named assignee who is on neither roster.
+ *
+ * Either list will do — see `getWorkOrderFacets` for why users count. What is
+ * refused is a name on neither: free text here is how a queue ends up holding
+ * "Raj", "raj" and "R. Kumar" as three technicians no filter can reconcile.
+ * Applied on every path that names someone — create, assign and PATCH — not
+ * only the assign action, or the other two become the way round it.
+ */
+async function assertAssignable(name: string): Promise<void> {
+  if (name === UNASSIGNED) return;
+  const [technician, user] = await Promise.all([
+    Technician.findOne({ name, active: true }).select('_id').lean(),
+    User.findOne({ name, status: 'active' }).select('_id').lean(),
+  ]);
+  if (!technician && !user) {
+    throw ApiError.badRequest(
+      `"${name}" is not an active technician or user. Pick someone from the assignee list, or clear the assignment.`,
+    );
+  }
+}
+
+/**
+ * Load a work order for a write — after refusing it if it sits outside the
+ * caller's estate.
+ *
+ * The visibility check has to come first. Several actions used to load by id,
+ * write, and only then call `getWorkOrder` to shape the reply — so a manager of
+ * another site got a 404 *and* the change: the order was cancelled or
+ * reassigned, the 404 merely hid that it had worked.
+ */
+async function loadForWrite(scope: VisibleScope, id: string) {
+  await getWorkOrder(scope, id);
+  const workOrder = await WorkOrder.findById(id);
+  if (!workOrder) throw ApiError.notFound('Work order');
+  return workOrder;
+}
+
+/**
+ * Point an order at a new assignee, keeping its status honest.
+ *
+ * "Assigned" means a person has it, so naming someone on a New order advances
+ * it, and clearing the name on an Assigned one sends it back to New. Leaving
+ * either half undone stores a state the board cannot represent: a card under
+ * Assigned that belongs to nobody, or one under New that already has an owner.
+ * Both moves land on the status trail like any other transition.
+ */
+function applyAssignee(
+  workOrder: InstanceType<typeof WorkOrder>,
+  next: string,
+  actor: string,
+): void {
+  workOrder.assignedTo = next;
+  if (next !== UNASSIGNED && workOrder.status === 'New') {
+    workOrder.status = 'Assigned';
+    workOrder.history.push({ from: 'New', to: 'Assigned', at: new Date(), actor, note: `Assigned to ${next}` });
+  } else if (next === UNASSIGNED && workOrder.status === 'Assigned') {
+    workOrder.status = 'New';
+    workOrder.history.push({ from: 'Assigned', to: 'New', at: new Date(), actor, note: 'Returned to the queue' });
+  }
+}
+
+/**
+ * What raising an order does to its asset, whichever path raised it.
+ *
+ * The form, the predictive board, the PM automation and inspection corrective
+ * work all create orders — and only the first two used to go through
+ * `createWorkOrder`, so a preventive or corrective order left its asset "In
+ * Service" with nothing on its timeline. One function, so every origin records
+ * the raise and applies §6 Stage Automation ("Maintenance Ticket Created →
+ * Maintenance") the same way.
+ *
+ * `activity: false` is for callers that write their own, more specific row.
+ */
+export async function onWorkOrderRaised(opts: {
+  assetId: string;
+  workOrderId: string;
+  title: string;
+  actor: string;
+  activity?: string | false;
+}): Promise<void> {
+  const { assetId, workOrderId, title, actor } = opts;
+  if (opts.activity !== false) {
+    await Activity.create({
+      assetId,
+      type: 'Maintenance',
+      description: opts.activity ?? `Work order ${workOrderId} raised: ${title}`,
+      actor,
+      timestamp: new Date(),
+    });
+  }
+
+  // Only pulls an in-service asset out — one raised while the asset is still
+  // being received/commissioned doesn't jump the queue ahead of onboarding.
+  const asset = await Asset.findById(assetId).select('lifecycleStage').lean<{ lifecycleStage?: string }>();
+  if (asset?.lifecycleStage === 'Assigned / In Service') {
+    await applyLifecycleTransition(assetId, 'Maintenance', {
+      actor,
+      reason: `Work order ${workOrderId} raised: ${title}`,
+      automated: true,
+    });
+  }
+}
+
+/**
+ * §6 Stage Automation: "Maintenance Completed → In Service" — once nothing is
+ * left open against the asset.
+ *
+ * Applied whenever an order stops being open, not only on completion. A
+ * cancelled or deleted order releases the asset just as surely as a finished
+ * one; checking only for `Completed` left an asset whose single order was
+ * cancelled sitting in Maintenance indefinitely, with no work to bring it out.
+ * Closing one of three concurrent orders still leaves it where it is.
+ */
+async function releaseAssetIfIdle(assetId: string, actor: string, reason: string): Promise<void> {
+  const asset = await Asset.findById(assetId).select('lifecycleStage').lean<{ lifecycleStage?: string }>();
+  if (asset?.lifecycleStage !== 'Maintenance') return;
+
+  const stillOpen = await WorkOrder.countDocuments({ assetId, status: { $in: OPEN_WO_STATUSES } });
+  if (stillOpen === 0) {
+    await applyLifecycleTransition(assetId, 'Assigned / In Service', { actor, reason, automated: true });
+  }
+}
+
 export async function createWorkOrder(
   scope: VisibleScope,
   input: CreateWorkOrderInput,
@@ -639,8 +777,22 @@ export async function createWorkOrder(
   // dangling record nobody will ever action.
   const asset = await Asset.findById(input.assetId).lean();
   if (!asset) throw ApiError.badRequest(`Asset ${input.assetId} does not exist`);
+  // Raising work is acting on the asset, so it has to be inside the caller's
+  // estate — answered as a 404, like every other out-of-scope id.
+  assertLocationVisible(scope, asset.location?.id, 'Asset');
 
   const assignedTo = normalizeAssignee(input.assignedTo);
+  await assertAssignable(assignedTo);
+
+  // A technician named at creation is an assignment. Opening the order as New
+  // with a name on it is the same contradiction `applyAssignee` exists to
+  // prevent: counted as "not yet assigned" while somebody already has it.
+  const opensAssigned = input.status === 'New' && assignedTo !== UNASSIGNED;
+  const status: WorkOrderStatus = opensAssigned ? 'Assigned' : input.status;
+  if (status === 'Assigned' && assignedTo === UNASSIGNED) {
+    throw ApiError.badRequest('A work order opened as Assigned needs a technician. Pick one, or open it as New.');
+  }
+
   const scheduledDate = input.scheduledDate ? new Date(input.scheduledDate) : undefined;
   const dueDate = new Date(input.dueDate);
 
@@ -655,41 +807,35 @@ export async function createWorkOrder(
     category: asset?.category,
   });
 
+  // The trail starts at creation, not at the first change: otherwise the
+  // status an order was opened in has to be inferred from a gap. An order
+  // raised straight to a technician records both steps, so its trail reads the
+  // same as one raised and then assigned.
+  const now = new Date();
+  const history = opensAssigned
+    ? [
+        { from: null, to: 'New' as const, at: now, actor, note: 'Work order created' },
+        { from: 'New' as const, to: 'Assigned' as const, at: now, actor, note: `Assigned to ${assignedTo}` },
+      ]
+    : [{ from: null, to: status, at: now, actor, note: 'Work order created' }];
+
   // The created document is not read back here: `getWorkOrder(id)` below
   // returns it with its placement resolved, and every other write path in this
   // file answers in that same shape.
   await WorkOrder.create({
     ...input,
     _id: id,
+    status,
     assetName: asset.name,
     assignedTo,
     scheduledDate,
     dueDate,
     // Never set by any path any more — predictive raising is parked.
     aiGenerated: false,
-    // The trail starts at creation, not at the first change: otherwise the
-    // status an order was opened in has to be inferred from a gap.
-    history: [{ from: null, to: input.status, at: new Date(), actor, note: 'Work order created' }],
+    history,
   });
 
-  await Activity.create({
-    assetId: input.assetId,
-    type: 'Maintenance',
-    description: `Work order ${id} raised: ${input.title}`,
-    actor,
-    timestamp: new Date(),
-  });
-
-  // §6 Stage Automation: "Maintenance Ticket Created → Maintenance". Only
-  // pulls an in-service asset out — one raised while the asset is still
-  // being received/commissioned doesn't jump the queue ahead of onboarding.
-  if (asset.lifecycleStage === 'Assigned / In Service') {
-    await applyLifecycleTransition(input.assetId, 'Maintenance', {
-      actor,
-      reason: `Work order ${id} raised: ${input.title}`,
-      automated: true,
-    });
-  }
+  await onWorkOrderRaised({ assetId: input.assetId, workOrderId: id, title: input.title, actor });
 
   markEstateChanged('work-order-create');
   return getWorkOrder(scope, id);
@@ -702,10 +848,7 @@ export async function updateWorkOrder(
   actor: string,
 ): Promise<WorkOrderDoc> {
   // Refuses a record outside the estate before any write happens.
-  await getWorkOrder(scope, id);
-
-  const workOrder = await WorkOrder.findById(id);
-  if (!workOrder) throw ApiError.notFound('Work order');
+  const workOrder = await loadForWrite(scope, id);
 
   // A status change carries a history entry and a transition check, so it is
   // routed through the action that owns those rather than being written here as
@@ -717,7 +860,15 @@ export async function updateWorkOrder(
   const { status: _ignored, scheduledDate, assignedTo, dueDate, ...rest } = input;
   Object.assign(workOrder, rest);
 
-  if (assignedTo !== undefined) workOrder.assignedTo = normalizeAssignee(assignedTo);
+  // Same rules as the assign action — a PATCH is not a way round the roster
+  // check or the New ⇄ Assigned rule.
+  if (assignedTo !== undefined) {
+    const next = normalizeAssignee(assignedTo);
+    if (next !== workOrder.assignedTo) {
+      await assertAssignable(next);
+      applyAssignee(workOrder, next, actor);
+    }
+  }
   if (dueDate !== undefined) workOrder.dueDate = new Date(dueDate);
   // Explicit `null` clears the date; `undefined` leaves it alone. That
   // distinction is the whole reason the field is nullable in the validator.
@@ -753,8 +904,7 @@ export async function changeWorkOrderStatus(
   actor: string,
   note?: string,
 ): Promise<WorkOrderDoc> {
-  const workOrder = await WorkOrder.findById(id);
-  if (!workOrder) throw ApiError.notFound('Work order');
+  const workOrder = await loadForWrite(scope, id);
 
   if (workOrder.status === status) return getWorkOrder(scope, id);
 
@@ -763,6 +913,15 @@ export async function changeWorkOrderStatus(
     throw ApiError.badRequest(
       `Cannot move a work order from "${workOrder.status}" to "${status}"` +
         (allowed.length ? `. Allowed: ${allowed.join(', ')}` : '. This work order is closed.'),
+    );
+  }
+
+  // "Assigned" names a person. Moving there with nobody on the order — which
+  // the board's one-click advance used to do — stores a card that every queue
+  // misreads: counted as dispatched, owned by no one, in nobody's My Work.
+  if (status === 'Assigned' && workOrder.assignedTo === UNASSIGNED) {
+    throw ApiError.badRequest(
+      'Pick a technician to move this work order to Assigned — assigning a New order advances it.',
     );
   }
 
@@ -787,24 +946,8 @@ export async function changeWorkOrderStatus(
     timestamp: new Date(),
   });
 
-  // §6 Stage Automation: "Maintenance Completed → In Service" — once this was
-  // the *last* open order against the asset. Closing one of three concurrent
-  // orders should not send the asset back into service still mid-repair.
-  if (status === 'Completed') {
-    const asset = await Asset.findById(workOrder.assetId).lean();
-    if (asset?.lifecycleStage === 'Maintenance') {
-      const stillOpen = await WorkOrder.countDocuments({
-        assetId: workOrder.assetId,
-        status: { $in: OPEN_WO_STATUSES },
-      });
-      if (stillOpen === 0) {
-        await applyLifecycleTransition(workOrder.assetId, 'Assigned / In Service', {
-          actor,
-          reason: `Work order ${id} completed`,
-          automated: true,
-        });
-      }
-    }
+  if (status === 'Completed' || status === 'Cancelled') {
+    await releaseAssetIfIdle(workOrder.assetId, actor, `Work order ${id} ${status === 'Completed' ? 'completed' : 'cancelled'}`);
   }
 
   // Closing a corrective order changes the asset's health, and closing a PM
@@ -817,10 +960,8 @@ export async function changeWorkOrderStatus(
 /**
  * Assign, reassign or release a work order.
  *
- * Its own action rather than a PATCH field because it has a rule PATCH does
- * not: a named assignee must be on the roster. Free text here is how a queue
- * ends up holding "Raj", "raj" and "R. Kumar" as three different technicians
- * that no filter can reconcile.
+ * Its own action rather than a PATCH field because it has a rule PATCH used to
+ * skip: a named assignee must be on the roster (PATCH now applies it too).
  */
 export async function assignWorkOrder(
   scope: VisibleScope,
@@ -829,45 +970,15 @@ export async function assignWorkOrder(
   actor: string,
   note?: string,
 ): Promise<WorkOrderDoc> {
-  const workOrder = await WorkOrder.findById(id);
-  if (!workOrder) throw ApiError.notFound('Work order');
+  const workOrder = await loadForWrite(scope, id);
 
   const next = normalizeAssignee(assignedTo);
-
-  if (next !== UNASSIGNED) {
-    // Either list will do — see `getWorkOrderFacets` for why users count. What
-    // is refused is a name on neither: free text here is how a queue ends up
-    // holding "Raj", "raj" and "R. Kumar" as three technicians no filter can
-    // reconcile.
-    const [technician, user] = await Promise.all([
-      Technician.findOne({ name: next, active: true }).select('_id').lean(),
-      User.findOne({ name: next, status: 'active' }).select('_id').lean(),
-    ]);
-
-    if (!technician && !user) {
-      throw ApiError.badRequest(
-        `"${next}" is not an active technician or user. Pick someone from the assignee list, or clear the assignment.`,
-      );
-    }
-  }
+  await assertAssignable(next);
 
   if (workOrder.assignedTo === next) return getWorkOrder(scope, id);
 
   const previousAssignee = workOrder.assignedTo;
-  workOrder.assignedTo = next;
-
-  // Assigning a brand-new order advances it: leaving it in New with a
-  // technician's name on it is a state the board cannot represent honestly.
-  if (next !== UNASSIGNED && workOrder.status === 'New') {
-    workOrder.status = 'Assigned';
-    workOrder.history.push({
-      from: 'New',
-      to: 'Assigned',
-      at: new Date(),
-      actor,
-      note: `Assigned to ${next}`,
-    });
-  }
+  applyAssignee(workOrder, next, actor);
 
   if (note) workOrder.comments.push({ author: actor, text: note, at: new Date() });
   await workOrder.save();
@@ -937,10 +1048,29 @@ export async function toggleChecklistItem(
   return getWorkOrder(scope, id);
 }
 
-export async function deleteWorkOrder(scope: VisibleScope, id: string): Promise<void> {
-  await getWorkOrder(scope, id);
+export async function deleteWorkOrder(scope: VisibleScope, id: string, actor = 'system'): Promise<void> {
+  const workOrder = await loadForWrite(scope, id);
 
   const result = await WorkOrder.findByIdAndDelete(id);
   if (!result) throw ApiError.notFound('Work order');
+
+  // The records that point at it: an inspection's corrective list and a
+  // predictive alert's raised orders would otherwise link to a 404, and the
+  // alert would refuse to raise a replacement while it still "had" one.
+  await Promise.all([
+    Inspection.updateMany({ workOrderIds: id }, { $pull: { workOrderIds: id } }),
+    PredictiveAlert.updateMany({ workOrderIds: id }, { $pull: { workOrderIds: id } }),
+  ]);
+
+  await Activity.create({
+    assetId: workOrder.assetId,
+    type: 'Maintenance',
+    description: `Work order ${id} deleted: ${workOrder.title}`,
+    actor,
+    timestamp: new Date(),
+  });
+
+  // Deleting the last open order releases the asset, exactly as closing it would.
+  await releaseAssetIfIdle(workOrder.assetId, actor, `Work order ${id} deleted`);
   markEstateChanged('work-order-delete');
 }

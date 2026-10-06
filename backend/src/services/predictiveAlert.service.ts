@@ -132,7 +132,12 @@ type JoinedAlert = PredictiveAlertDoc & { __asset?: { location?: { id?: string; 
 
 function present(rows: JoinedAlert[], hierarchy: Hierarchy): PredictiveAlertDoc[] {
   return rows.map((row) => {
-    const { __asset, ...rest } = row;
+    // `__seq` and the ranks exist only to sort; they are not part of the contract.
+    const { __asset, __seq, __statusRank, __severityRank, ...rest } = row as typeof row & {
+      __seq?: number;
+      __statusRank?: number;
+      __severityRank?: number;
+    };
     return { ...rest, placement: placementFor(hierarchy, __asset?.location) } as PredictiveAlertDoc;
   });
 }
@@ -249,11 +254,23 @@ async function matchStages(scope: VisibleScope, query: Partial<PredictiveAlertLi
           default: PREDICTIVE_ALERT_STATUSES.length,
         },
       },
+      __seq: SEQ_EXPR,
     },
   });
 
   return stages;
 }
+
+
+/**
+ * The number at the end of the business ID (`PA-12` → 12), for tie-breaks.
+ * The string `_id` alone ordered PA-10 ahead of PA-2 — every bulk-scheduled
+ * batch shares one date, so on a fresh install the tie-break decides the whole
+ * list from the tenth record on. Same expression as the work-order service.
+ */
+const SEQ_EXPR = {
+  $convert: { input: { $arrayElemAt: [{ $split: ['$_id', '-'] }, -1] }, to: 'long', onError: 0, onNull: 0 },
+};
 
 function sortStage(sort: Record<string, unknown>): Record<string, 1 | -1> {
   const out: Record<string, 1 | -1> = {};
@@ -264,7 +281,10 @@ function sortStage(sort: Record<string, unknown>): Record<string, 1 | -1> {
     // wants from a triage board.
     out[key] = direction === -1 || direction === 'desc' ? -1 : 1;
   }
-  out._id = 1; // stable paging: ties must not reshuffle between pages
+  // Stable paging: ties must not reshuffle between pages — by the ID's number
+  // first, so the tenth record does not sort between the first and second.
+  out.__seq = 1;
+  out._id = 1;
   return out;
 }
 
