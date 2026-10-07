@@ -19,6 +19,7 @@ import { Button } from '@/components/ui/Button';
 import { WorkOrderBoardView } from '@/components/maintenance/work-orders/WorkOrderBoard';
 import { WorkOrderFilterBar } from '@/components/maintenance/work-orders/WorkOrderFilters';
 import { WorkOrderListView } from '@/components/maintenance/work-orders/WorkOrderList';
+import { AssignDialog } from '@/components/maintenance/work-orders/AssignDialog';
 import { cn } from '@/lib/utils';
 
 /**
@@ -50,6 +51,8 @@ export default function MaintenancePage() {
   const [page, setPage] = useState(1);
   const [sort, setSort] = useState(DEFAULT_SORT);
   const [busyId, setBusyId] = useState<string | null>(null);
+  // The order waiting on "who?" before it can move to Assigned.
+  const [assigning, setAssigning] = useState<WorkOrder | null>(null);
 
   const { run } = useMutate();
   const refreshWorkOrders = useRefreshWorkOrders();
@@ -91,6 +94,12 @@ export default function MaintenancePage() {
    */
   const advance = useCallback(
     async (workOrder: WorkOrder, status: WorkOrderStatus) => {
+      // Assigned means somebody has it. With nobody on the order, ask who
+      // first — the server refuses the bare status flip.
+      if (status === 'Assigned' && workOrder.assignedTo === 'Unassigned') {
+        setAssigning(workOrder);
+        return;
+      }
       setBusyId(workOrder.id);
       await run(maintenanceApi.changeStatus(workOrder.id, status), {
         success: `${workOrder.id} moved to ${status}`,
@@ -102,6 +111,32 @@ export default function MaintenancePage() {
         refresh: refreshWorkOrders,
       });
       setBusyId(null);
+    },
+    [run, refreshWorkOrders],
+  );
+
+  /**
+   * Assign, and finish the move to Assigned.
+   *
+   * Assigning a New order advances it server-side; one coming back from On Hold
+   * keeps its status on assignment, so the transition follows as its own call.
+   */
+  const assignAndAdvance = useCallback(
+    async (workOrder: WorkOrder, assignee: string) => {
+      setBusyId(workOrder.id);
+      const assigned = await run(
+        maintenanceApi.assign(workOrder.id, assignee).then((saved) =>
+          saved.status === 'Assigned' ? saved : maintenanceApi.changeStatus(workOrder.id, 'Assigned'),
+        ),
+        {
+          success: `${workOrder.id} assigned to ${assignee}`,
+          successDetail: workOrder.title,
+          describe: 'assign that work order',
+          refresh: refreshWorkOrders,
+        },
+      );
+      setBusyId(null);
+      if (assigned) setAssigning(null);
     },
     [run, refreshWorkOrders],
   );
@@ -200,6 +235,15 @@ export default function MaintenancePage() {
           onAdvance={(workOrder, status) => void advance(workOrder, status)}
           now={now}
           filtersActive={activeCount > 0}
+        />
+      )}
+
+      {assigning && (
+        <AssignDialog
+          workOrder={assigning}
+          busy={busyId === assigning.id}
+          onAssign={(assignee) => void assignAndAdvance(assigning, assignee)}
+          onCancel={() => setAssigning(null)}
         />
       )}
     </div>

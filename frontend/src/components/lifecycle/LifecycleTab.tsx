@@ -3,6 +3,8 @@ import type { Asset, LifecycleTransition } from '@access-genie/shared';
 import { EmptyState } from '@/components/ui/primitives';
 import { Button } from '@/components/ui/Button';
 import { relTime, formatDate } from '@/lib/utils';
+import { useMutate } from '@/api/mutate';
+import { lifecycleApi, usePendingStageChanges } from '@/api/lifecycle';
 import { ChangeStageDialog } from './ChangeStageDialog';
 
 /**
@@ -18,6 +20,20 @@ import { ChangeStageDialog } from './ChangeStageDialog';
 export function LifecycleTab({ asset, history }: { asset: Asset; history: LifecycleTransition[] }) {
   const [changingStage, setChangingStage] = useState(false);
   const pending = history.find((t) => t.status === 'Pending');
+  const { run, isPending: deciding } = useMutate();
+
+  // Whether this user may decide the request is the server's answer (role
+  // matrix, requester, any approval chain), read from the same queue the
+  // Approvals page shows — never re-derived here.
+  const queue = usePendingStageChanges();
+  const decidable = pending ? queue.data?.find((p) => p.id === pending.id) : undefined;
+
+  const decide = (decision: 'Approved' | 'Rejected') =>
+    pending &&
+    run(lifecycleApi.decide(pending.id, decision), {
+      success: decision === 'Approved' ? `Approved — ${asset.name} → ${pending.toStage}` : 'Request rejected',
+      describe: 'record that decision',
+    });
 
   return (
     <div className="space-y-6">
@@ -32,9 +48,22 @@ export function LifecycleTab({ asset, history }: { asset: Asset; history: Lifecy
       </div>
 
       {pending && (
-        <div className="rounded-lg bg-amber-50 px-3 py-2.5 text-sm text-amber-800">
-          <strong>Awaiting approval:</strong> {pending.requester} requested a move to{' '}
-          <strong>{pending.toStage}</strong> — {pending.reason}
+        <div className="flex flex-wrap items-center gap-3 rounded-lg bg-amber-50 px-3 py-2.5 text-sm text-amber-800">
+          <span className="min-w-0 flex-1">
+            <strong>Awaiting approval:</strong> {pending.requester} requested a move to{' '}
+            <strong>{pending.toStage}</strong> — {pending.reason}
+            {decidable?.approvalRequestId && <> · held by an approval workflow, decided from Approvals</>}
+          </span>
+          {decidable?.canDecide && (
+            <span className="flex gap-1.5">
+              <Button size="sm" variant="outline" disabled={deciding} onClick={() => void decide('Rejected')}>
+                Reject
+              </Button>
+              <Button size="sm" disabled={deciding} onClick={() => void decide('Approved')}>
+                Approve
+              </Button>
+            </span>
+          )}
         </div>
       )}
 

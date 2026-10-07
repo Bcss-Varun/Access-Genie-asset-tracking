@@ -16,6 +16,7 @@ router.use(requireModule('assets'));
 
 router.get('/lifecycle/board', controller.board);
 router.get('/lifecycle/kpis', controller.kpis);
+router.get('/lifecycle/pending', controller.pending);
 router.post(
   '/lifecycle/bulk-transition',
   requirePermission('assets', 'edit'),

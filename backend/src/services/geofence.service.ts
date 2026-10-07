@@ -1,4 +1,18 @@
-import { Alert, Asset, Geofence, TrackingEvent, nextId, type AssetDoc, type GeofenceDoc } from '../models/index.js';
+import {
+  Alert,
+  Asset,
+  Geofence,
+  OPEN_TRACKING_ALERT_STATES,
+  ScopeNodeModel,
+  TrackedFacility,
+  TrackedZone,
+  TrackingAlert,
+  TrackingEvent,
+  nextId,
+  type AssetDoc,
+  type GeofenceDoc,
+} from '../models/index.js';
+import type { AlertPriority } from '@access-genie/shared';
 import { logger } from '../config/logger.js';
 
 /**
@@ -48,6 +62,8 @@ export interface BreachContext {
   zoneId?: string;
   previousZone?: string;
   position?: { x: number; y: number };
+  /** Facility name the sighting was made in, when the reader reported one. */
+  facility?: string;
   at: Date;
   source: string;
 }
@@ -98,12 +114,11 @@ function detect(fences: GeofenceDoc[], ctx: BreachContext): Breach[] {
  */
 export async function evaluateGeofences(ctx: BreachContext): Promise<string[]> {
   const fences = await Geofence.find({ active: true }).lean<GeofenceDoc[]>();
-  if (fences.length === 0) return [];
-
   const breaches = detect(fences, ctx);
-  if (breaches.length === 0) return [];
-
   const asset = await Asset.findById(ctx.assetId).lean<AssetDoc>();
+
+  if (breaches.length === 0) return evaluateArmedZones(asset, ctx);
+
   const assetName = asset?.name ?? ctx.assetId;
   const raised: string[] = [];
 
@@ -149,11 +164,135 @@ export async function evaluateGeofences(ctx: BreachContext): Promise<string[]> {
     });
 
     await Geofence.updateOne({ _id: fence._id }, { $inc: { breaches24h: 1 } });
+    // The Tracking Alerts console works its own queue; a breach that only
+    // reached the general alert centre never showed up there at all.
+    await raiseTrackingAlert(asset, ctx, {
+      title: `Geofence breach — ${fence.name}`,
+      summary: `${assetName} ${reason}`,
+      priority: fence.rule === 'Restricted' ? 'P1' : 'P2',
+      source: `Geofence ${fence.name}`,
+    });
     raised.push(fence.name);
   }
 
+  raised.push(...(await evaluateArmedZones(asset, ctx)));
+
   if (raised.length > 0) {
     logger.info('Geofence breach', { assetId: ctx.assetId, zone: ctx.zone, fences: raised });
+  }
+  return raised;
+}
+
+/** Response window per priority — when an unacknowledged alert counts as breached. */
+const SLA_HOURS: Record<AlertPriority, number> = { P1: 1, P2: 4, P3: 24, P4: 72 };
+
+/**
+ * Open a tracking alert for a breach, unless one is already open for this
+ * asset and place — a tag sitting in a restricted room is one problem, not one
+ * alert per read.
+ */
+async function raiseTrackingAlert(
+  asset: AssetDoc | null,
+  ctx: BreachContext,
+  alert: { title: string; summary: string; priority: AlertPriority; source: string },
+): Promise<void> {
+  const facility = ctx.facility ?? asset?.location?.name ?? 'Unassigned';
+  const open = await TrackingAlert.exists({
+    assetId: ctx.assetId,
+    location: ctx.zone,
+    category: 'Unauthorized Movement',
+    state: { $in: OPEN_TRACKING_ALERT_STATES },
+  });
+  if (open) return;
+
+  await TrackingAlert.create({
+    _id: await nextId('trackingAlert', 'TRK-ALT'),
+    category: 'Unauthorized Movement',
+    priority: alert.priority,
+    state: 'New',
+    title: alert.title,
+    summary: alert.summary,
+    assetId: ctx.assetId,
+    assetName: asset?.name ?? ctx.assetId,
+    facility,
+    location: ctx.zone,
+    raisedAt: ctx.at,
+    slaDueAt: new Date(ctx.at.getTime() + SLA_HOURS[alert.priority] * 3_600_000),
+    source: alert.source,
+    valueAtRiskInr: asset?.bookValue ?? asset?.purchasePrice ?? 0,
+    timeline: [{ at: ctx.at, actor: `${ctx.source} reader`, action: 'Raised', note: alert.summary }],
+  });
+}
+
+/**
+ * Zones armed on the Geofences screen.
+ *
+ * That screen arms *tracked zones* and sets their policy, but breach detection
+ * only ever read the separate geofence rectangles — so arming a zone changed
+ * nothing, and its "Violations 24h" never moved. A policy is now enforced on
+ * the sighting the same way a fence rule is. Dwell limits need a timer per asset
+ * and are not evaluated here.
+ */
+async function evaluateArmedZones(asset: AssetDoc | null, ctx: BreachContext): Promise<string[]> {
+  const zones = await TrackedZone.find({
+    armed: true,
+    policy: { $in: ['Authorised only', 'After-hours watch', 'No exit without check-out'] },
+    $or: [{ name: { $in: [ctx.zone, ctx.previousZone].filter(Boolean) } }, ...(ctx.zoneId ? [{ _id: ctx.zoneId }] : [])],
+  }).lean();
+  if (zones.length === 0) return [];
+
+  // Zones belong to a facility by slug; the sighting names its facility. Two
+  // sites can both have a "Server Room", and only the one the asset is in counts.
+  // A facility's slug is its stored tracking record's id when it has one, and
+  // otherwise its scope node's id lower-cased (see trackingWorkspace.service).
+  const slugs = new Set<string>();
+  if (ctx.facility) {
+    const [stored, nodes] = await Promise.all([
+      TrackedFacility.find({ name: ctx.facility }).select('_id').lean(),
+      ScopeNodeModel.find({ level: 'facility', name: ctx.facility }).select('_id').lean(),
+    ]);
+    for (const f of stored) slugs.add(String(f._id));
+    for (const n of nodes) slugs.add(String(n._id).toLowerCase());
+  }
+  const inFacility = (slug: string) => !ctx.facility || slugs.has(slug);
+
+  const raised: string[] = [];
+  for (const zone of zones) {
+    if (!inFacility(zone.facility)) continue;
+    const inNow = zone._id === ctx.zoneId || zone.name === ctx.zone;
+    const wasIn = ctx.previousZone === zone.name;
+
+    let reason: string | null = null;
+    if (zone.policy === 'No exit without check-out') {
+      if (wasIn && !inNow) reason = `left ${zone.name} without a check-out`;
+    } else if (inNow && !wasIn) {
+      reason = zone.policy === 'Authorised only'
+        ? `entered ${zone.name}, which is authorised-only`
+        : `entered ${zone.name} while it is under watch`;
+    }
+    if (!reason) continue;
+
+    const assetName = asset?.name ?? ctx.assetId;
+    await TrackedZone.updateOne({ _id: zone._id }, { $inc: { violations24h: 1 } });
+    await raiseTrackingAlert(asset, ctx, {
+      title: `Zone policy breach — ${zone.name}`,
+      summary: `${assetName} ${reason}`,
+      priority: zone.policy === 'Authorised only' ? 'P1' : 'P2',
+      source: `Zone ${zone.name} (${zone.policy})`,
+    });
+    await TrackingEvent.create({
+      _id: await nextId('trackingEvent', 'EV'),
+      at: ctx.at,
+      kind: 'Alert',
+      title: `Zone policy breach — ${zone.name}`,
+      detail: `${assetName} ${reason}`,
+      zone: ctx.zone,
+      actor: `${ctx.source} reader`,
+      tone: zone.policy === 'Authorised only' ? 'red' : 'amber',
+      assetId: ctx.assetId,
+      assetName,
+    });
+    raised.push(zone.name);
   }
   return raised;
 }

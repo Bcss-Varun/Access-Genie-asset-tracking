@@ -1,7 +1,8 @@
-import { Asset, Certification, ComplianceRecord, Notification, nextId, type CertificationDoc } from '../models/index.js';
+import { Asset, Certification, ComplianceRecord, nextId, type CertificationDoc } from '../models/index.js';
 import { logger } from '../config/logger.js';
 import { recordSystemAudit } from './audit.service.js';
 import { fireEvent } from './notificationRule.service.js';
+import { notify } from './notification.service.js';
 
 /**
  * Certification expiry, processed on a clock.
@@ -58,6 +59,9 @@ async function raiseComplianceRecord(cert: CertificationDoc, kind: 'Expired' | '
     assetId: cert.assetId,
     assetName: cert.assetName,
     scopeId,
+    relatedCertificationId: cert._id,
+    certificationEvent: kind,
+    certificationExpiresAt: cert.expiresAt,
     title,
     description,
     category: 'Regulatory',
@@ -84,6 +88,23 @@ async function raiseComplianceRecord(cert: CertificationDoc, kind: 'Expired' | '
 }
 
 /**
+ * Has this certificate already had a finding for this event at this expiry?
+ *
+ * Findings raised before the idempotency fields existed are matched by asset
+ * and title, so the first pass after an upgrade does not duplicate them.
+ */
+async function alreadyAnnounced(cert: CertificationDoc, kind: 'Expired' | 'Expiring'): Promise<boolean> {
+  const title = kind === 'Expired' ? `Certificate expired — ${cert.name}` : `Certificate expiring soon — ${cert.name}`;
+  const existing = await ComplianceRecord.exists({
+    $or: [
+      { relatedCertificationId: cert._id, certificationEvent: kind, certificationExpiresAt: cert.expiresAt },
+      { relatedCertificationId: { $exists: false }, source: 'Automated', assetId: cert.assetId, title },
+    ],
+  });
+  return Boolean(existing);
+}
+
+/**
  * Advance every certificate whose status no longer matches its date.
  *
  * Two `updateMany` calls rather than a read-modify-write loop: the transition
@@ -107,58 +128,60 @@ export async function sweepCertificationExpiry(now = new Date()): Promise<Compli
     { $set: { status: 'Expiring' } },
   );
 
-  // Only the certificates that changed *in this pass* are announced. Notifying
-  // on every pass for everything currently expired would make the inbox
-  // useless within a week, which is the usual way a digest stops being read.
+  /*
+   * Announce every certificate that has crossed a threshold and not yet been
+   * announced for it — rather than only the ones this pass moved.
+   *
+   * It used to be "the ones `updateMany` just changed", which had two holes. A
+   * certificate *recorded* already expired or inside the window is stored with
+   * that status by the write path (compliance.service derives it), so no pass
+   * ever moved it and no finding was ever raised. And the lapsed set was
+   * re-selected as "the N most recently expired", which is not necessarily the
+   * N that changed. The finding itself is now the record of having announced:
+   * one per certificate, per event, per expiry date — so the pass stays
+   * idempotent, and a renewed certificate that lapses again is announced again.
+   */
   let notified = 0;
 
-  if (expired.modifiedCount > 0) {
-    const lapsed = await Certification.find({ status: 'Expired', expiresAt: { $lt: now } })
-      .sort({ expiresAt: -1 })
-      .limit(expired.modifiedCount)
-      .lean<CertificationDoc[]>();
-
-    for (const cert of lapsed) {
-      try {
-        // Broadcast (no `userId`) — an expired certificate is an
-        // organisation-level compliance fact, not one person's task. Kept
-        // alongside the rule-engine event below so expiry is never silent for
-        // an org that has not yet configured a Notification Rule for it.
-        await Notification.create({
-          _id: await nextId('notification', 'NTF'),
-          title: `Certificate expired — ${cert.name}`,
-          body: `${cert.name} for ${cert.assetName} lapsed on ${cert.expiresAt.toISOString().slice(0, 10)}.`,
-          category: 'Compliance',
-          at: now,
-          read: false,
-        });
-        await raiseComplianceRecord(cert, 'Expired');
-        notified += 1;
-      } catch (err: unknown) {
-        // A failed notification must not roll back a status that is now correct.
-        logger.error('Certificate expiry notification failed', {
-          certificate: cert._id,
-          err: err instanceof Error ? err.message : String(err),
-        });
-      }
+  const lapsed = await Certification.find({ status: 'Expired', expiresAt: { $lt: now } })
+    .sort({ expiresAt: -1 })
+    .lean<CertificationDoc[]>();
+  for (const cert of lapsed) {
+    if (await alreadyAnnounced(cert, 'Expired')) continue;
+    try {
+      await raiseComplianceRecord(cert, 'Expired');
+      // An organisation-level fact: everyone who can see the asset's site is
+      // told. This used to be a Notification with no `userId` — a "broadcast"
+      // the inbox (which reads by user) never showed to anybody.
+      const asset = await Asset.findById(cert.assetId).select('location').lean();
+      await notify({
+        title: `Certificate expired — ${cert.name}`,
+        body: `${cert.name} for ${cert.assetName} lapsed on ${cert.expiresAt.toISOString().slice(0, 10)}.`,
+        category: 'Compliance',
+        scopeId: asset?.location?.id,
+      });
+      notified += 1;
+    } catch (err: unknown) {
+      // A failed notification must not roll back a status that is now correct.
+      logger.error('Certificate expiry notification failed', {
+        certificate: cert._id,
+        err: err instanceof Error ? err.message : String(err),
+      });
     }
   }
 
-  if (expiring.modifiedCount > 0) {
-    const upcoming = await Certification.find({ status: 'Expiring', expiresAt: { $gte: now, $lte: horizon } })
-      .sort({ expiresAt: 1 })
-      .limit(expiring.modifiedCount)
-      .lean<CertificationDoc[]>();
-
-    for (const cert of upcoming) {
-      try {
-        await raiseComplianceRecord(cert, 'Expiring');
-      } catch (err: unknown) {
-        logger.error('Certificate expiring-soon finding failed', {
-          certificate: cert._id,
-          err: err instanceof Error ? err.message : String(err),
-        });
-      }
+  const upcoming = await Certification.find({ status: 'Expiring', expiresAt: { $gte: now, $lte: horizon } })
+    .sort({ expiresAt: 1 })
+    .lean<CertificationDoc[]>();
+  for (const cert of upcoming) {
+    if (await alreadyAnnounced(cert, 'Expiring')) continue;
+    try {
+      await raiseComplianceRecord(cert, 'Expiring');
+    } catch (err: unknown) {
+      logger.error('Certificate expiring-soon finding failed', {
+        certificate: cert._id,
+        err: err instanceof Error ? err.message : String(err),
+      });
     }
   }
 

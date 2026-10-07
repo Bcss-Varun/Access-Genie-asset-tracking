@@ -1,5 +1,6 @@
 import type {
   ApprovalDecision,
+  AssetStatus,
   BulkStageChangeResult,
   LifecycleBoardColumn,
   LifecycleKpis,
@@ -11,6 +12,7 @@ import { LIFECYCLE_APPROVAL_REQUIRED, LIFECYCLE_FLOW, LIFECYCLE_ROLE_MATRIX, LIF
 import { Activity, Asset, LifecycleTransition, PmSchedule, nextId, type AssetDoc, type LifecycleTransitionDoc } from '../models/index.js';
 import { ApiError } from '../utils/ApiError.js';
 import { notify, notifyRoles } from './notification.service.js';
+import { openIfRequired, openRequestFor } from './approval.service.js';
 import { assetClause, locationClause, type VisibleScope } from './tenancy.service.js';
 
 /**
@@ -40,17 +42,51 @@ function daysUntil(date: Date | undefined, now: Date): number | null {
   return Math.round((date.getTime() - now.getTime()) / 86_400_000);
 }
 
+/**
+ * The registry status a stage implies, given the status the asset has now.
+ *
+ * `status` and `lifecycleStage` are separate fields, and nothing kept them in
+ * step: an approved move into Maintenance left the registry, the dashboard
+ * tiles and every status filter saying "Active", so the approval visibly did
+ * nothing anywhere but the lifecycle board. Only the stages that have an
+ * unambiguous status are mapped; a status somebody set for another reason
+ * (Missing, Staging) is left alone.
+ */
+function statusForStage(toStage: LifecycleStage, current: AssetStatus): AssetStatus {
+  if (toStage === 'Maintenance') return 'Maintenance';
+  if (toStage === 'Retired' || toStage === 'Disposed') return 'End_Of_Life';
+  if (current === 'Maintenance' && (toStage === 'Assigned / In Service' || toStage === 'Available' || toStage === 'Returned')) {
+    return 'Active';
+  }
+  return current;
+}
+
 /** Low-level primitive: writes the stage, appends the timeline, notifies. */
 export async function applyLifecycleTransition(
   assetId: string,
   toStage: LifecycleStage,
-  opts: { actor: string; reason: string; comments?: string; automated?: boolean; documentIds?: string[] },
+  opts: {
+    actor: string;
+    actorId?: string;
+    reason: string;
+    comments?: string;
+    automated?: boolean;
+    documentIds?: string[];
+    /**
+     * The `Pending` row this application settles. An approved request already
+     * has its transition row — marked Approved by `decideStageChange` — and
+     * writing a second, `Applied` one put the same move on the asset's
+     * lifecycle timeline twice.
+     */
+    settles?: LifecycleTransitionDoc;
+  },
 ): Promise<AssetDoc> {
   const asset = await Asset.findById(assetId);
   if (!asset) throw ApiError.notFound('Asset');
 
   const fromStage = asset.lifecycleStage;
   asset.lifecycleStage = toStage;
+  asset.status = statusForStage(toStage, asset.status);
   await asset.save();
 
   await Activity.create({
@@ -63,22 +99,25 @@ export async function applyLifecycleTransition(
     timestamp: new Date(),
   });
 
-  await LifecycleTransition.create({
-    _id: await nextId('lifecycleTransition', 'LTX'),
-    assetId,
-    assetName: asset.name,
-    fromStage,
-    toStage,
-    reason: opts.reason,
-    comments: opts.comments,
-    requester: opts.actor,
-    status: 'Applied',
-    approvals: [],
-    documentIds: opts.documentIds ?? [],
-    automated: opts.automated ?? false,
-    requestedAt: new Date(),
-    decidedAt: new Date(),
-  });
+  if (!opts.settles) {
+    await LifecycleTransition.create({
+      _id: await nextId('lifecycleTransition', 'LTX'),
+      assetId,
+      assetName: asset.name,
+      fromStage,
+      toStage,
+      reason: opts.reason,
+      comments: opts.comments,
+      requester: opts.actor,
+      requesterId: opts.actorId,
+      status: 'Applied',
+      approvals: [],
+      documentIds: opts.documentIds ?? [],
+      automated: opts.automated ?? false,
+      requestedAt: new Date(),
+      decidedAt: new Date(),
+    });
+  }
 
   await notify({
     scopeId: asset.location?.id,
@@ -101,6 +140,7 @@ export async function requestStageChange(
   input: RequestStageChangeInput,
   actor: string,
   role: RoleId,
+  actorId?: string,
 ): Promise<{ status: 'Applied' | 'Pending'; asset?: AssetDoc; transition: LifecycleTransitionDoc }> {
   const asset = await scopedAsset(scope, assetId);
 
@@ -129,12 +169,29 @@ export async function requestStageChange(
       reason: input.reason,
       comments: input.comments,
       requester: actor,
+      requesterId: actorId,
       status: 'Pending',
       approvals: eligible.map((r) => ({ role: r, status: 'Pending' as const })),
       documentIds: input.documentIds ?? [],
       automated: false,
       requestedAt: new Date(),
     });
+
+    // A disposal is the one stage change Administration can put behind a
+    // configured approval chain (`asset_disposal`, listed as wired in
+    // shared/governance.ts). Nothing used to open that request, so a disposal
+    // workflow could be built, activated and then never fire. When one covers
+    // this asset, the chain decides the request and Approvals settles it.
+    if (input.toStage === 'Disposed' && actorId) {
+      await openIfRequired({
+        trigger: 'asset_disposal',
+        subjectId: transition._id,
+        subjectLabel: `${asset.name} → Disposed`,
+        scopeId: asset.location?.id,
+        requestedBy: actorId,
+        requestedByName: actor,
+      });
+    }
 
     await notifyRoles(eligible, {
       scopeId: asset.location?.id,
@@ -148,6 +205,7 @@ export async function requestStageChange(
 
   const updated = await applyLifecycleTransition(assetId, input.toStage, {
     actor,
+    actorId,
     reason: input.reason,
     comments: input.comments,
     documentIds: input.documentIds,
@@ -157,6 +215,48 @@ export async function requestStageChange(
     .lean<LifecycleTransitionDoc>();
 
   return { status: 'Applied', asset: updated, transition: transition! };
+}
+
+/** Whether this caller is the person who raised the request. */
+function isRequester(transition: Pick<LifecycleTransitionDoc, 'requester' | 'requesterId'>, actor: string, actorId?: string): boolean {
+  // By id whenever the row has one. The name is only a fallback for rows
+  // written before ids were stored — a display name is editable by its owner,
+  // so comparing names let a requester rename themselves and self-approve.
+  if (transition.requesterId) return transition.requesterId === actorId;
+  return transition.requester === actor;
+}
+
+/** Record a decision on a pending row and, when approved, apply the stage. */
+async function settle(
+  transition: InstanceType<typeof LifecycleTransition>,
+  decision: ApprovalDecision,
+  actor: string,
+  role: RoleId | undefined,
+  scopeId: string | undefined,
+): Promise<void> {
+  transition.status = decision;
+  transition.decidedAt = new Date();
+  transition.approvals = transition.approvals.map((a) =>
+    !role || a.role === role ? { ...a, status: decision, actor, at: new Date() } : a,
+  );
+  await transition.save();
+
+  if (decision === 'Approved') {
+    await applyLifecycleTransition(transition.assetId, transition.toStage, {
+      actor,
+      reason: `Approved: ${transition.reason}`,
+      comments: transition.comments,
+      documentIds: transition.documentIds,
+      settles: transition.toObject(),
+    });
+  } else {
+    await notify({
+      scopeId,
+      title: `Rejected: ${transition.assetName} → ${transition.toStage}`,
+      body: `${actor} rejected the request from ${transition.requester}.`,
+      category: 'Approval',
+    });
+  }
 }
 
 /**
@@ -171,6 +271,7 @@ export async function decideStageChange(
   decision: ApprovalDecision,
   actor: string,
   role: RoleId,
+  actorId?: string,
 ): Promise<LifecycleTransitionDoc> {
   const transition = await LifecycleTransition.findById(transitionId);
   if (!transition) throw ApiError.notFound('Lifecycle transition');
@@ -178,7 +279,7 @@ export async function decideStageChange(
   if (transition.status !== 'Pending') {
     throw ApiError.badRequest(`This request is already ${transition.status.toLowerCase()}.`);
   }
-  if (actor === transition.requester) {
+  if (isRequester(transition, actor, actorId)) {
     throw ApiError.forbidden('A stage change cannot be approved by the person who requested it.');
   }
 
@@ -187,30 +288,74 @@ export async function decideStageChange(
     throw ApiError.forbidden(`Only ${eligible.join(', ') || 'an administrator'} may decide this request.`);
   }
 
-  transition.status = decision;
-  transition.decidedAt = new Date();
-  transition.approvals = transition.approvals.map((a) =>
-    a.role === role ? { ...a, status: decision, actor, at: new Date() } : a,
-  );
-  await transition.save();
-
-  if (decision === 'Approved') {
-    await applyLifecycleTransition(transition.assetId, transition.toStage, {
-      actor,
-      reason: `Approved: ${transition.reason}`,
-      comments: transition.comments,
-      documentIds: transition.documentIds,
-    });
-  } else {
-    await notify({
-      scopeId: asset.location?.id,
-      title: `Rejected: ${transition.assetName} → ${transition.toStage}`,
-      body: `${actor} rejected the request from ${transition.requester}.`,
-      category: 'Approval',
-    });
+  // Same rule as transfers: a request held by a configured approval chain is
+  // decided in Approvals, step by step, not around it from here.
+  const governed = await openRequestFor('asset_disposal', transitionId);
+  if (governed) {
+    throw ApiError.conflict(
+      `This request is governed by "${governed.workflowName}" and is awaiting approval step ` +
+        `${governed.currentStep + 1} of ${governed.steps.length}. Decide it from Approvals.`,
+    );
   }
 
+  await settle(transition, decision, actor, role, asset.location?.id);
   return transition.toObject();
+}
+
+/**
+ * Apply a settled `asset_disposal` approval to the transition it was holding.
+ *
+ * Called by the approvals controller once the chain finishes. Like the transfer
+ * equivalent it logs rather than throws: the approval is already recorded, and
+ * a request that was decided some other way in the meantime is a race, not a
+ * reason to lose the decision.
+ */
+export async function applyDisposalApproval(transitionId: string, outcome: 'Approved' | 'Rejected', approver: string): Promise<void> {
+  const transition = await LifecycleTransition.findById(transitionId);
+  if (!transition || transition.status !== 'Pending') return;
+  const asset = await Asset.findById(transition.assetId).lean();
+  await settle(transition, outcome, approver, undefined, asset?.location?.id);
+}
+
+/** A pending stage change as the approvals queue shows it. */
+export interface PendingStageChange extends LifecycleTransitionDoc {
+  /** Whether *this* caller may decide it here, right now. */
+  canDecide: boolean;
+  /** Set when a configured approval chain holds it — decided from that request instead. */
+  approvalRequestId?: string;
+}
+
+/**
+ * Every pending stage change in the caller's estate.
+ *
+ * Gated stage changes opened a `Pending` row and notified the approvers, but
+ * no screen listed them and nothing called the decide endpoint — so a request
+ * for Maintenance or Retired could be raised and never settled. This is the
+ * queue's read side; `canDecide` is worked out here, from the same rules
+ * `decideStageChange` enforces, so the client never second-guesses them.
+ */
+export async function listPendingStageChanges(
+  scope: VisibleScope,
+  actor: string,
+  role: RoleId,
+  actorId?: string,
+): Promise<PendingStageChange[]> {
+  const rows = await LifecycleTransition.find({ ...(await assetClause(scope)), status: 'Pending' })
+    .sort({ requestedAt: -1, _id: -1 })
+    .limit(200)
+    .lean<LifecycleTransitionDoc[]>();
+
+  return Promise.all(
+    rows.map(async (row) => {
+      const governed = row.toStage === 'Disposed' ? await openRequestFor('asset_disposal', row._id) : null;
+      const eligible = LIFECYCLE_ROLE_MATRIX.canApprove[row.toStage] ?? [];
+      return {
+        ...row,
+        approvalRequestId: governed?._id,
+        canDecide: !governed && eligible.includes(role) && !isRequester(row, actor, actorId),
+      };
+    }),
+  );
 }
 
 export async function listTransitions(scope: VisibleScope, assetId: string): Promise<LifecycleTransitionDoc[]> {
@@ -225,6 +370,7 @@ export async function bulkStageChange(
   input: RequestStageChangeInput,
   actor: string,
   role: RoleId,
+  actorId?: string,
 ): Promise<BulkStageChangeResult> {
   const updated: string[] = [];
   const pendingApproval: string[] = [];
@@ -232,7 +378,7 @@ export async function bulkStageChange(
 
   for (const id of ids) {
     try {
-      const result = await requestStageChange(scope, id, input, actor, role);
+      const result = await requestStageChange(scope, id, input, actor, role, actorId);
       if (result.status === 'Applied') updated.push(id);
       else pendingApproval.push(id);
     } catch (err) {

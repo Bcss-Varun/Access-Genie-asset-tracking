@@ -54,7 +54,8 @@ const KIND_STYLE: Record<JourneyEventKind, { dot: string; ring: string; tone: To
  * the human anchor ("was that today?"), and `last` gets the "now" treatment.
  */
 function Stop({ stop, first, last }: { stop: JourneyStop; first: boolean; last: boolean }) {
-  const s = KIND_STYLE[stop.kind];
+  // Stops recorded before ingest wrote a `kind` have none; draw them as sightings.
+  const s = KIND_STYLE[stop.kind] ?? KIND_STYLE.Seen;
   const gap = stop.kind === 'Gap';
 
   return (

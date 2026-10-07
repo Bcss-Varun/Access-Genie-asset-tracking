@@ -1,4 +1,6 @@
-import { createBrowserRouter, Navigate } from 'react-router-dom';
+import type { ComponentType } from 'react';
+import { createBrowserRouter, Navigate, type RouteObject } from 'react-router-dom';
+import { useDataVersion } from '@/api/dataset';
 import { AppShell } from '@/components/layout/AppShell';
 import { AppProviders } from '@/components/providers/AppProviders';
 import { RequireAuth } from './RequireAuth';
@@ -43,7 +45,34 @@ const isLabels = (r: { path?: string }) => String(r.path) === LABELS_PATH;
  * other hundred-odd routes stay reachable.
  */
 const withBoundary = (routes: typeof pageRoutes) =>
-  routes.map((route) => ({ ...route, errorElement: <PageError /> }));
+  routes.map((route) => ({ ...route, lazy: liveLazy(route.lazy), errorElement: <PageError /> }));
+
+/**
+ * Re-render a screen whenever the data it reads is re-read.
+ *
+ * Screens read the dataset and tracking payloads from module bindings, and the
+ * router hands each one a memoised element — so when a write (or the tracking
+ * poll) refreshed a payload, the screen on display kept showing what it first
+ * rendered. Subscribing here, once, covers every screen without each having to.
+ */
+function live<P extends object>(Screen: ComponentType<P>): ComponentType<P> {
+  function LiveScreen(props: P) {
+    useDataVersion();
+    return <Screen {...props} />;
+  }
+  LiveScreen.displayName = `Live(${Screen.displayName ?? Screen.name ?? 'Screen'})`;
+  return LiveScreen;
+}
+
+function liveLazy(lazy: RouteObject['lazy']): RouteObject['lazy'] {
+  if (typeof lazy !== 'function') return lazy;
+  return async () => {
+    const loaded = await lazy();
+    return loaded.Component ? { ...loaded, Component: live(loaded.Component) } : loaded;
+  };
+}
+
+const LiveDashboard = live(DashboardPage);
 
 const trackingRoutes = withBoundary(pageRoutes.filter(isTracking));
 const labelRoutes = withBoundary(pageRoutes.filter(isLabels));
@@ -54,6 +83,12 @@ export const router = createBrowserRouter([
   { path: '/login', element: <LoginPage />, errorElement: <RouteError /> },
   { path: '/forgot-password', element: <ForgotPasswordPage />, errorElement: <RouteError /> },
   { path: '/mfa', element: <MfaPage />, errorElement: <RouteError /> },
+  // The sign-in form sends second-factor users to `/auth/mfa`, and the MFA page
+  // links back to `/auth/login`. Neither was routed, so `/auth/mfa` fell into the
+  // authenticated tree, bounced to /login, and lost the challenge — no account
+  // with MFA on could finish signing in.
+  { path: '/auth/mfa', element: <MfaPage />, errorElement: <RouteError /> },
+  { path: '/auth/login', element: <Navigate to="/login" replace /> },
 
   // ── Authenticated ──────────────────────────────────────────────────────────
   {
@@ -72,7 +107,7 @@ export const router = createBrowserRouter([
               </AppProviders>
             ),
             children: [
-              { index: true, element: <DashboardPage /> },
+              { index: true, element: <LiveDashboard /> },
 
               // The eight role dashboards and the gallery that listed them are
               // now one screen at `/`. Old links — bookmarks, printed decks,
@@ -153,7 +188,7 @@ export const router = createBrowserRouter([
               // when the generator is next run.
               {
                 path: 'a/:code',
-                lazy: async () => ({ Component: (await import('@/pages/a/[code]/page')).default }),
+                lazy: liveLazy(async () => ({ Component: (await import('@/pages/a/[code]/page')).default })),
               },
 
               ...generalRoutes,

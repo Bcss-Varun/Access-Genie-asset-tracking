@@ -45,6 +45,10 @@ export const errorHandler: ErrorRequestHandler = (err, req, res, _next) => {
     // the user uploads a large file and is told "Something went wrong", which
     // reads as a broken server rather than as a file they need to shrink.
     apiError = new ApiError(413, 'PAYLOAD_TOO_LARGE', 'That file is too large — the limit is 5MB');
+  } else if (isMalformedBody(err)) {
+    // Same reason: body-parser refuses unparseable JSON before any route runs.
+    // It is the caller's mistake, so it is a 400 — not a 500 with a stack trace.
+    apiError = ApiError.badRequest('The request body is not valid JSON');
   } else {
     apiError = ApiError.internal();
   }
@@ -87,6 +91,11 @@ interface DuplicateKeyError {
 
 function isDuplicateKeyError(err: unknown): err is DuplicateKeyError {
   return typeof err === 'object' && err !== null && (err as { code?: number }).code === 11000;
+}
+
+/** What body-parser throws when a request body is not valid JSON. */
+function isMalformedBody(err: unknown): boolean {
+  return typeof err === 'object' && err !== null && (err as { type?: string }).type === 'entity.parse.failed';
 }
 
 /** What body-parser throws when a request body exceeds the configured limit. */

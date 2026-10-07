@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { ASSET_CATEGORIES, type Asset } from '@access-genie/shared';
+import { ASSET_CATEGORIES, newestFirst, type Asset } from '@access-genie/shared';
 import { PageHeader, Badge, EmptyState } from '@/components/ui/primitives';
 import { Button } from '@/components/ui/Button';
 import { Dropdown, MenuItem } from '@/components/ui/Dropdown';
@@ -19,7 +19,7 @@ const statusTone = (s: Asset['status']) =>
 const STATUSES = ['All', 'Active', 'Maintenance', 'Missing', 'Staging', 'End_Of_Life'] as const;
 const CATEGORIES = ['All', ...ASSET_CATEGORIES] as const;
 
-type SortKey = 'name' | 'status' | 'healthScore' | 'category' | 'utilization' | 'riskScore' | 'lastPing';
+type SortKey = 'newest' | 'name' | 'status' | 'healthScore' | 'category' | 'utilization' | 'riskScore' | 'lastPing';
 
 /**
  * A sortable column header.
@@ -97,8 +97,11 @@ export default function AssetRegistryPage() {
   const [search, setSearch] = useState('');
   const [status, setStatus] = useState<string>('All');
   const [category, setCategory] = useState<string>('All');
-  const [sortKey, setSortKey] = useState<SortKey>('name');
-  const [sortDir, setSortDir] = useState<'asc' | 'desc'>('asc');
+  // Newest first by default: what someone has just registered belongs at the
+  // top of page one. Sorting by name used to drop it wherever its name fell —
+  // often onto page two, where it looked as if it had never saved.
+  const [sortKey, setSortKey] = useState<SortKey>('newest');
+  const [sortDir, setSortDir] = useState<'asc' | 'desc'>('desc');
   const [hidden, setHidden] = useState<Set<OptCol>>(new Set<OptCol>(['utilization', 'riskScore', 'lastPing']));
   const [dense, setDense] = useState(false);
   const [selected, setSelected] = useState<Set<string>>(new Set());
@@ -144,6 +147,7 @@ export default function AssetRegistryPage() {
       return true;
     });
     const dir = sortDir === 'asc' ? 1 : -1;
+    if (sortKey === 'newest') return rows.sort((a, b) => newestFirst(a, b) * -dir);
     rows.sort((a, b) => {
       let av: string | number = '', bv: string | number = '';
       if (sortKey === 'name') { av = a.name; bv = b.name; }
@@ -495,7 +499,7 @@ export default function AssetRegistryPage() {
                   {show('lastPing') && <td className={cn(td, 'text-slate-400 text-xs')}>{a.telemetry?.lastPing ? relTime(a.telemetry.lastPing) : 'Unknown'}</td>}
                   <td className={cn(td, 'text-right')}>
                     {a.onboarding.state === 'Draft' ? (
-                      <Link to={`/assets/new?resume=${a.id}`} className="text-primary-600 hover:text-primary-700 font-medium text-sm">Finish setup →</Link>
+                      <Link to={`/assets/${a.id}/edit`} className="text-primary-600 hover:text-primary-700 font-medium text-sm">Finish setup →</Link>
                     ) : (
                       <Link to={`/assets/${a.id}`} className="text-slate-400 hover:text-primary-600 font-medium text-sm">Open →</Link>
                     )}

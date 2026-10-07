@@ -55,7 +55,7 @@ export const fmtDwell = (min: number) => {
 /** One stop, said the way an operator would read it off a timeline. */
 export const stopItem = (s: JourneyStop) => ({
   at: relTime(s.at),
-  title: s.kind === 'Gap' ? 'Trail goes cold' : `${s.kind} · ${s.zone}`,
+  title: s.kind === 'Gap' ? 'Trail goes cold' : `${s.kind ?? 'Seen'} · ${s.zone}`,
   detail: s.note ?? (s.dwellMin ? `Stayed ${fmtDwell(s.dwellMin)}` : undefined),
   actor: s.actor,
   tone: (s.kind === 'Gap' || s.kind === 'Alert' ? 'bad' : s.kind === 'Exited' ? 'warn' : 'info') as 'bad' | 'warn' | 'info',

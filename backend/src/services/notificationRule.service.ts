@@ -105,7 +105,14 @@ async function resolveRecipients(rule: NotificationRuleDoc, payload: EventPayloa
     if (spec.kind === 'user' && spec.value) {
       ids.add(spec.value);
     } else if (spec.kind === 'requester' && payload.actorId) {
-      ids.add(payload.actorId);
+      // Events identify their actor however the raising service knows them —
+      // approvals by user id, compliance and audit findings by email (that is
+      // what they store as `createdBy`). Matching on `_id` alone resolved every
+      // finding's requester to nobody, so the rule logged "no recipients".
+      const requester = await User.findOne({ $or: [{ _id: payload.actorId }, { email: payload.actorId }] })
+        .select('_id')
+        .lean<{ _id: string }>();
+      if (requester) ids.add(requester._id);
     } else if (spec.kind === 'role' && spec.value) {
       const holders = await User.find({ roleId: spec.value, status: 'active' }).select('_id').lean<{ _id: string }[]>();
       for (const holder of holders) ids.add(holder._id);

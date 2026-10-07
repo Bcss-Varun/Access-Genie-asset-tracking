@@ -25,6 +25,7 @@ import { FieldActionButtons, SlaChip } from '@/components/workforce/WorkOrderAct
 import { fieldStageLabel, toolsForWorkOrder, STAGE_TONE } from '@/lib/field-ops';
 import { TYPE_EMOJI, formatDate, initials, sourceLabel } from '@/components/maintenance/work-orders/tokens';
 import { SourceBadge } from '@/components/maintenance/work-orders/shared';
+import { AssignDialog } from '@/components/maintenance/work-orders/AssignDialog';
 
 /**
  * One work order.
@@ -114,6 +115,8 @@ export default function WorkOrderDetailPage() {
   const refreshWorkOrders = useRefreshWorkOrders();
 
   const [draft, setDraft] = useState('');
+  // Set when a move to Assigned is waiting on "who?".
+  const [askAssignee, setAskAssignee] = useState(false);
 
   const wo = query.data;
 
@@ -132,6 +135,12 @@ export default function WorkOrderDetailPage() {
 
   const changeStatus = async (next: WorkOrderStatus) => {
     if (!wo) return;
+    // Assigned names a person; with nobody on the order, ask first — the
+    // server refuses the bare status flip.
+    if (next === 'Assigned' && wo.assignedTo === 'Unassigned') {
+      setAskAssignee(true);
+      return;
+    }
     await run(maintenanceApi.changeStatus(wo.id, next), {
       success: `${wo.id} → ${next}`,
       describe: 'change that status',
@@ -146,6 +155,18 @@ export default function WorkOrderDetailPage() {
       describe: 'assign that work order',
       refresh,
     });
+  };
+
+  /** Assign from the "who?" prompt, then finish the move to Assigned if assigning alone did not. */
+  const assignAndAdvance = async (name: string) => {
+    if (!wo) return;
+    const saved = await run(
+      maintenanceApi.assign(wo.id, name).then((after) =>
+        after.status === 'Assigned' ? after : maintenanceApi.changeStatus(wo.id, 'Assigned'),
+      ),
+      { success: `${wo.id} assigned to ${name}`, describe: 'assign that work order', refresh },
+    );
+    if (saved) setAskAssignee(false);
   };
 
   const toggleItem = async (index: number, done: boolean) => {
@@ -536,6 +557,15 @@ export default function WorkOrderDetailPage() {
           </div>
         </div>
       </div>
+
+      {askAssignee && (
+        <AssignDialog
+          workOrder={wo}
+          busy={isPending}
+          onAssign={(name) => void assignAndAdvance(name)}
+          onCancel={() => setAskAssignee(false)}
+        />
+      )}
     </div>
   );
 }

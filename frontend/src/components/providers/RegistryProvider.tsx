@@ -174,7 +174,10 @@ export function RegistryProvider({ children }: { children: React.ReactNode }) {
       const previousWrite = pendingWrites.current.get(id) ?? Promise.resolve(true);
       const write = previousWrite.then(async () => {
         const previous = currentAssets.current.find((a) => a.id === id);
-        if (!previous) return false;
+        if (!previous) {
+          toast({ title: `Could not ${describe}`, description: 'That asset is no longer in this view. Refresh and try again.', tone: 'error' });
+          return false;
+        }
         const updated = fn(previous);
         const body = Object.fromEntries(Object.entries(updated).filter(([key, value]) =>
           !['id', 'createdAt', 'updatedAt'].includes(key) && value !== previous[key as keyof RegisteredAsset],
@@ -242,7 +245,10 @@ export function RegistryProvider({ children }: { children: React.ReactNode }) {
             onboarding: (created as RegisteredAsset).onboarding ?? asset.onboarding,
           };
 
-          setAssets((list) => [stored, ...list]);
+          // The ref too: `commit` reads it, so an edit made straight after
+          // registering otherwise found no asset and was dropped without a word.
+          currentAssets.current = [stored, ...currentAssets.current.filter((a) => a.id !== stored.id)];
+          setAssets(currentAssets.current);
           setSessionIds((ids) => [stored.id, ...ids]);
           await refreshDataset();
           return stored;
@@ -351,7 +357,8 @@ export function RegistryProvider({ children }: { children: React.ReactNode }) {
           return false;
         }
 
-        setAssets((list) => list.filter((a) => a.id !== id));
+        currentAssets.current = currentAssets.current.filter((a) => a.id !== id);
+        setAssets(currentAssets.current);
         setSessionIds((ids) => ids.filter((i) => i !== id));
         await refreshDataset();
         return true;

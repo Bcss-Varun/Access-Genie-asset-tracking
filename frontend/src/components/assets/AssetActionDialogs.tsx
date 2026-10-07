@@ -4,7 +4,8 @@ import { FormDialog, Field, Select, TextArea, TextInput } from '@/components/ui/
 import { useMutate } from '@/api/mutate';
 import { custodyApi } from '@/api/catalog';
 import { operationsApi } from '@/api/operations';
-import { allUsers, flattenScope } from '@/lib/rbac';
+import { allUsers, findScope, flattenScope } from '@/lib/rbac';
+import { useSession } from '@/components/providers/SessionProvider';
 
 /**
  * The three actions the asset profile's "More" menu offered.
@@ -100,7 +101,13 @@ export function CustodyDialog({ asset, onClose }: { asset: Asset; onClose: () =>
 // ── Transfer ─────────────────────────────────────────────────────────────────
 export function TransferDialog({ asset, onClose }: { asset: Asset; onClose: () => void }) {
   const { run, isPending } = useMutate();
-  const places = flattenScope().filter(({ node }) => node.level !== 'org' && node.level !== 'region');
+  const { session } = useSession();
+  // Only places inside the requester's own estate. The whole tree is in the
+  // dataset (the scope switcher needs it), so this offered a facility manager
+  // every other site in the organisation — and the server then refused the
+  // request because the destination is outside their scope.
+  const home = session.user.homeScopeId ? findScope(session.user.homeScopeId) : undefined;
+  const places = flattenScope(home).filter(({ node }) => node.level !== 'org' && node.level !== 'region');
 
   const [to, setTo] = useState(places.find((p) => p.node.id !== asset.location.id)?.node.name ?? '');
   const [reason, setReason] = useState('');

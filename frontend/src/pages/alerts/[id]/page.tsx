@@ -26,36 +26,78 @@ const statusTone: Record<AlertStatus, Tone> = {
   Resolved: 'emerald',
 };
 
-// Deterministic lifecycle timeline derived from the alert's current status.
-function buildTimeline(alert: Alert): { label: string; detail: string; ts: string; done: boolean }[] {
-  const order: AlertStatus[] = ['Open', 'Acknowledged', 'Escalated', 'Resolved'];
-  const idx = order.indexOf(alert.status);
-  return [
-    {
-      label: 'Alert raised',
-      detail: `${alert.source} triggered "${alert.title}".`,
-      ts: alert.createdAt,
-      done: true,
-    },
-    {
-      label: 'Acknowledged',
-      detail: 'Sneha Iyer acknowledged the alert.',
-      ts: alert.createdAt,
-      done: idx >= 1,
-    },
-    {
-      label: 'Escalated to on-call',
-      detail: 'Routed to Tier 2 (Facilities on-call).',
-      ts: alert.createdAt,
-      done: idx >= 2,
-    },
-    {
-      label: 'Resolved',
-      detail: 'Root cause addressed and alert closed.',
-      ts: alert.createdAt,
-      done: idx >= 3,
-    },
-  ];
+/**
+ * What the API returns beyond the shared `Alert` contract: the escalation stamp
+ * and the step-by-step trail the service now records (backend models/Alert.ts).
+ * Optional, so an alert written before the trail existed still renders.
+ */
+interface AlertHistoryEntry {
+  action: 'raised' | 'acknowledged' | 'escalated' | 'resolved' | 'assigned';
+  by: string;
+  at: string;
+  from?: AlertStatus;
+  assignee?: string;
+  note?: string;
+}
+type AlertWithTrail = Alert & { escalatedBy?: string; escalatedAt?: string; history?: AlertHistoryEntry[] };
+
+/**
+ * The steps this alert has actually been through.
+ *
+ * This used to be derived from the current status alone: every step up to the
+ * status index was drawn as done, each credited to the same fixture person and
+ * stamped with the creation time. So an alert resolved straight from
+ * Acknowledged claimed it had been escalated, and every acknowledgement named
+ * somebody who never touched it. Now it is the recorded trail, falling back —
+ * for alerts older than the trail — to the stamps on the record itself, and
+ * never to a name the record does not carry.
+ */
+function trailOf(alert: AlertWithTrail): AlertHistoryEntry[] {
+  if (alert.history?.length) return alert.history;
+  const steps: AlertHistoryEntry[] = [{ action: 'raised', by: alert.source, at: alert.createdAt }];
+  if (alert.acknowledgedBy && alert.acknowledgedAt) steps.push({ action: 'acknowledged', by: alert.acknowledgedBy, at: alert.acknowledgedAt });
+  if (alert.escalatedBy && alert.escalatedAt) steps.push({ action: 'escalated', by: alert.escalatedBy, at: alert.escalatedAt });
+  if (alert.assignedTo && alert.assignedAt) steps.push({ action: 'assigned', by: alert.assignedTo, at: alert.assignedAt, assignee: alert.assignedTo });
+  if (alert.resolvedBy && alert.resolvedAt) steps.push({ action: 'resolved', by: alert.resolvedBy, at: alert.resolvedAt });
+  return steps.sort((a, b) => Date.parse(a.at) - Date.parse(b.at));
+}
+
+const STEP_LABEL: Record<AlertHistoryEntry['action'], string> = {
+  raised: 'Alert raised',
+  acknowledged: 'Acknowledged',
+  escalated: 'Escalated to on-call',
+  resolved: 'Resolved',
+  assigned: 'Assigned',
+};
+
+function describeStep(step: AlertHistoryEntry, alert: Alert): string {
+  const note = step.note ? ` — "${step.note}"` : '';
+  switch (step.action) {
+    case 'raised':
+      return step.by === alert.source
+        ? `${alert.source} triggered "${alert.title}".`
+        : `${step.by} raised "${alert.title}" (${alert.source}).`;
+    case 'acknowledged':
+      return `${step.by} acknowledged the alert.${note}`;
+    case 'escalated':
+      return `${step.by} escalated the alert.${note}`;
+    case 'resolved':
+      return `${step.by} resolved the alert.${note}`;
+    case 'assigned':
+      return `${step.by} assigned it to ${step.assignee ?? 'someone'}.`;
+  }
+}
+
+function buildTimeline(alert: AlertWithTrail): { label: string; detail: string; ts?: string; done: boolean }[] {
+  const rows: { label: string; detail: string; ts?: string; done: boolean }[] = trailOf(alert).map((step) => ({
+    label: STEP_LABEL[step.action],
+    detail: describeStep(step, alert),
+    ts: step.at,
+    done: true,
+  }));
+  // The one step still ahead of an unresolved alert — shown as pending, never as done.
+  if (alert.status !== 'Resolved') rows.push({ label: 'Resolved', detail: 'Pending', done: false });
+  return rows;
 }
 
 export default function AlertDetailPage() {
@@ -85,7 +127,7 @@ export default function AlertDetailPage() {
     );
   }
 
-  const alert: Alert = found;
+  const alert: AlertWithTrail = found;
   const timeline = buildTimeline(alert);
 
   const act = (next: AlertStatus, verb: string) => {
@@ -129,6 +171,9 @@ export default function AlertDetailPage() {
       ),
     },
     { label: 'Raised', value: relTime(alert.createdAt) },
+    // Assigning was stored but never shown, so after "Alert assigned" nobody
+    // could tell from the screen whose it was.
+    { label: 'Owner', value: alert.assignedTo ?? <span className="text-slate-400">Nobody yet</span> },
   ];
 
   return (
@@ -231,7 +276,7 @@ export default function AlertDetailPage() {
                   <div className={cn('min-w-0 flex-1 pb-1', !t.done && 'opacity-50')}>
                     <div className="flex items-center justify-between gap-2">
                       <p className="text-sm font-semibold text-slate-800">{t.label}</p>
-                      {t.done && <span className="text-xs text-slate-400 whitespace-nowrap">{relTime(t.ts)}</span>}
+                      {t.done && t.ts && <span className="text-xs text-slate-400 whitespace-nowrap">{relTime(t.ts)}</span>}
                     </div>
                     <p className="text-sm text-slate-500">{t.done ? t.detail : 'Pending'}</p>
                   </div>

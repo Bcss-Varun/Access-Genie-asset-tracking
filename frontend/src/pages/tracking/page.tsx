@@ -45,6 +45,7 @@ import { useMutate } from '@/api/mutate';
 import { movementsApi } from '@/api/tracking-ops';
 import { alertsApi } from '@/api/alerts';
 import { useSession } from '@/components/providers/SessionProvider';
+import { useDataVersion } from '@/api/dataset';
 
 const TAB_KEYS = ['map', 'list'] as const;
 type TabKey = (typeof TAB_KEYS)[number];
@@ -120,6 +121,7 @@ export default function LiveTrackingPage() {
   const [sort, setSort] = useState<Sort>({ key: 'name', dir: 'asc' });
   const [page, setPage] = useState(0);
   const [selected, setSelected] = useState<Set<string>>(new Set());
+  const dataVersion = useDataVersion();
 
   const facilityName = scope === 'all' ? null : facilityBySlug(scope)?.name ?? null;
 
@@ -131,9 +133,9 @@ export default function LiveTrackingPage() {
         ? { ...p, state: 'Missing' as PresenceState, custody: 'Unaccounted' as const }
         : p,
     );
-  }, [scope, reported]);
+  }, [scope, reported, dataVersion]);
 
-  const kpis = useMemo(() => trackingKpis(scope), [scope]);
+  const kpis = useMemo(() => trackingKpis(scope), [scope, dataVersion]);
   const live = useMemo(() => ({
     online: scoped.filter((p) => p.state === 'Online').length,
     notSeen: scoped.filter((p) => p.state === 'Offline' || p.state === 'Stale').length,

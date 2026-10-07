@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { Link } from 'react-router-dom';
 import { useQueryClient } from '@tanstack/react-query';
 import {
   APPROVAL_TRIGGER_LABELS,
@@ -10,6 +11,7 @@ import {
 import { ApiRequestError } from '@/api/client';
 import { useMutate } from '@/api/mutate';
 import { approvalsApi, useApprovals, APPROVALS_KEY } from '@/api/admin-rules';
+import { lifecycleApi, usePendingStageChanges, type PendingStageChange } from '@/api/lifecycle';
 import { Badge, EmptyState, ErrorState, PageHeader, TableSkeleton } from '@/components/ui/primitives';
 import { Button } from '@/components/ui/Button';
 import { Field, FormDialog, TextArea } from '@/components/ui/FormDialog';
@@ -41,6 +43,7 @@ export default function ApprovalsPage() {
   const [mine, setMine] = useState(true);
   const [status, setStatus] = useState<ApprovalRequestStatus | undefined>('Pending');
   const query = useApprovals(mine, status);
+  const stageChanges = usePendingStageChanges();
   const cache = useQueryClient();
 
   const [deciding, setDeciding] = useState<{ request: ApprovalRequestView; decision: 'Approved' | 'Rejected' } | null>(
@@ -63,6 +66,17 @@ export default function ApprovalsPage() {
   }
 
   const requests = query.data ?? [];
+
+  // Gated lifecycle moves (Maintenance, Retired, Disposed) are approvals too,
+  // but they are LifecycleTransition rows, not workflow requests — so this
+  // queue never listed them, nothing called their decide endpoint, and a
+  // request raised from Asset 360 waited forever. They are shown here beside
+  // the workflow requests. One held by a disposal workflow is decided through
+  // that workflow's own card below, so it is not offered twice.
+  const showStageChanges = status === undefined || status === 'Pending';
+  const stageRows = showStageChanges
+    ? (stageChanges.data ?? []).filter((t) => !t.approvalRequestId && (!mine || t.canDecide))
+    : [];
 
   return (
     <div className="h-full flex flex-col space-y-6">
@@ -111,9 +125,20 @@ export default function ApprovalsPage() {
         </div>
       </div>
 
+      {stageRows.length > 0 && (
+        <div className="space-y-3">
+          <h2 className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+            Lifecycle stage changes <span className="tabular-nums text-slate-400">{stageRows.length}</span>
+          </h2>
+          {stageRows.map((t) => (
+            <StageChangeCard key={t.id} transition={t} />
+          ))}
+        </div>
+      )}
+
       {query.isLoading ? (
         <TableSkeleton rows={4} columns={5} />
-      ) : requests.length === 0 ? (
+      ) : requests.length === 0 && stageRows.length > 0 ? null : requests.length === 0 ? (
         <EmptyState
           title={mine ? 'Nothing is waiting on you' : 'No approval requests'}
           description={
@@ -144,6 +169,47 @@ export default function ApprovalsPage() {
           }}
         />
       )}
+    </div>
+  );
+}
+
+/** One pending stage change, decided in place — the server already said whether this user may. */
+function StageChangeCard({ transition }: { transition: PendingStageChange }) {
+  const { run, isPending } = useMutate();
+  const decide = (decision: 'Approved' | 'Rejected') =>
+    run(lifecycleApi.decide(transition.id, decision), {
+      success: decision === 'Approved' ? `Approved — ${transition.assetName} → ${transition.toStage}` : 'Request rejected',
+      successDetail: decision === 'Approved' ? 'The asset has moved to its new stage.' : 'The asset stays where it is.',
+      describe: 'record that decision',
+    });
+
+  return (
+    <div className="glass-panel rounded-xl p-4" data-stage-change={transition.id}>
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div className="min-w-0">
+          <div className="flex flex-wrap items-center gap-2">
+            <Link to={`/assets/${transition.assetId}?tab=lifecycle`} className="font-medium text-slate-800 hover:text-primary-600">
+              {transition.assetName} → {transition.toStage}
+            </Link>
+            <Badge tone="amber">Pending</Badge>
+            <span className="text-xs text-slate-400">Lifecycle stage change</span>
+          </div>
+          <p className="mt-0.5 text-xs text-slate-500">
+            {transition.fromStage} → {transition.toStage} · raised by {transition.requester} {relTime(transition.requestedAt)}
+          </p>
+          <p className="mt-1 text-sm text-slate-600">{transition.reason}</p>
+        </div>
+        {transition.canDecide && (
+          <div className="flex items-center gap-1.5">
+            <Button variant="outline" size="sm" disabled={isPending} onClick={() => void decide('Rejected')}>
+              Reject
+            </Button>
+            <Button size="sm" disabled={isPending} onClick={() => void decide('Approved')}>
+              Approve
+            </Button>
+          </div>
+        )}
+      </div>
     </div>
   );
 }

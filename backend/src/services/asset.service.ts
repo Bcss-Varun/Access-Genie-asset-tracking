@@ -1,6 +1,18 @@
 import type { FilterQuery } from 'mongoose';
-import type { ApiMeta } from '@access-genie/shared';
-import { Activity, Asset, CustodyRecord, Insight, LifecycleTransition, Transfer, WorkOrder, healthStatusFor, type AssetDoc } from '../models/index.js';
+import { OPEN_WORK_ORDER_STATUSES, type ApiMeta } from '@access-genie/shared';
+import {
+  Activity,
+  Alert,
+  Asset,
+  CustodyRecord,
+  Insight,
+  LifecycleTransition,
+  Reservation,
+  Transfer,
+  WorkOrder,
+  healthStatusFor,
+  type AssetDoc,
+} from '../models/index.js';
 import { ApiError } from '../utils/ApiError.js';
 import { mintId } from './numbering.service.js';
 import { logger } from '../config/logger.js';
@@ -78,15 +90,22 @@ export async function getAsset(scope: VisibleScope, id: string): Promise<AssetDo
 export async function getAssetProfile(scope: VisibleScope, id: string) {
   const asset = await getAsset(scope, id);
 
-  const [workOrders, activity, insights, custody, lifecycleHistory] = await Promise.all([
-    WorkOrder.find({ assetId: id }).sort({ dueDate: 1 }).limit(50).lean(),
-    Activity.find({ assetId: id }).sort({ timestamp: -1 }).limit(50).lean(),
+  // Every list newest first — the profile is a history, and the screen reads
+  // these instead of the org-wide /dataset slices, which are capped (activity
+  // and lifecycle at 200 rows across the whole estate) and so came back empty
+  // for any asset that had not changed recently. `_id` breaks ties between rows
+  // written in the same millisecond, such as a registration and its automatic
+  // Commissioning entry.
+  const [workOrders, activity, insights, custody, lifecycleHistory, alerts] = await Promise.all([
+    WorkOrder.find({ assetId: id }).sort({ createdAt: -1, _id: -1 }).limit(50).lean(),
+    Activity.find({ assetId: id }).sort({ timestamp: -1, _id: -1 }).limit(100).lean(),
     Insight.find({ assetId: id, status: 'open' }).sort({ createdAt: -1 }).limit(20).lean(),
-    CustodyRecord.find({ assetId: id }).sort({ at: -1 }).limit(20).lean(),
-    LifecycleTransition.find({ assetId: id }).sort({ requestedAt: -1 }).limit(50).lean(),
+    CustodyRecord.find({ assetId: id }).sort({ at: -1, _id: -1 }).limit(50).lean(),
+    LifecycleTransition.find({ assetId: id }).sort({ requestedAt: -1, _id: -1 }).limit(50).lean(),
+    Alert.find({ assetId: id }).sort({ createdAt: -1 }).limit(20).lean(),
   ]);
 
-  return { asset, workOrders, activity, insights, custody, lifecycleHistory };
+  return { asset, workOrders, activity, insights, custody, lifecycleHistory, alerts };
 }
 
 export async function createAsset(scope: VisibleScope, input: CreateAssetInput, actor: string): Promise<AssetDoc> {
@@ -243,6 +262,23 @@ export async function updateAsset(
       timestamp: new Date(),
     });
   }
+  // A custodian change made from the edit form, a bulk assignment or a received
+  // transfer is as much a custody event as a check-out. Without this entry the
+  // custody row was written (assetGraph) but the asset's own timeline, History
+  // and chain-of-custody views — which read the activity stream — never showed
+  // that the asset had changed hands.
+  if (input.custodian !== undefined && asset.custodian !== previous.custodian) {
+    const held = asset.custodian && asset.custodian !== 'Unassigned';
+    await Activity.create({
+      assetId: id,
+      type: 'Custody',
+      description: held
+        ? `Custodian changed from ${previous.custodian || 'Unassigned'} to ${asset.custodian}`
+        : `Returned to the pool by ${previous.custodian || 'Unassigned'}`,
+      actor,
+      timestamp: new Date(),
+    });
+  }
 
   // Move the dot, open a custody entry, register a newly bound tag.
   const { mapPosition } = await projectAssetUpdate(asset.toObject(), previous, actor);
@@ -260,12 +296,33 @@ export async function deleteAsset(scope: VisibleScope, id: string): Promise<void
   const asset = await Asset.findById(id);
   if (!asset) throw ApiError.notFound('Asset');
 
-  const openWorkOrders = await WorkOrder.countDocuments({ assetId: id, status: { $ne: 'Completed' } });
+  // Open means open: a cancelled order is as finished as a completed one, and
+  // counting it (`status !== 'Completed'`) made an asset undeletable forever
+  // once anyone had cancelled a job against it.
+  const openWorkOrders = await WorkOrder.countDocuments({ assetId: id, status: { $in: OPEN_WORK_ORDER_STATUSES } });
   if (openWorkOrders > 0) {
     throw ApiError.conflict(`Cannot retire an asset with ${openWorkOrders} open work order(s)`);
   }
 
+  // A transfer in flight is a physical movement somebody is about to carry
+  // out. Deleting the asset underneath it left the transfers board showing a
+  // move for an asset that no longer exists, with buttons that 404.
+  const openTransfers = await Transfer.countDocuments({
+    assetId: id,
+    status: { $in: ['Pending', 'Approved', 'Picked Up', 'In Transit', 'Received'] },
+  });
+  if (openTransfers > 0) {
+    throw ApiError.conflict(`Cannot delete an asset with ${openTransfers} transfer(s) in progress — cancel or complete them first`);
+  }
+
   await asset.deleteOne();
+
+  // Future bookings cannot be honoured, so they are released rather than left
+  // on the calendar against an asset nobody can open.
+  await Reservation.updateMany(
+    { assetId: id, status: { $in: ['Pending', 'Confirmed'] } },
+    { $set: { status: 'Cancelled' } },
+  );
 
   // Stop it occupying a dot on the map and being counted as live hardware.
   // Custody and activity stay — they are history.

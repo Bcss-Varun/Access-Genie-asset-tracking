@@ -25,6 +25,12 @@ export function FieldActionButtons({ wo, size = 'sm' }: { wo: WorkOrder; size?: 
   const [completing, setCompleting] = useState(false);
   const transitions = nextFieldTransitions(wo);
 
+  // The completion dialog outlives the status it changes. Every write now
+  // re-reads the work order, so by the time the "completed" summary step shows,
+  // this row already says Completed — returning the badge alone here unmounted
+  // the dialog mid-flow and the summary never appeared.
+  if (completing) return <CompleteWorkOrderDialog wo={wo} onClose={() => setCompleting(false)} />;
+
   if (wo.status === 'Completed') {
     return <span className="text-xs font-medium text-emerald-600">Completed ✓</span>;
   }
@@ -52,25 +58,22 @@ export function FieldActionButtons({ wo, size = 'sm' }: { wo: WorkOrder; size?: 
   }
 
   return (
-    <>
-      <div className="flex items-center justify-end gap-1.5">
-        {transitions.map((t) => (
-          <Button
-            key={t.stage}
-            size={size}
-            variant={t.stage === 'Completed' ? 'primary' : 'outline'}
-            disabled={isPending}
-            onClick={(e) => {
-              e.stopPropagation();
-              void apply(t);
-            }}
-          >
-            {t.label}
-          </Button>
-        ))}
-      </div>
-      {completing && <CompleteWorkOrderDialog wo={wo} onClose={() => setCompleting(false)} />}
-    </>
+    <div className="flex items-center justify-end gap-1.5">
+      {transitions.map((t) => (
+        <Button
+          key={t.stage}
+          size={size}
+          variant={t.stage === 'Completed' ? 'primary' : 'outline'}
+          disabled={isPending}
+          onClick={(e) => {
+            e.stopPropagation();
+            void apply(t);
+          }}
+        >
+          {t.label}
+        </Button>
+      ))}
+    </div>
   );
 }
 

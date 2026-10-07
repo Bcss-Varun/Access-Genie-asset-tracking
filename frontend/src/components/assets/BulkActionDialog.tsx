@@ -5,8 +5,8 @@ import { FormDialog, Field, Select, TextInput } from '@/components/ui/FormDialog
 import { useToast } from '@/components/providers/ToastProvider';
 import { useMutate } from '@/api/mutate';
 import { assetsApi } from '@/api/assets';
-import { flattenScope } from '@/lib/rbac';
-import { allUsers } from '@/lib/rbac';
+import { allUsers, findScope, flattenScope } from '@/lib/rbac';
+import { useSession } from '@/components/providers/SessionProvider';
 
 /**
  * Apply one change to a selection.
@@ -43,7 +43,12 @@ export function BulkActionDialog({
   const { run, isPending } = useMutate();
   const { toast } = useToast();
 
-  const places = flattenScope().filter(({ node }) => node.level !== 'org' && node.level !== 'region');
+  const { session } = useSession();
+  // Destinations inside the user's own estate only — the dataset carries the
+  // whole tree for the scope switcher, and offering a site the server will
+  // refuse turns a forty-asset move into forty identical failures.
+  const home = session.user.homeScopeId ? findScope(session.user.homeScopeId) : undefined;
+  const places = flattenScope(home).filter(({ node }) => node.level !== 'org' && node.level !== 'region');
 
   const [status, setStatus] = useState<AssetStatus>('Active');
   const [custodian, setCustodian] = useState(allUsers[0]?.name ?? '');

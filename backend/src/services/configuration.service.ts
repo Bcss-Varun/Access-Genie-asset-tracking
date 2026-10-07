@@ -40,8 +40,21 @@ export async function getOrgSettings(): Promise<OrgSettingsDoc> {
   const existing = await OrgSettings.findById('ORG').lean<OrgSettingsDoc>();
   if (existing) return withDefaults(existing);
 
-  const created = await OrgSettings.create({ _id: 'ORG', updatedAt: new Date() });
-  return withDefaults(created.toObject());
+  // On a fresh install the dataset and the shell both ask for settings at once.
+  // A find-then-create let the second request fail with a duplicate key — and
+  // because the dataset reads settings, that took the whole workspace down. An
+  // upsert is atomic; the catch covers the narrow window the server cannot.
+  try {
+    const created = await OrgSettings.findOneAndUpdate(
+      { _id: 'ORG' },
+      { $setOnInsert: { updatedAt: new Date() } },
+      { upsert: true, new: true, setDefaultsOnInsert: true },
+    ).lean<OrgSettingsDoc>();
+    return withDefaults(created!);
+  } catch (err) {
+    if ((err as { code?: number }).code !== 11000) throw err;
+    return withDefaults((await OrgSettings.findById('ORG').lean<OrgSettingsDoc>())!);
+  }
 }
 
 /**

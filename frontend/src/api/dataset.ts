@@ -1,5 +1,5 @@
-import { useSyncExternalStore } from 'react';
-import { useQuery, useQueryClient, type UseQueryResult } from '@tanstack/react-query';
+import { useCallback, useSyncExternalStore } from 'react';
+import { useQuery, useQueryClient, type QueryClient, type UseQueryResult } from '@tanstack/react-query';
 import { http, ApiRequestError } from '@/api/client';
 import { hydrate, type Dataset } from '@/lib/dataset';
 
@@ -75,8 +75,11 @@ export function datasetOptions() {
       if (!signal.aborted && scope === activeScopeId && version === generation) hydrate(data);
       return data;
     },
-    staleTime: 5 * 60_000,
+    // Thirty seconds, like every other query. At five minutes, a screen opened
+    // after someone else's change kept showing the old record for that long.
+    staleTime: 30_000,
     gcTime: 5 * 60_000,
+    refetchOnWindowFocus: true,
   };
 }
 
@@ -86,18 +89,66 @@ export function useDataset(): UseQueryResult<Dataset> {
 }
 
 /**
- * Re-read the dataset after a write.
- *
- * Every mutation in the app ends with this. It is deliberately coarse — one key
- * for the whole reference set — because the screens are cross-cutting: creating
- * an asset changes the registry, the dashboards, the class counts and the
- * activity feed, and enumerating that list at each call site is how those lists
- * fall out of date.
+ * Query roots a write never changes — or that must not be re-read under someone
+ * mid-edit (the registration form re-seeds its fields from its query).
  */
+const UNAFFECTED_BY_WRITES = new Set(['auth', 'preferences', 'registration-form', 'registration-defaults', 'field-catalog', 'clone-source']);
+
+/**
+ * Re-read everything a write can have changed.
+ *
+ * It used to re-read only the dataset. But roughly twenty screens keep their own
+ * query — the maintenance board, inspections, predictive alerts, approvals,
+ * notifications, both dashboards, analytics — so a work order raised from Asset
+ * 360 never reached the board, an acknowledgement never reached the dashboard
+ * tile, and the bell kept its old count, until a reload. A write is cross-module
+ * by nature, so the refresh is too: every data query is marked stale, and the
+ * ones on screen are re-read now. Inactive ones re-read when next opened.
+ */
+export function refreshAfterWrite(queryClient: QueryClient): Promise<void> {
+  return queryClient.invalidateQueries({
+    predicate: (query) => !UNAFFECTED_BY_WRITES.has(String(query.queryKey[0])),
+  });
+}
+
+/** Every mutation in the app ends with this — see {@link refreshAfterWrite}. */
 export function useRefreshDataset(): () => Promise<void> {
   const queryClient = useQueryClient();
-  // Prefix match, so it invalidates the payload for every scope rather than
-  // only the one currently selected — a write is a write regardless of which
-  // site was in view when it happened.
-  return () => queryClient.invalidateQueries({ queryKey: DATASET_KEY });
+  return useCallback(() => refreshAfterWrite(queryClient), [queryClient]);
+}
+
+/** The payloads screens read through module bindings rather than a hook. */
+const HYDRATED_ROOTS = new Set(['dataset', 'tracking', 'labels']);
+
+/**
+ * Changes whenever a hydrated payload (dataset, tracking, labels) is re-read.
+ *
+ * Screens read those payloads from module bindings, so nothing told them a
+ * refresh had landed: a screen stayed on whatever it rendered first until it
+ * happened to re-render for another reason. Calling this subscribes the caller,
+ * and is also the right dependency for any memo derived from those bindings.
+ */
+export function useDataVersion(): string {
+  const queryClient = useQueryClient();
+  const cache = queryClient.getQueryCache();
+  return useSyncExternalStore(
+    useCallback(
+      (onChange: () => void) =>
+        cache.subscribe((event) => {
+          if (event.type !== 'updated' && event.type !== 'removed') return;
+          if (!HYDRATED_ROOTS.has(String(event.query.queryKey[0]))) return;
+          // The cache can emit while another component is rendering (a gate
+          // creating its query); notifying synchronously then re-rendered this
+          // screen mid-render, which React rejects. A microtask is after it.
+          queueMicrotask(onChange);
+        }),
+      [cache],
+    ),
+    () =>
+      cache
+        .getAll()
+        .filter((query) => HYDRATED_ROOTS.has(String(query.queryKey[0])))
+        .map((query) => query.state.dataUpdatedAt)
+        .join(':'),
+  );
 }

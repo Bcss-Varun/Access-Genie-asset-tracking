@@ -17,6 +17,16 @@ router.get('/:id', validate({ params: idParamSchema }), controller.getOne);
 
 router.post('/', validate({ body: createAlertSchema }), controller.create);
 
+// Registered before the `/:id/...` routes, deliberately. Express matches in
+// order, so after them `POST /bulk/acknowledge` was taken by
+// `/:id/acknowledge` with id "bulk" — and every bulk acknowledgement from the
+// alert centre came back "Alert not found" while the screen showed it done.
+router.post(
+  '/bulk/acknowledge',
+  validate({ body: z.object({ ids: z.array(z.string().min(1)).min(1).max(200) }) }),
+  controller.acknowledgeMany,
+);
+
 router.post('/:id/acknowledge', validate({ params: idParamSchema, body: alertActionSchema }), controller.acknowledge);
 router.post('/:id/escalate', validate({ params: idParamSchema, body: alertActionSchema }), controller.escalate);
 router.post('/:id/resolve', validate({ params: idParamSchema, body: alertActionSchema }), controller.resolve);
@@ -29,10 +39,5 @@ router.post(
   controller.assign,
 );
 
-router.post(
-  '/bulk/acknowledge',
-  validate({ body: z.object({ ids: z.array(z.string().min(1)).min(1).max(200) }) }),
-  controller.acknowledgeMany,
-);
 
 export default router;

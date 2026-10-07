@@ -8,6 +8,7 @@ import { PageHeader, Badge, KpiCard, EmptyState } from '@/components/ui/primitiv
 import { useToast } from '@/components/providers/ToastProvider';
 import { useMutate } from '@/api/mutate';
 import { maintenanceApi } from '@/api/work-orders';
+import { useDataVersion } from '@/api/dataset';
 import { useSession } from '@/components/providers/SessionProvider';
 
 type SevMeta = { accent: string; tone: 'red' | 'amber' | 'primary'; gauge: string };
@@ -72,7 +73,9 @@ export default function AnomalyPage() {
     });
   };
 
-  const live = useMemo(() => allAnomalies.filter((a) => !dismissed.has(a.id)), [dismissed]);
+  // The data version too: `allAnomalies` is replaced by every dataset re-read.
+  const dataVersion = useDataVersion();
+  const live = useMemo(() => allAnomalies.filter((a) => !dismissed.has(a.id)), [dismissed, dataVersion]);
 
   const critical = live.filter((a) => a.severity === 'Critical').length;
   const avgZ = live.length ? (live.reduce((s, a) => s + a.zScore, 0) / live.length).toFixed(1) : '0.0';

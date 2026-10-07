@@ -1,6 +1,8 @@
+import { useQuery, type UseQueryResult } from '@tanstack/react-query';
 import type {
   ActivityEvent,
   AIInsight,
+  Alert,
   Asset,
   AssetCategory,
   AssetStatus,
@@ -39,6 +41,7 @@ export interface AssetProfile {
   insights: AIInsight[];
   custody: CustodyRecord[];
   lifecycleHistory: LifecycleTransition[];
+  alerts: Alert[];
 }
 
 export const assetsApi = {
@@ -59,3 +62,26 @@ export const assetsApi = {
     apiPost<{ updated: string[]; failed: { id: string; reason: string }[] }>('/assets/bulk', { ids, patch }),
   remove: (id: string) => apiDelete(`/assets/${id}`),
 };
+
+export const ASSET_PROFILE_KEY = ['asset-profile'] as const;
+
+/**
+ * One asset's own history, read from `GET /assets/:id/profile`.
+ *
+ * Asset 360 used to filter the org-wide `/dataset` slices instead. Those are
+ * capped across the whole estate — activity and lifecycle at 200 rows, alerts
+ * at 300 — so on any real estate the Timeline, History, Audit and custody tabs
+ * of an asset that had not changed lately were simply empty. The profile is
+ * queried per asset and uncapped in that sense.
+ *
+ * Every write refreshes every query (api/dataset.ts `refreshAfterWrite`), so a
+ * custody change or a stage change made on this page re-reads it too.
+ */
+export function useAssetProfile(id: string): UseQueryResult<AssetProfile> {
+  return useQuery({
+    queryKey: [...ASSET_PROFILE_KEY, id],
+    queryFn: () => assetsApi.profile(id),
+    enabled: Boolean(id),
+    staleTime: 15_000,
+  });
+}

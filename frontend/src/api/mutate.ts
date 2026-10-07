@@ -1,6 +1,5 @@
 import { useCallback, useState } from 'react';
 import { useRefreshDataset } from '@/api/dataset';
-import { useRefreshTracking } from '@/api/tracking-workspace';
 import { useToast } from '@/components/providers/ToastProvider';
 import { ApiRequestError } from '@/api/client';
 
@@ -31,7 +30,7 @@ export interface MutateOptions {
   describe: string;
   /** Undo the optimistic local change. */
   rollback?: () => void;
-  /** Also re-read the tracking workspace — for writes that move an asset. */
+  /** @deprecated Every write now re-reads the tracking workspace too. */
   refreshTracking?: boolean;
   /**
    * Re-read this module's own queries, as soon as the write lands.
@@ -48,7 +47,6 @@ export interface MutateOptions {
 
 export function useMutate() {
   const refreshDataset = useRefreshDataset();
-  const refreshTracking = useRefreshTracking();
   const { toast } = useToast();
   const [pending, setPending] = useState(0);
 
@@ -59,10 +57,10 @@ export function useMutate() {
         const result = await request;
 
         // The caller's own cache first — it is what the screen in front of the
-        // user is reading — then the shared dataset behind it.
+        // user is reading — then everything else the write can have changed,
+        // tracking included (see refreshAfterWrite).
         await options.refresh?.();
         await refreshDataset();
-        if (options.refreshTracking) await refreshTracking();
 
         if (options.success) {
           toast({ title: options.success, description: options.successDetail, tone: 'success' });
@@ -80,7 +78,7 @@ export function useMutate() {
         setPending((n) => n - 1);
       }
     },
-    [refreshDataset, refreshTracking, toast],
+    [refreshDataset, toast],
   );
 
   return { run, isPending: pending > 0 };

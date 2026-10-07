@@ -281,6 +281,8 @@ export interface Transfer {
   from: string;
   to: string;
   requester: string;
+  /** The requester's user id — what separation of duties compares; names can be edited. */
+  requesterId?: string;
   /** Must differ from `requester` — segregation of duties. */
   approver: string;
   status: TransferStatus;

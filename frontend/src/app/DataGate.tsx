@@ -1,5 +1,5 @@
 import { useEffect, type ReactNode } from 'react';
-import { Link, Outlet } from 'react-router-dom';
+import { Link, Outlet, useLocation } from 'react-router-dom';
 import { useQueryClient } from '@tanstack/react-query';
 import { useDataset } from '@/api/dataset';
 import { prefetchDashboardSummary } from '@/api/dashboard';
@@ -24,6 +24,7 @@ import { Button } from '@/components/ui/Button';
 function Gate({
   isPending,
   isError,
+  hasData,
   error,
   retry,
   label,
@@ -31,6 +32,8 @@ function Gate({
 }: {
   isPending: boolean;
   isError: boolean;
+  /** A failed *re*-fetch keeps the last good payload; only a first load has nothing to show. */
+  hasData: boolean;
   error: Error | null;
   retry: () => void;
   label: string;
@@ -47,7 +50,11 @@ function Gate({
     );
   }
 
-  if (isError) {
+  // A background refresh that fails (a network blip, a 502 during a deploy)
+  // keeps the data already on screen. Treating it like a failed first load used
+  // to replace the whole app — sidebar, top bar and the screen someone was
+  // working in — with an error panel.
+  if (isError && !hasData) {
     return (
       <div className="h-full flex items-center justify-center">
         <div className="glass-panel rounded-xl w-full max-w-lg">
@@ -66,8 +73,23 @@ function Gate({
 
 /** Gate for every screen that reads the reference dataset — nearly all of them. */
 export function RequireDataset() {
-  const { isPending, isError, error, refetch } = useDataset();
+  const { data, isPending, isError, isStale, error, refetch } = useDataset();
   const queryClient = useQueryClient();
+  const { pathname } = useLocation();
+
+  /*
+   * Opening a screen re-reads the dataset if it has gone stale.
+   *
+   * This gate stays mounted for the whole session, so the query never gets the
+   * "a new screen subscribed" signal React Query normally refreshes on — what
+   * another person (or a device, or the scheduler) changed was invisible until
+   * this browser happened to make a write of its own. A screen change is the
+   * moment someone expects current figures.
+   */
+  useEffect(() => {
+    if (isStale) void refetch();
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- only on navigation
+  }, [pathname]);
 
   /*
    * Warm the dashboard's own aggregation while the dataset is still in flight.
@@ -90,6 +112,7 @@ export function RequireDataset() {
     <Gate
       isPending={isPending}
       isError={isError}
+      hasData={data !== undefined}
       error={error}
       retry={() => void refetch()}
       label="your workspace"
@@ -121,6 +144,7 @@ export function RequireTrackingWorkspace() {
     <Gate
       isPending={isPending}
       isError={isError}
+      hasData={data !== undefined}
       error={error}
       retry={() => void refetch()}
       label="the tracking estate"
@@ -161,12 +185,13 @@ export function RequireTrackingWorkspace() {
  * no longer needs to prevent it from rendering at all.
  */
 export function RequireLabelWorkspace() {
-  const { isPending, isError, error, refetch } = useLabelWorkspace();
+  const { data, isPending, isError, error, refetch } = useLabelWorkspace();
 
   return (
     <Gate
       isPending={isPending}
       isError={isError}
+      hasData={data !== undefined}
       error={error}
       retry={() => void refetch()}
       label="label templates and printers"

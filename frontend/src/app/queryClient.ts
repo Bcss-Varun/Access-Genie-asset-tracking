@@ -1,4 +1,5 @@
-import { QueryClient } from '@tanstack/react-query';
+import { MutationCache, QueryClient } from '@tanstack/react-query';
+import { refreshAfterWrite } from '@/api/dataset';
 import { ApiRequestError } from '@/api/client';
 
 /**
@@ -9,7 +10,10 @@ import { ApiRequestError } from '@/api/client';
  * the axios interceptor is already refreshing. Only server and network faults
  * are worth a second attempt.
  */
-export const queryClient = new QueryClient({
+export const queryClient: QueryClient = new QueryClient({
+  // Writes made through `useMutation` refresh what they can have changed, the
+  // same as writes made through `useMutate` (see refreshAfterWrite).
+  mutationCache: new MutationCache({ onSuccess: () => refreshAfterWrite(queryClient) }),
   defaultOptions: {
     queries: {
       staleTime: 30_000,

@@ -33,6 +33,7 @@ import {
 } from '../models/index.js';
 import { ApiError } from '../utils/ApiError.js';
 import { assetClause, locationClause, type VisibleScope } from './tenancy.service.js';
+import { onWorkOrderRaised } from './workOrder.service.js';
 import { logger } from '../config/logger.js';
 import { markEstateChanged } from './derivation.scheduler.js';
 import { descendantIds } from './scopeFilter.service.js';
@@ -197,7 +198,8 @@ type JoinedInspection = InspectionDoc & { __asset?: { location?: { id?: string; 
 
 function present(rows: JoinedInspection[], hierarchy: Hierarchy): InspectionDoc[] {
   return rows.map((row) => {
-    const { __asset, ...rest } = row;
+    // `__seq` and the ranks exist only to sort; they are not part of the contract.
+    const { __asset, __seq, __statusRank, ...rest } = row as typeof row & { __seq?: number; __statusRank?: number };
     return { ...rest, placement: placementFor(hierarchy, __asset?.location) } as InspectionDoc;
   });
 }
@@ -299,18 +301,33 @@ async function matchStages(scope: VisibleScope, query: Partial<InspectionListQue
           default: -1,
         },
       },
+      __seq: SEQ_EXPR,
     },
   });
 
   return stages;
 }
 
+
+/**
+ * The number at the end of the business ID (`INS-12` → 12), for tie-breaks.
+ * The string `_id` alone ordered INS-10 ahead of INS-2 — every bulk-scheduled
+ * batch shares one date, so on a fresh install the tie-break decides the whole
+ * list from the tenth record on. Same expression as the work-order service.
+ */
+const SEQ_EXPR = {
+  $convert: { input: { $arrayElemAt: [{ $split: ['$_id', '-'] }, -1] }, to: 'long', onError: 0, onNull: 0 },
+};
+
 function sortStage(sort: Record<string, unknown>): Record<string, 1 | -1> {
   const out: Record<string, 1 | -1> = {};
   for (const [field, direction] of Object.entries(sort)) {
     out[field === 'status' ? '__statusRank' : field] = direction === -1 || direction === 'desc' ? -1 : 1;
   }
-  out._id = 1; // stable paging: ties must not reshuffle between pages
+  // Stable paging: ties must not reshuffle between pages — by the ID's number
+  // first, so the tenth record does not sort between the first and second.
+  out.__seq = 1;
+  out._id = 1;
   return out;
 }
 
@@ -1074,16 +1091,20 @@ export async function raiseCorrectiveWorkOrder(
   const now = new Date();
   const workOrderId = await nextId('workOrder', 'WO');
   const dueInDays = input.dueInDays ?? 3;
+  // Raised straight to someone means raised Assigned — the same rule the work
+  // order service applies, so the board never shows a New card with an owner.
+  const assignee = normalizeAssignee(input.assignedTo);
+  const assigned = assignee !== 'Unassigned';
 
   await WorkOrder.create({
     _id: workOrderId,
     title: `${response.label} — ${asset.name}`,
     assetId: inspection.assetId,
     assetName: asset.name,
-    status: 'New',
+    status: assigned ? 'Assigned' : 'New',
     priority: input.priority ?? (asset.criticality === 'Critical' ? 'Critical' : 'High'),
     type: 'Corrective',
-    assignedTo: normalizeAssignee(input.assignedTo),
+    assignedTo: assignee,
     dueDate: new Date(now.getTime() + dueInDays * 86_400_000),
     description:
       `Raised from inspection ${inspection._id} ("${inspection.title}"). ` +
@@ -1097,7 +1118,10 @@ export async function raiseCorrectiveWorkOrder(
     parts: [],
     laborLog: [],
     comments: [],
-    history: [{ from: null, to: 'New', at: now, actor, note: `Raised from inspection ${inspection._id}` }],
+    history: [
+      { from: null, to: 'New', at: now, actor, note: `Raised from inspection ${inspection._id}` },
+      ...(assigned ? [{ from: 'New', to: 'Assigned', at: now, actor, note: `Assigned to ${assignee}` }] : []),
+    ],
     createdAt: now,
   });
 
@@ -1110,6 +1134,17 @@ export async function raiseCorrectiveWorkOrder(
     description: `Work order ${workOrderId} raised from inspection ${inspection._id}: ${response.label}`,
     actor,
     timestamp: now,
+  });
+
+  // A defect found on inspection takes the asset out of service like any other
+  // raised order — the row above is the timeline entry, so only the stage
+  // automation is wanted from the shared hook.
+  await onWorkOrderRaised({
+    assetId: inspection.assetId,
+    workOrderId,
+    title: `${response.label} — ${asset.name}`,
+    actor,
+    activity: false,
   });
 
   logger.info('Corrective work raised from inspection', { inspection: id, checkpoint: checkpointKey, workOrder: workOrderId });

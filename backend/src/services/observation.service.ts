@@ -208,11 +208,14 @@ async function applyObservation(input: ObservationInput): Promise<ObservationRes
         confidence: input.confidence ?? profile.confidence,
         lastSeen: at,
         custodian: asset.custodian ?? 'Unassigned',
+        // Required by the presence schema, which an upsert does not validate —
+        // left unset, the live map's drawer printed "₹NaN" for every new asset.
+        valueInr: asset.bookValue ?? asset.purchasePrice ?? 0,
         movingNow: movedZone,
         ...(input.position ? { position: input.position } : {}),
       },
       ...(!input.position ? { $unset: { position: '' } } : {}),
-      $setOnInsert: { homeZone, custody: 'In Place' },
+      $setOnInsert: { homeZone, custody: 'In Place', alertIds: [] },
     },
     { upsert: true },
   );
@@ -223,6 +226,16 @@ async function applyObservation(input: ObservationInput): Promise<ObservationRes
     if (!latest) throw error;
     return { accepted: true, assetId, assetName: asset.name, zone: latest.zone, state: presenceStateFor(latest.lastSeen), reason: 'A newer observation already exists' };
   }
+
+  // The asset record carries "last seen" too — the registry's Last Ping column,
+  // Asset 360 and the dashboards read it from there, not from presence. Leaving
+  // it unwritten meant a tag could be read every minute and the registry still
+  // said "Unknown". Guarded like the presence write, so an older read never
+  // rewinds it.
+  await Asset.updateOne(
+    { _id: assetId, $or: [{ 'telemetry.lastPing': { $lt: at } }, { 'telemetry.lastPing': { $exists: false } }] },
+    { $set: { 'telemetry.lastPing': at } },
+  );
 
   // Only a change of zone is movement worth remembering.
   if (movedZone) {
@@ -247,7 +260,15 @@ async function applyObservation(input: ObservationInput): Promise<ObservationRes
         $setOnInsert: { windowFrom: at, distanceM: 0, gaps: 0 },
         $push: {
           stops: {
-            $each: [{ at, zone, facility, dwellMin: 0, precision: profile.precision }],
+            // Shaped like the schema's stop, which an update's $push does not
+            // validate: without `kind` and coordinates the journey screen threw
+            // on the first live stop it tried to draw.
+            $each: [{
+              at, zone, facility, dwellMin: 0, precision: profile.precision,
+              kind: previous?.zone ? 'Entered' : 'Seen',
+              x: input.position?.x ?? 50, y: input.position?.y ?? 50,
+              actor: input.actor ?? `${input.source} reader`,
+            }],
             // A rolling window — a journey is for reading, not an archive.
             $sort: { at: 1 },
             $slice: -50,
@@ -295,6 +316,7 @@ async function applyObservation(input: ObservationInput): Promise<ObservationRes
     zoneId: input.zone,
     previousZone: previous?.zone,
     position: input.position,
+    facility,
     at,
     source: input.source,
   });

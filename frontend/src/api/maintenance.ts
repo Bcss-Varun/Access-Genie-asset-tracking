@@ -23,6 +23,20 @@ import { apiDelete, apiGet, apiPatch, apiPost } from '@/api/client';
  * response.
  */
 
+/**
+ * Was this work order raised from that preventive schedule?
+ *
+ * The link is the schedule id in the order's description ("…from preventive
+ * schedule PM-1 (Quarterly)…"). A plain substring test made PM-1 claim every
+ * order PM-10 to PM-19 raised against the same asset, so from the tenth
+ * schedule on, plans showed completions and a "last done" that were not theirs.
+ * The id has to end where the number does.
+ */
+export function isRaisedFromSchedule(order: { description?: string }, scheduleId: string): boolean {
+  const id = scheduleId.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  return new RegExp(`\\bschedule ${id}(?![\\w-])`).test(order.description ?? '');
+}
+
 export const pmApi = {
   create: (body: {
     title: string;

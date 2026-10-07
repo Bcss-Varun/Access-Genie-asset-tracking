@@ -1,16 +1,21 @@
 import { financialStateFor } from '@/lib/financials';
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { Link, useParams, useSearchParams } from 'react-router-dom';
 import { useNavigate } from 'react-router-dom';
 import {
+  allAlerts,
+  allReservations,
   getWorkOrdersForAsset,
   getActivityForAsset,
+  getCustodyForAsset,
   getInsightsForAsset,
   getDocsForAsset,
   getGroupsForAsset,
   getLifecycleHistoryForAsset,
+  getPresenceForAsset,
 } from '@/lib/dataset';
-import type { Asset, ActivityEvent, AIInsight, AssetDoc } from '@access-genie/shared';
+import { OPEN_WORK_ORDER_STATUSES, newestFirst } from '@access-genie/shared';
+import type { Asset, ActivityEvent, AIInsight, Alert, AssetDoc, CustodyRecord } from '@access-genie/shared';
 import { PageHeader, Badge, EmptyState, Avatar } from '@/components/ui/primitives';
 import { Button } from '@/components/ui/Button';
 import { Dropdown, MenuItem } from '@/components/ui/Dropdown';
@@ -18,6 +23,7 @@ import { useToast } from '@/components/providers/ToastProvider';
 import { useRegistry } from '@/components/providers/RegistryProvider';
 import { SetupChecklist } from '@/components/onboarding/SetupChecklist';
 import { useMutate } from '@/api/mutate';
+import { useAssetProfile } from '@/api/assets';
 import { maintenanceApi } from '@/api/work-orders';
 import { insightsApi } from '@/api/insights';
 import { documentsApi } from '@/api/documents';
@@ -398,10 +404,19 @@ export default function AssetProfilePage() {
   const activeTab: TabKey = TABS.some((t) => t.k === requestedTab) ? requestedTab as TabKey : 'overview';
   const [timelineFilter, setTimelineFilter] = useState<string>('All');
   const [dialog, setDialog] = useState<DialogKey>(null);
-  // Read straight from the hydrated dataset rather than held in local state:
-  // `useMutate` re-reads it after every write, so a work order raised here
-  // appears because the source of truth changed, not because a setter ran.
-  const workOrders = getWorkOrdersForAsset(id);
+  // This asset's own history comes from its profile (GET /assets/:id/profile),
+  // not from the org-wide /dataset slices: those are capped across the whole
+  // estate (activity and lifecycle at 200 rows), so for most assets the
+  // Timeline, History, Audit and custody tabs were empty. The dataset is the
+  // fallback while the profile loads. Neither is held in local state — every
+  // write re-reads both, so a work order raised here appears because the
+  // source of truth changed, not because a setter ran.
+  const profile = useAssetProfile(id).data;
+  const workOrders = [...(profile?.workOrders ?? getWorkOrdersForAsset(id))].sort(newestFirst);
+  const openWorkOrders = workOrders.filter((wo) => OPEN_WORK_ORDER_STATUSES.includes(wo.status));
+  // A synchronous guard: `isPending` only flips after a re-render, so two fast
+  // clicks on "Create Work Order" could both get through and raise two orders.
+  const creatingWorkOrder = useRef(false);
 
   const goTab = (k: TabKey) => {
     setSearchParams((previous) => { const next = new URLSearchParams(previous); next.set('tab', k); return next; });
@@ -432,10 +447,24 @@ export default function AssetProfilePage() {
   // ── derived data ───────────────────────────────────────────────────────────────
   const tel = asset.telemetry;
   const insights = getInsightsForAsset(id);
-  const activity = getActivityForAsset(id);
+  const activity = profile?.activity ?? getActivityForAsset(id);
   const docs = getDocsForAsset(id);
   const groups = getGroupsForAsset(id);
-  const lifecycleHistory = getLifecycleHistoryForAsset(id);
+  const lifecycleHistory = profile?.lifecycleHistory ?? getLifecycleHistoryForAsset(id);
+  const custodyRecords: CustodyRecord[] = profile?.custody ?? getCustodyForAsset(id);
+  const assetAlerts: Alert[] = profile?.alerts ?? allAlerts.filter((a) => a.assetId === id);
+  const openAlerts = assetAlerts.filter((a) => a.status !== 'Resolved');
+  const reservations = allReservations
+    .filter((r) => r.assetId === id && r.status !== 'Cancelled' && r.status !== 'Returned')
+    .sort((a, b) => a.startDay - b.startDay);
+  const presence = getPresenceForAsset(id);
+  // The tag is the asset's own record — its tracking ID and live bindings —
+  // whether or not a Sensor document was ever provisioned for it. An EPC tag
+  // read by a portal has no Sensor row, and the tab used to call such an asset
+  // untracked while the tracking workspace was showing it moving.
+  const liveBindings = asset.onboarding.bindings.filter((b) => !b.retiredAt);
+  const tagIds = Array.from(new Set([asset.trackingId, ...liveBindings.map((b) => b.tagId)].filter((t): t is string => Boolean(t))));
+  const lastSeen = presence?.lastSeen ?? asset.telemetry?.lastPing;
   const trend = asset.healthTrend ?? [];
 
   const custodyEvents = activity.filter((e) => e.type === 'Custody' || e.type === 'Movement');
@@ -498,6 +527,8 @@ export default function AssetProfilePage() {
    * The server owns the id and the created/updated timestamps.
    */
   const createWorkOrder = async () => {
+    if (creatingWorkOrder.current) return;
+    creatingWorkOrder.current = true;
     const created = await run(
       maintenanceApi.create({
         title: `Health check — ${asset.name}`,
@@ -512,7 +543,7 @@ export default function AssetProfilePage() {
         dueDate: new Date(nowMs() + 3 * 86_400_000).toISOString(),
       }),
       { success: 'Work order created', successDetail: `Against ${asset.id}.`, describe: 'create that work order' },
-    );
+    ).finally(() => { creatingWorkOrder.current = false; });
     if (created) goTab('maintenance');
   };
 
@@ -684,9 +715,12 @@ export default function AssetProfilePage() {
       {asset.onboarding.state !== 'Active' && (
         <SetupChecklist
           asset={asset}
-          onJump={() => navigate(`/assets/new?resume=${asset.id}`)}
+          // Finishing setup edits *this* record. It used to point at
+          // /assets/new?resume=…, which ignored the parameter and registered
+          // a second asset — a duplicate of the one being finished.
+          onJump={() => navigate(`/assets/${asset.id}/edit`)}
           footer={
-            <Link to={`/assets/new?resume=${asset.id}`}>
+            <Link to={`/assets/${asset.id}/edit`}>
               <Button>Resume setup →</Button>
             </Link>
           }
@@ -849,11 +883,37 @@ export default function AssetProfilePage() {
                       <KV label="Category" value={asset.category} />
                       <KV label="Status" value={asset.status.replace('_', ' ')} />
                       <KV label="Criticality" value={asset.criticality} />
-                      <KV label="Open Work Orders" value={String(workOrders.length)} />
+                      <KV label="Open Work Orders" value={String(openWorkOrders.length)} />
                       <KV label="Utilization" value={asset.utilization !== undefined ? `${asset.utilization}%` : '—'} />
                       <KV label="Purchased" value={formatDate(asset.purchaseDate)} />
                     </dl>
                   </div>
+
+                  {/* This asset's alerts, newest first — the ones still open at
+                      the top of the asset's own page rather than only on the
+                      org-wide alert console. */}
+                  {assetAlerts.length > 0 && (
+                    <div>
+                      <SectionTitle count={openAlerts.length}>Alerts</SectionTitle>
+                      <ul className="divide-y divide-slate-100 rounded-lg border border-slate-200">
+                        {assetAlerts.slice(0, 8).map((al) => (
+                          <li key={al.id} className="flex items-center gap-3 px-4 py-2.5">
+                            <span aria-hidden>{severityMeta(al.severity).emoji}</span>
+                            <div className="min-w-0 flex-1">
+                              <div className="truncate text-sm font-medium text-slate-800">{al.title}</div>
+                              <div className="text-xs text-slate-500">
+                                {al.id} <span className="text-slate-300">•</span> {al.source} <span className="text-slate-300">•</span> {relTime(al.createdAt)}
+                              </div>
+                            </div>
+                            <Badge tone={al.status === 'Resolved' ? 'emerald' : al.severity === 'Critical' ? 'red' : 'amber'}>{al.status}</Badge>
+                          </li>
+                        ))}
+                      </ul>
+                      <Link to="/alerts" className="mt-2 inline-block text-sm font-medium text-primary-600 hover:underline">
+                        All alerts →
+                      </Link>
+                    </div>
+                  )}
 
                   {insights.length > 0 ? (
                     <div>
@@ -908,61 +968,72 @@ export default function AssetProfilePage() {
               )}
 
               {/* ── LIVE TRACKING ──────────────────────────────────────────── */}
+              {/* Shown for any asset that carries a tag or has been observed —
+                  not only for one with a map position. Tracking used to hinge
+                  on `mapPosition`, which nothing sets for a portal-read EPC tag,
+                  so an asset the tracking workspace showed moving was labelled
+                  "No tracking device attached" here. The assigned location and
+                  the observed one are shown side by side and never merged: the
+                  gap between them is what "misplaced" means. */}
               {activeTab === 'tracking' && (
                 <div className="space-y-6">
-                  {asset.mapPosition ? (
+                  {asset.mapPosition || tagIds.length > 0 || presence ? (
                     <>
-                      <div className="relative w-full h-56 rounded-lg border border-slate-200 bg-[repeating-linear-gradient(45deg,#f1f5f9,#f1f5f9_12px,#f8fafc_12px,#f8fafc_24px)] overflow-hidden">
-                        <div
-                          className="absolute"
-                          style={{ left: `${asset.mapPosition.x}%`, top: `${asset.mapPosition.y}%`, transform: 'translate(-50%,-50%)' }}
-                        >
-                          <span className="relative flex h-4 w-4">
-                            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary-500 opacity-60" />
-                            <span className="relative inline-flex rounded-full h-4 w-4 bg-primary-600 ring-2 ring-white" />
+                      {asset.mapPosition && (
+                        <div className="relative w-full h-56 rounded-lg border border-slate-200 bg-[repeating-linear-gradient(45deg,#f1f5f9,#f1f5f9_12px,#f8fafc_12px,#f8fafc_24px)] overflow-hidden">
+                          <div
+                            className="absolute"
+                            style={{ left: `${asset.mapPosition.x}%`, top: `${asset.mapPosition.y}%`, transform: 'translate(-50%,-50%)' }}
+                          >
+                            <span className="relative flex h-4 w-4">
+                              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary-500 opacity-60" />
+                              <span className="relative inline-flex rounded-full h-4 w-4 bg-primary-600 ring-2 ring-white" />
+                            </span>
+                          </div>
+                          <span className="absolute bottom-2 left-3 text-[10px] font-medium text-slate-500">
+                            Facility floor-plan · {asset.location.name}
                           </span>
                         </div>
-                        <span className="absolute bottom-2 left-3 text-[10px] font-medium text-slate-500">
-                          Facility floor-plan · {asset.location.name}
-                        </span>
-                      </div>
+                      )}
                       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-                        <TelemetryTile emoji="📡" label="Tracking Tech" value={asset.trackingTech ?? '—'} />
-                        <TelemetryTile
-                          emoji="🎯"
-                          label="Confidence"
-                          value={`${Math.max(60, 100 - Math.round((asset.riskScore ?? 0) / 3))}%`}
-                        />
-                        <TelemetryTile
-                          emoji="🔋"
-                          label="Tag Battery"
-                          value={tel?.batteryLevel !== undefined ? `${tel.batteryLevel}%` : '—'}
-                          warn={tel?.batteryLevel !== undefined && tel.batteryLevel < 20}
-                        />
-                        <TelemetryTile emoji="🛰️" label="Last Fix" value={tel?.lastPing ? relTime(tel.lastPing) : '—'} />
+                        <TelemetryTile emoji="📡" label="Tracking Tech" value={asset.trackingTech ?? liveBindings[0]?.kind ?? '—'} />
+                        <TelemetryTile emoji="🏷️" label="Tag" value={tagIds.length > 0 ? tagIds.join(', ') : '—'} />
+                        <TelemetryTile emoji="🎯" label="Presence" value={presence ? `${presence.state} · ${presence.confidence}%` : '—'} />
+                        <TelemetryTile emoji="🛰️" label="Last Seen" value={lastSeen ? relTime(lastSeen) : 'Not yet seen'} />
                       </div>
-                      <div className="flex items-center justify-between rounded-lg border border-slate-200 p-4">
-                        <div className="min-w-0">
-                          <div className="text-sm font-medium text-slate-800">{locationPath(asset)}</div>
-                          {/* "Geofence: within bounds" was printed here
-                              unconditionally — it said the asset was inside its
-                              boundary whether or not any geofence covered it,
-                              which is the one thing this line exists to tell
-                              you. Containment is evaluated on the tracking
-                              workspace against real observations; the honest
-                              thing here is the zone, which the record knows. */}
+                      <div className="grid gap-3 sm:grid-cols-2">
+                        <div className="rounded-lg border border-slate-200 p-4">
+                          <div className="text-xs uppercase tracking-wide text-slate-500">Assigned location</div>
+                          <div className="mt-1 text-sm font-medium text-slate-800">{locationPath(asset)}</div>
                           <div className="text-xs text-slate-500 mt-0.5">
                             Zone: {asset.location.zone ?? asset.location.building ?? '—'}
                           </div>
                         </div>
-                        <div className="flex gap-2 flex-shrink-0">
-                          {/* "Ping Tag" raised a toast. Nothing in this platform
-                              can command a tag — readers report, they are not
-                              addressable — so there is nothing to wire it to. */}
-                          <Link to="/tracking" className={cn(linkCls('primary'), 'text-xs px-3 py-1.5 rounded-md')}>
-                            Open Live Map
-                          </Link>
+                        <div className="rounded-lg border border-slate-200 p-4" data-observed-location>
+                          <div className="text-xs uppercase tracking-wide text-slate-500">Last observed</div>
+                          {presence ? (
+                            <>
+                              <div className="mt-1 text-sm font-medium text-slate-800">
+                                {[presence.facility, presence.zone].filter(Boolean).join(' ▸ ') || '—'}
+                              </div>
+                              <div className="text-xs text-slate-500 mt-0.5">
+                                {presence.precision} · seen {relTime(presence.lastSeen)}
+                              </div>
+                            </>
+                          ) : (
+                            <div className="mt-1 text-sm text-slate-500">
+                              {lastSeen ? `Last read ${relTime(lastSeen)}` : 'No reader has reported this tag yet.'}
+                            </div>
+                          )}
                         </div>
+                      </div>
+                      <div className="flex justify-end">
+                        {/* "Ping Tag" raised a toast. Nothing in this platform
+                            can command a tag — readers report, they are not
+                            addressable — so there is nothing to wire it to. */}
+                        <Link to="/tracking" className={cn(linkCls('primary'), 'text-xs px-3 py-1.5 rounded-md')}>
+                          Open Live Map
+                        </Link>
                       </div>
                     </>
                   ) : (
@@ -1058,7 +1129,11 @@ export default function AssetProfilePage() {
                       icon="🧰"
                       title="No work orders"
                       description="Nothing wrench-related on file for this asset yet."
-                      action={<Button variant="primary" size="sm" onClick={createWorkOrder}>+ Create Work Order</Button>}
+                      action={
+                        <Button variant="primary" size="sm" disabled={isPending} onClick={() => void createWorkOrder()}>
+                          + Create Work Order
+                        </Button>
+                      }
                     />
                   ) : (
                     <>
@@ -1132,10 +1207,10 @@ export default function AssetProfilePage() {
                             warranty expiry, and the certification register that
                             tracks renewals — so the buttons point at those
                             rather than pretending to be them. */}
-                        <Link to="/alerts/rules" className={cn(linkCls('outline'), 'text-xs px-3 py-1.5 rounded-md')}>
+                        <Link to="/alert-rules" className={cn(linkCls('outline'), 'text-xs px-3 py-1.5 rounded-md')}>
                           Alert me before expiry
                         </Link>
-                        <Link to="/compliance/certifications" className={cn(linkCls('ghost'), 'text-xs px-3 py-1.5 rounded-md')}>
+                        <Link to="/certifications" className={cn(linkCls('ghost'), 'text-xs px-3 py-1.5 rounded-md')}>
                           Track renewal
                         </Link>
                       </div>
@@ -1183,12 +1258,59 @@ export default function AssetProfilePage() {
                     </div>
                   </div>
 
+                  {/* The chain is the custody rows themselves — the same records
+                      the Chain of Custody screen lists — newest first. It used
+                      to be rebuilt from capped activity entries, so a custodian
+                      change made from the edit form or a bulk assignment never
+                      appeared here at all. */}
                   <div>
-                    <SectionTitle>Chain of Custody</SectionTitle>
-                    {custodyEvents.length > 0 ? (
-                      <TimelineList events={custodyEvents} />
+                    <SectionTitle count={custodyRecords.length}>Chain of Custody</SectionTitle>
+                    {custodyRecords.length > 0 ? (
+                      <ol className="relative border-l border-slate-200 ml-3 space-y-5">
+                        {custodyRecords.map((c) => (
+                          <li key={c.id} className="ml-6" data-custody-row={c.id}>
+                            <span className="absolute -left-[13px] flex h-6 w-6 items-center justify-center rounded-full text-xs ring-4 ring-background" style={{ backgroundColor: '#8b5cf622' }}>
+                              🤝
+                            </span>
+                            <div className="flex flex-wrap items-center gap-2">
+                              <span className="text-sm font-medium text-slate-800">{c.action} — {c.holder}</span>
+                            </div>
+                            <div className="mt-0.5 text-xs text-slate-500">
+                              {c.by} <span className="text-slate-300">•</span> {relTime(c.at)}
+                            </div>
+                          </li>
+                        ))}
+                      </ol>
                     ) : (
                       <EmptyState icon="🤝" title="No custody events" description="Custody assignments and transfers will appear here." />
+                    )}
+                  </div>
+
+                  {custodyEvents.filter((e) => e.type === 'Movement').length > 0 && (
+                    <div>
+                      <SectionTitle>Movements</SectionTitle>
+                      <TimelineList events={custodyEvents.filter((e) => e.type === 'Movement')} />
+                    </div>
+                  )}
+
+                  {/* Bookings were stored (POST /operations/reservations) and
+                      shipped in the dataset, but no screen ever showed one. */}
+                  <div>
+                    <SectionTitle count={reservations.length}>Reservations</SectionTitle>
+                    {reservations.length > 0 ? (
+                      <ul className="divide-y divide-slate-100 rounded-lg border border-slate-200">
+                        {reservations.map((r) => (
+                          <li key={r.id} className="flex items-center gap-3 px-4 py-2.5 text-sm">
+                            <span className="font-mono text-xs text-slate-400">{r.id}</span>
+                            <span className="font-medium text-slate-800">{r.reservedBy}</span>
+                            <span className="text-slate-500">{r.startLabel} → {r.endLabel}</span>
+                            {r.purpose && <span className="truncate text-slate-500">· {r.purpose}</span>}
+                            <Badge tone="primary">{r.status}</Badge>
+                          </li>
+                        ))}
+                      </ul>
+                    ) : (
+                      <p className="text-sm text-slate-500">No upcoming reservations.</p>
                     )}
                   </div>
                 </div>
@@ -1298,7 +1420,7 @@ export default function AssetProfilePage() {
                             a comparator, which is the alert-rule editor's whole
                             job. Pointing at it beats a second, narrower editor
                             that writes to the same collection. */}
-                        <Link to="/alerts/rules" className={cn(linkCls('ghost'), 'text-xs px-3 py-1.5 rounded-md')}>
+                        <Link to="/alert-rules" className={cn(linkCls('ghost'), 'text-xs px-3 py-1.5 rounded-md')}>
                           Set threshold alert
                         </Link>
                       </div>
@@ -1309,7 +1431,7 @@ export default function AssetProfilePage() {
                       title="No sensors reporting"
                       description="Attach a sensor to stream telemetry for this asset."
                       action={
-                        <Link to="/tracking/devices" className={cn(linkCls('outline'), 'text-xs px-3 py-1.5 rounded-md')}>
+                        <Link to="/tracking/infrastructure" className={cn(linkCls('outline'), 'text-xs px-3 py-1.5 rounded-md')}>
                           Register a sensor
                         </Link>
                       }

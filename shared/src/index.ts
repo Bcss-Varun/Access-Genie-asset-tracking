@@ -16,3 +16,4 @@ export * from './analytics.js'; // the analytics dashboard and the report engine
 export * from './governance.js'; // administration: action permissions and approvals
 export * from './compliance.js'; // Compliance Monitoring & Audit Center: findings, audits, evidence
 export * from './api.js'; // envelopes, query contracts, auth payloads
+export * from './ordering.js'; // newest-first and numeric ID ordering, used by both sides

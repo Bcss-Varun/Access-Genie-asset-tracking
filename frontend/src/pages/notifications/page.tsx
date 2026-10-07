@@ -1,46 +1,61 @@
-import { useMemo, useState } from 'react';
+import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { allNotifications } from '@/lib/dataset';
 import type { Notification } from '@access-genie/shared';
 import { PageHeader, KpiCard, EmptyState } from '@/components/ui/primitives';
 import { Button } from '@/components/ui/Button';
-import { useToast } from '@/components/providers/ToastProvider';
 import { cn, relTime } from '@/lib/utils';
 import { notificationsApi } from '@/api/catalog';
 import { useMutate } from '@/api/mutate';
 
 export default function NotificationsPage() {
-  const { toast } = useToast();
   const { run } = useMutate();
-  const [items, setItems] = useState<Notification[]>(allNotifications);
   const [category, setCategory] = useState<string>('All');
-
-  const categories = useMemo(() => ['All', ...Array.from(new Set(allNotifications.map((n) => n.category)))], []);
-  const unread = items.filter((n) => !n.read).length;
-
-  const visible = useMemo(
-    () => (category === 'All' ? items : items.filter((n) => n.category === category)),
-    [items, category],
+  /*
+   * The inbox is the dataset's, read on every render, with the rows being
+   * marked read right now laid over it.
+   *
+   * It was `useState(allNotifications)` — a copy taken at mount — and the
+   * category chips were memoised with no dependencies at all. Anything that
+   * arrived while the screen was open (a stage change made here, a rule's test
+   * send) never appeared, and a new category never got a chip, until a remount.
+   * The overlay keeps the instant feedback and lives only while the request is
+   * in flight; after it, the refreshed dataset carries the truth.
+   */
+  const [markingRead, setMarkingRead] = useState<Set<string> | 'all'>(new Set());
+  const items: Notification[] = allNotifications.map((n) =>
+    !n.read && (markingRead === 'all' || markingRead.has(n.id)) ? { ...n, read: true } : n,
   );
 
+  const categories = ['All', ...Array.from(new Set(items.map((n) => n.category)))];
+  const unread = items.filter((n) => !n.read).length;
+  const visible = category === 'All' ? items : items.filter((n) => n.category === category);
+
   function markRead(id: string) {
-    const before = items;
-    setItems((prev) => prev.map((n) => (n.id === id ? { ...n, read: true } : n)));
+    // Already read — nothing to send.
+    if (items.find((n) => n.id === id)?.read) return;
+    setMarkingRead((prev) => (prev === 'all' ? prev : new Set(prev).add(id)));
     void run(notificationsApi.markRead(id), {
       describe: 'mark that notification read',
-      rollback: () => setItems(before),
-    });
+    }).finally(() =>
+      setMarkingRead((prev) => {
+        if (prev === 'all') return prev;
+        const next = new Set(prev);
+        next.delete(id);
+        return next;
+      }),
+    );
   }
 
   function markAllRead() {
-    const before = items;
-    setItems((prev) => prev.map((n) => ({ ...n, read: true })));
+    setMarkingRead('all');
+    // One confirmation, and only once it is true — this used to toast "All
+    // caught up" immediately as well, even when the request then failed.
     void run(notificationsApi.markAllRead(), {
-      success: 'All notifications marked read',
+      success: 'All caught up',
+      successDetail: 'Every notification marked as read.',
       describe: 'mark them all read',
-      rollback: () => setItems(before),
-    });
-    toast({ title: 'All caught up', description: 'Every notification marked as read.', tone: 'success' });
+    }).finally(() => setMarkingRead(new Set()));
   }
 
   return (

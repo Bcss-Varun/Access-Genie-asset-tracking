@@ -25,6 +25,18 @@ import { presenceStateFor } from './observation.service.js';
  * trains people to ignore the whole screen.
  */
 
+/** How long a person's action or dismissal stands before the rule may raise it again. */
+const DECISION_HOLD_DAYS = 30;
+
+/**
+ * One finding per rule per asset. The action label tells apart two rules of
+ * the same type — "not seen for days" and "outside its home zone" are both
+ * Theft/Security — which used to share a key and overwrite each other.
+ */
+function findingKey(type: string, assetId: string | undefined, actionLabel: string): string {
+  return `${type}::${assetId ?? ''}::${actionLabel}`;
+}
+
 /** How long an asset can go unseen before it is a finding rather than a gap. */
 const UNSEEN_DAYS = 3;
 /** Below this, a 30-day window of near-zero activity is worth flagging. */
@@ -171,8 +183,20 @@ export interface InsightSweepResult {
 export async function regenerateInsights(scope?: VisibleScope): Promise<InsightSweepResult> {
   const [assets, ctx] = await Promise.all([Asset.find(scope ? locationClause(scope) : {}).lean<AssetDoc[]>(), loadMetricsContext()]);
 
-  const existing = await Insight.find({ status: 'open', ...(scope ? await assetClause(scope) : {}) }).lean();
-  const openByKey = new Map(existing.map((i) => [`${i.type}::${i.assetId ?? ''}`, i]));
+  const clause = scope ? await assetClause(scope) : {};
+  const [existing, decided] = await Promise.all([
+    Insight.find({ status: 'open', ...clause }).lean(),
+    // What a person has already actioned or dismissed. Loading only the open
+    // set meant a dismissed finding whose rule still fired came straight back
+    // as a new open insight on the next sweep — seconds to minutes later.
+    Insight.find({
+      status: { $in: ['actioned', 'dismissed'] },
+      updatedAt: { $gte: new Date(ctx.now - DECISION_HOLD_DAYS * 86_400_000) },
+      ...clause,
+    }).select('type assetId actionLabel').lean(),
+  ]);
+  const openByKey = new Map(existing.map((i) => [findingKey(i.type, i.assetId, i.actionLabel), i]));
+  const decidedKeys = new Set(decided.map((i) => findingKey(i.type, i.assetId, i.actionLabel)));
   const stillValid = new Set<string>();
 
   let raised = 0;
@@ -180,8 +204,9 @@ export async function regenerateInsights(scope?: VisibleScope): Promise<InsightS
 
   for (const asset of assets) {
     for (const finding of evaluate(asset, ctx)) {
-      const key = `${finding.type}::${asset._id}`;
+      const key = findingKey(finding.type, String(asset._id), finding.actionLabel);
       stillValid.add(key);
+      if (decidedKeys.has(key)) continue;
       const prior = openByKey.get(key);
 
       if (prior) {
@@ -220,7 +245,7 @@ export async function regenerateInsights(scope?: VisibleScope): Promise<InsightS
   }
 
   // Anything open that no rule still fires for has been resolved by events.
-  const stale = existing.filter((i) => !stillValid.has(`${i.type}::${i.assetId ?? ''}`));
+  const stale = existing.filter((i) => !stillValid.has(findingKey(i.type, i.assetId, i.actionLabel)));
   if (stale.length > 0) {
     await Insight.deleteMany({ _id: { $in: stale.map((i) => i._id) } });
   }

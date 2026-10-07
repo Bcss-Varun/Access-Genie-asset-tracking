@@ -33,6 +33,15 @@ export interface ComplianceRecordDoc {
   source: ComplianceSource;
   relatedAuditId?: string;
   relatedFindingId?: string;
+  /**
+   * For findings the certificate sweep raises: which certificate, which event,
+   * and the expiry date it was raised for. Together they are the sweep's
+   * idempotency key — one finding per certificate per lapse, and a renewed
+   * certificate that lapses again gets a new one.
+   */
+  relatedCertificationId?: string;
+  certificationEvent?: 'Expired' | 'Expiring';
+  certificationExpiresAt?: Date;
   dueDate?: Date;
   resolvedAt?: Date;
   resolvedBy?: string;
@@ -56,6 +65,9 @@ const complianceRecordSchema = new Schema<ComplianceRecordDoc>(
     source: { type: String, required: true, enum: COMPLIANCE_SOURCES, default: 'Manual' },
     relatedAuditId: { type: String, ref: 'Audit' },
     relatedFindingId: { type: String, ref: 'AuditFinding' },
+    relatedCertificationId: { type: String, ref: 'Certification', index: true },
+    certificationEvent: { type: String, enum: ['Expired', 'Expiring'] },
+    certificationExpiresAt: { type: Date },
     dueDate: { type: Date, index: true },
     resolvedAt: { type: Date },
     resolvedBy: { type: String },

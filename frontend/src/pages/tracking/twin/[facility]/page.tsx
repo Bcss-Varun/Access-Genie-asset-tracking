@@ -34,6 +34,7 @@ import {
 } from '@/lib/tracking-data';
 import { cn, formatMoney, relTime } from '@/lib/utils';
 import type { AssetPresence, TrackedFacility, ZoneKind } from '@access-genie/shared';
+import { useDataVersion } from '@/api/dataset';
 
 const LAYERS: { key: MapMode; label: string; blurb: string }[] = [
   { key: 'presence', label: 'Presence', blurb: 'where everything is right now' },
@@ -105,13 +106,14 @@ function TwinWorkspace({ facility }: { facility: TrackedFacility }) {
   // In-session state so actions visibly do something.
   const [flagged, setFlagged] = useState<string[]>([]);
   const [recounted, setRecounted] = useState<string[]>([]);
+  const dataVersion = useDataVersion();
 
-  const zones = useMemo(() => zonesForFacility(facility.name), [facility.name]);
-  const presence = useMemo(() => presenceForFacility(facility.slug), [facility.slug]);
-  const rooms = useMemo(() => roomsForFacility(facility.slug), [facility.slug]);
-  const devices = useMemo(() => devicesForFacility(facility.slug), [facility.slug]);
-  const kpis = useMemo(() => trackingKpis(facility.slug), [facility.slug]);
-  const events = useMemo(() => eventsForFacility(facility.slug).slice(0, 8), [facility.slug]);
+  const zones = useMemo(() => zonesForFacility(facility.name), [facility.name, dataVersion]);
+  const presence = useMemo(() => presenceForFacility(facility.slug), [facility.slug, dataVersion]);
+  const rooms = useMemo(() => roomsForFacility(facility.slug), [facility.slug, dataVersion]);
+  const devices = useMemo(() => devicesForFacility(facility.slug), [facility.slug, dataVersion]);
+  const kpis = useMemo(() => trackingKpis(facility.slug), [facility.slug, dataVersion]);
+  const events = useMemo(() => eventsForFacility(facility.slug).slice(0, 8), [facility.slug, dataVersion]);
 
   // The one derived table the plan, the tiles and the inspector all read from.
   const rows = useMemo(

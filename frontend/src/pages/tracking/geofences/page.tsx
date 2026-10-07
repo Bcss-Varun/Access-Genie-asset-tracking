@@ -36,11 +36,13 @@ import {
 import { cn } from '@/lib/utils';
 import type { TrackedZone } from '@access-genie/shared';
 import { downloadCsv } from '@/api/configuration';
+import { useDataVersion } from '@/api/dataset';
 
 /** What the operator is looking for, not what the data model calls it. */
 type View = 'all' | 'armed' | 'violations' | 'weak';
 
 export default function GeofenceMonitoringPage() {
+  const dataVersion = useDataVersion();
   const { toast } = useToast();
   const { run: mutate } = useMutate();
   const [scope, setScope] = useFacilityScope();
@@ -58,9 +60,9 @@ export default function GeofenceMonitoringPage() {
     () => (facilityName ? facilityBySlug(slugFor(facilityName)) : facilityBySlug(planSlug)) ?? TRACKED_FACILITIES[0],
     [facilityName, planSlug],
   );
-  const planZones = useMemo(() => zonesForFacility(planFacility.name), [planFacility.name]);
+  const planZones = useMemo(() => zonesForFacility(planFacility.name), [planFacility.name, dataVersion]);
 
-  const scoped = useMemo(() => presenceForFacility(scope), [scope]);
+  const scoped = useMemo(() => presenceForFacility(scope), [scope, dataVersion]);
   const onPlan = useMemo(
     () => scoped.filter((p) => p.facility === planFacility.name && p.position),
     [scoped, planFacility.name],

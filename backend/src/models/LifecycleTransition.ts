@@ -37,6 +37,13 @@ export interface LifecycleTransitionDoc {
   reason: string;
   comments?: string;
   requester: string;
+  /**
+   * The requesting user's id. Segregation of duties is decided on this, not on
+   * `requester`: a display name is editable by its owner (PATCH /auth/me), so a
+   * name comparison let anyone rename themselves and approve their own request.
+   * Optional because rows written before it existed, and automated ones, have none.
+   */
+  requesterId?: string;
   status: TransitionStatus;
   approvals: LifecycleApprovalSub[];
   documentIds: string[];
@@ -65,6 +72,7 @@ const lifecycleTransitionSchema = new Schema<LifecycleTransitionDoc>(
     reason: { type: String, required: true },
     comments: String,
     requester: { type: String, required: true },
+    requesterId: String,
     status: { type: String, required: true, enum: TRANSITION_STATUSES, default: 'Applied', index: true },
     approvals: { type: [approvalSchema], default: [] },
     documentIds: { type: [String], default: [] },

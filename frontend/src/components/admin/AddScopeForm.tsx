@@ -13,6 +13,7 @@
 // ─────────────────────────────────────────────────────────────────────────────
 
 import { useState } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 import type { ScopeLevel, ScopeNode } from '@access-genie/shared';
 import { Button } from '@/components/ui/Button';
 import { useToast } from '@/components/providers/ToastProvider';
@@ -35,6 +36,7 @@ export function AddScopeForm({
 }) {
   const { run, isPending } = useMutate();
   const { toast } = useToast();
+  const queryClient = useQueryClient();
 
   const levels = only ? [only] : ALLOWED_CHILDREN[parent.level];
   const [level, setLevel] = useState<ScopeLevel>(levels[0] ?? 'zone');
@@ -61,6 +63,12 @@ export function AddScopeForm({
       success: `${trimmed} added`,
       successDetail: `${LEVEL_LABEL[level]} under ${parent.name} — you can now put assets here.`,
       describe: `add that ${LEVEL_LABEL[level].toLowerCase()}`,
+      // The asset forms take their site list from the registration defaults,
+      // which the blanket post-write refresh deliberately leaves alone (it must
+      // not re-seed a form somebody is filling in). A new site is exactly the
+      // change that list exists to show, so mark it stale here — otherwise the
+      // location picker kept offering the old sites until its cache expired.
+      refresh: () => queryClient.invalidateQueries({ queryKey: ['registration-defaults'] }),
     });
 
     if (!created) return;

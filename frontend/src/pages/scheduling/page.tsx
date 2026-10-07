@@ -11,7 +11,7 @@ import {
   techniciansWithLiveState, TECH_STATUS_TONE, SKILLS, technicianRoster, skillMatchPct,
   type LiveTechnician, type TechnicianStatus,
 } from '@/lib/technicians';
-import type { WorkOrder, WorkOrderPriority } from '@access-genie/shared';
+import { compareIds, type WorkOrder, type WorkOrderPriority } from '@access-genie/shared';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Scheduling & Dispatch — "which technician should do this work?" Select an
@@ -51,7 +51,12 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
 
 export default function SchedulingPage() {
   const { run } = useMutate();
-  const [workOrders, setWorkOrders] = useState<WorkOrder[]>(() => allWorkOrders.map((w) => ({ ...w })));
+  // Optimistic edits layered over the live dataset, rather than a copy of it.
+  // The copy was taken once at mount, so anything that changed afterwards — an
+  // order raised elsewhere, a status moved by its technician, the server's own
+  // reply to this page's writes — never reached the queue until a remount.
+  const [pending, setPending] = useState<Record<string, Partial<WorkOrder>>>({});
+  const workOrders: WorkOrder[] = allWorkOrders.map((w) => (pending[w.id] ? { ...w, ...pending[w.id] } : w));
   const [selectedWoId, setSelectedWoId] = useState<string | null>(null);
 
   const [skillFilter, setSkillFilter] = useState('All');
@@ -73,22 +78,31 @@ export default function SchedulingPage() {
   const technicians = techniciansWithLiveState(workOrders);
 
   async function assign(woId: string, tech: string) {
-    const previous = workOrders;
     const status = workOrders.find((w) => w.id === woId)?.status;
     const nextStatus = status === 'New' ? 'Assigned' : status;
+    const clear = () =>
+      setPending((prev) => {
+        const next = { ...prev };
+        delete next[woId];
+        return next;
+      });
 
-    setWorkOrders((prev) => prev.map((w) => (w.id === woId ? { ...w, assignedTo: tech, status: nextStatus ?? w.status } : w)));
+    setPending((prev) => ({ ...prev, [woId]: { assignedTo: tech, ...(nextStatus ? { status: nextStatus } : {}) } }));
     setSelectedWoId(null);
 
     // The assign action, not a PATCH: it checks the name against the roster and
     // advances New → Assigned itself, so the optimistic `nextStatus` above is a
     // prediction of what the server does rather than an instruction to it.
+    // Either way the overlay goes once the request settles — on success the
+    // re-read dataset carries the real record, on failure the rollback is
+    // simply showing the dataset again.
     await run(maintenanceApi.assign(woId, tech), {
       success: 'Work order assigned',
       successDetail: `${woId} → ${tech}`,
       describe: 'assign that work order',
-      rollback: () => setWorkOrders(previous),
+      rollback: clear,
     });
+    clear();
   }
 
   const openWos = workOrders.filter(isOpen);
@@ -96,7 +110,8 @@ export default function SchedulingPage() {
     .filter((w) => w.assignedTo === UNASSIGNED)
     .filter((w) => priorityFilter === 'All' || w.priority === priorityFilter)
     .filter((w) => facilityFilter === 'All' || getAssetById(w.assetId)?.location?.name === facilityFilter)
-    .sort((a, b) => Date.parse(a.dueDate) - Date.parse(b.dueDate));
+    // Soonest due first; the id number breaks ties so WO-9 precedes WO-10.
+    .sort((a, b) => Date.parse(a.dueDate) - Date.parse(b.dueDate) || compareIds(a.id, b.id));
 
   const selectedWo = selectedWoId ? unassigned.find((w) => w.id === selectedWoId) ?? null : null;
 

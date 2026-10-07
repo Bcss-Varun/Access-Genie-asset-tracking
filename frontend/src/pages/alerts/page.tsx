@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { allAlerts } from '@/lib/dataset';
-import type { Alert, AlertStatus } from '@access-genie/shared';
+import { newestFirst, type Alert, type AlertStatus } from '@access-genie/shared';
 import { PageHeader, Badge, KpiCard, EmptyState } from '@/components/ui/primitives';
 import { Button } from '@/components/ui/Button';
 import { alertsApi } from '@/api/alerts';
@@ -29,9 +29,36 @@ const STATUSES: AlertStatus[] = ['Open', 'Acknowledged', 'Escalated', 'Resolved'
 
 export default function AlertCenterPage() {
   const { run } = useMutate();
-  // Seeded from the dataset, then updated optimistically. `run` re-reads the
-  // dataset on success, so the sidebar badge and the dashboards follow.
-  const [alerts, setAlerts] = useState<Alert[]>(allAlerts);
+  /*
+   * Read from the dataset on every render, with the in-flight optimistic
+   * statuses laid over it.
+   *
+   * This used to be `useState(allAlerts)` — a copy taken at mount. The copy
+   * never saw a refresh, so an alert raised or worked elsewhere while this
+   * screen was open stayed invisible (or in its old state) until a remount.
+   * The overlay keeps the instant feedback the copy gave: an entry lives only
+   * while its request is in flight, and is dropped once the refreshed dataset
+   * carries the truth (or the request fails and there is nothing to show).
+   */
+  const [pendingStatus, setPendingStatus] = useState<Record<string, AlertStatus>>({});
+  const alerts = useMemo(
+    () =>
+      [...allAlerts]
+        .map((a) => (pendingStatus[a.id] ? { ...a, status: pendingStatus[a.id] } : a))
+        // Newest first, ids compared numerically — ALT-12 above ALT-2.
+        .sort(newestFirst),
+    // `allAlerts` is a live module binding; the page re-renders when it is re-read.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [allAlerts, pendingStatus],
+  );
+  const overlay = (ids: string[], status: AlertStatus) =>
+    setPendingStatus((prev) => ({ ...prev, ...Object.fromEntries(ids.map((id) => [id, status])) }));
+  const clearOverlay = (ids: string[]) =>
+    setPendingStatus((prev) => {
+      const next = { ...prev };
+      for (const id of ids) delete next[id];
+      return next;
+    });
   const [sevFilter, setSevFilter] = useState<Severity | 'All'>('All');
   const [statusFilter, setStatusFilter] = useState<AlertStatus | 'All'>('All');
   const [selected, setSelected] = useState<Set<string>>(new Set());
@@ -39,7 +66,12 @@ export default function AlertCenterPage() {
   const open = alerts.filter((a) => a.status === 'Open').length;
   const critical = alerts.filter((a) => a.severity === 'Critical' && a.status !== 'Resolved').length;
   const escalated = alerts.filter((a) => a.status === 'Escalated').length;
-  const resolvedToday = alerts.filter((a) => a.status === 'Resolved').length;
+  // Labelled "today", so counted by when it was resolved — it used to count
+  // every resolved alert ever, a figure that only grows.
+  const startOfToday = new Date().setHours(0, 0, 0, 0);
+  const resolvedToday = alerts.filter(
+    (a) => a.status === 'Resolved' && a.resolvedAt !== undefined && Date.parse(a.resolvedAt) >= startOfToday,
+  ).length;
 
   const visible = useMemo(
     () =>
@@ -53,9 +85,8 @@ export default function AlertCenterPage() {
 
   function setStatus(id: string, status: AlertStatus, verb: string) {
     const alert = alerts.find((a) => a.id === id);
-    const previous = alert?.status;
 
-    setAlerts((prev) => prev.map((a) => (a.id === id ? { ...a, status } : a)));
+    overlay([id], status);
 
     const call =
       status === 'Acknowledged' ? alertsApi.acknowledge(id)
@@ -66,9 +97,7 @@ export default function AlertCenterPage() {
       success: `Alert ${verb}`,
       successDetail: `${alert?.id} — ${alert?.title}`,
       describe: `${verb.replace(/d$/, '')} that alert`,
-      rollback: () =>
-        setAlerts((prev) => prev.map((a) => (a.id === id && previous ? { ...a, status: previous } : a))),
-    });
+    }).finally(() => clearOverlay([id]));
   }
 
   function toggleSelect(id: string) {
@@ -89,15 +118,13 @@ export default function AlertCenterPage() {
     const ids = alerts.filter((a) => selected.has(a.id) && a.status === 'Open').map((a) => a.id);
     if (!ids.length) return;
 
-    const before = alerts;
-    setAlerts((prev) => prev.map((a) => (ids.includes(a.id) ? { ...a, status: 'Acknowledged' } : a)));
+    overlay(ids, 'Acknowledged');
     setSelected(new Set());
 
     void run(alertsApi.acknowledgeMany(ids), {
       success: `${ids.length} alert${ids.length === 1 ? '' : 's'} acknowledged`,
       describe: 'acknowledge those alerts',
-      rollback: () => setAlerts(before),
-    });
+    }).finally(() => clearOverlay(ids));
   }
 
   const allChecked = visible.length > 0 && selected.size === visible.length;
@@ -248,6 +275,7 @@ export default function AlertCenterPage() {
                     </td>
                     <td className="px-4 py-3 align-top">
                       <Badge tone={statusTone[a.status]}>{a.status}</Badge>
+                      {a.assignedTo && <div className="mt-1 text-xs text-slate-500">Owner: {a.assignedTo}</div>}
                     </td>
                     <td className="px-4 py-3 align-top text-slate-600">{a.source}</td>
                     <td className="px-4 py-3 align-top whitespace-nowrap text-slate-500">{relTime(a.createdAt)}</td>
